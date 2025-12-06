@@ -88,9 +88,12 @@ function makeToken(len=32){
 }
 
 
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
+export async function onRequest(context) {
+  // The context object contains request, env, and other properties.
+  // We can destructure it to get what we need.
+  const { request, env, next } = context;
+
+  const url = new URL(request.url);
     /*__CVS_CALLBACK_MERGE_FINAL__*/
     try{
       const _u = new URL(request.url);
@@ -1706,7 +1709,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
 }
 // 非 /api/* 的請求一律交回 Pages 靜態資產（含 /admin/ -> admin/index.html）
     if (!pathname.startsWith("/api/")) {
-      return env.ASSETS.fetch(request);
+      return next();
     }
 
     // CORS Preflight
@@ -1877,9 +1880,8 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
     }
 
     // 預設回退
-    return env.ASSETS.fetch(request);
-  }
-};
+    return next();
+}
 
 /* ========== /api/upload ========== */
 async function handleUpload(request, env, origin) {
