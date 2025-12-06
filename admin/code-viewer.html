@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>商品留言管理（POST 刪除兼容版）｜守護指引</title>
+<style>
+  :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--brand:#eab308;--line:#1f2937;}
+  html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1022,#0f172a);color:#e5e7eb;font-family:ui-sans-serif,system-ui,-apple-system}
+  .wrap{max-width:1040px;margin:0 auto;padding:20px}
+  h1{margin:0 0 16px;font-size:20px;font-weight:800;letter-spacing:.3px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 12px 28px rgba(0,0,0,.18)}
+  .muted{color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:10px}
+  @media (min-width:860px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  .item{background:#0b1222;border:1px solid #263041;border-radius:12px;padding:12px}
+  .title{font-weight:800;margin-bottom:6px}
+  .id{font-size:13px;color:#eab308;font-weight:600}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .btn{border:1px solid #263041;background:#0b1222;color:#e5e7eb;border-radius:10px;padding:7px 10px;cursor:pointer;font-weight:700}
+  .btn.primary{background:var(--brand);color:#111827;border-color:#a16207}
+  .btn.warn{background:#ef4444;color:#fff;border-color:#b91c1c}
+  #log{margin-top:12px;font-size:12px;color:#94a3b8;white-space:pre-wrap}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none}
+  .panel{position:absolute;inset:8% 10%;background:#111827;color:#e5e7eb;border:1px solid #1f2937;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);display:flex;flex-direction:column}
+  .panel header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #263041}
+  .panel main{padding:12px;overflow:auto}
+  .msg{border-top:1px dashed #263041;padding:8px 0}
+  .chip{display:inline-flex;align-items:center;padding:2px 8px;border:1px solid #263041;border-radius:999px;font-size:12px;margin-right:6px}
+  textarea.raw{width:100%;height:160px;background:#0b1222;color:#e5e7eb;border:1px solid #263041;border-radius:8px;padding:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>商品留言管理（POST 刪除兼容版，不改站）</h1>
+  <div class="card">
+    <p class="muted">本頁從 <code>/api/products</code> 讀取商品清單；「管理留言」可載入該商品的所有留言，逐筆刪除或一鍵全刪。<b>刪除請求一律使用 POST + <code>_method=DELETE</code></b>，因此就算伺服器不允許 DELETE，也能刪除。</p>
+    <div id="productList" class="grid">讀取中...</div>
+    <div id="log" class="muted"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <header>
+      <div>
+        <strong>留言管理</strong>
+        <span class="muted" id="ovCode"></span>
+      </div>
+      <div class="row">
+        <button class="btn warn" id="ovDelAll">刪除全部</button>
+        <button class="btn primary" id="ovClose">關閉</button>
+      </div>
+    </header>
+    <main id="ovList">載入中…</main>
+    <div style="padding:10px;border-top:1px solid #263041">
+      <div class="muted" style="margin-bottom:6px">原始回應（除錯用）：</div>
+      <textarea class="raw" id="ovRaw" readonly>（等待載入）</textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = location.origin;
+const $ = (s)=>document.querySelector(s);
+function toast(msg){ $('#log').textContent = msg; }
+function esc(s){ return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+
+async function loadProducts(){
+  const list = $('#productList');
+  list.textContent = '載入中...';
+  try{
+    const res = await fetch(API_BASE + '/api/products',{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const items = data.items || [];
+    if(!items.length){ list.textContent = '目前沒有上架商品'; return; }
+    list.innerHTML = items.map(p => `
+      <div class="item" data-id="${esc(p.id||'')}">
+        <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
+        <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
+        ${p.deity?`<div class="muted">神祇：${esc(p.deity)}</div>`:''}
+        <div class="row">
+          <button class="btn" data-act="view">查看留言(JSON)</button>
+          <button class="btn primary" data-act="manage">管理留言</button>
+          <button class="btn warn" data-act="del">整品項全刪</button>
+        </div>
+      </div>
+    `).join('');
+    list.onclick = handleListAction;
+  }catch(e){
+    $('#productList').textContent = '讀取失敗：' + e.message;
+  }
+}
+
+function handleListAction(e){
+  const t = e.target;
+  if (!(t instanceof Element)) return;
+  const act = t.getAttribute('data-act');
+  if (!act) return;
+  const wrap = t.closest('.item');
+  if (!wrap) return;
+  const id = (wrap.getAttribute('data-id')||'');
+  if (!id) return toast('找不到此商品 ID');
+  if (act === 'view'){
+    window.open(API_BASE + '/api/stories?code=' + encodeURIComponent(id), '_blank');
+  }
+  if (act === 'del'){
+    delAllViaPost(id);
+  }
+  if (act === 'manage'){
+    openOverlay(id);
+  }
+}
+
+async function delAllViaPost(id){
+  const code = id;
+  if (!confirm('刪除 '+code+' 的所有留言？')) return;
+  try{
+    const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code) + '&_method=DELETE', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _method: 'DELETE' })
+    });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    toast('已刪除 '+code+' 的所有留言');
+  }catch(e){
+    toast('刪除失敗：' + e.message);
+  }
+}
+
+async function fetchStories(code){
+  const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code), { cache:'no-store' });
+  const js = await r.json();
+  return js;
+}
+
+/* overlay logic */
+const overlay = $('#overlay');
+const ovCode = $('#ovCode');
+const ovList = $('#ovList');
+const ovRaw  = $('#ovRaw');
+
+$('#ovClose').onclick = ()=> overlay.style.display = 'none';
+$('#ovDelAll').onclick = ()=>{
+  const code = ovCode.textContent.trim();
+  if (!code) return;
+  delAllViaPost(code);
+};
+
+async function openOverlay(code){
+  ovCode.textContent = code;
+  ovList.textContent = '載入中…';
+  ovRaw.value = '（等待載入）';
+  overlay.style.display = 'block';
+  try{
+    const data = await fetchStories(code);
+    ovRaw.value = JSON.stringify(data, null, 2);
+    const arr = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+    if (!arr.length){
+      ovList.innerHTML = '<div class="muted">目前沒有留言</div>';
+      return;
+    }
+    ovList.innerHTML = arr.map(m => `
+      <div class="msg" data-id="${esc(m.id||'')}">
+        <div><span class="chip">${m.ts ? new Date(m.ts).toLocaleString() : '-'}</span></div>
+        <div style="margin:6px 0">${esc(m.msg||m.text||'')}</div>
+        <div class="row"><button class="btn warn" data-act="del-one">刪除此則</button></div>
+      </div>
+    `).join('');
+    ovList.onclick = async (e)=>{
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.getAttribute('data-act') !== 'del-one') return;
+      const msgEl = t.closest('.msg');
+      const mid = msgEl && msgEl.getAttribute('data-id');
+      if (!mid) return alert('找不到留言ID');
+      if (!confirm('確定要刪除此則留言？')) return;
+      t.disabled = true;
+      try{
+        const rr = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code) + '&id=' + encodeURIComponent(mid) + '&_method=DELETE', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _method: 'DELETE' })
+        });
+        if (!rr.ok) throw new Error('HTTP '+rr.status);
+        msgEl.remove();
+      }catch(err){
+        alert('刪除失敗：'+err.message);
+      }finally{
+        t.disabled = false;
+      }
+    };
+  }catch(e){
+    ovList.textContent = '讀取失敗：' + e.message;
+    ovRaw.value = '讀取失敗：' + e.message;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+</body>
+</html>

@@ -1,0 +1,424 @@
+  /* —— 淺色主題 —— */
+  :root{
+    --bg:#ffffff; --fg:#111827; --muted:#6b7280;
+    --card:#ffffff; --line:#e5e7eb; --brand:#16a34a; --brand-ink:#ffffff;
+    --chip:#f3f4f6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:18px 16px 28px}
+
+  /* 頂部 */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand img{width:40px;height:40px;border-radius:10px;object-fit:cover}
+  .brand .t1{font-weight:800;font-size:16px}
+  .brand .t2{font-size:12px;color:var(--muted)}
+  .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  @media(min-width:720px){.filters{grid-template-columns:220px 220px 1fr 1fr}}
+  select,input{width:100%;padding:10px 12px;border:1px solid var(--line);background:#fff;color:var(--fg);border-radius:10px}
+
+  /* 商品格 */
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:10px}
+  @media(min-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 10px rgba(17,24,39,.04)}
+  .card .pic{position:relative;background:#fff}
+  /* 以 1:1 方形預覽框，圖片完整顯示（contain），不再被裁切 */
+  .card .pic::before{content:"";display:block;padding-top:100%}
+  .card .pic img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;image-rendering:auto;transition:transform .2s}
+  .card .pic:hover img{transform:scale(1.02)}
+  .card .body{padding:12px}
+  .name{font-weight:700}
+  .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;margin:6px 0}
+  .price{font-weight:800;margin-top:4px}
+  .cta{display:flex;gap:8px;margin-top:10px}
+  .btn{flex:1;appearance:none;border:1px solid var(--line);background:#f9fafb;color:#111;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;text-align:center}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+  .btn.link{
+  background:#facc15;        /* 金色或亮黃色底 */
+  border-color:#eab308;
+  color:#111;                /* 黑色字 */
+  text-decoration:none;      /* 移除底線 */
+}
+.btn.link:hover{
+  filter:brightness(1.1);
+}
+  .empty{opacity:.8;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:12px;margin-top:10px}
+  .footer{margin:24px 0 6px;color:var(--muted);font-size:12px;text-align:center}
+
+  /* 詳情 Dialog（白底） */
+  dialog{border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--fg);max-width:900px;width:96%}
+  .closeBar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+  .xbtn{appearance:none;background:transparent;border:0;color:#111;font-size:18px;cursor:pointer}
+  .dlgBody{display:grid;grid-template-columns:1fr;gap:16px;padding:14px}
+  @media(min-width:820px){.dlgBody{grid-template-columns:1fr 1fr}}
+  .bigBox{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .bigBox::before{content:"";display:block;padding-top:100%}
+  .big{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;object-fit:contain}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .thumbs img{width:64px;height:64px;border-radius:8px;border:1px solid var(--line);object-fit:cover;cursor:pointer;background:#fff}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row .field{display:flex;flex-direction:column;gap:6px}
+  label{font-size:12px;color:var(--muted)}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:#374151}
+
+  /* 評價區 */
+  .reviews{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .rvItem{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;background:#fff}
+  .rvHead{font-size:12px;color:#6b7280;margin-bottom:6px}
+  textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
+
+/* --- 左側神祇介紹側欄 --- */
+.store{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start}
+@media(max-width: 900px){ .store{grid-template-columns:1fr} #sideDeities{order:-1} }
+#sideDeities{position:sticky; top:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;}
+#sideDeities h3{margin:6px 0 10px; font-size:16px; font-weight:800;}
+#sideDeities .list{display:flex; flex-direction:column; gap:6px; max-height:70vh; overflow:auto;}
+#sideDeities .list a{display:block; font-size:14px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); text-decoration:none; color:inherit;}
+#sideDeities .list a:hover{background:#f3f4f6;}
+
+/* --- Cart preview UI --- */
+#cartFab{position:fixed; right:16px; bottom:16px; z-index:50; display:flex; align-items:center; gap:8px;
+  background:var(--card); border:1px solid var(--line); border-radius:999px; padding:10px 14px; cursor:pointer; user-select:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.15);}
+#cartFab:hover{background:#f3f4f6;}
+#cartBadge{display:inline-block; min-width:20px; height:20px; line-height:20px; text-align:center; border-radius:10px;
+  background:#ef4444; color:#fff; font-size:12px; padding:0 6px;}
+#cartFab .lbl{font-weight:700;}
+#dlgCart{border:none; border-radius:16px; padding:0; max-width:760px; width:95%;}
+.cartWrap{padding:16px;}
+.cartHead{display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:18px; padding:10px 6px 6px;}
+.cartList{display:flex; flex-direction:column; gap:10px; margin-top:8px; max-height:50vh; overflow:auto;}
+.cartItem{display:grid; grid-template-columns:64px 1fr auto; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px; padding:8px;}
+.cartItem img{width:64px; height:64px; object-fit:cover; border-radius:8px;}
+.cartTitle{font-weight:700;}
+.cartCtl{display:flex; align-items:center; gap:6px;}
+.cartCtl input{width:56px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:transparent; color:inherit;}
+.cartSum{display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding:10px; background:var(--card); border:1px solid var(--line); border-radius:12px;}
+.cartActions{display:flex; gap:8px; justify-content:flex-end; margin-top:10px;}
+.cartActions .btn{min-width:140px;}
+@media(max-width:560px){
+  .cartItem{grid-template-columns:1fr; grid-template-rows:auto; }
+  .cartItem img{display:none;}
+}
+
+/* 統一 7-11 按鈕樣式（無底線＋字體一致） */
+#cartGo711, #pay711, a#cartGo711.btn, a#pay711.btn {
+  text-decoration: none !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+  /* --- Stage 1 additions (safe & minimal) --- */
+  .badge{background:#111827;color:#eab308;border:1px solid #2b2f3a;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}
+  @media(max-width:640px){ .badge{font-size:11px} }
+
+  .skeleton-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:10px}
+  @media(min-width:900px){.skeleton-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .skeleton-card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(17,24,39,.04);animation:pulse 1.2s ease-in-out infinite}
+  .skeleton-pic{position:relative;background:#f3f4f6}
+  .skeleton-pic::before{content:"";display:block;padding-top:100%}
+  .skeleton-line{height:12px;background:#eee;border-radius:8px;margin:8px 12px}
+  .skeleton-line.w60{width:60%}
+  @keyframes pulse{0%{opacity:.6}50%{opacity:.95}100%{opacity:.6}}
+
+/* cart close size */
+#cartClose{padding:6px 10px;font-size:13px;border-radius:8px}
+
+/* toast */
+#toast{position:fixed;right:16px;bottom:84px;background:#111827;color:#eab308;border:1px solid #2b2f3a;border-radius:10px;padding:10px 12px;font-weight:700;opacity:0;transform:translateY(10px);transition:.25s;z-index:60}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* Toast 修正版：確保手機也會顯示 */
+#toast{
+  position:fixed;
+  left:50%;
+  bottom:100px;
+  transform:translateX(-50%) translateY(20px);
+  background:rgba(17,17,17,0.9);
+  color:#eab308;
+  border-radius:10px;
+  padding:12px 18px;
+  font-weight:700;
+  font-size:15px;
+  text-align:center;
+  opacity:0;
+  z-index:9999;
+  transition:opacity .3s ease, transform .3s ease;
+}
+#toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+@media(max-width:640px){
+  #toast{
+    bottom:120px; /* 手機螢幕往上移一點避免被按鈕擋住 */
+    font-size:16px;
+    padding:14px 20px;
+  }
+}
+
+/* category inside sidebar */
+#sideDeities .cats{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+#sideDeities .cats h4{margin:0 0 8px 0;font-size:14px;color:#eab308;letter-spacing:.5px}
+#sideDeities .cats .list{display:flex;flex-direction:column;gap:8px}
+#sideDeities .cats .list button{all:unset;cursor:pointer;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#0f172a;color:#e5e7eb;font-weight:700}
+#sideDeities .cats .list button.active{background:#111827;border-color:#2b2f3a;color:#eab308}
+@media(max-width:900px){
+  #sideDeities{order:-1}
+}
+
+/* Hide min/max price inputs (UI only) */
+#fMin, #fMax { display:none !important; }
+
+/* fix: 7-11 buttons vertical align */
+#pay711, #cartGo711 {
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-decoration:none !important;
+  line-height:1.4 !important;
+}
+
+
+  /* === 查詢訂單：狀態顏色標籤 === */
+  .ok-badge{display:inline-block;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
+  .ok-paid{color:#f59e0b;background:rgba(245,158,11,.08);border-color:#f59e0b}
+  .ok-ship{color:#60a5fa;background:rgba(96,165,250,.08);border-color:#60a5fa}
+  .ok-done{color:#34d399;background:rgba(52,211,153,.08);border-color:#34d399}
+  .ok-muted{color:#6b7280;font-size:13px}
+  .ok-card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff}
+
+  .cartSum div:last-child{ min-width:96px; text-align:right; }
+/* 強制固定購物車關閉鈕尺寸與排版（最後載入，優先級最高） */
+.cartHead .btn{flex:0 0 auto !important;}
+#cartClose.btn, #cartClose.btn.link{
+  padding:6px 10px !important;
+  font-size:13px !important;
+  border-radius:8px !important;
+  line-height:1.2 !important;
+}
+
+  /* === 查詢訂單：狀態顏色標籤 === */
+  .ok-badge{display:inline-block;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700}
+  .ok-paid{color:#f59e0b;background:rgba(245,158,11,.08);border-color:#f59e0b}
+  .ok-ship{color:#60a5fa;background:rgba(96,165,250,.08);border-color:#60a5fa}
+  .ok-done{color:#34d399;background:rgba(52,211,153,.08);border-color:#34d399}
+  .ok-muted{color:#6b7280;font-size:13px}
+  .ok-card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff}
+
+.line-support-btn{
+  display:block;
+  text-align:center;
+  font-weight:700;
+  color:#fff;
+  /* LINE official green tone */
+  background: linear-gradient(90deg, #00B900 0%, #00a600 100%);
+  padding:10px 14px;
+  border-radius:10px;
+  margin-top:12px;
+  text-decoration:none;
+  transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  border:1px solid rgba(0,0,0,.04);
+}
+.line-support-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 14px rgba(0,185,0,.28);
+  filter:saturate(1.05);
+}
+.line-support-btn:active{
+  transform:translateY(0);
+  box-shadow:0 2px 6px rgba(0,185,0,.25);
+  filter:saturate(1);
+}
+.line-support-btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 3px rgba(0,185,0,.15), 0 6px 14px rgba(0,185,0,.28);
+}
+/* === QUIZ LINK BUTTON === */
+.quiz-link-btn{
+  display:block;
+  text-align:center;
+  font-weight:700;
+  color:#111827;
+  background: linear-gradient(90deg, #fdf2f8 0%, #f5f3ff 100%);
+  padding:10px 14px;
+  border-radius:10px;
+  margin-top:12px;
+  text-decoration:none;
+  transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  border:1px solid #e5e7eb;
+}
+.quiz-link-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 14px rgba(139,92,246,.18);
+  filter:saturate(1.03);
+}
+.quiz-link-btn:active{
+  transform:translateY(0);
+  box-shadow:0 2px 6px rgba(139,92,246,.18);
+}
+.quiz-link-btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 3px rgba(139,92,246,.25), 0 6px 14px rgba(139,92,246,.18);
+}
+/* === DLG BANK — Consolidated, single source of truth === */
+
+/* 1) Scope + reset to avoid external collisions */
+#dlgBank, #dlgBank * { box-sizing: border-box !important; }
+
+/* 2) Dialog sizing and scroll behavior */
+#dlgBank{
+  max-height:90vh !important;
+  overflow:auto !important;
+  width:min(680px,96vw) !important;
+}
+
+/* 3) Kill legacy title/grid that previously caused misalignment */
+#dlgBank .bankInfoGrid,
+#dlgBank .bankHeader .bankTitle{
+  display:none !important;
+}
+
+/* 4) Layout: force single-column in the dialog (beats any global .row rules) */
+#dlgBank .row,
+#dlgBank .bankRow{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:10px !important;
+}
+#dlgBank .row *[class$="field"],
+#dlgBank .bankRow *[class$="field"]{
+  width:100% !important;
+}
+
+/* 5) Field wrappers should not constrain width */
+#dlgBank .bank-field,
+#dlgBank form > div,
+#dlgBank .field{
+  width:100% !important;
+  max-width:100% !important;
+  margin:0 0 10px 0 !important;
+  display:block !important;
+}
+
+/* 6) Unified control styles */
+#dlgBank input[type="text"],
+#dlgBank input[type="tel"],
+#dlgBank input[type="email"],
+#dlgBank input[type="number"],
+#dlgBank input[type="file"],
+#dlgBank select{
+  width:100% !important;
+  height:44px !important;
+  padding:10px 12px !important;
+  font-size:14px !important;
+  line-height:1.3 !important;
+  border:1px solid #e5e7eb !important;
+  border-radius:10px !important;
+  background:#fff !important;
+}
+
+/* Make file input truly full-width and tidy filename label */
+#dlgBank input[type="file"]{
+  display:block !important;
+  width:100% !important;
+  min-height:44px !important;
+  padding:6px 8px !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+/* File input button normalization (Safari/Chromium) */
+#dlgBank input[type="file"]::-webkit-file-upload-button{
+  padding:8px 12px !important;
+  margin-right:8px !important;
+  border:1px solid #e5e7eb !important;
+  border-radius:8px !important;
+  background:#f9fafb !important;
+  font-size:14px !important;
+  line-height:1.2 !important;
+  cursor:pointer !important;
+}
+#dlgBank input[type="file"]::file-selector-button{
+  padding:8px 12px !important;
+  margin-right:8px !important;
+  border:1px solid #e5e7eb !important;
+  border-radius:8px !important;
+  background:#f9fafb !important;
+  font-size:14px !important;
+  line-height:1.2 !important;
+  cursor:pointer !important;
+}
+
+/* 7) Textarea sizing — visually balanced but multi-line */
+#dlgBank textarea{
+  display:block !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-height:112px !important;
+  padding:10px 12px !important;
+  font-size:14px !important;
+  line-height:1.5 !important;
+  border:1px solid #e5e7eb !important;
+  border-radius:10px !important;
+  resize:vertical !important;
+}
+
+/* 8) Remove number spinners for consistency */
+#dlgBank input[type="number"]{
+  -moz-appearance:textfield !important;
+}
+#dlgBank input[type="number"]::-webkit-outer-spin-button,
+#dlgBank input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance:none !important;
+  margin:0 !important;
+}
+
+/* 9) Ensure the "four-line" bank info stays tidy */
+#dlgBank .line16{
+  font-size:16px !important;
+  font-weight:800 !important;
+  line-height:1.2 !important;
+  margin:4px 0 !important;
+}
+
+/* 10) Ensure copy button is compact and aligned */
+#dlgBank #bankCopyAll{
+  padding:4px 8px !important;
+  font-size:12px !important;
+  border-radius:8px !important;
+}
+
+/* 11) Safety: any nested grids default to single column inside dialog */
+#dlgBank [class*="row"]{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:10px !important;
+}
+
+/* 12) Extra padding to avoid right-edge clipping */
+/* 確保商品卡片圖片容器有尺寸 */
+  .card .pic{ position:relative; background:#fff; }
+  .card .pic, .card .pic .img-box{ width:100%; }
+  .card .pic{ aspect-ratio: 1 / 1; overflow:hidden; }
+
+  /* 強制圖片顯示且自適應 */
+  .card .pic img{
+    display:block !important;
+    width:100% !important;
+    height:100% !important;
+    object-fit:contain !important; /* 若要滿版可改 cover */
+    opacity:1 !important;
+    visibility:visible !important;
+  }
+
+  /* 若有 lazy 區塊還原可見性 */
+  .card .pic [data-lazy-img]{
+    display:block !important;
+    opacity:1 !important;
+    visibility:visible !important;
+  }

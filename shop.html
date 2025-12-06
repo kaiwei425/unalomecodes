@@ -1,0 +1,4444 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="coupon-api" content="https://coupon-service.kaiwei425.workers.dev/">
+<title>泰國寺廟map ©️ unalomecodes</title>
+<link rel="stylesheet" href="/css/style.css">
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <img src="https://i.ibb.co/7mtppQQ/logo.jpg" alt="">
+      <div>
+        <div class="t1">泰國寺廟map ©️ unalomecodes</div>
+        <div class="t2">unalome象徵人生修行並通往覺悟的道路</div>
+      </div>
+    </div>
+    <div class="filters">
+      <select id="fDeity">
+        <option value="">全部神祇</option>
+      </select>
+      <select id="fSort">
+        <option value="">排序：預設</option>
+        <option value="sold-desc">已售出（多→少）</option>
+        <option value="price-asc">價格（低→高）</option>
+        <option value="price-desc">價格（高→低）</option>
+        <option value="newest">最新上架</option>
+      </select>
+      <input id="fMin" type="number" placeholder="最低價">
+      <input id="fMax" type="number" placeholder="最高價">
+    </div>
+  </div>
+
+  <div class="store">
+    <aside id="sideDeities"><h3>連結</h3>
+    <div class="list">
+      <a href="#" id="linkOrderLookup">查詢訂單狀態</a>
+      <a href="https://unalomecodes.pages.dev/share?view=deity-menu&amp;api=https%3A%2F%2Fproud-boat-794c.kaiwei425.workers.dev" target="_blank" rel="noopener">神祇介紹</a>
+      <a href="https://myship.7-11.com.tw/general/detail/GM2509114839878" target="_blank" rel="noopener">7-11賣貨便</a>
+    </div>
+</aside>
+    <div class="main">
+      <div id="banner" class="empty" style="display:none"></div>
+      <div id="skeleton" class="skeleton-grid"><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div></div>
+      <div id="list" class="grid"></div>
+    </div>
+  </div>
+  <div class="footer">
+  <strong>聯絡我們</strong><br>
+  bkkaiwei@gmail.com<br>
+  客服LINE official @427oaemj<br>
+  2025©unalomecodes
+</div>
+</div>
+
+<dialog id="dlg">
+  <div class="closeBar">
+    <strong id="dlgTitle">商品資訊</strong>
+    <button class="xbtn" onclick="dlg.close()">✕</button>
+  </div>
+  <div class="dlgBody">
+    <div>
+      <div class="bigBox">
+        <img id="dlgBig" class="big" alt="">
+      </div>
+      <div class="thumbs" id="dlgThumbs"></div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div id="dlgName" style="font-weight:800;margin:2px 0 6px"></div>
+        <span class="chip" id="dlgChip"></span>
+      </div>
+      <div id="dlgDeity" style="font-size:13px;color:#6b7280;margin-bottom:6px"></div>
+      <div id="dlgDesc" style="font-size:14px;white-space:pre-wrap;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:10px;max-height:220px;overflow:auto"></div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label>規格</label>
+          <select id="dlgVariant"></select>
+        </div>
+        <div class="field">
+          <label>數量</label>
+          <input id="dlgQty" type="number" value="1" min="1">
+        </div>
+      </div>
+
+      <div style="margin-top:10px;font-weight:800">
+        NT$ <span id="dlgPrice">0</span>
+      </div>
+
+      <div class="cta" style="margin-top:10px;flex-wrap:wrap">
+        <button class="btn primary" id="btnAddCart">加入購物車</button>
+        <button class="btn link" id="btnCheckout">直接結帳</button>
+      </div>
+
+      <!-- 顧客評價 / 真實故事 -->
+      <div class="reviews">
+        <div style="font-weight:800;margin-bottom:6px">顧客評價／真實故事</div>
+        <div id="rvList"></div>
+        <div style="margin-top:8px">
+          <textarea id="rvText" placeholder="分享你的佩戴體驗、感應或故事（送出後暫存於本機；之後可接後台）"></textarea>
+          <div class="cta" style="margin-top:8px">
+            <button class="btn primary" id="rvSubmit">送出分享</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
+
+</script>
+
+  <!-- 小視窗：直接結帳 -->
+  <dialog id="dlgCheckout" style="border:none;border-radius:16px;padding:0;max-width:420px;width:90%;">
+    <div style="padding:18px 18px 8px;font-weight:800;font-size:18px">選擇結帳方式</div>
+    <div style="padding:0 18px 18px;color:#6b7280;font-size:14px">請選擇你想使用的結帳方式</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px">
+      <a id="pay711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
+      <button id="payCC" class="btn">信用卡（暫未開放）</button>
+      <button id="payClose" class="btn link" style="margin-left:auto">關閉</button>
+    </div>
+  </dialog>
+
+  <!-- Cart floating preview -->
+  <button id="cartFab" title="查看購物車"><span class="lbl">購物車</span><span id="cartBadge">0</span></button>
+
+  <!-- Cart dialog -->
+  <dialog id="dlgCart">
+    <div class="cartWrap">
+      <div class="cartHead">
+        <div>購物車</div>
+        <button id="cartClose" class="btn link">關閉</button>
+      </div>
+      <div id="cartList" class="cartList"></div>
+      <div class="cartSum">
+        <div>小計</div>
+        <div id="cartTotal">NT$ 0</div>
+      </div>
+      <!-- Coupon input widget -->
+      <div class="cartCoupon" style="display:grid;gap:8px;margin:8px 0 0">
+        <label for="cartCouponInput" style="font-size:12px;color:#6b7280">優惠碼</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="cartCouponInput" type="text" inputmode="latin" placeholder="請輸入優惠碼"
+                 style="flex:1 1 auto;padding:10px;border:1px solid #e5e7eb;border-radius:10px">
+          <button id="cartApply" class="btn" style="flex:0 0 auto">套用</button>
+        </div>
+        <div id="cartCouponHint" style="display:none;font-size:12px;color:#6b7280;line-height:1.6"></div>
+      </div>
+
+      <!-- Discount row (hidden until a valid coupon is applied) -->
+      <div class="cartSum cartDiscount" style="display:none;margin-top:6px">
+        <div>折扣</div>
+        <div id="cartOff">-NT$ 0</div>
+      </div>
+
+      <!-- Grand total -->
+      <div class="cartSum">
+        <div style="font-weight:800">應付金額</div>
+        <div id="cartGrandTotal" style="font-weight:800">NT$ 0</div>
+      </div>
+      <div class="cartActions">
+        <button id="cartClear" class="btn">清空</button>
+        <a id="cartGo711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
+      </div>
+    </div>
+  </dialog>
+<div id="toast" style="position:fixed;right:16px;bottom:16px;z-index:1000;display:none;max-width:92vw"></div>
+
+
+<script id="cats-inline">
+(function(){
+  const CATS = ["佛牌/聖物","蠟燭加持祈福","跑廟行程","其他"];
+  let selectedCat = "佛牌/聖物";
+
+  function normalizeCat(cat){
+    if (!cat) return "";
+    // 接受後台直接填四種分類名稱（完全比對）
+    if (CATS.includes(cat)) return cat;
+    return "";
+  }
+
+  function classify(p){
+    // 僅使用後台正式分類；未提供時預設為「佛牌/聖物」
+    const explicit = normalizeCat(p && p.category);
+    return explicit || "佛牌/聖物";
+  }
+
+  function buildCats(){
+    const side = document.getElementById('sideDeities');
+    if(!side || side.querySelector('.cats')) return;
+    const box = document.createElement('div');
+    box.className = 'cats';
+    box.innerHTML = '<h4>商品分類</h4><div class="list"></div>';
+    const list = box.querySelector('.list');
+    CATS.forEach(cat=>{
+      const b = document.createElement('button');
+      b.textContent = cat; b.dataset.cat = cat;
+      if(cat===selectedCat) b.classList.add('active');
+      b.addEventListener('click', ()=>{
+        selectedCat = cat;
+        [...list.children].forEach(x=> x.classList.toggle('active', x===b));
+        if(typeof applyFilter === 'function') applyFilter();
+        else if(typeof renderList === 'function' && Array.isArray(window.viewItems)) renderList(window.viewItems);
+      });
+      list.appendChild(b);
+    });
+    side.appendChild(box);
+  }
+
+  // 包一層 renderList：先依分類規則過濾，再交回原邏輯
+  const __renderList0 = window.renderList;
+  if (typeof __renderList0 === 'function'){
+    window.renderList = function(items){
+      try{
+        // 先幫每個 item 設定分類（若後台未設定就用關鍵字歸類）
+        const prepared = (Array.isArray(items)?items:[]).map(p => {
+          try{ p.category = classify(p); }catch(e){}
+          return p;
+        });
+        const filtered = prepared.filter(p => !selectedCat || p.category === selectedCat);
+        return __renderList0.call(this, filtered);
+      }catch(e){
+        // 若有意外，回退原本行為，避免商品消失
+        return __renderList0.apply(this, arguments);
+      }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', buildCats);
+})();
+</script>
+
+<script id="line-support-link">
+(function(){
+  function addLineSupportLink(){
+    var side = document.getElementById('sideDeities');
+    if (!side) return;
+    // avoid duplicates if script runs multiple times
+    if (document.getElementById('lineSupportLink')) return;
+    var a = document.createElement('a');
+    a.id = 'lineSupportLink';
+    a.href = 'https://line.me/R/ti/p/@427oaemj';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'side-link line-support-btn';
+    a.textContent = '💬 官方LINE客服';
+    // place the link at the end of the sidebar container
+    side.appendChild(a);
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', addLineSupportLink);
+  }else{
+    addLineSupportLink();
+  }
+})();
+</script>
+</script>)
+
+<script id="quiz-side-link">
+(function(){
+  function addQuizSideLink(){
+    var side = document.getElementById('sideDeities');
+    if (!side) return;
+    if (document.getElementById('quizSideLink')) return; // avoid duplicate
+    var a = document.createElement('a');
+    a.id = 'quizSideLink';
+    a.href = 'https://unalomecodes.pages.dev/quiz';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'side-link quiz-link-btn';
+    a.textContent = '🔮 測驗與您有緣的守護神';
+    side.appendChild(a);
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', addQuizSideLink);
+  } else {
+    addQuizSideLink();
+  }
+})();
+</script>
+
+
+  <!-- 門市選擇 Dialog（新） -->
+  <dialog id="dlgStore" style="border:none;border-radius:16px;padding:0;max-width:520px;width:92%;">
+    <div style="padding:16px 18px 0;display:flex;gap:8px;font-size:12px;font-weight:600;">
+      <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">1 確認訂單</div>
+      <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #16a34a;color:#16a34a;">2 選擇門市</div>
+      <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">3 匯款資料</div>
+    </div>
+    <div style="padding:18px 18px 10px;">
+      <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px">
+        請先選擇 7-11 取貨門市，再進入匯款資訊頁面
+      </div>
+      <div style="color:#ef4444;font-size:12px;margin-top:2px">
+        若是購買服務性商品（例如蠟燭祈福等），可跳過此步驟，不需填寫門市資訊
+      </div>
+    </div>
+    <div style="padding:0 18px 16px;display:grid;gap:10px">
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">取貨門市</label>
+        <input id="dlgStoreInput" type="text"
+               placeholder="尚未選擇門市"
+               style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;background-color:#f9fafb;">
+        <div style="font-size:12px;color:#6b7280;line-height:1.6">
+          請點選下方「查詢 7-11 門市」按鈕，於地圖中選擇門市後，這裡與匯款資料頁面會自動帶入相同門市
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+        <button type="button" id="storeOpenCvsBtn" class="btn link" style="flex:1 1 auto">查詢 7-11 門市</button>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button type="button" id="storeBackBtn" class="btn">返回上一頁</button>
+        <button type="button" id="storeNextBtn" class="btn primary">下一步：填寫匯款資訊</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 轉帳匯款 Dialog -->
+  <dialog id="dlgBank" style="border:none;border-radius:16px;padding:0;max-width:680px;width:96%;">
+  <div style="padding:16px 18px 0;display:flex;gap:8px;font-size:12px;font-weight:600;">
+    <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">1 確認訂單</div>
+    <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">2 選擇門市</div>
+    <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #16a34a;color:#16a34a;">3 匯款資料</div>
+  </div>
+  <div style="padding:18px 18px 10px;">
+    <div style="font-weight:800;font-size:18px;">轉帳匯款資訊</div>
+    <div style="color:#6b7280;font-size:14px;margin-top:4px">請先完成匯款，再上傳匯款憑證並填寫資料。</div>
+  </div>
+  <div style="padding:0 18px 16px;display:grid;gap:10px;">
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px">
+      <div class="bankHeader">
+        <div class="bankTitle" id="bankBankVal">中國信託 (822)</div>
+        <button id="bankCopyAll" class="btn" style="padding:6px 10px;border-radius:8px">複製全部</button>
+      </div>
+      <div class="bankInfoGrid">
+        <div class="label">帳號</div><div class="value" id="bankNoVal">148540417073</div>
+      </div>
+    </div>
+
+    <form id="bankForm" enctype="multipart/form-data" style="display:grid;gap:10px">
+      <div id="bfCouponBackHint" style="font-size:12px;color:#6b7280;line-height:1.6;margin-top:4px">
+        若欲使用優惠券，請返回上一頁輸入優惠券並套用。
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">收件人姓名</label>
+        <input id="bfName" name="name" required type="text" placeholder="請輸入收件人姓名">
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">手機號碼</label>
+        <input id="bfContact" name="phone" type="tel" placeholder="例：0969123456" pattern="^09\d{8}$" inputmode="tel" title="請輸入有效手機號碼" required>
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">電子郵件</label>
+        <input id="bfEmail" name="email" type="email" placeholder="name@example.com" inputmode="email" autocomplete="email">
+      </div>
+      <div class="bank-field" style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">收件 7-11 門市（若非實體寄送商品，請填寫「無」）</label>
+        <input id="bfStore" name="store" type="text" placeholder="尚未選擇門市" readonly>
+        <div style="margin-top:4px;font-size:12px;color:#555">若需修改門市，請返回上一步</div>
+        <button type="button" id="bfBackToStoreBtn" class="btn link" style="margin-top:4px;max-width:180px;justify-self:flex-start">返回上一頁修改門市</button>
+      </div>
+      <div class="bank-field" style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">匯款金額（NT$）</label>
+        <input id="bfAmount" name="amount" type="number" min="1" required>
+        <div id="bfAmtHint" style="font-size:12px;color:#6b7280">系統自動帶入金額，無需修改</div>
+      </div>
+      <div class="bank-field" style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">匯款末五碼</label>
+        <input id="bfLast5" name="last5" pattern="\d{5}" placeholder="12345" required>
+      </div>
+      <div class="bank-field" style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">上傳匯款憑證（照片或截圖）</label>
+        <input id="bfFile" name="receipt" type="file" accept="image/*,application/pdf" required>
+      </div>
+      <div id="bfRitualBlock" class="bank-field" style="display:none;gap:6px">
+        <label style="font-size:12px;color:#6b7280">上傳您的照片（用於祈福儀式）</label>
+        <input id="bfRitualPhoto" name="ritual_photo" type="file" accept="image/*">
+      </div>
+      <div id="bfCandleTip" style="display:none;font-size:12px;color:#ef4444;line-height:1.6">
+        🔥 若您購買蠟燭祈福，請於備註欄輸入您的英文名字與西元生日。
+      </div>
+      <div class="bank-field" style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">備註（可選）</label>
+        <textarea id="bfNote" name="note" placeholder="想補充的資料（如：訂購人姓名、地址、商品規格）"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button type="button" id="bfCancel" class="btn">取消</button>
+        <button type="submit" id="bfSubmit" class="btn primary">送出匯款資訊</button>
+      </div>
+    </form>
+    <div id="bfHint" style="font-size:12px;color:#6b7280;line-height:1.6">
+      送出匯款資訊後請等待5至10秒才會跳出送出成功，有時候因圖片檔案較大要上傳較久，請勿重複點「送出匯款資訊」按鈕。另外送出後可至左邊連結查詢訂單狀態，確認訂單是否成功建立。
+    </div>
+  </div>
+</dialog>
+
+
+<script id="storeFillOverride">
+// 統一處理 7-11 門市回填：同時寫入「選擇門市」步驟與匯款表單
+// 並支援新後端傳入的欄位名稱（storename/storeid/storeaddress/storetel）
+// 以及舊版 7-11 物件欄位（stName/storeName、stCode/code、stAddr/storeAddr...）
+function fillStoreIntoForm(p){
+  if (!p) return false;
+
+  // 1) 正規化欄位名稱
+  var name = '';
+  var id   = '';
+  var addr = '';
+  var tel  = '';
+
+  try{
+    name = (p.storename || p.storeName || p.stName || '').toString().trim();
+  }catch(e){ name = ''; }
+  try{
+    id   = (p.storeid   || p.storeId   || p.stCode || p.code || '').toString().trim();
+  }catch(e){ id = ''; }
+  try{
+    addr = (p.storeaddress || p.storeAddr || p.stAddr || '').toString().trim();
+  }catch(e){ addr = ''; }
+  try{
+    tel  = (p.storetel || p.storeTel || p.stTel || '').toString().trim();
+  }catch(e){ tel = ''; }
+
+  // 2) 顯示用文字：優先「門市名稱 + (門市代號)」，沒有代號再退而求其次
+  var text = '';
+  if (name && id){
+    text = name + ' (' + id + ')';
+  } else if (name){
+    text = name;
+  } else if (addr){
+    text = addr;
+  } else if (id){
+    text = id;
+  }
+
+  if (!text) return false;
+
+  // 3) Step 2 預覽欄位（選擇門市對話框）
+  var preview = document.getElementById('dlgStoreInput');
+  if (preview){
+    preview.value = text;
+  }
+
+  // 4) Step 3 匯款表單欄位（收件 7-11 門市）＋ data-* 屬性（給後端用）
+  var bank = document.getElementById('bfStore');
+  if (bank){
+    bank.value = text;
+    // 將原始資訊塞進 data-*，方便匯款送單時附帶給後端
+    bank.setAttribute('data-storeid',      id   || '');
+    bank.setAttribute('data-storename',    name || '');
+    bank.setAttribute('data-storeaddress', addr || '');
+    bank.setAttribute('data-storetel',     tel  || '');
+  }
+
+  return true;
+}
+</script>
+<script id="candleExtrasFormal">
+function needCandleExtras(){
+  // Simplified flow: no extra required fields; use 備註 + 額外照片
+  return false;
+}
+function ensureCandleFields(required){
+  // Keep legacy extra block hidden, but allow ritual photo block to be controlled by toggleCandleUI()
+  var legacy = document.getElementById('candleExtra');
+  if (legacy) legacy.style.display = 'none';
+  // Do not touch bfRitualPhoto requirements (not required by default)
+  var nameEn = document.getElementById('bfNameEn');
+  var bday  = document.getElementById('bfBirthday');
+  var photo = document.getElementById('bfPhoto');
+  if (nameEn) nameEn.required = false;
+  if (bday)  bday.required = false;
+  if (photo) photo.required = false;
+}
+</script>
+
+<script>
+(function(){
+  const BANK = { bank: '中國信託 (822)', no: '148540417073' };
+
+  // Rich success panel (uses #toast) with "查詢訂單狀態" action
+  window.showOrderSuccessPanel = function(phone, last5){
+    try{
+      var host = document.getElementById('toast');
+      if (!host) return;
+      var html = ''
+        + '<div id="toastCard" style="background:#111827;color:#e5e7eb;border:1px solid rgba(255,255,255,.06);'
+        + 'padding:12px 14px;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.25);min-width:260px;max-width:380px">'
+        + '<div style="font-weight:800;margin-bottom:6px;font-size:14px">送出成功</div>'
+        + '<div style="font-size:13px;line-height:1.5;color:#cbd5e1">'
+        + '已收到你的匯款資訊。圖片較大時上傳需數秒，請勿重複點擊。你也可以立即查看訂單處理進度與祈福成果。'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">'
+        +   '<button id="toastClose" class="btn" style="padding:6px 10px;border-radius:8px;font-size:13px;background:#374151;color:#fff;border:1px solid rgba(255,255,255,.08)">稍後</button>'
+        +   '<button id="toastLookup" class="btn" style="padding:6px 10px;border-radius:8px;font-size:13px;background:#10b981;color:#062a1a;border:1px solid rgba(0,0,0,.06)">立即查詢</button>'
+        + '</div>'
+        + '</div>';
+      host.innerHTML = html;
+      host.style.display = '';
+      // wire buttons
+      var closeBtn = document.getElementById('toastClose');
+      var goBtn = document.getElementById('toastLookup');
+      if (closeBtn){ closeBtn.onclick = function(){ host.style.display='none'; }; }
+      if (goBtn){
+        goBtn.onclick = function(){
+          host.style.display = 'none';
+          if (typeof window.openOrderLookup === 'function'){
+            window.openOrderLookup(phone||'', (String(last5||'').replace(/\D+/g,'').slice(-5)));
+          }
+        };
+      }
+      // auto-hide after 10s (if not interacted)
+      setTimeout(function(){ try{ if (host && host.style.display !== 'none') host.style.display='none'; }catch(e){} }, 10000);
+    }catch(e){}
+  };
+
+  function copyAll(){
+    const text = `銀行：${BANK.bank}\n帳號：${BANK.no}`;
+    try{ navigator.clipboard.writeText(text); }catch(e){
+      const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    }
+    alert('已複製匯款資訊');
+  }
+
+  window.openBankDialog = function(from){
+    window.__checkoutSource = (from === 'cart') ? 'cart' : 'direct';
+    try{
+      const dlg = document.getElementById('dlgBank');
+      if(!dlg) return alert('無法顯示匯款視窗');
+      // 填入展示資訊
+      const bankEl = document.getElementById('bankBankVal');
+      const noEl   = document.getElementById('bankNoVal');
+      if (bankEl) bankEl.textContent = BANK.bank;
+      if (noEl)   noEl.textContent   = BANK.no;
+      // 清表單
+      const f = document.getElementById('bankForm');
+      if (f) f.reset();
+      // 同步 7-11 門市資訊到匯款視窗（若已在前一步選好）
+      try{
+        var storeFromDlg = document.getElementById('dlgStoreInput');
+        var storeField   = document.getElementById('bfStore');
+        // 只同步欄位值，不產生任何額外「查詢門市」按鈕
+        if (storeFromDlg || storeField){
+          var vDlg  = (storeFromDlg && storeFromDlg.value || '').trim();
+          var vBank = (storeField   && storeField.value   || '').trim();
+          if (vDlg && vBank){
+            if (storeField && storeField.value !== vDlg){
+              storeField.value = vDlg;
+            }
+            if (storeFromDlg && storeFromDlg.value !== vDlg){
+              storeFromDlg.value = vDlg;
+            }
+          } else if (vDlg && !vBank){
+            if (storeField){ storeField.value = vDlg; }
+          } else if (!vDlg && vBank){
+            if (storeFromDlg){ storeFromDlg.value = vBank; }
+          }
+        }
+      }catch(e){}
+      // If opened from product detail, capture the current detail as a pending item
+      try{
+        if (from !== 'cart'){
+          var nameEl = document.getElementById('dlgTitle');
+          var selEl  = document.getElementById('dlgVariant');
+          var qtyEl  = document.getElementById('dlgQty');
+          var priceNode = document.getElementById('dlgPrice');
+          var pName = (nameEl && nameEl.textContent || '').trim();
+          var spec  = (selEl && selEl.options && selEl.selectedIndex>=0) ? (selEl.options[selEl.selectedIndex].textContent||'').trim() : '';
+          if (spec) spec = spec.replace(/（\+[^）]*）/g,'').trim();
+          var qty   = qtyEl ? Math.max(1, Number(qtyEl.value||1)) : 1;
+          var total = 0;
+          if (priceNode){
+            var dp = Number(priceNode.getAttribute('data-price')||0);
+            if (!dp){
+              var txt = (priceNode.textContent||'').replace(/[ ,\s]/g,'');
+              dp = Number(txt)||0;
+            }
+            total = dp;
+          }
+          var unit  = qty ? (total/qty) : total;
+          var dlgEl = document.getElementById('dlg');
+          var cat   = dlgEl && dlgEl.getAttribute('data-product-cat');
+          var looks = /蠟燭/.test(pName);
+          var pid   = dlgEl && dlgEl.getAttribute('data-product-id'); // ensure product id is captured
+          var pending = pName ? {
+            id: pid || '',                 // for cart compatibility
+            productId: pid || '',          // explicit for backend fallback
+            name: pName,
+            productName: pName,
+            variantName: spec || '',
+            qty: Number(qty||1),
+            price: Number(unit||0),
+            category: (cat === '蠟燭加持祈福' || looks) ? '蠟燭加持祈福' : (cat || '佛牌/聖物')
+          } : null;
+          // --- deity detection ---
+          // try to capture deity code from dialog dataset or name keywords
+          var deityCode = '';
+          if (dlgEl){
+            deityCode = (dlgEl.getAttribute('data-product-deity') || dlgEl.getAttribute('data-deity') || '').toUpperCase();
+          }
+          if (!deityCode && pName){
+            var nm = pName.replace(/\s+/g,'').toUpperCase();
+            // keyword → code map
+            if (/四面神|BRAHMA|PHRA PHROM|PHROM|ERAWAN/.test(pName)) deityCode = 'FM';
+            else if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/.test(pName)) deityCode = 'GA';
+            else if (/崇迪|SOMDEJ|SOMDEJ|SOMDET/.test(pName)) deityCode = 'CD';
+            else if (/坤平|KHUNPHAEN|KHUN PAEN|K\.P\.|KP/.test(pName)) deityCode = 'KP';
+            else if (/哈魯曼|H(AN|AR)UMAN|HANUMAN/.test(pName)) deityCode = 'HM';
+            else if (/拉胡|RAHU/.test(pName)) deityCode = 'RH';
+            else if (/迦樓羅|GARUDA|K(AR|AL)UDA/.test(pName)) deityCode = 'JL';
+            else if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDOGON|ZEDUKIN/.test(pName)) deityCode = 'ZD';
+            else if (/招財女神|L(AX|AK)SHMI|LAKSHMI|LAMSI|ZF/.test(pName)) deityCode = 'ZF';
+            else if (/五眼四耳|FIVE[-\s]*EYES|5EYES|WE/.test(pName)) deityCode = 'WE';
+            else if (/徐祝|XUZHU|XU ZHU|XZ/.test(pName)) deityCode = 'XZ';
+            else if (/魂魄勇|HPY|HUN PO YONG/.test(pName)) deityCode = 'HP';
+          }
+          if (deityCode) pending.deity = deityCode;
+          // --- end deity detection ---
+          if (pending){
+            pending.deity = deityCodeOf(pending.deity || pending.name || '');
+            sessionStorage.setItem('__pendingDetail__', JSON.stringify(pending));
+          }
+        }
+      }catch(e){}
+      // 自動帶入金額：購物車合計優先，否則詳情價
+      let amount = 0;
+      try{
+        const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+        if (Array.isArray(cart) && cart.length){
+          amount = cart.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
+        }
+      }catch{}
+      if (!amount){
+        try{
+          const priceNode = document.getElementById('dlgPrice');
+          const p = priceNode ? Number(priceNode.getAttribute('data-price')||0) : 0;
+          if (p>0) amount = p;
+        }catch{}
+      }
+      // apply active coupon (fixed NT$200) only if deity matches any item
+      function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
+      function getActiveCoupon(){
+        try{ if (window.__coupon && typeof window.__coupon.getActiveCoupon==='function') return window.__coupon.getActiveCoupon(); }catch(e){}
+        try{ var raw = localStorage.getItem('__activeCoupon__'); if (raw) return JSON.parse(raw); }catch(e){}
+        return null;
+      }
+      // Normalize any deity input (2-letter code or Chinese/English name) → 2-letter code
+      function deityCodeOf(input){
+        try{
+          var s = (input||'').toString().trim();
+          if (!s) return '';
+          // already a 2-letter code
+          if (/^[A-Z]{2}$/.test(s)) return s.toUpperCase();
+
+          var raw = s.toUpperCase();
+          // Chinese/English keyword matching (same rules as pending detection)
+          if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/i.test(s)) return 'FM';
+          if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/i.test(s))   return 'GA';
+          if (/崇迪|SOMDEJ|SOMDET/i.test(s))                      return 'CD';
+          if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/i.test(s))  return 'KP';
+          if (/哈魯曼|H(AN|AR)UMAN/i.test(s))                     return 'HM';
+          if (/拉胡|RAHU/i.test(s))                                return 'RH';
+          if (/迦樓羅|GARUDA|K(AR|AL)UDA/i.test(s))               return 'JL';
+          if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/i.test(s)) return 'ZD';
+          if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/i.test(s))          return 'ZF';
+          if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/i.test(s)) return 'WE';
+          if (/徐祝|XU\s*ZHU|XUZHU/i.test(s))                     return 'XZ';
+          if (/魂魄勇|HUN\s*PO\s*YONG|HPY/i.test(s))              return 'HP';
+
+          return raw.length === 2 ? raw : raw; // fallback: return uppercased raw
+        }catch(e){ return ''; }
+      }
+
+      function sumEligible(items, deity){
+        if (!deity) return 0;
+        var want = deityCodeOf(deity);
+        if (!want) return 0;
+        try{
+          return items.reduce(function(s,it){
+            var itemCode = deityCodeOf( (it && (it.deity || it.name || it.title || it.productName)) || '' );
+            var ok = (itemCode && itemCode === want);
+            return s + (ok ? Number(it.price||0)*Math.max(1, Number(it.qty||1)) : 0);
+          }, 0);
+        }catch(e){ return 0; }
+      }
+      var coupon = getActiveCoupon();
+      var off = 0;
+      if (coupon && coupon.code){
+        // build a combined items list = cart + pending detail
+        var items = readCart().slice();
+        try{
+          var _pend = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
+          if (_pend) items.push(_pend);
+        }catch(_){}
+        var elig = sumEligible(items, coupon.deity);
+        if (elig > 0){ off = Number(coupon.amount||200) || 200; }
+      }
+      var grand = Math.max(0, Math.round(amount - off));
+      const amtEl = document.getElementById('bfAmount');
+      if (amtEl) amtEl.value = grand;
+      // show small line under amount to indicate coupon state
+      (function(){
+        var hint = document.getElementById('bfAmtHint');
+        if (!hint) return;
+        if (off > 0){
+          hint.textContent = '已套用優惠碼 '+ (coupon && coupon.code || '') +' 折抵 NT$' + (Number(coupon.amount||200)||200);
+          hint.style.color = '#059669';
+        }else{
+          hint.textContent = '系統自動帶入金額，無需修改';
+          hint.style.color = '#6b7280';
+        }
+      })();
+      // Candle extras based on formal category
+      try{ var need = needCandleExtras(); ensureCandleFields(need); }catch(_){ }
+      // Ensure toggleCandleUI runs after order state is set (only one copy)
+      try{ if (typeof toggleCandleUI === 'function') toggleCandleUI(); }catch(e){}
+      // 關閉其他已開啟的 dialog，避免 showModal 失敗
+      try{ document.querySelectorAll('dialog[open]').forEach(d=>{ if(d!==dlg) d.close(); }); }catch{}
+      // 顯示 Dialog
+      if (typeof dlg.showModal === 'function') dlg.showModal();
+      else alert('請使用支援對話框的瀏覽器');
+
+      // 移除匯款頁最下方「文字版購物車摘要」區塊（本次匯款金額包含以下購物車商品：...）
+      // 只刪掉純文字摘要，不碰上方圖片版訂單確認表格
+      try{
+        var dlgRoot = document.getElementById('dlgBank');
+        if (dlgRoot){
+          var blocks = dlgRoot.querySelectorAll('div,section');
+          blocks.forEach(function(node){
+            var txt = (node.textContent || '').replace(/\s+/g,'');
+            if (txt.indexOf('本次匯款金額包含以下購物車商品：') === 0){
+              node.remove();
+            }
+          });
+        }
+      }catch(e){}
+
+    }catch(e){ console.error(e); alert('開啟匯款視窗失敗'); }
+  };
+
+  document.addEventListener('click', (e)=>{
+    if (e.target && e.target.id === 'bankCopyAll'){ e.preventDefault(); copyAll(); }
+    if (e.target && e.target.id === 'bfCancel'){ e.preventDefault(); const d=document.getElementById('dlgBank'); if(d) d.close(); }
+  });
+
+  const form = document.getElementById('bankForm');
+  if (form){
+    // 匯款憑證大小限制
+    try{
+      var rec = document.getElementById('bfFile');
+      if (rec){
+        rec.addEventListener('change', function(){
+          try{
+            var f = rec.files && rec.files[0];
+            if (f && f.size > 20 * 1024 * 1024){
+              alert('匯款憑證檔案過大（上限 20MB）');
+              rec.value = '';
+            }
+          }catch(e){}
+        });
+      }
+    }catch(e){}
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const dlg = document.getElementById('dlgBank');
+
+      const submitBtn = document.getElementById('bfSubmit');
+      let pendingOverlay = document.getElementById('orderPendingOverlay');
+      let pendingText = document.getElementById('orderPendingText');
+      if (!pendingOverlay) {
+        pendingOverlay = document.createElement('div');
+        pendingOverlay.id = 'orderPendingOverlay';
+        pendingOverlay.style.position = 'fixed';
+        pendingOverlay.style.inset = '0';
+        pendingOverlay.style.zIndex = '9999';
+        pendingOverlay.style.display = 'none';
+        pendingOverlay.style.alignItems = 'center';
+        pendingOverlay.style.justifyContent = 'center';
+        pendingOverlay.style.background = 'rgba(15,23,42,0.45)';
+        pendingOverlay.style.backdropFilter = 'blur(2px)';
+        pendingOverlay.innerHTML = '<div id="orderPendingOverlayBox" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:#ffffff;box-shadow:0 10px 25px rgba(15,23,42,0.35);font-size:14px;color:#374151;"><div id="orderPendingSpinner" style="width:18px;height:18px;border-radius:999px;border:2px solid #e5e7eb;border-top-color:#4b5563;animation:orderPendingSpin 0.8s linear infinite;"></div><div id="orderPendingText">訂單送出中，請稍候...</div></div>';
+        (dlg || document.body).appendChild(pendingOverlay);
+        if (!document.getElementById('orderPendingSpinStyle')) {
+          const st = document.createElement('style');
+          st.id = 'orderPendingSpinStyle';
+          st.textContent = '@keyframes orderPendingSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}';
+          document.head.appendChild(st);
+        }
+        pendingText = document.getElementById('orderPendingText');
+      }
+
+      if (pendingOverlay) {
+        pendingOverlay.style.display = 'flex';
+        if (pendingText) pendingText.textContent = '訂單送出中，請稍候...';
+      }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+
+      const fd = new FormData(form);
+      // 附加 7-11 門市資訊
+      try{
+        var sEl = document.getElementById('bfStore');
+        if (sEl){
+          fd.set('store', (sEl.value||'').trim());
+          fd.append('store_id', sEl.getAttribute('data-storeid')||'');
+          fd.append('store_name', sEl.getAttribute('data-storename')||'');
+          fd.append('store_address', sEl.getAttribute('data-storeaddress')||'');
+          fd.append('store_tel', sEl.getAttribute('data-storetel')||'');
+        }
+      }catch(_){ }
+      // 不再強制檢查蠟燭加持額外欄位；改以備註＋可選照片
+      try{ /* no-op */ }catch(_){ }
+      try{
+        // Merge: existing cart + pending detail (if any)
+        var cart = [];
+        try{ cart = JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){}
+        if (!Array.isArray(cart)) cart = [];
+        try{
+          var pendRaw = sessionStorage.getItem('__pendingDetail__');
+          var pend = pendRaw ? JSON.parse(pendRaw) : null;
+          if (pend && typeof pend === 'object'){
+            // 若購物車本身已有商品（從購物車匯款），就不要再加 pending，避免重複計算
+            if (!cart.length){
+              cart.push(pend);
+            }
+          }
+        }catch(e){}
+        fd.set('cart', JSON.stringify(cart));
+        fd.set('method', 'BANK_TRANSFER');
+        if (Array.isArray(cart) && cart.length > 0) {
+          fd.set('mode', 'cart');
+          fd.set('useCart', '1');
+        }
+
+        // Fallback product identity for backend counters (when no cart or missing id)
+        try{
+          var pendRaw2 = sessionStorage.getItem('__pendingDetail__');
+          var pend2 = pendRaw2 ? JSON.parse(pendRaw2) : null;
+          var fpid = (pend2 && (pend2.productId || pend2.id)) || '';
+          var fqty = (pend2 && Number(pend2.qty||1)) || '';
+          if (fpid){ fd.set('productId', String(fpid)); }
+          if (fqty){ fd.set('qty', String(fqty)); }
+          if (pend2 && pend2.variantName){ fd.set('variantName', String(pend2.variantName)); }
+        }catch(_){}
+
+        // attach coupon info if present
+        try{
+          var c = (window.__coupon && window.__coupon.getActiveCoupon && window.__coupon.getActiveCoupon()) || null;
+          if (c){ fd.set('coupon', String(c.code||'')); fd.set('coupon_deity', String(c.deity||'')); }
+        }catch(e){}
+
+        const res = await fetch('/api/payment/bank',  { method:'POST', body: fd });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json().catch(()=>({}));
+        try{ sessionStorage.removeItem('__pendingDetail__'); }catch(e){}
+        alert(data && data.ok ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
+        if (dlg) dlg.close();
+        // Show a rich success panel with an action button to open the lookup dialog (prefilled)
+        try{
+          var phoneVal = (document.getElementById('bfContact') && document.getElementById('bfContact').value) || '';
+          var last5Val = (document.getElementById('bfLast5') && document.getElementById('bfLast5').value) || '';
+          if (typeof window.showOrderSuccessPanel === 'function'){
+            window.showOrderSuccessPanel(phoneVal, last5Val);
+          }
+        }catch(e){}
+
+        // After success: clear cart and refresh product list to reflect updated "已售出"
+        try{ localStorage.removeItem('cart'); }catch(_){}
+        try{ window.__coupon && window.__coupon.updateTotalsDisplay(); }catch(_){ }
+        try{
+          if (typeof loadProducts === 'function'){
+            await loadProducts();
+          }
+          // also refresh the badge in the opened detail dialog if same product
+          var dlgEl2 = document.getElementById('dlg');
+          var pidNow = dlgEl2 && dlgEl2.getAttribute('data-product-id');
+          if (pidNow && Array.isArray(window.rawItems)){
+            var pNew = window.rawItems.find(function(x){ return String(x.id) === String(pidNow); });
+            if (pNew){
+              var chip = document.getElementById('dlgChip');
+              if (chip) chip.textContent = '已售出：' + Number(pNew.sold||0);
+            }
+          }
+        }catch(_){}
+      }catch(err){
+        console.error(err);
+        try{
+          const stash = JSON.parse(localStorage.getItem('bankSubmits')||'[]');
+          const obj = {}; fd.forEach((v,k)=>{ if(k==='receipt'){ obj[k] = (v && v.name) || 'file'; } else obj[k]=v; });
+          obj.ts = Date.now();
+          stash.push(obj);
+          localStorage.setItem('bankSubmits', JSON.stringify(stash));
+        }catch{}
+        try{ sessionStorage.removeItem('__pendingDetail__'); }catch(e){}
+        alert('已送出訂單，核對匯款資訊無誤後會盡快安排出貨。');
+        if (dlg) dlg.close();
+      }finally{
+        if (pendingOverlay) {
+          pendingOverlay.style.display = 'none';
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      }
+    });
+  }
+})();
+// ---- bank dialog coupon apply (for direct-buy path) ----
+(function(){
+  var BASE = 'https://coupon-service.kaiwei425.workers.dev';
+  function getPendingDeity(){
+    try{
+      var p = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
+      if (p && (p.deity || p.name)) return deityCodeOf(p.deity || p.name);
+    }catch(_){}
+    try{
+      var dlg = document.getElementById('dlg');
+      var d = (dlg && (dlg.getAttribute('data-product-deitycode') || dlg.getAttribute('data-product-deity') || dlg.getAttribute('data-deity') || dlg.getAttribute('data-product-name'))) || '';
+      if (d) return deityCodeOf(d);
+    }catch(_){}
+    return '';
+  }
+  async function checkCoupon(code, deity){
+    var url = BASE + '/check?code=' + encodeURIComponent(code) + (deity ? '&deity=' + encodeURIComponent(deity) : '');
+    var r = await fetch(url, { method:'GET', mode:'cors', credentials:'omit', cache:'no-store' });
+    var j = await r.json().catch(()=>({}));
+    return j && j.ok ? j : { ok:false };
+  }
+  function setActiveCoupon(obj){
+    try{
+      // write to localStorage so other modules react (top bar/cart observers)
+      localStorage.setItem('__activeCoupon__', JSON.stringify(obj||{}));
+      // minimal window.__coupon shim
+      window.__coupon = window.__coupon || {};
+      window.__coupon.getActiveCoupon = function(){ try{ var raw=localStorage.getItem('__activeCoupon__'); return raw?JSON.parse(raw):null; }catch(e){ return null; } };
+      window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay();
+      // notify listeners
+      window.dispatchEvent(new StorageEvent('storage', { key:'__activeCoupon__', newValue:JSON.stringify(obj||{}) }));
+    }catch(e){}
+  }
+  function markHint(ok, text){
+    var hint = document.getElementById('bfCouponHint');
+    if (!hint) return;
+    hint.style.display = '';
+    hint.textContent = text || (ok ? '已套用優惠碼' : '優惠碼無效或不適用');
+    hint.style.color = ok ? '#059669' : '#ef4444';
+  }
+  function recalcAmount(){
+    try{
+      var amtEl = document.getElementById('bfAmount');
+      var aHint = document.getElementById('bfAmtHint');
+
+      // 1) Collect current items exactly like the order-summary does:
+      var items = [];
+      // 1a) cart (unless checkoutSource === 'direct')
+      try{
+        var src = (typeof window !== 'undefined' && window.__checkoutSource) ? String(window.__checkoutSource) : '';
+        if (src !== 'direct'){
+          var cart = JSON.parse(localStorage.getItem('cart')||'[]');
+          if (Array.isArray(cart) && cart.length){
+            items = cart.map(function(it){
+              return {
+                name:  (it && (it.name||it.title)) || '商品',
+                spec:  (it && (it.variantName||'')) || '',
+                qty:   Math.max(1, Number((it && it.qty) || 1)),
+                price: Number((it && it.price) || 0),
+                deity: (it && it.deity) || ''
+              };
+            });
+          }
+        }
+      }catch(_){}
+      // 1b) pending detail (direct-buy path)
+      try{
+        var pendRaw = sessionStorage.getItem('__pendingDetail__');
+        var pend = pendRaw ? JSON.parse(pendRaw) : null;
+        if (pend && (pend.name || pend.productName)){
+          items.push({
+            name:  pend.name || pend.productName || '商品',
+            spec:  pend.variantName || '',
+            qty:   Math.max(1, Number(pend.qty||1)),
+            price: Number(pend.price||0),
+            deity: (pend.deity||'')
+          });
+        }
+      }catch(_){}
+
+      // 2) Subtotal
+      var amount = 0;
+      try{
+        amount = items.reduce(function(s,it){
+          return s + Number(it.price||0) * Math.max(1, Number(it.qty||1));
+        }, 0);
+      }catch(_){ amount = 0; }
+
+      // 3) Coupon discount (fixed -200 if eligible deity is present in items)
+      var cpnRaw = localStorage.getItem('__activeCoupon__');
+      var cpn = cpnRaw ? JSON.parse(cpnRaw) : null;
+      var off = 0;
+      if (cpn && cpn.code){
+        var want = (typeof deityCodeOf === 'function') ? deityCodeOf(cpn.deity) : String(cpn.deity||'').toUpperCase();
+        var elig = 0;
+        try{
+          elig = items.reduce(function(s,it){
+            var code = (it && it.deity && /^[A-Z]{2}$/.test(String(it.deity))) ? String(it.deity).toUpperCase()
+                      : (typeof deityCodeOf === 'function' ? deityCodeOf((it && (it.name||'')) || '') : String(it.deity||'').toUpperCase());
+            var ok = (code && want && code === want);
+            return s + (ok ? Number(it.price||0) * Math.max(1, Number(it.qty||1)) : 0);
+          }, 0);
+        }catch(_){ elig = 0; }
+        if (elig > 0) off = Number(cpn.amount||200) || 200;
+      }
+
+      var grand = Math.max(0, Math.round(amount - off));
+
+      if (amtEl) amtEl.value = grand;
+      if (aHint){
+        if (off>0){
+          aHint.textContent = '已套用優惠碼 ' + (cpn && cpn.code || '') + ' 折抵 NT$' + (Number(cpn && cpn.amount || 200) || 200);
+          aHint.style.color = '#059669';
+        }else{
+          aHint.textContent = '系統自動帶入金額，無需修改';
+          aHint.style.color = '#6b7280';
+        }
+      }
+
+      // 通知其他總計區塊（若有）
+      try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+    }catch(e){}
+  }
+
+  // expose and react to changes
+  window.__recalcBankAmount = recalcAmount;
+  window.addEventListener('storage', function(ev){
+    try{
+      if (!ev) return;
+      if (ev.key === 'cart' || ev.key === '__activeCoupon__'){ recalcAmount(); }
+    }catch(_){}
+  });
+
+  // MutationObserver: watch order list for changes and recalc
+  try{
+    var orderListNode = document.getElementById('bfOrderList');
+    if (orderListNode){
+      var mo = new MutationObserver(function(){ recalcAmount(); });
+      mo.observe(orderListNode, { childList:true, subtree:false });
+    }
+  }catch(_){}
+
+  document.addEventListener('click', async function(e){
+    if (!(e.target && e.target.id === 'bfCouponApply')) return;
+    e.preventDefault();
+    var code = (document.getElementById('bfCouponInput') && document.getElementById('bfCouponInput').value || '').trim().toUpperCase();
+    if (!code){ markHint(false, '請輸入優惠碼'); return; }
+    var deity = getPendingDeity();
+    var res = await checkCoupon(code, deity);
+    if (res && res.ok){
+      setActiveCoupon({ code:res.code||code, deity:res.deity||deity, amount:Number(res.amount||200)||200 });
+      markHint(true, '已套用優惠碼 ' + (res.code||code) + '（限定：'+ (res.deity||deity) +'）');
+      recalcAmount();
+    }else{
+      markHint(false, '優惠碼無效、已使用，或不適用此守護神商品');
+    }
+  });
+})();
+</script>
+
+
+
+<script id="bankPriceStorePatch">
+(function(){
+  if (window.__bankPriceStorePatched) return; window.__bankPriceStorePatched = true;
+
+  function fmt(n){
+    try{ return 'NT$ ' + Number(n||0).toLocaleString('zh-TW'); }catch(e){ return 'NT$ ' + (Number(n||0).toFixed(0)); }
+  }
+
+  function ensureOrderBox(){
+    var dlg = document.getElementById('dlgBank');
+    if (!dlg) return {list:null, box:null};
+    var box = document.getElementById('bfOrderBox');
+    if (!box){
+      box = document.createElement('div');
+      box.id = 'bfOrderBox';
+      box.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:none;margin-bottom:8px';
+      box.innerHTML = '<div style="font-weight:800;margin-bottom:6px">訂單內容確認</div><div id="bfOrderList" style="display:flex;flex-direction:column;gap:8px"></div>';
+      // Insert before bankForm
+      var form = document.getElementById('bankForm');
+      if (form && form.parentNode){
+        form.parentNode.insertBefore(box, form);
+      } else {
+        dlg.appendChild(box);
+      }
+    }
+    var list = document.getElementById('bfOrderList');
+    return {list:list, box:box};
+  }
+
+  function buildItems(){
+    var items = [];
+
+    // Determine checkout source: 'direct' (single item flow) vs 'cart' (multi-item cart flow)
+    var src = (typeof window !== 'undefined' && window.__checkoutSource) ? String(window.__checkoutSource) : '';
+
+    if (src === 'direct'){
+      // ---- DIRECT CHECKOUT: ONLY the pending detail item ----
+      // read optional "removed ad-hoc ui keys" to avoid re-adding after user removed
+      var removedUI = [];
+      try{ removedUI = JSON.parse(sessionStorage.getItem('__bank_removed_ui__')||'[]'); if(!Array.isArray(removedUI)) removedUI = []; }catch(e){ removedUI = []; }
+
+      // Pending detail captured from product page/dialog
+      try{
+        var pendRaw = sessionStorage.getItem('__pendingDetail__');
+        var pend = pendRaw ? JSON.parse(pendRaw) : null;
+        if (pend && pend.name){
+          items.push({
+            name: pend.name,
+            spec: pend.variantName || '',
+            qty:  Math.max(1, Number(pend.qty||1)),
+            unit: Number(pend.price||0),
+            source:'pending',
+            index:0
+          });
+        }
+      }catch(e){}
+
+      // Fallback: if pending isn't present, attempt a last-resort snapshot from current UI
+      if (!items.length){
+        try{
+          var name = (document.getElementById('dlgTitle') && document.getElementById('dlgTitle').textContent) || '';
+          var sel  = document.getElementById('dlgVariant');
+          var spec = (sel && sel.options && sel.selectedIndex>=0) ? sel.options[sel.selectedIndex].textContent : '';
+          if (spec) spec = spec.replace(/（\+[^）]*）/g,'').trim();
+          if (!spec) spec = '標準外殼';
+          var qtyEl = document.getElementById('dlgQty');
+          var qty = qtyEl ? Math.max(1, Number(qtyEl.value||1)) : 1;
+          var priceNode = document.getElementById('dlgPrice');
+          var total = 0;
+          if (priceNode){
+            var dp = Number(priceNode.getAttribute('data-price')||0);
+            if (!dp){
+              var txt = (priceNode.textContent||'').replace(/[ ,\s]/g,'');
+              dp = Number(txt)||0;
+            }
+            total = dp;
+          }
+          var unit = qty ? (total/qty) : total;
+          if (name){
+            var snap = { name:name, spec:spec, qty:qty, unit:unit, source:'ui', index:0 };
+            snap.__key = JSON.stringify({n:snap.name,s:snap.spec,u:snap.unit,q:snap.qty});
+            if (!removedUI.includes(snap.__key)) items.push(snap);
+          }
+        }catch(e){}
+      }
+      return items;
+    }
+
+    // ---- CART CHECKOUT (default): ONLY cart items, do NOT append pending ----
+    try{
+      var cart = JSON.parse(localStorage.getItem('cart')||'[]');
+      if (Array.isArray(cart) && cart.length){
+        items = cart.map(function(it, idx){
+          var name = (it && (it.name||it.title)) || '商品';
+          var spec = (it && (it.variantName||'')) || '';
+          var qty  = Math.max(1, Number((it && it.qty) || 1));
+          var unit = Number((it && it.price) || 0);
+          return { name:name, spec:spec, qty:qty, unit:unit, source:'cart', index:idx };
+        });
+      }
+    }catch(e){}
+
+    // No pending fallback here by design — cart and direct are strictly separated
+    return items;
+  }
+
+  function renderOrderSummary(){
+    // 已改用 bankCouponBridgeUnified 的訂單內容表格
+    // 這裡只保留舊腳本需要的金額重算，不再渲染 bfOrderBox（訂單內容確認＋單行預覽＋移除按鈕）
+    try{
+      if (window.__coupon && typeof window.__coupon.updateTotalsDisplay === 'function'){
+        window.__coupon.updateTotalsDisplay();
+      }
+    }catch(_){}
+
+    try{
+      if (typeof window.__recalcBankAmount === 'function'){
+        window.__recalcBankAmount();
+      }
+    }catch(_){}
+  }
+
+  // 真正移除訂單項目並刷新
+  function removeItemFromOrder(source, index, key){
+    try{
+      if (source === 'cart'){
+        var cart = JSON.parse(localStorage.getItem('cart')||'[]');
+        if (Array.isArray(cart) && cart.length){
+          var idx = Number(index);
+          if (!isNaN(idx) && idx>=0 && idx<cart.length){
+            cart.splice(idx,1);
+          }else{
+            // fallback by snapshot key (if提供)
+            if (key){
+              var found = cart.findIndex(function(it){
+                var snap = JSON.stringify({n:String(it.name||it.title||'商品'), s:String(it.variantName||''), u:Number(it.price||0), q:Math.max(1,Number(it.qty||1))});
+                return snap === decodeURIComponent(key);
+              });
+              if (found>=0) cart.splice(found,1);
+            }
+          }
+          localStorage.setItem('cart', JSON.stringify(cart));
+          try{ window.dispatchEvent(new StorageEvent('storage', { key:'cart', newValue: JSON.stringify(cart) })); }catch(_){}
+        }
+      }else if (source === 'pending'){
+        sessionStorage.removeItem('__pendingDetail__');
+      }else if (source === 'ui'){
+        // 記錄用戶移除的 ad-hoc UI 項，避免重建時又出現
+        if (key){
+          var arr = [];
+          try{ arr = JSON.parse(sessionStorage.getItem('__bank_removed_ui__')||'[]'); }catch(e){}
+          if (!Array.isArray(arr)) arr = [];
+          if (arr.indexOf(decodeURIComponent(key)) === -1) arr.push(decodeURIComponent(key));
+          sessionStorage.setItem('__bank_removed_ui__', JSON.stringify(arr));
+        }
+      }
+    }catch(e){}
+    // 重新渲染與重算金額
+    try{ renderOrderSummary(); }catch(_){}
+    try{ if (typeof window.__recalcBankAmount === 'function') window.__recalcBankAmount(); }catch(_){}
+  }
+
+  function ensureStoreField(){
+    var form = document.getElementById('bankForm');
+    if (!form) return;
+    if (document.getElementById('bfStore')) return; // already exists
+    // Find the "上傳匯款憑證" block to insert before
+    var uploadLabel = null;
+    var labels = form.querySelectorAll('label');
+    for (var i=0;i<labels.length;i++){
+      var t = (labels[i].textContent||'').trim();
+      if (t.indexOf('上傳匯款憑證') !== -1){ uploadLabel = labels[i]; break; }
+    }
+    var field = document.createElement('div');
+    field.style.display='grid';
+    field.style.gap='6px';
+    field.innerHTML = '<label style="font-size:12px;color:#6b7280">收件7-11門市（若非實體商品，請填寫「無」）</label>' +
+                      '<input id="bfStore" name="store" placeholder="請輸入門市名稱或店號" required ' +
+                      'style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">' +
+                      '<div id="bfStoreHelp" style="margin-top:6px;font-size:12px;color:#6b7280;display:none"></div>';
+    if (uploadLabel && uploadLabel.parentNode){
+      uploadLabel.parentNode.parentNode.insertBefore(field, uploadLabel.parentNode);
+    }else{
+      form.insertBefore(field, form.firstChild);
+    }
+  }
+
+  // --- Candle UI helpers ---
+  function isCandleOrder(){
+    // 1) Check cart categories or names
+    try{
+      var cart = JSON.parse(localStorage.getItem('cart')||'[]');
+      if (Array.isArray(cart) && cart.some(function(it){
+        var cat = String((it && it.category) || '').trim();
+        var nm  = String((it && (it.name||it.title||'')) || '');
+        return cat === '蠟燭加持祈福' || /蠟燭/.test(nm);
+      })){
+        return true;
+      }
+    }catch(e){}
+    // 2) Fallback: check current detail dialog dataset
+    try{
+      var dlg = document.getElementById('dlg');
+      var cat = dlg && dlg.getAttribute('data-product-cat');
+      if (cat === '蠟燭加持祈福') return true;
+      var nm = dlg && dlg.getAttribute('data-product-name');
+      if (nm && /蠟燭/.test(nm)) return true;
+    }catch(e){}
+    // 3) Also consider pending detail captured when opening from product page
+    try{
+      var pRaw = sessionStorage.getItem('__pendingDetail__');
+      var p = pRaw ? JSON.parse(pRaw) : null;
+      if (p && (p.category === '蠟燭加持祈福' || /蠟燭/.test(p.name||''))) return true;
+    }catch(e){}
+    return false;
+  }
+
+  function toggleCandleUI(){
+    var isCandle = isCandleOrder();
+
+    // 1) Ritual photo block
+    try{
+      var rb = document.getElementById('bfRitualBlock');
+      if (rb){ rb.style.display = isCandle ? '' : 'none'; }
+    }catch(e){}
+
+    // 2) Candle tip above note
+    try{
+      var tip = document.getElementById('bfCandleTip');
+      if (tip){ tip.style.display = isCandle ? '' : 'none'; }
+    }catch(e){}
+
+    // 3) Store help hint
+    try{
+      var help = document.getElementById('bfStoreHelp');
+      if (help){
+        if (isCandle){
+          help.textContent = '若為蠟燭祈福等服務類商品，請填寫「無」。';
+          help.style.display = '';
+        }else{
+          help.textContent = '';
+          help.style.display = 'none';
+        }
+      }
+    }catch(e){}
+  }
+
+  function onOpen(){
+    var __src = (typeof window !== 'undefined' && window.__checkoutSource) ? String(window.__checkoutSource) : '';
+    if (__src !== 'direct'){
+      try{ sessionStorage.removeItem('__pendingDetail__'); }catch(_){ }
+    }
+    try{
+      ensureStoreField();
+      renderOrderSummary();
+      toggleCandleUI();
+    }catch(e){ console.error('bank patch error', e); }
+  }
+
+  // Hook into clicks that open bank dialog (without changing their original logic)
+  document.addEventListener('click', function(e){
+    var btn = e.target && ( e.target.id ? e.target : (e.target.closest && e.target.closest('#pay711, #cartGo711')) );
+    if (!btn) return;
+    var id = btn.id || '';
+    if (id === 'cartGo711')      window.__checkoutSource = 'cart';
+    else if (id === 'pay711')    window.__checkoutSource = 'direct';
+    else if ((btn.matches && btn.matches('#cartGo711')) || (btn.closest && btn.closest('#cartGo711'))) window.__checkoutSource = 'cart';
+    else if ((btn.matches && btn.matches('#pay711'))   || (btn.closest && btn.closest('#pay711')))   window.__checkoutSource = 'direct';
+
+    setTimeout(onOpen, 0);
+    setTimeout(toggleCandleUI, 0);
+  }, true);
+
+  // Handle remove clicks in the order summary list
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('.ok-remove');
+    if (!btn) return;
+    e.preventDefault();
+    var src = btn.getAttribute('data-remove-source') || '';
+    var idx = btn.getAttribute('data-remove-index') || '';
+    var key = btn.getAttribute('data-remove-key') || '';
+    removeItemFromOrder(src, idx, key);
+  }, true);
+
+  // Also run on DOM ready in case dialog is already present
+  if (document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(onOpen, 0);
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(onOpen, 0); });
+  }
+
+  // Expose for other scripts
+  window.toggleCandleUI = toggleCandleUI;
+  window.isCandleOrder = isCandleOrder;
+})();
+</script>
+
+
+<script id="bankStoreLinkPatch">
+(function(){
+  if (window.__bankStoreLinkPatched) return; window.__bankStoreLinkPatched = true;
+
+  // Build the emap URL with callback = this page (no hash), so it can redirect back with query params.
+  function buildEMapUrl(){
+    var base = "https://emap.presco.com.tw/c2cemap.ashx";
+    var params = new URLSearchParams();
+    params.set("eshopid", "870");
+    params.set("servicetype", "1");
+    // callback to this exact page (strip hash to avoid issues)
+    try{
+      var here = location.origin + location.pathname + '#bank';
+      const worker = new URL("https://shopunalomecodes.pages.dev/cvs_callback"); worker.searchParams.set("ret", here); params.set("url", worker.toString());
+    try{ worker.searchParams.set("bank","1"); }catch(e){}
+    }catch(e){
+      params.set("url", "https://localhost:3000/cvs_callback");
+    }
+    return base + "?" + params.toString();
+  }
+
+  function ensureLink(){
+    // 建立隱藏的門市查詢連結供 Step2 使用，不在 Step3 畫面顯示任何按鈕
+    var existing = document.getElementById("bfStoreLink");
+    if (existing) return;
+    try{
+      var href = buildEMapUrl();
+      if (!href) return;
+      var a = document.createElement("a");
+      a.id = "bfStoreLink";
+      a.href = href;
+      a.style.display = "none";
+      document.body.appendChild(a);
+    }catch(e){}
+  }
+
+  // Try to auto-fill from query params upon return
+  function tryAutoFillFromQuery(){
+    var usp = new URLSearchParams(location.search || "");
+    if ([...usp.keys()].length === 0) return; // nothing to do
+
+    function pick(arr){
+      for (var i=0;i<arr.length;i++){
+        var v = usp.get(arr[i]);
+        if (v) return v;
+      }
+      return "";
+    }
+
+    // Common key guesses from 7-11 emap callbacks
+    var id   = pick(["storeid","StoreId","stCode","code","store"]);
+    var name = pick(["storename","StoreName","stName","name"]);
+    var addr = pick(["storeaddress","StoreAddress","address","Addr"]);
+    var tel  = pick(["storetel","StoreTel","tel","TEL"]);
+
+    var parts = [];
+    if (name) parts.push(name);
+    if (id)   parts.push("(" + id + ")");
+    if (addr) parts.push(addr);
+    if (tel)  parts.push(tel);
+
+    var text = parts.join(" ");
+    if (!text) return;
+
+    var input = document.getElementById("bfStore");
+    if (input){
+      input.value = text;
+
+try{
+  // 自動開啟匯款視窗（若 hash 或 bank 旗標存在）
+  var hasFlag = (location.hash === '#bank') || (usp.get('bank') === '1');
+  if (hasFlag && typeof window.openBankDialog === 'function'){
+    window.openBankDialog('ret');
+  }
+}catch(e){}
+
+      try{
+        // Clear the query string (optional: avoid leaving params in the address bar)
+        if (history && history.replaceState){
+          history.replaceState({}, document.title, location.pathname + location.hash);
+        }
+      }catch(e){}
+    }
+  }
+
+  function onOpen(){
+    try{ ensureLink(); }catch(e){}
+    try{ /* No-op */ }catch(e){}
+  }
+
+  // Hook when bank dialog is opened (without changing original logic)
+  document.addEventListener('click', function(e){
+    var trigger = e.target && ( (e.target.id==='pay711') || (e.target.id==='cartGo711') || (e.target.closest && e.target.closest('#pay711, #cartGo711')) );
+    if (trigger){
+      setTimeout(onOpen, 0);
+    }
+  }, true);
+
+  // Safety net: intercept any emap link and open as a popup
+  function interceptEmapClicks(){
+    document.addEventListener('click', function(e){
+      var a = e.target && (e.target.closest ? e.target.closest('a[href]') : null);
+      if (!a) return;
+      try{
+        var href = String(a.href||'');
+        if (/emap\.presco\.com\.tw\/c2cemap\.ashx/i.test(href)){
+          e.preventDefault();
+          var w = window.open(href, 'cvs_popup', 'width=980,height=720,resizable=yes,scrollbars=yes');
+          try{ w && w.focus && w.focus(); }catch(_){ }
+        }
+      }catch(_){ }
+    }, true);
+  }
+
+  // Run on DOM ready: add link if form is already in DOM, and attempt autofill if coming back
+  if (document.readyState === 'complete' || document.readyState === 'interactive'){
+    tryAutoFillFromQuery();
+    setTimeout(onOpen, 0);
+    interceptEmapClicks();
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){
+      tryAutoFillFromQuery();
+      setTimeout(onOpen, 0);
+      interceptEmapClicks();
+    });
+  }
+})();
+</script>
+
+
+
+<script id="bankUnifiedReset">
+(function(){
+  // Disabled: previously this script stripped inline styles from the bank dialog,
+  // which removed necessary paddings and caused the form to look cropped on the edges.
+  // Keep the guard flag to avoid re-injection, but perform no mutations.
+  if (window.__bankUnifiedReset__) return;
+  window.__bankUnifiedReset__ = true;
+})();
+</script>
+
+
+<script id="bankRestorePatch">
+(function(){
+  if (window.__bankRestorePatched) return; window.__bankRestorePatched = true;
+
+  function digitsOnly(s){ return String(s||'').replace(/[^0-9]/g,''); }
+
+  function restoreBankUI(){
+    var dlg = document.getElementById('dlgBank');
+    if (!dlg) return;
+
+    // read values
+    var bankVal = '中國信託 (822)';
+    var acctVal = '148540417073';
+    var bankEl = document.getElementById('bankBankVal');
+    var noEl   = document.getElementById('bankNoVal');
+    if (bankEl && bankEl.textContent.trim()) bankVal = bankEl.textContent.trim();
+    if (noEl && noEl.textContent.trim()) acctVal = noEl.textContent.trim();
+
+    // hide old header title and grid
+    try{
+      var title = dlg.querySelector('.bankHeader .bankTitle'); if (title) title.style.display='none';
+      var grid  = dlg.querySelector('.bankInfoGrid'); if (grid) grid.style.display='none';
+    }catch(e){}
+
+    // inject four-line block
+    var box = document.getElementById('bankFourLines');
+    if (!box){
+      box = document.createElement('div');
+      box.id = 'bankFourLines';
+      var header = dlg.querySelector('.bankHeader');
+      if (header && header.parentNode){
+        header.parentNode.insertBefore(box, header.nextSibling);
+      }else{
+        dlg.appendChild(box);
+      }
+    }
+    box.innerHTML = ''
+      + '<div class="line16">銀行名稱：</div>'
+      + '<div class="line16" id="bankNameLine"></div>'
+      + '<div class="line16">匯款帳號：</div>'
+      + '<div class="line16" id="bankNoLine"></div>';
+
+    var nameLine = document.getElementById('bankNameLine');
+    var noLine   = document.getElementById('bankNoLine');
+    if (nameLine) nameLine.textContent = bankVal;
+    if (noLine)   noLine.textContent   = digitsOnly(acctVal) || acctVal;
+
+    // shrink & rebind copy button
+    var btn = document.getElementById('bankCopyAll');
+    if (btn){
+      btn.textContent = '複製帳號';
+      btn.style.padding = '4px 8px';
+      btn.style.fontSize = '12px';
+      btn.style.borderRadius = '8px';
+      btn.onclick = function(ev){
+        ev && ev.preventDefault && ev.preventDefault();
+        var text = digitsOnly((document.getElementById('bankNoLine')||{}).textContent||acctVal);
+        try{
+          navigator.clipboard.writeText(text);
+          alert('已複製帳號');
+        }catch(e){
+          var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+          alert('已複製帳號');
+        }
+      };
+    }
+
+    // set amount readonly and hint
+    var amt = document.getElementById('bfAmount');
+    if (amt){
+      amt.readOnly = true;
+      var hint = document.getElementById('bfAmtHint');
+      if (!hint){
+        hint = document.createElement('div');
+        hint.id = 'bfAmtHint';
+        hint.textContent = '系統自動帶入金額，無需修改';
+        // place right below amount input (same grid column)
+        try{
+          var parentCol = amt.parentNode;
+          if (parentCol && parentCol.appendChild) parentCol.appendChild(hint);
+        }catch(e){}
+      }
+    }
+
+    // 根據購物車與優惠券重新計算實際應付金額，確保與購物車視窗顯示一致
+    try{
+      var cartRaw = localStorage.getItem('cart') || '[]';
+      // --- 插入 twLocal helper ---
+      function twLocal(n){
+        try{
+          return 'NT$ ' + Number(n || 0).toLocaleString('zh-TW');
+        }catch(e){
+          var num = Number(n || 0);
+          if (!isFinite(num)) num = 0;
+          return 'NT$ ' + num.toFixed(0);
+        }
+      }
+      var items = [];
+      try{
+        var parsed = JSON.parse(cartRaw);
+        if (Array.isArray(parsed)) items = parsed;
+      }catch(e){}
+
+      function baseAmountOfItemForBank(it){
+        if (!it) return 0;
+        var unit = Number(it.price != null ? it.price : (it.unit != null ? it.unit : 0)) || 0;
+        var qty  = Math.max(1, Number(it.qty != null ? it.qty : (it.quantity != null ? it.quantity : 1)) || 1);
+        return unit * qty;
+      }
+
+      var sub = 0;
+      for (var i = 0; i < items.length; i++){
+        sub += baseAmountOfItemForBank(items[i]);
+      }
+
+      var off = 0;
+      try{
+        if (window.__cartCouponState && window.__cartCouponState.assignment){
+          off = Number(window.__cartCouponState.assignment.total || 0) || 0;
+        }
+      }catch(e){}
+
+      var grand = Math.max(0, sub - off);
+      if (amt && grand > 0){
+        amt.value = grand;
+      }
+
+      // Render a full cart item summary inside the bank dialog so
+      // 「訂單內容確認」對應實際匯款金額（包含購物車所有商品）
+      try{
+        if (items && items.length){
+          var dlgRoot = dlg;
+          // Create or reuse a container for the cart summary
+          var summaryBox = document.getElementById('bankCartSummary');
+          if (!summaryBox){
+            summaryBox = document.createElement('div');
+            summaryBox.id = 'bankCartSummary';
+            summaryBox.style.marginTop = '12px';
+            summaryBox.style.padding = '10px 12px';
+            summaryBox.style.borderRadius = '10px';
+            summaryBox.style.background = '#f9fafb';
+            summaryBox.style.fontSize = '13px';
+            summaryBox.style.lineHeight = '1.6';
+
+            // Try to insert the box right after the existing 「訂單內容確認」區塊，
+            // 若找不到就加在 dialog 內文的最下方。
+            var heading = dlgRoot.querySelector('.bankOrderTitle, .bankOrderHeader, .bank-order-title');
+            if (!heading){
+              // Fallback: try to locate a block containing the text "訂單內容確認"
+              var labels = dlgRoot.querySelectorAll('div, h2, h3');
+              for (var i = 0; i < labels.length; i++){
+                if ((labels[i].textContent || '').indexOf('訂單內容確認') !== -1){
+                  heading = labels[i];
+                  break;
+                }
+              }
+            }
+            if (heading && heading.parentNode){
+              heading.parentNode.insertBefore(summaryBox, heading.nextSibling);
+            }else{
+              dlgRoot.appendChild(summaryBox);
+            }
+          }
+
+          // Build HTML for all cart items
+          var html = '';
+          html += '<div style="font-weight:700;margin-bottom:4px">本次匯款金額包含以下購物車商品：</div>';
+          for (var j = 0; j < items.length; j++){
+            var it = items[j] || {};
+            var name = it.name || it.title || it.productName || '商品';
+            var spec = it.variantName || it.spec || it.deity || '';
+            var qty  = Number(it.qty != null ? it.qty : (it.quantity != null ? it.quantity : 1)) || 1;
+            var unit = Number(it.price != null ? it.price : (it.unit != null ? it.unit : 0)) || 0;
+            var line = '<div>'
+                     + name
+                     + (spec ? '｜規格：' + spec : '')
+                     + '｜數量：' + qty
+                     + '｜單價：' + twLocal(unit)
+                     + '</div>';
+            html += line;
+          }
+
+          // Show discount info if any coupon is applied
+          if (off > 0){
+            html += '<div style="margin-top:6px;color:#059669">已套用優惠折抵 '
+                 + twLocal(off).replace(/^NT\$\s*/, 'NT$ ')
+                 + '，實際應付金額為 '
+                 + twLocal(grand).replace(/^NT\$\s*/, 'NT$ ')
+                 + '</div>';
+          }else{
+            html += '<div style="margin-top:6px;color:#6b7280">本次匯款金額：'
+                 + twLocal(grand).replace(/^NT\$\s*/, 'NT$ ')
+                 + '</div>';
+          }
+
+          summaryBox.innerHTML = html;
+        }
+      }catch(_){}
+    }catch(e){}
+  }
+
+  function onOpen(){
+    try{ restoreBankUI(); }catch(e){ console.error(e); }
+  }
+
+  // Trigger when bank dialog opens (respect existing logic, don't override)
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    var fire = t && (t.id==='pay711' || t.id==='cartGo711' || (t.closest && t.closest('#pay711,#cartGo711')));
+    if (fire){ setTimeout(onOpen, 0); }
+  }, true);
+
+  // Also run on DOM ready (for cases where dialog is already present)
+  if (document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(onOpen, 0);
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(onOpen, 0); });
+  }
+})();
+</script>
+
+
+<script id="emapWorkerLinkPatch">
+(function(){
+  function buildEMapUrl(){
+    var base = "https://emap.presco.com.tw/c2cemap.ashx";
+    var params = new URLSearchParams();
+    params.set("eshopid", "870");
+    params.set("servicetype", "1");
+    // Use full href and force #bank to help the page reopen the bank dialog on return
+    var here = location.href;
+    if (!/#bank$/i.test(here) && location.hash.toLowerCase() !== "#bank") {
+      // Append #bank if not present
+      // Avoid duplicating hashes
+      if (here.indexOf("#") === -1) here += "#bank";
+      else if (location.hash === "") here += "bank";
+    }
+    var worker = new URL("https://shopunalomecodes.pages.dev/cvs_callback");
+    worker.searchParams.set("ret", here);
+    params.set("url", worker.toString());
+    return base + "?" + params.toString();
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var a = document.getElementById('bfStoreLink');
+    if (a) a.href = buildEMapUrl();
+    if (a) a.removeAttribute('target');
+    // If there are other entry points (e.g., pay711/cartGo711), keep original behavior; we only ensure bfStoreLink uses our URL
+  });
+})();
+</script>
+
+
+<script id="bankAutoReopen">
+(function(){
+  function qs(){ return new URLSearchParams(location.search); }
+  function refillFromQuery(){
+    var sp = qs();
+    var name = sp.get('storename') || '';
+    var id   = sp.get('storeid') || '';
+    var addr = sp.get('storeaddress') || '';
+    var tel  = sp.get('storetel') || '';
+
+    var val = '';
+    if (name && id) val = name + ' (' + id + ')';
+    else if (name)  val = name;
+    else if (id)    val = id;
+
+    var box = document.getElementById('bfStore');
+    if (box && val) {
+      box.value = val;
+      box.setAttribute('data-storeid', id);
+      box.setAttribute('data-storename', name);
+      box.setAttribute('data-storeaddress', addr);
+      box.setAttribute('data-storetel', tel);
+    }
+  }
+
+  function reopenIfNeeded(){
+    var sp = qs();
+    var shouldOpen = (location.hash && location.hash.toLowerCase() === '#bank') || sp.get('bank') === '1';
+    if (!shouldOpen) return;
+
+    // try to open the bank dialog; prefer your existing helper
+    try{
+      if (typeof openBankDialog === 'function') {
+        openBankDialog('detail');
+        return;
+      }
+    }catch(e){}
+    // fallback to show dialog element
+    try{
+      var dlg = document.getElementById('dlgBank');
+      if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+    }catch(e){}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    refillFromQuery();
+    reopenIfNeeded();
+  });
+})();
+</script>
+
+
+<script id="emapPopupOnlyPatch">
+(function(){
+  // Build emap URL with full ret and #bank marker
+  function buildEMapUrl(){
+    var base = "https://emap.presco.com.tw/c2cemap.ashx";
+    var emap = new URL(base);
+    emap.searchParams.set("eshopid", "870");
+    emap.searchParams.set("servicetype", "1");
+    var here = location.href;
+    if (!/#bank$/i.test(here) && location.hash.toLowerCase() !== "#bank"){
+      if (here.indexOf('#') === -1) here += "#bank";
+      else if (location.hash === "") here += "bank";
+    }
+    var worker = new URL("https://shopunalomecodes.pages.dev/cvs_callback");
+    worker.searchParams.set("ret", here);
+    emap.searchParams.set("url", worker.toString());
+    return emap.toString();
+  }
+
+  function parseStoreParams(sp){
+    return {
+      storename: sp.get('storename') || '',
+      storeid: sp.get('storeid') || '',
+      storeaddress: sp.get('storeaddress') || '',
+      storetel: sp.get('storetel') || ''
+    };
+  }
+
+  function fillStore(data){
+    var box = document.getElementById('bfStore');
+    if (!box) return;
+    var val = '';
+    if (data.storename && data.storeid) val = data.storename + ' (' + data.storeid + ')';
+    else if (data.storename) val = data.storename;
+    else if (data.storeid) val = data.storeid;
+    if (val){
+      box.value = val;
+      box.setAttribute('data-storeid', data.storeid||'');
+      box.setAttribute('data-storename', data.storename||'');
+      box.setAttribute('data-storeaddress', data.storeaddress||'');
+      box.setAttribute('data-storetel', data.storetel||'');
+      try{ box.dispatchEvent(new Event('input')); }catch(e){}
+    }
+  }
+
+  function openBankIfNeeded(){
+    try{
+      if (typeof openBankDialog === 'function'){ openBankDialog('detail'); }
+      else {
+        var dlg = document.getElementById('dlgBank');
+        if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+      }
+    }catch(e){}
+  }
+
+  // Intercept "查詢門市" click -> popup
+  function hookLink(){
+    var a = document.getElementById('bfStoreLink');
+    if (!a) return;
+    a.removeAttribute('target'); // force same-window behavior off
+    a.addEventListener('click', function(ev){
+      ev.preventDefault();
+      var url = buildEMapUrl();
+      // open focused popup (not a new tab)
+      var w = window.open(url, 'cvs_popup', 'width=980,height=720');
+      try{ w && w.focus && w.focus(); }catch(e){}
+      sessionStorage.setItem('cvs_popup_open', '1');
+    }, {passive:false});
+  }
+
+  // Direct-return (same window or popup blocked): if URL carries store params, apply + open dialog
+  function handleDirectReturn(){
+    var sp = new URLSearchParams(location.search||'');
+    var data = parseStoreParams(sp);
+    var hasStore = data.storename || data.storeid || data.storeaddress || data.storetel;
+    if (hasStore){
+      fillStore(data);
+      openBankIfNeeded();
+      // keep #bank marker for consistency
+      try{
+        var u = new URL(location.href);
+        if (u.hash.toLowerCase() !== '#bank') u.hash = '#bank';
+        history.replaceState({}, document.title, u.toString());
+      }catch(e){}
+    }
+  }
+
+  // If THIS window is the popup landing (has params & opener), post back and close
+  function maybePopupReturn(){
+    var sp = new URLSearchParams(location.search||'');
+    var data = parseStoreParams(sp);
+    var hasStore = data.storename || data.storeid || data.storeaddress || data.storetel;
+    if (hasStore && window.opener && typeof window.opener.postMessage === 'function'){
+      try{
+        window.opener.postMessage({ __cvs_store__: true, ...data }, '*');
+        setTimeout(function(){ try{ window.close(); }catch(e){} }, 200);
+      }catch(e){}
+    }
+  }
+
+  window.addEventListener('message', function(ev){
+    try{
+      var d = ev.data || {};
+      if (d && d.__cvs_store__){
+        fillStore(d);
+        openBankIfNeeded();
+        try{
+          var u = new URL(location.href);
+          if (u.hash.toLowerCase() !== '#bank') u.hash = '#bank';
+          history.replaceState({}, document.title, u.toString());
+        }catch(e){}
+      }
+    }catch(e){}
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    hookLink();
+    handleDirectReturn();
+    maybePopupReturn();
+  });
+})();
+</script>
+
+
+<script id="storeAutofillPatch">
+(function(){
+  function parseStore(sp){
+    return {
+      storename: sp.get('storename') || '',
+      storeid: sp.get('storeid') || '',
+      storeaddress: sp.get('storeaddress') || '',
+      storetel: sp.get('storetel') || ''
+    };
+  }
+  function fillStore(data){
+    try{
+      var box = document.getElementById('bfStore');
+      if (!box) return;
+      var val = '';
+      if (data.storename && data.storeid) val = data.storename + ' (' + data.storeid + ')';
+      else if (data.storename) val = data.storename;
+      else if (data.storeid) val = data.storeid;
+      if (val){
+        box.value = val;
+        box.setAttribute('data-storeid', data.storeid||'');
+        box.setAttribute('data-storename', data.storename||'');
+        box.setAttribute('data-storeaddress', data.storeaddress||'');
+        box.setAttribute('data-storetel', data.storetel||'');
+        try{ box.dispatchEvent(new Event('input')); }catch(e){}
+      }
+    }catch(e){ console.error(e); }
+  }
+  function reopenBank(){
+    try{
+      if (typeof openBankDialog === 'function'){ openBankDialog('detail'); }
+      else {
+        var d = document.getElementById('dlgBank');
+        if (d && typeof d.showModal === 'function') d.showModal();
+      }
+    }catch(e){}
+  }
+  // Direct URL case
+  document.addEventListener('DOMContentLoaded', function(){
+    var sp = new URLSearchParams(location.search||'');
+    var data = parseStore(sp);
+    if (data.storename || data.storeid || data.storeaddress || data.storetel){
+      fillStore(data);
+      reopenBank();
+    }
+  });
+  // Popup message case
+  window.addEventListener('message', function(ev){
+    try{
+      var d = ev.data||{};
+      if (d && d.__cvs_store__){
+        fillStore(d);
+        reopenBank();
+      }
+    }catch(e){}
+  });
+})();
+</script>
+
+
+<script id="cvsAutoFillStrict">
+(function(){
+  if (window.__cvsAutoFillStrict) return; window.__cvsAutoFillStrict = true;
+
+  function pick(sp, keys){
+    for (var i=0;i<keys.length;i++){
+      var v = sp.get(keys[i]);
+      if (v) return v;
+    }
+    return '';
+  }
+  function parseFromURL(u){
+    try{
+      var sp = new URLSearchParams((u && u.search) || location.search || '');
+      var id   = pick(sp, ['storeid','StoreId','stCode','code','store']);
+      var name = pick(sp, ['storename','StoreName','stName','name']);
+      var addr = pick(sp, ['storeaddress','StoreAddress','address','Addr']);
+      var tel  = pick(sp, ['storetel','StoreTel','tel','TEL']);
+      return {id:id||'', name:name||'', addr:addr||'', tel:tel||''};
+    }catch(e){ return {id:'',name:'',addr:'',tel:''}; }
+  }
+  function composeText(d){
+    var t = '';
+    if (d.name && d.id) t = d.name + ' (' + d.id + ')';
+    else if (d.name)    t = d.name;
+    else if (d.id)      t = d.id;
+    // 若需要可加地址電話：
+    // if (d.addr) t += (t?' · ':'') + d.addr;
+    // if (d.tel)  t += (t?' · ':'') + d.tel;
+    return t;
+  }
+  function openBankIfPossible(){
+    try{
+      if (typeof openBankDialog === 'function'){ openBankDialog('detail'); return; }
+      var dlg = document.getElementById('dlgBank');
+      if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+    }catch(e){}
+  }
+  function fillIntoField(d){
+    var text = composeText(d);
+    if (!text) return false;
+    var el = document.getElementById('bfStore');
+    if (!el) return false;
+    try{
+      el.value = text;
+      el.setAttribute('data-storeid', d.id||'');
+      el.setAttribute('data-storename', d.name||'');
+      el.setAttribute('data-storeaddress', d.addr||'');
+      el.setAttribute('data-storetel', d.tel||'');
+      el.dispatchEvent(new Event('input', {bubbles:true}));
+      el.dispatchEvent(new Event('change', {bubbles:true}));
+      return true;
+    }catch(e){ return false; }
+  }
+  function whenFieldReady(cb){
+    if (document.getElementById('bfStore')){ cb(); return; }
+    var mo = new MutationObserver(function(){
+      if (document.getElementById('bfStore')){ mo.disconnect(); cb(); }
+    });
+    mo.observe(document.documentElement, {childList:true, subtree:true});
+  }
+
+  // 1) DOM ready: 若 URL 已有門市資料，等待欄位出現後回填
+  document.addEventListener('DOMContentLoaded', function(){
+    var data = parseFromURL(location);
+    var has = data.id || data.name || data.addr || data.tel;
+    if (!has) return;
+    whenFieldReady(function(){
+      if (fillIntoField(data)) openBankIfPossible();
+    });
+  });
+
+  // 2) postMessage：若 popup/新視窗回傳，照樣回填
+  window.addEventListener('message', function(ev){
+    try{
+      var d = ev.data || {};
+      if (!d.__cvs_store__) return;
+      var got = { id: d.storeid||'', name: d.storename||'', addr: d.storeaddress||'', tel: d.storetel||'' };
+      whenFieldReady(function(){
+        if (fillIntoField(got)) openBankIfPossible();
+      });
+    }catch(e){}
+  });
+})();
+</script>
+
+
+<script id="cart-coupon-normalize-and-apply">
+(function(){
+  if (window.__cartCouponPatchedMulti__) return; 
+  window.__cartCouponPatchedMulti__ = true;
+
+  // 每次重新載入購物頁時，不自動沿用上一筆訂單的優惠券狀態
+  try{
+    localStorage.removeItem('__cartCoupons__');
+    localStorage.removeItem('__cartCouponsCartSig__');
+    // 同時清除舊版購物車優惠暫存，避免一打開購物車就出現上一筆訂單的折扣
+    localStorage.removeItem('__activeCoupons__');
+    localStorage.removeItem('__activeCoupon__');
+    // 也一併清除舊版以 coupon_* 命名的 sessionStorage 折扣暫存，避免殘留 -200 狀態
+    try{
+      sessionStorage.removeItem('coupon_subtotal');
+      sessionStorage.removeItem('coupon_discount');
+      sessionStorage.removeItem('coupon_grand');
+      sessionStorage.removeItem('coupon_lines');
+      sessionStorage.removeItem('__activeCoupons__');
+    }catch(_){}
+  }catch(e){}
+  var __cartCouponsMem = [];
+  var __cartCouponsMemSig = '';
+
+  // ---------- 基本工具 ----------
+  function deityCodeOf(input){
+    try{
+      var s = (input||'').toString().trim();
+      if (!s) return '';
+      if (/^[A-Z]{2}$/.test(s)) return s.toUpperCase();
+      if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/i.test(s)) return 'FM';
+      if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/i.test(s))   return 'GA';
+      if (/崇迪|SOMDEJ|SOMDET/i.test(s))                      return 'CD';
+      if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/i.test(s))  return 'KP';
+      if (/哈魯曼|H(AN|AR)UMAN/i.test(s))                     return 'HM';
+      if (/拉胡|RAHU/i.test(s))                               return 'RH';
+      if (/迦樓羅|GARUDA|K(AR|AL)UDA/i.test(s))              return 'JL';
+      if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/i.test(s)) return 'ZD';
+      if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/i.test(s))          return 'ZF';
+      if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/i.test(s)) return 'WE';
+      if (/徐祝|XU\s*ZHU|XUZHU/i.test(s))                     return 'XZ';
+      if (/魂魄勇|HUN\s*PO\s*YONG|HPY/i.test(s))              return 'HP';
+      return s.toUpperCase();
+    }catch(e){ return ''; }
+  }
+  function readCart(){
+    try{
+      var c = JSON.parse(localStorage.getItem('cart')||'[]');
+      return Array.isArray(c) ? c : [];
+    }catch(e){ return []; }
+  }
+  function subTotal(items){
+    try{
+      return (items || []).reduce(function(sum, it){
+        return sum + baseAmountOfItem(it);
+      }, 0);
+    }catch(e){
+      return 0;
+    }
+  }
+  // --- 購物車內容簽章（快照） ---
+  function cartSignature(){
+    try{
+      var items = readCart();
+      return JSON.stringify(items.map(function(it){
+        return {
+          id: (it && (it.id || it.code || it.sku || it.productId || it.name || it.title || '')),
+          deity: (it && (it.deity || '')),
+          price: Number(it && it.price || 0),
+          qty: Math.max(1, Number(it && (it.qty || it.quantity || 1)) || 1)
+        };
+      }));
+    }catch(e){ return '[]'; }
+  }
+  function tw(n){
+    try{ return 'NT$ ' + Number(n||0).toLocaleString('zh-TW'); }
+    catch(e){ return 'NT$ ' + (Number(n||0).toFixed(0)); }
+  }
+
+  // ---------- 優惠券存取：支援多張 ----------
+  function getCartCoupons(){
+    try{
+      // 若購物車目前是空的，視為新的購物流程，強制清除所有舊優惠券
+      var itemsNow = readCart();
+      if (!itemsNow || !itemsNow.length){
+        __cartCouponsMem = [];
+        __cartCouponsMemSig = '';
+        try{
+          localStorage.removeItem('__cartCoupons__');
+          localStorage.removeItem('__cartCouponsCartSig__');
+        }catch(_){ }
+        return [];
+      }
+
+      var curSig = cartSignature();
+      // 更新目前購物車簽章，但保留已套用的優惠券
+      // 只在購物車完全清空時（上方條件）才會強制清除優惠狀態
+      __cartCouponsMemSig = curSig;
+
+      // 回傳一份拷貝，避免外部意外修改
+      return __cartCouponsMem.slice();
+    }catch(e){
+      return [];
+    }
+  }
+  function setCartCoupons(list){
+    try{
+      var arr = Array.isArray(list) ? list : [];
+      __cartCouponsMem = arr.slice();
+      __cartCouponsMemSig = cartSignature();
+
+      // 將目前狀態寫入 localStorage 只是為了讓其它模組（例如頂部 bar）可以同步顯示
+      try{
+        localStorage.setItem('__cartCoupons__', JSON.stringify(arr));
+        localStorage.setItem('__cartCouponsCartSig__', __cartCouponsMemSig);
+      }catch(_){ }
+      // 清除舊版 coupon keys
+      try{
+        localStorage.removeItem('__activeCoupon__');
+        localStorage.removeItem('__activeCoupons__');
+      }catch(_){ }
+
+      // 對其他模組公布狀態（以記憶體為主）
+      window.__cartCouponState = window.__cartCouponState || {};
+      window.__cartCouponState.coupons = __cartCouponsMem.slice();
+      // 清除舊版全域狀態
+      try{
+        window.__activeCoupon = null;
+        window.__activeCoupons = null;
+      }catch(_){ }
+
+      // 廣播事件讓其它監聽者可更新
+      try{
+        window.dispatchEvent(new StorageEvent('storage', { key:'__cartCoupons__', newValue: JSON.stringify(arr) }));
+      }catch(_){}
+    }catch(e){}
+  }
+  function removeCartCoupon(code){
+    var list = getCartCoupons().filter(function(c){
+      return String(c.code||'').toUpperCase() !== String(code||'').toUpperCase();
+    });
+    setCartCoupons(list);
+  }
+
+  // ---------- 商品與折扣分配 ----------
+  function baseAmountOfItem(it){
+    if (!it) return 0;
+    var unit = Number(it.price != null ? it.price : it.unit != null ? it.unit : 0) || 0;
+    var qty  = Math.max(1, Number(it.qty != null ? it.qty : it.quantity != null ? it.quantity : 1) || 1);
+    return unit * qty;
+  }
+  function itemDeityOf(it){
+    if (!it) return '';
+    var d = it.deity || it.deityCode || it.deity_id || '';
+    if (!d){
+      var nm = it.name || it.title || it.productName || '';
+      d = deityCodeOf(nm);
+    }
+    return deityCodeOf(d);
+  }
+  function normDeity(d){
+    return deityCodeOf(d||'');
+  }
+
+  // 依照「一個商品最多一張券」規則，把多張券分配到購物車商品上
+  function assignCouponsToItems(items, coupons){
+    var discountedItemIdx = {};   // itemIndex -> true
+    var lines = [];
+    var total = 0;
+
+    for (var ci = 0; ci < coupons.length; ci++){
+      var cpn = coupons[ci];
+      if (!cpn || !cpn.code) continue;
+
+      var deity = normDeity(cpn.deity || '');
+      var bestIdx  = -1;
+      var bestBase = 0;
+
+      for (var i = 0; i < items.length; i++){
+        if (discountedItemIdx[i]) continue; // 一個商品只能吃一張券
+
+        var it = items[i] || {};
+        var itemDeity = itemDeityOf(it);
+
+        if (deity && itemDeity && itemDeity !== deity) continue;
+
+        var base = baseAmountOfItem(it);
+        if (base <= 0) continue;
+
+        if (base > bestBase){
+          bestBase = base;
+          bestIdx  = i;
+        }
+      }
+
+      if (bestIdx < 0) continue; // 找不到適用商品
+
+      var rawAmt   = (cpn.amount != null ? cpn.amount : (cpn.off != null ? cpn.off : cpn.discount));
+      var discount = Number(rawAmt || 0);
+      if (!discount || discount <= 0) discount = 200;
+      if (discount > bestBase) discount = bestBase;
+
+      total += discount;
+      discountedItemIdx[bestIdx] = true;
+
+      lines.push({
+        code:      String(cpn.code || ''),
+        deity:     deity,
+        amount:    discount,
+        itemIndex: bestIdx
+      });
+    }
+
+    return { total: total, lines: lines, usedItems: discountedItemIdx };
+  }
+
+  // ---------- 優惠券清單 UI（在購物車欄位下方） ----------
+  function deityNameOf(code){
+    var m = {
+      FM:'四面神',
+      GA:'象神',
+      CD:'崇迪',
+      KP:'坤平',
+      HM:'哈魯曼',
+      RH:'拉胡',
+      JL:'迦樓羅',
+      ZD:'澤度金',
+      ZF:'招財女神',
+      WE:'五眼四耳',
+      XZ:'徐祝',
+      HP:'魂魄勇'
+    };
+    return m[ normDeity(code) ] || '';
+  }
+
+  function ensureCouponListBox(){
+    var box = document.getElementById('cartCouponList');
+    if (box) return box;
+
+    box = document.createElement('div');
+    box.id = 'cartCouponList';
+    box.style.marginTop = '6px';
+    box.style.display = 'none';
+    box.style.fontSize = '13px';
+    box.style.lineHeight = '1.6';
+
+    var hint = document.getElementById('cartCouponHint');
+    if (hint && hint.parentNode){
+      hint.parentNode.insertBefore(box, hint.nextSibling);
+    }else{
+      var input = document.getElementById('cartCouponInput');
+      if (input && input.parentNode){
+        input.parentNode.appendChild(box);
+      }else{
+        document.body.appendChild(box);
+      }
+    }
+    return box;
+  }
+
+  function renderCouponList(assignInfo){
+    var box = ensureCouponListBox();
+    var coupons = getCartCoupons();
+    box.innerHTML = '';
+
+    if (!coupons.length){
+      box.style.display = 'none';
+      return;
+    }
+    box.style.display = '';
+
+    var items = readCart();
+    var assignedLines = (assignInfo && assignInfo.lines) ? assignInfo.lines : [];
+
+    coupons.forEach(function(cpn){
+      var row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.justifyContent = 'space-between';
+      row.style.alignItems = 'center';
+      row.style.gap = '8px';
+      row.style.padding = '6px 8px';
+      row.style.border = '1px solid #e5e7eb';
+      row.style.borderRadius = '8px';
+      row.style.marginBottom = '4px';
+
+      var deity = normDeity(cpn.deity || '');
+      var dName = deityNameOf(deity);
+      var line  = assignedLines.find(function(l){ 
+        return String(l.code||'').toUpperCase() === String(cpn.code||'').toUpperCase();
+      });
+      var appliedText = '';
+      if (line && typeof line.itemIndex === 'number'){
+        var it = items[line.itemIndex] || {};
+        var nm = it.name || it.title || it.productName || '商品';
+        appliedText = '已套用於：「' + nm + '」 折抵 ' + tw(line.amount).replace(/^NT\$\s*/, 'NT$ ');
+      }else{
+        appliedText = '目前尚未找到可套用的商品（或全部商品已使用其他優惠）';
+      }
+
+      var left = document.createElement('div');
+      left.innerHTML = ''
+        + '<div style="font-weight:700">優惠碼：'+ String(cpn.code||'') +'</div>'
+        + '<div style="color:#6b7280">守護神：'
+        + (deity ? deity + (dName ? '｜'+dName : '') : '不限')
+        + '</div>'
+        + '<div style="color:#6b7280;font-size:12px">'+ appliedText +'</div>';
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '移除';
+      btn.setAttribute('data-coupon-code', String(cpn.code||''));
+      btn.style.fontSize = '12px';
+      btn.style.padding = '4px 8px';
+      btn.style.borderRadius = '8px';
+      btn.style.border = '1px solid #ef4444';
+      btn.style.background = '#fff';
+      btn.style.color = '#ef4444';
+      btn.style.cursor = 'pointer';
+
+      row.appendChild(left);
+      row.appendChild(btn);
+      box.appendChild(row);
+    });
+  }
+
+  // ---------- 合計金額：使用多券分配結果 ----------
+  function updateCartTotals(){
+    // 確保購物車優惠碼輸入框與按鈕永遠可以使用（不會被其他腳本鎖住）
+    try{
+      var _input = document.getElementById('cartCouponInput');
+      if (_input){
+        _input.disabled = false;
+        _input.readOnly = false;
+        _input.removeAttribute('disabled');
+        _input.removeAttribute('readonly');
+      }
+      var _btn = document.getElementById('cartApply');
+      if (_btn){
+        _btn.disabled = false;
+        _btn.removeAttribute('disabled');
+      }
+    }catch(e){}
+
+    var items = readCart();
+    var sub   = subTotal(items);
+    var coupons = getCartCoupons();
+    var assign = assignCouponsToItems(items, coupons);
+    var off   = assign.total || 0;
+    var grand = Math.max(0, sub - off);
+
+
+    // 對外輸出目前分配結果，給上方 bar / 其他模組使用
+    window.__cartCouponState = window.__cartCouponState || {};
+    window.__cartCouponState.assignment = assign;
+
+    function setText(selList, val){
+      selList.forEach(function(sel){
+        try{
+          var nodes = [];
+          if (typeof sel === 'string') nodes = Array.prototype.slice.call(document.querySelectorAll(sel));
+          else if (sel && sel.nodeType === 1) nodes = [sel];
+          nodes.forEach(function(n){ n.textContent = val; });
+        }catch(_){}
+      });
+    }
+
+    // 小計（cart overlay + 其他可能的顯示區域）
+    setText([
+      '#cartTotal',            // 購物車視窗中的「小計」
+      '#cartSubtotal',         // 舊版備援
+      '#topSubtotal',          // 頂部 bar
+      '[data-cart-subtotal]',
+      '.cart-subtotal'
+    ], tw(sub));
+
+    // 折扣（顯示成 -NT$ xxx）；沒有折扣時顯示 -NT$ 0 並可選擇隱藏折扣列
+    var offText = off ? ('-' + tw(off).replace(/^NT\$\s*/, 'NT$ ')) : '-NT$ 0';
+    setText([
+      '#cartOff',              // 購物車視窗中的「折扣」
+      '#cartDiscount',         // 舊版備援
+      '#topDiscount',          // 頂部 bar
+      '[data-cart-discount]',
+      '.cart-discount'
+    ], offText);
+
+    // 控制折扣那一整列要不要顯示
+    try{
+      var offRow = document.querySelector('.cartSum.cartDiscount');
+      if (offRow){ offRow.style.display = off ? '' : 'none'; }
+    }catch(_){ }
+
+    // 應付金額 / 總金額
+    setText([
+      '#cartGrandTotal',       // 購物車視窗中的「應付金額」
+      '#cartGrand',            // 舊版備援
+      '#cartSum',              // 其他舊版 ID
+      '#topGrand',             // 頂部 bar
+      '[data-cart-grand]',
+      '.cartGrandTotal',
+      '.cart-grand',
+      '.cart-total'
+    ], tw(grand));
+
+    var hint = document.getElementById('cartCouponHint');
+    if (hint){
+      var state = hint.getAttribute('data-state') || '';
+      if (coupons && coupons.length){
+        hint.style.display = '';
+        hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(off).replace(/^NT\$\s*/, 'NT$ ');
+        hint.style.color = '#059669';
+        hint.style.background = 'transparent';
+        hint.style.padding = '0';
+        hint.style.borderRadius = '0';
+        hint.style.marginTop = '0';
+        hint.setAttribute('data-state', 'ok');
+      }else{
+        // 若目前是錯誤狀態，就保留錯誤提示，不要清空
+        if (state !== 'error'){
+          hint.style.display = 'none';
+          hint.textContent = '';
+          hint.style.background = 'transparent';
+          hint.style.padding = '0';
+          hint.style.borderRadius = '0';
+          hint.style.marginTop = '0';
+          hint.removeAttribute('data-state');
+        }
+      }
+    }
+
+    // 渲染「已套用優惠券」清單
+    renderCouponList(assign);
+
+  }
+
+  // storage 變動即時更新
+  window.addEventListener('storage', function(ev){
+    if (!ev) return;
+    if (ev.key === 'cart' || ev.key === '__cartCoupons__'){
+      updateCartTotals();
+    }
+  });
+  document.addEventListener('DOMContentLoaded', updateCartTotals);
+
+  // 讓新的折扣與總金額邏輯成為唯一來源：
+  // 1) 把 updateCartTotals 暴露給其他腳本使用
+  // 2) 用低頻率計時器重算，避免舊的購物車腳本在之後覆寫總金額或折扣
+  try{
+    window.__cartCouponRecalc = updateCartTotals;
+    if (!window.__cartGrandWatch){
+      window.__cartGrandWatch = setInterval(function(){
+        try{ updateCartTotals(); }catch(_){ }
+      }, 500);
+    }
+  }catch(_){ }
+
+  // 本機紀錄：已使用過的優惠碼（以防使用者在同一瀏覽器重複使用）
+  function getUsedCouponsLocal(){
+    try{
+      var raw = localStorage.getItem('__usedCoupons__');
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function isCouponUsedLocal(code){
+    var uc = String(code || '').toUpperCase();
+    if (!uc) return false;
+    var arr = getUsedCouponsLocal();
+    return arr.indexOf(uc) !== -1;
+  }
+  function markCouponUsedLocal(code){
+    try{
+      var uc = String(code || '').toUpperCase();
+      if (!uc) return;
+      var arr = getUsedCouponsLocal();
+      if (arr.indexOf(uc) === -1){
+        arr.push(uc);
+        localStorage.setItem('__usedCoupons__', JSON.stringify(arr));
+      }
+    }catch(e){}
+  }
+
+  // ---------- 遠端檢查優惠碼 ----------
+  async function checkCoupon(code, deity){
+    // 先檢查這張券是否在本機已經被標記為「使用過」
+    if (isCouponUsedLocal(code)){
+      return { ok:false, reason:'already_used_local' };
+    }
+    try{
+      var base = 'https://coupon-service.kaiwei425.workers.dev';
+      var qs = 'code=' + encodeURIComponent(code);
+      if (deity) qs += '&deity=' + encodeURIComponent(deity);
+      var r = await fetch(base + '/check?' + qs, { method:'GET', mode:'cors', credentials:'omit', cache:'no-store' });
+      var j = await r.json().catch(function(){ return {}; });
+      return j && j.ok ? j : { ok:false };
+    }catch(e){ return { ok:false }; }
+  }
+
+  function computeCartDeitySet(items){
+    var set = new Set();
+    (items||[]).forEach(function(it){
+      var code = itemDeityOf(it);
+      if (code) set.add(code);
+    });
+    return Array.from(set);
+  }
+
+  // 檢查新券加入後是否真的能分配到某個商品
+  function canAssignCoupon(items, coupons, newCoupon){
+    var currentAssign = assignCouponsToItems(items, coupons);
+    var withNew = coupons.concat([newCoupon]);
+    var assign2 = assignCouponsToItems(items, withNew);
+
+    var beforeCodes = {};
+    (currentAssign.lines||[]).forEach(function(l){
+      beforeCodes[String(l.code||'').toUpperCase()] = true;
+    });
+
+    var added = (assign2.lines||[]).some(function(l){
+      var c = String(l.code||'').toUpperCase();
+      return c === String(newCoupon.code||'').toUpperCase();
+    });
+    return added;
+  }
+
+  // ---------- 套用優惠碼按鈕（購物車） ----------
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!(t && t.id === 'cartApply')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+    (async function(){
+      var input = document.getElementById('cartCouponInput');
+      var code = (input && input.value || '').trim().toUpperCase();
+      if (!code){
+        input && input.focus();
+        return;
+      }
+
+      var items = readCart();
+      if (!items.length){
+        alert('購物車內沒有商品，無法套用優惠券');
+        return;
+      }
+
+      // 不允許同一張券重複加入
+      var existing = getCartCoupons();
+      var dup = existing.some(function(c){
+        return String(c.code||'').toUpperCase() === code;
+      });
+      if (dup){
+        var h1 = document.getElementById('cartCouponHint');
+        if (h1){
+          h1.style.display = '';
+          h1.textContent = '此優惠碼已套用，無需重複使用';
+          h1.style.color = '#ef4444';
+        }else{
+          alert('此優惠碼已套用，無需重複使用');
+        }
+        return;
+      }
+
+      // 若購物車只有單一守護神，帶入 deity 供後端檢查
+      var deities = computeCartDeitySet(items);
+      var deity = deities.length === 1 ? deities[0] : '';
+
+      var res = await checkCoupon(code, deity);
+      if (!(res && res.ok)){
+        var h2 = document.getElementById('cartCouponHint');
+        var msg;
+        // 如果是在同一台裝置上重複輸入同一張券，或後端判定該券已使用過
+        if (res && (res.reason === 'already_used' || res.reason === 'already_used_local')){
+          msg = '此優惠券已使用過，無法再次使用';
+        }else{
+          // 其他情況（後端回傳無效、守護神不符等等）維持原本文案
+          msg = '優惠碼無效、已使用，或不適用此守護神商品';
+        }
+        if (h2){
+          h2.style.display = '';
+          h2.textContent = msg;
+          h2.style.color = '#ffffff';
+          h2.style.background = '#ef4444';
+          h2.style.padding = '6px 10px';
+          h2.style.borderRadius = '6px';
+          h2.style.marginTop = '6px';
+          h2.setAttribute('data-state', 'error');
+        }else{
+          alert(msg);
+        }
+        return;
+      }
+
+      var newCoupon = {
+        code:   res.code || code,
+        deity:  res.deity || deity || '',
+        amount: Number(res.amount||200)||200
+      };
+
+      // 確認這張券加入後，是否真的能套用到某個商品
+      var okAssign = canAssignCoupon(items, existing, newCoupon);
+      if (!okAssign){
+        var h3 = document.getElementById('cartCouponHint');
+        var msg = '目前購物車內沒有可套用此優惠券的商品，或相關商品已使用其他優惠。';
+        if (h3){
+          h3.style.display = '';
+          h3.textContent = msg;
+          h3.style.color = '#ef4444';
+        }else{
+          alert(msg);
+        }
+        return;
+      }
+
+      // 正式加入
+      existing.push(newCoupon);
+      // 一旦成功套用，即視為這張券已在本機使用過，避免後續重複使用
+      markCouponUsedLocal(newCoupon.code || code);
+      setCartCoupons(existing);
+      updateCartTotals();
+      try{
+        if (input){ input.value = ''; input.focus(); }
+      }catch(e){}
+
+      var hint = document.getElementById('cartCouponHint');
+      if (hint){
+        hint.style.display = '';
+        hint.textContent = '已套用優惠碼 ' + newCoupon.code + '，目前共 ' + existing.length + ' 張優惠券生效';
+        hint.style.color = '#059669';
+        hint.style.background = 'transparent';
+        hint.style.padding = '0';
+        hint.style.borderRadius = '0';
+        hint.style.marginTop = '0';
+        hint.setAttribute('data-state', 'ok');
+      }
+    })();
+  }, true);
+
+  // ---------- 「移除優惠券」按鈕 ----------
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button[data-coupon-code]');
+    if (!btn) return;
+    var code = btn.getAttribute('data-coupon-code') || '';
+    if (!code) return;
+    e.preventDefault();
+    removeCartCoupon(code);
+    updateCartTotals();
+  });
+
+  // 將新版購物車合計函式對外公開，並定期刷新，避免被舊腳本覆蓋
+  try{
+    window.__cartUpdateTotals = updateCartTotals;
+  }catch(_){ }
+  try{
+    // 每 800ms 重新計算一次，確保「小計」與「應付金額」始終一致
+    setInterval(function(){
+      try{ updateCartTotals(); }catch(_){ }
+    }, 800);
+  }catch(_){ }
+
+  // === Unified totals helper for ALL pages (cart + top bar + bank dialog) ===
+  // 之後所有地方只要呼叫 getUnifiedCartTotals()，就會用同一套邏輯：
+  // 讀取 cart 內容 + 多張優惠券分配結果，算出小計 / 折扣 / 應付金額。
+  try{
+    window.getUnifiedCartTotals = function(){
+      var items = readCart();
+      var coupons = getCartCoupons();
+      var assign = assignCouponsToItems(items, coupons);
+      var sub    = subTotal(items);
+      var off    = assign && assign.total ? assign.total : 0;
+      var grand  = Math.max(0, sub - off);
+      return {
+        items:      items,
+        coupons:    coupons,
+        assignment: assign,
+        sub:        sub,
+        off:        off,
+        grand:      grand
+      };
+    };
+
+    // 統一對外的優惠券 API，讓匯款頁或其他模組都用同一套狀態
+    window.cartCouponAPI = {
+      getCoupons:   getCartCoupons,
+      setCoupons:   setCartCoupons,
+      removeCoupon: removeCartCoupon,
+      recalcTotals: updateCartTotals
+    };
+  }catch(_){}
+})();
+</script>
+<script id="bankCouponBridgeUnified">
+(function(){
+  if (window.__bankCouponBridgeUnified__) return;
+  window.__bankCouponBridgeUnified__ = true;
+
+  function hasUnified(){
+    return typeof window.getUnifiedCartTotals === 'function';
+  }
+
+  function formatTW(n){
+    try{
+      return 'NT$ ' + Number(n||0).toLocaleString('zh-TW');
+    }catch(e){
+      var num = Number(n||0);
+      if (!isFinite(num)) num = 0;
+      return 'NT$ ' + num.toFixed(0);
+    }
+  }
+
+
+  // 讓匯款頁面的金額與優惠券顯示，完全吃 unified totals
+  function refreshBankFromUnified(){
+    // --- renderBankOrderItems helper, nested inside refreshBankFromUnified ---
+    function renderBankOrderItems(totals){
+      var dlg = document.getElementById('dlgBank');
+      if (!dlg) return;
+
+      var items = totals && Array.isArray(totals.items) ? totals.items : [];
+      var html = '';
+
+      // 標題 + 表格 HTML
+      html += '<div style="font-weight:800;font-size:18px;margin-bottom:8px;">訂單內容確認</div>';
+
+      if (!items.length){
+        html += '<div style="padding:8px 0;color:#6b7280;">目前沒有任何商品。</div>';
+      }else{
+        html += '<div style="overflow-x:auto;">';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+        html += '<thead><tr>';
+        html += '<th style="text-align:center;padding:6px 4px;border-bottom:1px solid #e5e7eb;">商品圖片</th>';
+        html += '<th style="text-align:left;padding:6px 4px;border-bottom:1px solid #e5e7eb;">商品名稱</th>';
+        html += '<th style="text-align:right;padding:6px 4px;border-bottom:1px solid #e5e7eb;">單價</th>';
+        html += '<th style="text-align:center;padding:6px 4px;border-bottom:1px solid #e5e7eb;">數量</th>';
+        html += '<th style="text-align:right;padding:6px 4px;border-bottom:1px solid #e5e7eb;">小計</th>';
+        html += '</tr></thead><tbody>';
+
+        for (var i = 0; i < items.length; i++){
+          var it = items[i] || {};
+          var imgSrc = it.img || it.image || it.picture || '';
+          var name   = it.name || it.title || it.productName || '商品';
+          var spec   = it.variantName || it.spec || it.deity || '';
+          var unit   = Number(it.price != null ? it.price : (it.unit != null ? it.unit : 0)) || 0;
+          var qty    = Math.max(1, Number(it.qty != null ? it.qty : (it.quantity != null ? it.quantity : 1)) || 1);
+          var subtotal = unit * qty;
+
+          html += '<tr>';
+          html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">';
+          if (imgSrc){
+            html += '<img src="' + String(imgSrc).replace(/"/g,'&quot;') + '" style="width:60px;height:60px;object-fit:cover;border-radius:8px;background:#f3f4f6;" />';
+          }else{
+            html += '<div style="width:60px;height:60px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;color:#9ca3af;border-radius:8px;font-size:12px;">No Image</div>';
+          }
+          html += '</td>';
+
+          html += '<td style="padding:6px 4px;vertical-align:top;">'
+               +  '<div style="font-weight:600;">' + escapeHtml(name) + '</div>';
+          if (spec){
+            html += '<div style="color:#6b7280;font-size:12px;">規格：' + escapeHtml(spec) + '</div>';
+          }
+          html += '</td>';
+
+          html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">' + tw(unit) + '</td>';
+          html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">' + qty + '</td>';
+          html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">' + tw(subtotal) + '</td>';
+          html += '</tr>';
+        }
+
+        html += '</tbody></table></div>';
+      }
+
+      // 找到或建立專用容器：#bankOrderItemsBox
+      var box = document.getElementById('bankOrderItemsBox');
+      if (!box){
+        box = document.createElement('div');
+        box.id = 'bankOrderItemsBox';
+        box.style.margin = '0 0 12px 0';
+
+        // 優先放在匯款表單之前，整個 dialog 只保留這一份訂單內容
+        var form = dlg.querySelector('form');
+        if (form && form.parentNode){
+          form.parentNode.insertBefore(box, form);
+        }else{
+          dlg.insertBefore(box, dlg.firstChild);
+        }
+      }
+
+      box.innerHTML = html;
+    }
+    // --- end renderBankOrderItems ---
+    function hideLegacyOrderSections(dlg){
+      if (!dlg) return;
+      try{
+        var nodes = dlg.querySelectorAll('*');
+        for (var i = 0; i < nodes.length; i++){
+          var el = nodes[i];
+          if (!el) continue;
+          var txt = (el.textContent || '').trim();
+          if (!txt) continue;
+          if (txt.indexOf('訂單內容確認') !== -1){
+            var container = el.closest('section,fieldset,table,tbody,tr,div');
+            if (container && container !== dlg){
+              container.style.display = 'none';
+            }
+          }
+        }
+      }catch(_){ }
+    }
+    if (!hasUnified()) return;
+    var dlg = document.getElementById('dlgBank');
+    if (!dlg) return;
+
+    function ensureBankBackButton(dlg){
+      if (!dlg || dlg.__hasBackButton) return;
+      dlg.__hasBackButton = true;
+
+      var form = dlg.querySelector('form');
+      var host = form || dlg;
+
+      var wrapper = document.createElement('div');
+      wrapper.style.margin = '0 0 10px 0';
+
+      // 下方返回按鈕列
+      var btnRow = document.createElement('div');
+      btnRow.style.display = 'flex';
+      btnRow.style.justifyContent = 'flex-end';
+
+      var backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.id = 'bankBackBtn';
+      backBtn.textContent = '返回上一頁';
+      backBtn.style.padding = '6px 12px';
+      backBtn.style.borderRadius = '999px';
+      backBtn.style.border = '1px solid #e5e7eb';
+      backBtn.style.background = '#ffffff';
+      backBtn.style.color = '#374151';
+      backBtn.style.fontSize = '13px';
+      backBtn.style.cursor = 'pointer';
+
+      btnRow.appendChild(backBtn);
+      wrapper.appendChild(btnRow);
+
+      var nameInput = dlg.querySelector('#bfName');
+      if (nameInput && nameInput.parentNode){
+        nameInput.parentNode.parentNode.insertBefore(wrapper, nameInput.parentNode);
+      } else {
+        host.insertBefore(wrapper, host.firstChild);
+      }
+
+      // 綁定返回邏輯：關閉匯款 Dialog，返回訂單確認頁
+      if (!window.__bankBackBtnHandler__){
+        window.__bankBackBtnHandler__ = true;
+
+        document.addEventListener('click', function(e){
+          var t = e.target;
+          if (!t || t.id !== 'bankBackBtn') return;
+          e.preventDefault();
+
+          try{
+            var bankDlg = document.getElementById('dlgBank');
+            if (bankDlg && bankDlg.open){ bankDlg.close(); }
+          }catch(_){ }
+
+          try{
+            if (typeof window.__openOrderConfirmDialogUnified === 'function'){
+              window.__openOrderConfirmDialogUnified();
+            }else{
+              var orderDlg = document.getElementById('dlgOrderConfirm');
+              if (orderDlg && typeof orderDlg.showModal === 'function'){
+                orderDlg.showModal();
+              }
+            }
+          }catch(_){ }
+        });
+      }
+    }
+
+    ensureBankBackButton(dlg);
+
+    var totals = window.getUnifiedCartTotals();
+    // Render order items section
+    renderBankOrderItems(totals);
+    var amtInput = document.getElementById('bfAmount');
+    if (amtInput && totals){
+      var target = Number(totals.grand || 0);
+      if (isFinite(target) && target >= 0){
+        // 舊腳本若寫入原價，我們直接覆蓋回統一金額
+        if (Number(amtInput.value || 0) !== target){
+          amtInput.value = target;
+        }
+      }
+    }
+
+    // 匯款頁只需要顯示提示文字與已套用的優惠券清單，不再提供輸入功能
+    var hint   = document.getElementById('bfCouponHint');
+    var listBox = ensureBankCouponListBox();
+
+    var coupons = (totals && totals.coupons) || [];
+    // --- recompute off from assignment lines if possible ---
+    var off = 0;
+    if (totals && totals.assignment && Array.isArray(totals.assignment.lines)){
+      totals.assignment.lines.forEach(function(l){ off += Number(l.amount||0); });
+    } else if (totals && typeof totals.off === 'number'){
+      off = Number(totals.off)||0;
+    }
+
+    if (hint){
+      if (coupons.length){
+        hint.style.display = '';
+        hint.textContent = '已套用 ' + coupons.length + ' 張購物車優惠券，總折抵 ' +
+                           formatTW(off).replace(/^NT\$\s*/, 'NT$ ');
+      }else{
+        hint.style.display = '';
+        hint.textContent = '若欲使用優惠券，請返回上一頁輸入優惠碼並套用。';
+      }
+    }
+
+
+    // 在匯款頁下方顯示「已套用優惠券清單」，方便在這裡直接移除
+    if (listBox){
+      listBox.innerHTML = '';
+      if (!coupons.length){
+        listBox.style.display = 'none';
+      }else{
+        listBox.style.display = '';
+        var assign = (totals && totals.assignment) || { lines: [] };
+        var items  = totals.items || [];
+        coupons.forEach(function(cpn){
+          var code = String(cpn.code || '');
+          var line = (assign.lines || []).find(function(l){
+            return String(l.code||'').toUpperCase() === code.toUpperCase();
+          });
+          var it   = line && typeof line.itemIndex === 'number' ? (items[line.itemIndex] || {}) : null;
+          var name = it ? (it.name || it.title || it.productName || '商品') : '商品';
+          var amount = line && line.amount ? line.amount : (cpn.amount || 0);
+
+          var row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.justifyContent = 'space-between';
+          row.style.alignItems = 'center';
+          row.style.gap = '8px';
+          row.style.padding = '6px 8px';
+          row.style.border = '1px solid #e5e7eb';
+          row.style.borderRadius = '8px';
+          row.style.marginTop = '4px';
+
+          var left = document.createElement('div');
+          left.style.fontSize = '13px';
+          left.style.lineHeight = '1.5';
+          left.innerHTML =
+            '<div style="font-weight:700">優惠碼：' + code + '</div>' +
+            '<div style="color:#6b7280">已套用於：「' + name +
+            '」，折抵 ' + formatTW(amount).replace(/^NT\$\s*/, 'NT$ ') + '</div>';
+
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = '移除';
+          btn.setAttribute('data-coupon-code', code);
+          btn.style.fontSize = '12px';
+          btn.style.padding = '4px 8px';
+          btn.style.borderRadius = '8px';
+          btn.style.border = '1px solid #ef4444';
+          btn.style.background = '#fff';
+          btn.style.color = '#ef4444';
+          btn.style.cursor = 'pointer';
+
+          row.appendChild(left);
+          row.appendChild(btn);
+          listBox.appendChild(row);
+        });
+      }
+    }
+    // --- escapeHtml and tw helpers for renderBankOrderItems ---
+    function escapeHtml(s){
+      return String(s||'').replace(/[&<>\"']/g, function(m){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m;
+      });
+    }
+    function tw(n){
+      try{ return 'NT$ ' + Number(n||0).toLocaleString('zh-TW'); }
+      catch(e){ return 'NT$ ' + (Number(n||0).toFixed(0)); }
+    }
+  }
+
+  function ensureBankCouponListBox(){
+    var box = document.getElementById('bfCouponList');
+    if (box) return box;
+
+    var dlg = document.getElementById('dlgBank');
+    if (!dlg) return null;
+
+    // 優先放在匯款表單中，若沒有 form 就放在對話框內容最下方
+    var form = dlg.querySelector('form');
+    var host = form || dlg;
+
+    box = document.createElement('div');
+    box.id = 'bfCouponList';
+    box.style.marginTop = '10px';
+    box.style.fontSize = '13px';
+    box.style.lineHeight = '1.5';
+
+    host.appendChild(box);
+    return box;
+  }
+
+
+  // 當購物車或優惠券狀態變動時，自動刷新匯款頁顯示
+  window.addEventListener('storage', function(ev){
+    if (!ev) return;
+    if (ev.key === 'cart' || ev.key === '__cartCoupons__'){
+      setTimeout(refreshBankFromUnified, 150);
+    }
+  });
+
+  // 每當匯款視窗打開 & 填寫表單欄位時，都重新套用 unified 金額，避免舊腳本改回原價
+  function tick(){
+    var dlg = document.getElementById('dlgBank');
+    if (!dlg) return;
+    if (dlg.open){
+      refreshBankFromUnified();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // 定時守門員：就算有舊腳本寫入 bfAmount，我們也會在下一個 interval 把它改回 unified 結果
+    try{
+      setInterval(tick, 500);
+    }catch(_){}
+  });
+})();
+</script>
+<script id="bankBackBtn-handler">
+(function(){
+  if (window.__bankBackBtnHandler__) return; window.__bankBackBtnHandler__ = true;
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t || t.id !== 'bankBackBtn') return;
+    e.preventDefault();
+
+    try{
+      var bankDlg = document.getElementById('dlgBank');
+      if (bankDlg && bankDlg.open){ bankDlg.close(); }
+    }catch(_){ }
+
+    try{
+      if (typeof window.__openOrderConfirmDialogUnified === 'function'){
+        window.__openOrderConfirmDialogUnified();
+      }else{
+        var orderDlg = document.getElementById('dlgOrderConfirm');
+        if (orderDlg && typeof orderDlg.showModal === 'function'){
+          orderDlg.showModal();
+        }
+      }
+    }catch(_){ }
+  });
+})();
+</script>
+<script id="coupon-legacy-disable">
+(function(){
+  // 將舊版單一優惠券邏輯全面降級為 no-op，避免與「cart-coupon-normalize-and-apply」的新多券邏輯產生衝突
+  try{
+    // 1) 關掉舊版全域物件 __coupon 上所有可能的動作函式
+    window.__coupon = window.__coupon || {};
+    var legacyFns = [
+      'updateTotalsDisplay',
+      'apply',
+      'applyToCart',
+      'applyToPending',
+      'remove',
+      'clear',
+      'reset',
+      'syncFromStorage',
+      'init'
+    ];
+    legacyFns.forEach(function(k){
+      try{ window.__coupon[k] = function(){ /* legacy disabled */ }; }catch(_){ }
+    });
+
+    // 2) 常見舊版全域函式名稱：一律覆寫為空函式，避免再改動金額
+    var globalNames = [
+      'applyCoupon',
+      'applyCartCoupon',
+      'applyBankCoupon',
+      'cartApplyCoupon',
+      'bankApplyCoupon',
+      'recalcCartTotals',
+      'recalcCouponTotals'
+    ];
+    globalNames.forEach(function(name){
+      try{
+        if (typeof window[name] === 'function'){
+          window[name] = function(){ /* legacy disabled */ };
+        }
+      }catch(_){ }
+    });
+
+    // 3) 清除舊版在 localStorage / sessionStorage 裡使用的暫存 key，避免殘留 -200 折扣
+    try{
+      var lsKeys = [
+        '__activeCoupon__',
+        '__activeCoupons__',
+        'coupon_subtotal',
+        'coupon_discount',
+        'coupon_grand',
+        'coupon_lines'
+      ];
+      lsKeys.forEach(function(k){ try{ localStorage.removeItem(k); }catch(_){ } });
+    }catch(_){ }
+
+    try{
+      var ssKeys = [
+        '__activeCoupon__',
+        '__activeCoupons__',
+        'coupon_subtotal',
+        'coupon_discount',
+        'coupon_grand',
+        'coupon_lines'
+      ];
+      ssKeys.forEach(function(k){ try{ sessionStorage.removeItem(k); }catch(_){ } });
+    }catch(_){ }
+
+  }catch(_){ }
+})();
+</script>
+
+
+  <!-- 統一訂單確認 Dialog（購物車 & 直接結帳共用） -->
+  <dialog id="dlgOrderConfirm" style="border:none;border-radius:16px;padding:0;max-width:960px;width:96%;max-height:90vh;overflow:auto;">
+    <div style="padding:18px 18px 10px;">
+      <div style="font-weight:800;font-size:18px;">確認訂單內容</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px">
+        請先確認商品、數量與優惠折扣是否正確，再按下一步填寫匯款 / 收件資訊。
+      </div>
+    </div>
+
+    <div id="orderItemsBox" style="padding:0 18px 10px;"></div>
+
+    <div id="orderCouponArea" style="padding:0 18px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;">
+      <div style="display:grid;gap:6px">
+        <label for="orderCouponInput" style="font-size:12px;color:#6b7280;">優惠碼</label>
+        <input id="orderCouponInput" type="text" placeholder="請輸入優惠碼"
+               style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;">
+        <div id="orderCouponHint" style="font-size:12px;color:#6b7280;line-height:1.6;"></div>
+      </div>
+      <div style="align-self:flex-end">
+        <button type="button" id="orderCouponApply"
+                style="padding:10px 16px;border-radius:10px;border:1px solid #16a34a;background:#16a34a;color:#fff;font-weight:600;cursor:pointer;">
+          套用
+        </button>
+      </div>
+    </div>
+
+    <div id="orderTotalsBox" style="padding:0 18px 14px;border-top:1px solid #f3f4f6;margin-top:4px;">
+      <div style="display:flex;justify-content:flex-end;font-size:14px;margin-top:6px;">
+        <div style="min-width:220px;display:grid;row-gap:4px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span>小計</span>
+            <span id="orderSubtotalText">NT$ 0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>折扣</span>
+            <span id="orderDiscountText">-NT$ 0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;margin-top:4px;">
+            <span>應付金額</span>
+            <span id="orderGrandText">NT$ 0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0 18px 14px;">
+      <div id="orderCouponList" style="font-size:13px;line-height:1.6;"></div>
+    </div>
+
+    <div style="padding:0 18px 16px;display:flex;justify-content:flex-end;gap:10px;">
+      <button type="button" id="orderCancelBtn"
+              style="padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;">
+        返回
+      </button>
+      <button type="button" id="orderNextBtn"
+              style="padding:8px 16px;border-radius:10px;border:none;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;">
+        下一步：填寫資料
+      </button>
+    </div>
+  </dialog>
+
+  <!-- 選擇門市 Dialog（插在訂單確認與匯款資料之間） -->
+  <dialog id="dlgStore" style="border:none;border-radius:16px;padding:0;max-width:680px;width:96%;max-height:90vh;overflow:auto;">
+    <div style="padding:18px 18px 10px;">
+      <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;">
+        請先選擇 7-11 取貨門市，再進入匯款資訊頁面
+        <br>
+        若是購買服務性商品（如蠟燭祈福等），可跳過此步驟直接按下一步
+      </div>
+    </div>
+
+    <form id="storeForm" style="padding:0 18px 16px;display:grid;gap:10px;">
+      <div style="display:grid;gap:6px;">
+        <label for="bfStorePreview" style="font-size:12px;color:#6b7280;">取貨門市</label>
+        <input id="bfStorePreview" type="text" readonly
+               placeholder="尚未選擇門市"
+               style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;background:#f9fafb;color:#4b5563;">
+        <div style="font-size:12px;color:#6b7280;">
+          請點選下方「查詢 7-11 門市」按鈕，於地圖中選擇門市後，這裡與匯款資料頁面會自動帶入相同門市
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-start;gap:10px;margin-top:4px;">
+        <!-- 使用原本的 7-11 查詢門市連結邏輯：這個按鈕只負責觸發 popup，由既有腳本接收回填 -->
+        <button type="button" id="storeOpenCvsBtn"
+                style="padding:8px 12px;border-radius:999px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:13px;cursor:pointer;">
+          查詢 7-11 門市
+        </button>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button type="button" id="storeBackBtn"
+                style="padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:13px;cursor:pointer;">
+          返回上一頁
+        </button>
+        <button type="button" id="storeNextBtn"
+                style="padding:8px 16px;border-radius:10px;border:none;background:#16a34a;color:#ffffff;font-weight:700;font-size:13px;cursor:pointer;">
+          下一步：填寫匯款資料
+        </button>
+      </div>
+    </form>
+  </dialog>
+<!-- Remove the element whose inner text contains 「建議先在 7-11 官網或地圖查好門市，再將門市名稱與地址貼到這裡」 -->
+
+<script id="order-confirm-unified">
+(function(){
+  if (window.__orderConfirmUnified__) return;
+  window.__orderConfirmUnified__ = true;
+
+  function tw(n){
+    try{ return 'NT$ ' + Number(n||0).toLocaleString('zh-TW'); }
+    catch(e){ var num = Number(n||0); if(!isFinite(num)) num = 0; return 'NT$ ' + num.toFixed(0); }
+  }
+
+  // --- 共用：在三個 Dialog 上方畫出 1/2/3 步驟條 ---
+  function renderStepBar(dlgId, activeStep){
+    try{
+      var dlg = document.getElementById(dlgId);
+      if (!dlg) return;
+      var header = dlg.firstElementChild;
+      if (!header) return;
+
+      var bar = dlg.querySelector('.checkout-step-bar');
+      if (!bar){
+        bar = document.createElement('div');
+        bar.className = 'checkout-step-bar';
+        bar.style.padding = '0 18px 8px';
+        bar.style.display = 'flex';
+        bar.style.gap = '8px';
+        bar.style.marginTop = '4px';
+        header.parentNode.insertBefore(bar, header.nextSibling);
+      }
+
+      var steps = [
+        { idx:1, label:'確認訂單' },
+        { idx:2, label:'選擇門市' },
+        { idx:3, label:'填寫匯款資料' }
+      ];
+
+      var html = '<div style="display:flex;gap:8px;font-size:12px;color:#6b7280;">';
+      steps.forEach(function(s){
+        var active = (s.idx === activeStep);
+        html += '<div style="flex:1;display:flex;align-items:center;gap:6px;">'
+              +   '<div style="width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;'
+              +        'font-weight:600;font-size:11px;'
+              +        (active ? 'background:#16a34a;color:#ffffff;' : 'background:#e5e7eb;color:#6b7280;')
+              +   '\">' + s.idx + '</div>'
+              +   '<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+              +        (active ? 'color:#111827;font-weight:600;' : 'color:#6b7280;')
+              +   '\">' + s.label + '</div>'
+              + '</div>';
+      });
+      html += '</div>';
+      bar.innerHTML = html;
+    }catch(e){}
+  }
+
+  function readCartLS(){
+    try{
+      var c = JSON.parse(localStorage.getItem('cart')||'[]');
+      return Array.isArray(c) ? c : [];
+    }catch(e){ return []; }
+  }
+  function saveCartLS(cart){
+    try{
+      localStorage.setItem('cart', JSON.stringify(cart||[]));
+      try{
+        if (window.cartCouponAPI && typeof window.cartCouponAPI.recalcTotals === 'function'){
+          window.cartCouponAPI.recalcTotals();
+        }
+      }catch(_){ }
+      try{
+        window.dispatchEvent(new StorageEvent('storage', { key:'cart', newValue: JSON.stringify(cart||[]) }));
+      }catch(_){ }
+    }catch(e){}
+  }
+
+  function getTotals(){
+    try{
+      if (typeof window.getUnifiedCartTotals === 'function'){
+        return window.getUnifiedCartTotals();
+      }
+    }catch(e){}
+    var items = readCartLS();
+    var sub = 0;
+    items.forEach(function(it){
+      var unit = Number(it && (it.price!=null?it.price:it.unit)) || 0;
+      var qty  = Number(it && (it.qty!=null?it.qty:it.quantity)) || 1;
+      if (qty<1) qty = 1;
+      sub += unit * qty;
+    });
+    return {
+      items: items,
+      coupons: [],
+      assignment:{ total:0, lines:[] },
+      sub: sub,
+      off: 0,
+      grand: sub
+    };
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m;
+    });
+  }
+
+  function renderOrderDialog(){
+    var dlg  = document.getElementById('dlgOrderConfirm');
+    if (!dlg) return;
+
+    var box  = document.getElementById('orderItemsBox');
+    var listBox = document.getElementById('orderCouponList');
+    var hint = document.getElementById('orderCouponHint');
+    var subtotalEl = document.getElementById('orderSubtotalText');
+    var discountEl = document.getElementById('orderDiscountText');
+    var grandEl    = document.getElementById('orderGrandText');
+
+    var totals = getTotals();
+    var items  = totals.items || [];
+    var coupons = totals.coupons || [];
+    var assign  = totals.assignment || {lines:[], total:0};
+
+    if (!box) return;
+
+    if (!items.length){
+      box.innerHTML = '<div style="padding:8px 0;color:#6b7280;">目前購物車沒有任何商品。</div>';
+    }else{
+      var html = '';
+      html += '<div style="overflow-x:auto;">';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+      html += '<thead><tr>';
+      html += '<th style="text-align:left;padding:6px 4px;border-bottom:1px solid #e5e7eb;">商品</th>';
+      html += '<th style="text-align:left;padding:6px 4px;border-bottom:1px solid #e5e7eb;">單價</th>';
+      html += '<th style="text-align:center;padding:6px 4px;border-bottom:1px solid #e5e7eb;">數量</th>';
+      html += '<th style="text-align:right;padding:6px 4px;border-bottom:1px solid #e5e7eb;">小計</th>';
+      html += '<th style="text-align:center;padding:6px 4px;border-bottom:1px solid #e5e7eb;">操作</th>';
+      html += '</tr></thead><tbody>';
+
+      for (var i=0;i<items.length;i++){
+        var it   = items[i] || {};
+        var name = it.name || it.title || it.productName || '商品';
+        var spec = it.variantName || it.spec || it.deity || '';
+        var qty  = Number(it.qty!=null?it.qty:it.quantity) || 1;
+        if (qty<1) qty = 1;
+        var unit = Number(it.price!=null?it.price:it.unit) || 0;
+        var line = unit * qty;
+        html += '<tr data-index="'+i+'">';
+        html += '<td style="padding:6px 4px;vertical-align:top;">'
+             +  '<div style="font-weight:600;">'+ escapeHtml(name) +'</div>'
+             +  (spec ? '<div style="color:#6b7280;font-size:12px;">規格：'+ escapeHtml(spec) +'</div>' : '')
+             +  '</td>';
+        html += '<td style="padding:6px 4px;vertical-align:top;">'+ tw(unit) +'</td>';
+        html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">'
+             +  '<button type="button" class="order-qty-minus" style="width:28px;height:28px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;">-</button>'
+             +  '<input type="number" class="order-qty-input" min="1" value="'+ qty +'" style="width:56px;margin:0 4px;padding:4px 6px;border-radius:8px;border:1px solid #e5e7eb;text-align:center;font-size:13px;">'
+             +  '<button type="button" class="order-qty-plus" style="width:28px;height:28px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;">+</button>'
+             +  '</td>';
+        html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">'+ tw(line) +'</td>';
+        html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">'
+             +  '<button type="button" class="order-remove-item" style="padding:4px 8px;border-radius:8px;border:1px solid #ef4444;background:#fff;color:#ef4444;font-size:12px;cursor:pointer;">移除</button>'
+             +  '</td>';
+        html += '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+      box.innerHTML = html;
+    }
+
+    if (subtotalEl) subtotalEl.textContent = tw(totals.sub || 0);
+    if (discountEl) discountEl.textContent = '-' + tw(totals.off || 0).replace(/^NT\$\s*/, 'NT$ ');
+    if (grandEl)    grandEl.textContent    = tw(totals.grand || 0);
+
+    if (hint){
+      if (coupons.length){
+        hint.style.display = '';
+        hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' +
+                           tw(assign.total || totals.off || 0).replace(/^NT\$\s*/, 'NT$ ');
+        hint.style.color = '#059669';
+      }else{
+        hint.style.display = '';
+        hint.textContent = '如需使用優惠券，請輸入優惠碼後按「套用」。';
+        hint.style.color = '#6b7280';
+      }
+    }
+
+    if (listBox){
+      listBox.innerHTML = '';
+      if (!coupons.length){
+        listBox.style.display = 'none';
+      }else{
+        listBox.style.display = '';
+        coupons.forEach(function(cpn){
+          var code = String(cpn.code||'');
+          var line = (assign.lines||[]).find(function(l){
+            return String(l.code||'').toUpperCase() === code.toUpperCase();
+          });
+          var it = line && typeof line.itemIndex === 'number' ? (items[line.itemIndex]||{}) : null;
+          var nm = it ? (it.name||it.title||it.productName||'商品') : '商品';
+          var amt = line && line.amount ? line.amount : (cpn.amount||0);
+          var row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.justifyContent = 'space-between';
+          row.style.alignItems = 'center';
+          row.style.gap = '8px';
+          row.style.padding = '6px 8px';
+          row.style.border = '1px solid #e5e7eb';
+          row.style.borderRadius = '8px';
+          row.style.marginBottom = '4px';
+          row.innerHTML =
+            '<div style="font-size:13px;line-height:1.5;">'
+            +'<div style="font-weight:700;">優惠碼：'+ escapeHtml(code) +'</div>'
+            +'<div style="color:#6b7280;">已套用於：「'+ escapeHtml(nm) +'」，折抵 '+ tw(amt).replace(/^NT\\$\\s*/, "NT$ ") +'</div>'
+            +'</div>'
+            +'<button type="button" class="order-remove-coupon" data-coupon-code="'+ escapeHtml(code) +'"'
+            +' style="font-size:12px;padding:4px 8px;border-radius:8px;border:1px solid #ef4444;background:#fff;color:#ef4444;cursor:pointer;">移除</button>';
+          listBox.appendChild(row);
+        });
+      }
+    }
+  }
+
+  function openOrderDialog(){
+    var dlg = document.getElementById('dlgOrderConfirm');
+    if (!dlg) return;
+    var totals = getTotals();
+    if (!totals.items || !totals.items.length){
+      alert('目前購物車沒有商品，無法進行結帳');
+      return;
+    }
+    renderOrderDialog();
+    renderStepBar('dlgOrderConfirm', 1);
+    try{ dlg.showModal(); }catch(e){}
+  }
+
+  function closeOrderDialog(){
+    var dlg = document.getElementById('dlgOrderConfirm');
+    if (!dlg) return;
+    try{ dlg.close(); }catch(e){}
+  }
+
+  function openBankStep(){
+    try{
+      if (typeof openBankDialog === 'function'){
+        openBankDialog('detail');
+        var b = document.getElementById('dlgBank');
+        if (b) renderStepBar('dlgBank', 3);
+      }else{
+        var dlg = document.getElementById('dlgBank');
+        if (dlg && typeof dlg.showModal === 'function'){
+          renderStepBar('dlgBank', 3);
+          dlg.showModal();
+        }
+      }
+    }catch(err){}
+  }
+
+  function openStoreDialog(){
+    var dlg = document.getElementById('dlgStore');
+    if (!dlg){
+      // 若尚未建立門市 Dialog，直接進匯款步驟
+      openBankStep();
+      return;
+    }
+    try{
+      try{ syncStorePreviewFromBank(); }catch(e){}
+      renderStepBar('dlgStore', 2);
+      dlg.showModal();
+    }catch(e){}
+  }
+
+  function closeStoreDialog(){
+    var dlg = document.getElementById('dlgStore');
+    if (!dlg) return;
+    try{ dlg.close(); }catch(e){}
+  }
+
+  function syncStorePreviewFromBank(){
+    try{
+      var bankInput = document.getElementById('bfStore');
+      var preview   = document.getElementById('bfStorePreview');
+      if (!preview) return;
+      var v = bankInput ? (bankInput.value || '').trim() : '';
+      if (v){
+        preview.value = v;
+      }else{
+        preview.value = '尚未選擇門市';
+      }
+    }catch(e){}
+  }
+  try{ window.__syncStorePreviewFromBank = syncStorePreviewFromBank; }catch(_){}
+
+  // pay711 / cartGo711 進入第一步：訂單確認
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    var btn = t && t.closest && t.closest('#pay711,#cartGo711');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    openOrderDialog();
+  }, true);
+
+  // 訂單確認、門市選擇 與 下一步 / 返回 的按鈕邏輯
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('#orderCancelBtn,#orderNextBtn,#storeBackBtn,#storeNextBtn');
+    if (!btn) return;
+    e.preventDefault();
+
+    if (btn.id === 'orderCancelBtn'){
+      closeOrderDialog();
+      return;
+    }
+    if (btn.id === 'orderNextBtn'){
+      closeOrderDialog();
+      openStoreDialog();
+      return;
+    }
+    if (btn.id === 'storeBackBtn'){
+      closeStoreDialog();
+      openOrderDialog();
+      return;
+    }
+    if (btn.id === 'storeNextBtn'){
+      // 允許服務性商品直接略過門市，或在已選門市後進入匯款頁
+      try{ syncStorePreviewFromBank(); }catch(e){}
+      closeStoreDialog();
+      openBankStep();
+      return;
+    }
+  });
+
+  // 數量增減 / 移除商品 / 移除優惠券
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t) return;
+    var row, idx, cart, q;
+    if (t.classList && t.classList.contains('order-qty-minus')){
+      e.preventDefault();
+      row = t.closest('tr[data-index]');
+      if (!row) return;
+      idx = parseInt(row.getAttribute('data-index'),10);
+      cart = readCartLS();
+      if (!cart[idx]) return;
+      q = Number(cart[idx].qty!=null?cart[idx].qty:cart[idx].quantity) || 1;
+      if (q>1) q--;
+      cart[idx].qty = q;
+      cart[idx].quantity = q;
+      saveCartLS(cart);
+      renderOrderDialog();
+    }else if (t.classList && t.classList.contains('order-qty-plus')){
+      e.preventDefault();
+      row = t.closest('tr[data-index]');
+      if (!row) return;
+      idx = parseInt(row.getAttribute('data-index'),10);
+      cart = readCartLS();
+      if (!cart[idx]) return;
+      q = Number(cart[idx].qty!=null?cart[idx].qty:cart[idx].quantity) || 1;
+      q++;
+      cart[idx].qty = q;
+      cart[idx].quantity = q;
+      saveCartLS(cart);
+      renderOrderDialog();
+    }else if (t.classList && t.classList.contains('order-remove-item')){
+      e.preventDefault();
+      row = t.closest('tr[data-index]');
+      if (!row) return;
+      idx = parseInt(row.getAttribute('data-index'),10);
+      cart = readCartLS();
+      if (!cart.length) return;
+      cart.splice(idx,1);
+      saveCartLS(cart);
+      renderOrderDialog();
+    }else if (t.classList && t.classList.contains('order-remove-coupon')){
+      e.preventDefault();
+      var code = t.getAttribute('data-coupon-code') || '';
+      if (code && window.cartCouponAPI && typeof window.cartCouponAPI.removeCoupon === 'function'){
+        window.cartCouponAPI.removeCoupon(code);
+        if (typeof window.cartCouponAPI.recalcTotals === 'function'){
+          window.cartCouponAPI.recalcTotals();
+        }
+      }
+      renderOrderDialog();
+    }
+  });
+
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if (!t || !t.classList || !t.classList.contains('order-qty-input')) return;
+    var row = t.closest('tr[data-index]');
+    if (!row) return;
+    var idx = parseInt(row.getAttribute('data-index'),10);
+    var cart = readCartLS();
+    if (!cart[idx]) return;
+    var v = Number(t.value||'1'); if (!isFinite(v) || v<1) v = 1;
+    cart[idx].qty = v;
+    cart[idx].quantity = v;
+    saveCartLS(cart);
+    renderOrderDialog();
+  });
+
+  // 訂單確認 Dialog 內輸入優惠碼，實際仍委派給購物車欄位
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!(t && t.id === 'orderCouponApply')) return;
+    e.preventDefault();
+    var input = document.getElementById('orderCouponInput');
+    var code  = (input && input.value || '').trim();
+    if (!code){
+      input && input.focus();
+      return;
+    }
+    var cartInput = document.getElementById('cartCouponInput');
+    var cartBtn   = document.getElementById('cartApply');
+    if (cartInput && cartBtn){
+      cartInput.value = code;
+      cartBtn.click();
+      setTimeout(function(){
+        try{
+          if (input){ input.value = ''; }
+        }catch(_){ }
+        renderOrderDialog();
+      }, 600);
+    }else{
+      alert('找不到購物車優惠碼欄位，請稍後再試');
+    }
+  });
+
+  // Expose helper for其他腳本（例如 bankBackBtn-handler）
+  try{
+    window.__openOrderConfirmDialogUnified   = openOrderDialog;
+    window.__renderOrderConfirmDialogUnified = renderOrderDialog;
+  }catch(_){ }
+
+  // 當視窗獲得焦點時，若門市 Dialog 開啟則同步預覽欄位
+  window.addEventListener('focus', function(){
+    try{
+      var dlgStore = document.getElementById('dlgStore');
+      if (dlgStore && dlgStore.open && typeof syncStorePreviewFromBank === 'function'){
+        syncStorePreviewFromBank();
+      }
+    }catch(e){}
+  });
+
+  
+  // Step3 匯款頁面：從門市欄位「返回上一頁修改門市」
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t || t.id !== 'bfBackToStoreBtn') return;
+    e.preventDefault();
+    try{
+      var bankDlg = document.getElementById('dlgBank');
+      if (bankDlg && bankDlg.open){ bankDlg.close(); }
+    }catch(_){}
+    try{
+      if (typeof openStoreDialog === 'function'){
+        openStoreDialog();
+      }else{
+        var storeDlg = document.getElementById('dlgStore');
+        if (storeDlg && typeof storeDlg.showModal === 'function'){
+          renderStepBar('dlgStore', 2);
+          storeDlg.showModal();
+        }
+      }
+    }catch(_){}
+  }, true);
+// 門市 Dialog 的「查詢 7-11 門市」按鈕：沿用現有 bfStoreLink 的 href
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t || t.id !== 'storeOpenCvsBtn') return;
+    e.preventDefault();
+    try{
+      var originalLink = document.getElementById('bfStoreLink');
+      var href = originalLink && originalLink.getAttribute('href');
+      if (!href){
+        alert('目前無法開啟 7-11 門市地圖，請稍後再試');
+        return;
+      }
+      var w = window.open(href, 'cvs_popup', 'width=980,height=720,resizable=yes,scrollbars=yes');
+      try{ w && w.focus && w.focus(); }catch(_){ }
+    }catch(err){}
+  });
+
+})();
+</script>
+  <!-- 訂單狀態查詢 Dialog -->
+  <dialog id="dlgLookup" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;">
+    <div style="padding:18px 18px 10px;">
+      <div style="font-weight:800;font-size:18px;">查詢訂單狀態</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px">請輸入 <b>手機號碼</b> 或 <b>匯款末五碼</b>（至少擇一）。</div>
+    </div>
+    <form id="lookupForm" style="padding:0 18px 16px;display:grid;gap:10px">
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">手機號碼（09 開頭）</label>
+        <input id="qPhone" name="phone" type="tel" inputmode="tel"
+               pattern="^(?:\+?886[-\s]?9\d{8}|09\d{8}|\d{9,13})$"
+               placeholder="例：0969123456 或 +886 969 123 456"
+               title="請輸入 09 開頭或 +8869 開頭的手機號碼（允許空白與破折號）"
+               style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">匯款末五碼</label>
+        <input id="qLast5" name="last5" type="text" pattern="\d{5}" placeholder="12345" title="請輸入匯款末五碼（5 位數字）"
+               style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
+      </div>
+      <div class="cta" style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+        <button type="button" id="lookupCancel" class="btn">關閉</button>
+        <button type="submit" id="lookupSubmit" class="btn primary">查詢</button>
+      </div>
+      <div id="lookupHint" style="font-size:12px;color:#6b7280;line-height:1.6">
+        可輸入手機號碼或匯款末五碼，至少一項。
+      </div>
+    </form>
+
+    <!-- 提示：查詢結果上方（蠟燭祈福成果說明） -->
+    <div id="lookupResultHint" style="padding:0 18px 8px;color:#6b7280;font-size:12px;line-height:1.6">
+      若訂單包含<span style="font-weight:700">蠟燭加持祈福</span>服務，完成後會在該訂單卡片中出現
+      <span style="font-weight:700">查看祈福成果</span>按鈕，點擊即可查看儀式的照片或影片。
+    </div>
+
+    <div id="lookupResult" style="display:none;padding:0 18px 18px">
+      <div style="font-weight:800;margin:4px 0 8px">查詢結果</div>
+      <div id="lookupList" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </dialog>
+
+<script>
+/* ==== order-lookup script ==== */
+(function(){
+  // ---------- helpers ----------
+  function statusBadge(s){
+    var t = String(s||'').trim();
+    var cls = 'ok-badge';
+    if (t === '已完成訂單') cls += ' ok-done';
+    else if (t === '已付款待出貨') cls += ' ok-paid';
+    else if (t === '已寄件') cls += ' ok-ship';
+    return '<span class="'+cls+'">'+ (t||'處理中') +'</span>';
+  }
+  function escapeHtml(s){ return String(s||'').replace(/[&<>\"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m] || m; }); }
+  function numTW(v){ try{ return 'NT$ ' + Number(String(v||0).toString().replace(/[^\d.]/g,'')).toLocaleString('zh-TW'); }catch(e){ return String(v||''); } }
+  function digitsOnly(s){ return String(s||'').replace(/\D+/g,''); }
+  function normalizeTWPhone(s){
+    var d = digitsOnly(s);
+    if (d.startsWith('8869') && d.length >= 11) return '0' + d.slice(3, 11);
+    if (d.startsWith('8860') && d.length >= 13) return d.slice(3, 13);
+    if (d.length === 9 && d.startsWith('9')) return '0' + d;
+    if (d.length === 10 && d.startsWith('09')) return d;
+    if (d.length > 10) return d.slice(-10);
+    return d;
+  }
+  function phonesEqualLoose(a, b){
+    var A = normalizeTWPhone(a);
+    var B = normalizeTWPhone(b);
+    if (!A || !B) return false;
+    if (A === B) return true;
+    var tA = A.slice(-9), tB = B.slice(-9);
+    return (tA && B.endsWith(tA)) || (tB && A.endsWith(tB));
+  }
+  function matchesOrder(o, phone, last5){
+    try{
+      var pUser = normalizeTWPhone(phone);
+      var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
+      var wantPhone = !!pUser;
+      var wantL5 = (l5User.length === 5);
+
+      // Gather as many phone candidates as possible from common schemas
+      var phoneCandidates = [
+        o && o.phone, o && o.contact, o && o.mobile, o && o.phoneNumber, o && o.contactPhone,
+        o && o.recipientPhone, o && o.buyerPhone, o && o.customerPhone,
+        // buyer object from your backend schema
+        o && o.buyer && (o.buyer.phone || o.buyer.mobile || o.buyer.contactPhone),
+        // nested shipping/billing/customer/payment/bank/transfer objects
+        o && o.shipping && (o.shipping.phone || o.shipping.contactPhone),
+        o && o.billing  && (o.billing.phone  || o.billing.contactPhone),
+        o && o.customer && (o.customer.phone || o.customer.mobile || (o.customer.contact && o.customer.contact.phone)),
+        o && o.payment  && (o.payment.phone  || o.payment.contactPhone),
+        o && o.bank     && (o.bank.phone     || o.bank.contactPhone),
+        o && o.transfer && (o.transfer.phone || o.transfer.contactPhone)
+      ].filter(Boolean);
+
+      var phoneOk = phoneCandidates.some(function(v){ return phonesEqualLoose(v, pUser); });
+
+      // Try to recover phone from notes/free text
+      if (!phoneOk){
+        var note = (o && (o.notes || o.note || o.remark || o.memo || '')) || '';
+        var digits = digitsOnly(note);
+        if (digits){
+          var pn = normalizeTWPhone(digits);
+          phoneOk = phonesEqualLoose(pn, pUser) || (!!pUser && digits.indexOf(pUser) !== -1);
+        }
+        // also check nested comment fields
+        var cm = o && (o.comment || o.comments);
+        if (!phoneOk && typeof cm === 'string'){
+          var d2 = digitsOnly(cm);
+          var pn2 = normalizeTWPhone(d2);
+          phoneOk = phonesEqualLoose(pn2, pUser);
+        }
+      }
+
+      // Gather last-5 candidates from multiple places
+      var last5Candidates = [
+        o && o.last5,
+        o && o.transferLast5, // root-level field used by current backend
+        o && o.payment && (o.payment.last5 || o.payment.ref_last5 || o.payment.lastfive || o.payment.transferLast5),
+        o && o.bank    && (o.bank.last5    || o.bank.ref_last5    || o.bank.lastfive    || o.bank.transferLast5),
+        o && o.transfer&& (o.transfer.last5|| o.transfer.ref_last5|| o.transfer.lastfive|| o.transfer.transferLast5)
+      ].filter(Boolean).map(function(x){ return String(x||'').replace(/\D+/g,'').slice(-5); });
+
+      var l5Ok = last5Candidates.some(function(v){ return v === l5User; });
+
+      // Fallback: try to read any standalone 5 digits in notes/remarks
+      if (!l5Ok){
+        var textPool = [
+          (o && (o.notes || o.note || o.remark || o.memo || '')) || '',
+          (o && o.payment && (o.payment.note || o.payment.remark || '')) || ''
+        ].join(' ');
+        var m = textPool.match(/\b(\d{5})\b/);
+        l5Ok = !!(m && m[1] === l5User);
+      }
+
+      return !!((wantPhone ? phoneOk : true) && (wantL5 ? l5Ok : true));
+    }catch(e){ return false; }
+  }
+  function filterOrdersByQuery(list, phone, last5){
+    try{
+      var arr = Array.isArray(list) ? list : [];
+      return arr.filter(function(o){ return matchesOrder(o, phone, last5); });
+    }catch(e){ return []; }
+  }
+  function getAmount(o){
+    var a = o && (o.amount || o.total || o.grandTotal || o.price || 0);
+    if (!a){
+      try{
+        var items = Array.isArray(o.items) ? o.items : [];
+        a = items.reduce(function(s,it){
+          var unit = Number(it.unitPrice||it.price||0);
+          var qty  = Number(it.qty||it.quantity||1);
+          return s + unit * qty;
+        }, 0);
+      }catch(_){}
+    }
+    return a || 0;
+  }
+  function renderOrders(arr){
+    var box = document.getElementById('lookupList');
+    var wrap = document.getElementById('lookupResult');
+    if (!box || !wrap) return;
+    box.innerHTML = '';
+    if (!Array.isArray(arr) || !arr.length){
+      box.innerHTML = '<div class="ok-muted">查無符合條件的訂單，請確認輸入再嘗試。</div>';
+      wrap.style.display = '';
+      return;
+    }
+    if (arr.length > 20) arr = arr.slice(0, 20);
+    arr.forEach(function(o){
+      var id = o.id || o.orderId || '';
+      var amt = numTW(getAmount(o));
+      var items = Array.isArray(o.items) ? o.items : [];
+      var lines = [];
+      if (items.length){
+        items.forEach(function(it){
+          var name = it.name || it.productName || it.title || '商品';
+          var spec = it.variantName || it.spec || it.deity || '';
+          var qty  = it.qty || it.quantity || 1;
+          var unit = numTW(it.unitPrice||it.price);
+          lines.push('<div>'+ escapeHtml(name) +'｜單價：'+ unit +'｜規格：'+ escapeHtml(spec) +'｜數量：'+ qty +'</div>');
+        });
+      }else if (o.productName){
+        lines.push('<div>'+ escapeHtml(o.productName) +'</div>');
+      }
+      var div = document.createElement('div');
+      div.className = 'ok-card';
+      div.innerHTML = ''
+        + '<div style="font-weight:800">訂單編號：'+ escapeHtml(String(id||'')) +'</div>'
+        + '<div class="ok-muted">金額：'+ amt + (lines.length? '（以下為明細）' : '') +'</div>'
+        + (lines.join('')||'')
+        + (o.store ? '<div class="ok-muted">門市：'+ escapeHtml(o.store) +'</div>' : '')
+        + (o.contact ? '<div class="ok-muted">聯絡方式：'+ escapeHtml(o.contact) +'</div>' : '')
+        + '<div class="ok-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;margin-top:8px">'
+        +   '<div class="ok-status">'+ statusBadge(o.status) +'</div>'
+        +   ( (o && o.resultToken)
+              ? ('<div class="ok-actions"><a class="btn" style="padding:6px 10px;font-size:13px" target="_blank" rel="noopener" href="/o/'+ encodeURIComponent(String(id||'')) +'?token='+ encodeURIComponent(String(o.resultToken||'')) +'">查看祈福成果</a></div>')
+              : '' )
+        + '</div>';
+      box.appendChild(div);
+    });
+    wrap.style.display = '';
+  }
+
+  // ---------- multi-endpoint lookup ----------
+  async function fetchJsonSafe(url, init){
+    try{
+      var opts = Object.assign({ cache:'no-store' }, init||{});
+      var r = await fetch(url, opts);
+      var text = await r.text();
+      if (!text) return {};
+      try{ return JSON.parse(text); }catch(_){ return {}; }
+    }catch(e){ return {}; }
+  }
+  function pickArrayLike(obj){
+    if (!obj || typeof obj !== 'object') return [];
+    if (Array.isArray(obj)) return obj;
+    return obj.orders || obj.items || obj.list || obj.data || [];
+  }
+  async function tryAllLookups(phone, last5){
+    // Normalize inputs
+    var pNorm = normalizeTWPhone(phone);
+    var l5 = String(last5||'').replace(/\D+/g,'').slice(-5);
+
+    // Compose common query variants (read-only)
+    var usp1 = new URLSearchParams();
+    usp1.set('phone', phone);
+    usp1.set('last5', l5);
+    usp1.set('lookupOnly','1');
+
+    var usp2 = new URLSearchParams();
+    usp2.set('lookup','1');
+    usp2.set('phone', phone);
+    usp2.set('last5', l5);
+
+    var headersRO = {'X-Lookup':'phone+last5','X-Read-Only':'1','Cache-Control':'no-cache'};
+
+    var all = [];
+
+    // Helper to add unique array-like results
+    function pushArr(x){
+      try{
+        var arr = pickArrayLike(x);
+        if (Array.isArray(arr)) all = all.concat(arr);
+      }catch(_){}
+    }
+
+    // --- Tier 1: filtered GET endpoints (preferred, zero side effects) ---
+    pushArr(await fetchJsonSafe('/api/orders/lookup?'+usp1.toString(), {headers:headersRO}));
+    pushArr(await fetchJsonSafe('/api/orders?'+usp1.toString(), {headers:headersRO}));
+    pushArr(await fetchJsonSafe('/api/payment/bank?'+usp2.toString(), {headers:headersRO}));
+
+    // --- Tier 2: plain reads (backend may ignore filters), capped by limit param if supported ---
+    if (all.length === 0){
+      pushArr(await fetchJsonSafe('/api/orders?limit=200', {headers:headersRO}));
+      pushArr(await fetchJsonSafe('/api/payment/bank?limit=200', {headers:headersRO}));
+    }
+
+    // --- Tier 3: ultimate fallback to bare endpoints (no params) ---
+    if (all.length === 0){
+      pushArr(await fetchJsonSafe('/api/orders', {headers:headersRO}));
+      pushArr(await fetchJsonSafe('/api/payment/bank', {headers:headersRO}));
+    }
+
+    // De-dup (by id + amount)
+    var seen = new Set();
+    var uniq = [];
+    for (var i=0;i<all.length;i++){
+      var o = all[i] || {};
+      var key = (o.id||o.orderId||'') + '|' + String(getAmount(o)||0);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      uniq.push(o);
+    }
+    return uniq;
+  }
+
+  // ---------- UI wiring ----------
+  function openLookup(){
+    var d = document.getElementById('dlgLookup');
+    if (!d) return alert('無法顯示查詢視窗');
+    try{
+      // reset form and result box on every open
+      var f = document.getElementById('lookupForm');
+      if (f) f.reset();
+      var list = document.getElementById('lookupList');
+      var wrap = document.getElementById('lookupResult');
+      if (list) list.innerHTML = '';
+      if (wrap) wrap.style.display = 'none';
+      d.showModal();
+      // small delay to ensure focus lands after dialog opens
+      setTimeout(function(){ try{ document.getElementById('qPhone').focus(); }catch(e){} }, 50);
+    }catch(e){
+      alert('請使用支援對話框的瀏覽器');
+    }
+  }
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (t && t.id === 'linkOrderLookup'){ e.preventDefault(); openLookup(); }
+    if (t && t.id === 'lookupCancel'){ e.preventDefault(); var d=document.getElementById('dlgLookup'); if(d) d.close(); }
+  });
+
+  var form = document.getElementById('lookupForm');
+  if (form){
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      var phone = (document.getElementById('qPhone').value||'').trim();
+      var last5 = (document.getElementById('qLast5').value||'').trim();
+      var hasPhone = !!phone.trim();
+      var hasLast5 = !!last5.trim();
+      if (!hasPhone && !hasLast5){
+        alert('請至少填寫手機號碼或匯款末五碼');
+        return;
+      }
+      last5 = String(last5).replace(/\D+/g,'').slice(-5);
+      var box = document.getElementById('lookupList');
+      var wrap = document.getElementById('lookupResult');
+      if (box){ box.innerHTML = '<div class="ok-muted">查詢中…</div>'; }
+      if (wrap){ wrap.style.display = ''; }
+
+      try{
+        var raw = await tryAllLookups(phone, last5);
+        var list = filterOrdersByQuery(raw, phone, last5);
+        renderOrders(list);
+      }catch(err){
+        console.error('lookup error', err);
+        if (box){ box.innerHTML = '<div class="ok-muted">查詢失敗，請稍後再試。</div>'; }
+      }
+    });
+  }
+  // Expose a helper so other modules can open the lookup dialog with prefilled fields
+  window.openOrderLookup = function(phone, last5){
+    try{
+      openLookup();
+      setTimeout(function(){
+        try{
+          var p = document.getElementById('qPhone');
+          var l = document.getElementById('qLast5');
+          if (p && typeof phone === 'string') p.value = phone;
+          if (l && typeof last5 === 'string') l.value = String(last5).replace(/\D+/g,'').slice(-5);
+          // focus on the next empty field
+          if (p && !p.value) p.focus();
+          else if (l && !l.value) l.focus();
+        }catch(e){}
+      }, 50);
+    }catch(e){}
+  };
+})();
+</script>
+<script id="topCouponBar-logic">
+(function(){
+  function tw(n){ 
+    try{ return 'NT$ ' + Number(n||0).toLocaleString('zh-TW'); }
+    catch(e){ return 'NT$ ' + (Number(n||0).toFixed(0)); }
+  }
+  function readCart(){ 
+    try{ var c = JSON.parse(localStorage.getItem('cart')||'[]'); return Array.isArray(c)?c:[]; }
+    catch(e){ return []; } 
+  }
+  function subTotal(items){
+    try{
+      return items.reduce(function(s,it){
+        return s + Number(it.price||0)*Math.max(1,Number(it.qty||1));
+      },0);
+    }catch(e){ return 0; }
+  }
+
+  // 讓頂部 bar 優先使用 window.__cartCouponState.assignment 的折扣
+  function getCurrentDiscountTotal(){
+    try{
+      if (window.__cartCouponState && window.__cartCouponState.assignment){
+        return Number(window.__cartCouponState.assignment.total||0) || 0;
+      }
+    }catch(e){}
+    // 後備：若尚未建立多券狀態，預設 0（由購物車腳本負責主導折扣）
+    return 0;
+  }
+
+  function updateTopTotals(){
+    try{
+      var items = readCart();
+      var sub   = subTotal(items);
+      var off   = getCurrentDiscountTotal();
+      var grand = Math.max(0, sub - off);
+
+      var elSub   = document.getElementById('topSubtotal');
+      var elOff   = document.getElementById('topDiscount');
+      var elGrand = document.getElementById('topGrand');
+      if (elSub)   elSub.textContent   = tw(sub);
+      if (elOff)   elOff.textContent   = off ? ('-' + tw(off).replace(/^NT\$\s*/, 'NT$ ')) : 'NT$ 0';
+      if (elGrand) elGrand.textContent = tw(grand);
+
+      var hint = document.getElementById('topCouponHint');
+      if (hint){
+        var cps = (window.__cartCouponState && window.__cartCouponState.coupons) || [];
+        if (cps && cps.length){
+          hint.style.display = '';
+          hint.textContent = '已套用 ' + cps.length + ' 張優惠券，總折抵 ' 
+                             + tw(off).replace(/^NT\$\s*/, 'NT$ ');
+        }else{
+          hint.style.display = 'none';
+          hint.textContent = '';
+        }
+      }
+    }catch(e){}
+  }
+
+  function applyTopCoupon(){
+    try{
+      var input = document.getElementById('topCouponInput');
+      var code = (input && input.value || '').trim();
+      if (!code){
+        input && input.focus();
+        return;
+      }
+      var cartInput = document.getElementById('cartCouponInput');
+      var cartBtn   = document.getElementById('cartApply');
+      if (!cartInput || !cartBtn){
+        alert('找不到購物車優惠碼欄位，請稍後再試');
+        return;
+      }
+      cartInput.value = code;
+      cartBtn.click();
+      setTimeout(updateTopTotals, 300);
+    }catch(e){}
+  }
+
+  document.addEventListener('click', function(e){
+    if (e.target && e.target.id === 'topCouponApply'){
+      e.preventDefault();
+      applyTopCoupon();
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', updateTopTotals);
+  window.addEventListener('storage', function(ev){
+    if (!ev) return;
+    if (ev.key === 'cart' || ev.key === '__cartCoupons__'){
+      updateTopTotals();
+    }
+  });
+})();
+</style>
+
+<script id="product-image-fallback-fix">
+(function(){
+  if (window.__productImageFix__) return; window.__productImageFix__ = true;
+  var PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">\n'
+    + '<rect width="100%" height="100%" fill="#f3f4f6"/>\n'
+    + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="20" font-family="-apple-system,system-ui,Segoe UI,Roboto">No Image</text>\n'
+    + '</svg>'
+  );
+
+  function fixOne(img){
+    if (!img || img.__fixed) return; img.__fixed = true;
+    // lazy helpers
+    img.loading = img.loading || 'lazy';
+    img.decoding = 'async';
+    // 若 src 空或只含空白，套 placeholder
+    var s = (img.getAttribute('src')||'').trim();
+    if (!s){ img.setAttribute('src', PLACEHOLDER); }
+    // onerror fallback
+    img.addEventListener('error', function(){
+      if (img.getAttribute('src') !== PLACEHOLDER){ img.setAttribute('src', PLACEHOLDER); }
+    });
+  }
+
+  function scan(){
+    try{
+      var list = document.querySelectorAll('.card .pic img');
+      for (var i=0;i<list.length;i++) fixOne(list[i]);
+    }catch(e){}
+  }
+
+  // 初次與後續刷新（商品重新渲染）
+  document.addEventListener('DOMContentLoaded', scan);
+  var mo; try{
+    mo = new MutationObserver(function(){ scan(); });
+    mo.observe(document.documentElement, { childList:true, subtree:true });
+  }catch(e){ setInterval(scan, 1000); }
+})();
+</script>
+<script id="coupon-deity-normalize">
+(function(){
+  if (window.__couponDeityNormalize__) return; window.__couponDeityNormalize__ = true;
+
+  // --- deity inference from product name/title (both zh & en keywords) ---
+  function inferDeityFromName(name){
+    var s = (name||'').toString().toUpperCase();
+    // Chinese keywords don't need case conversion, but keep both checks on same source string
+    var raw = (name||'').toString();
+    if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/i.test(raw)) return 'FM';
+    if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/i.test(raw)) return 'GA';
+    if (/崇迪|SOMDEJ|SOMDET/i.test(raw)) return 'CD';
+    if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/i.test(raw)) return 'KP';
+    if (/哈魯曼|H(AN|AR)UMAN/i.test(raw)) return 'HM';
+    if (/拉胡|RAHU/i.test(raw)) return 'RH';
+    if (/迦樓羅|GARUDA|K(AR|AL)UDA/i.test(raw)) return 'JL';
+    if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/i.test(raw)) return 'ZD';
+    if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/i.test(raw)) return 'ZF';
+    if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/i.test(raw)) return 'WE';
+    if (/徐祝|XU\s*ZHU|XUZHU/i.test(raw)) return 'XZ';
+    if (/魂魄勇|HUN\s*PO\s*YONG|HPY/i.test(raw)) return 'HP';
+    return '';
+  }
+
+  // Normalize deity for a single cart/pending item
+  function normalizeItemDeity(it){
+    if (!it || typeof it !== 'object') return it;
+    var d = it.deity ? String(it.deity).toUpperCase() : '';
+    if (!d){
+      var nm = it.name || it.title || it.productName || '';
+      d = inferDeityFromName(nm);
+    }
+    if (d) it.deity = d;
+    return it;
+  }
+
+  // Normalize entire cart
+  function normalizeCart(){
+    try{
+      var cart = JSON.parse(localStorage.getItem('cart')||'[]');
+      if (Array.isArray(cart) && cart.length){
+        var changed = false;
+        for (var i=0;i<cart.length;i++){
+          var before = cart[i] && cart[i].deity;
+          normalizeItemDeity(cart[i]);
+          if ((cart[i] && cart[i].deity) !== before) changed = true;
+        }
+        if (changed){
+          localStorage.setItem('cart', JSON.stringify(cart));
+          // notify observers (totals bar, etc.)
+          try{ window.dispatchEvent(new StorageEvent('storage', { key:'cart', newValue: JSON.stringify(cart) })); }catch(e){}
+        }
+      }
+    }catch(e){}
+  }
+
+  // Normalize pending detail (direct-buy path)
+  function normalizePending(){
+    try{
+      var raw = sessionStorage.getItem('__pendingDetail__');
+      if (!raw) return;
+      var p = JSON.parse(raw);
+      var before = p && p.deity;
+      normalizeItemDeity(p);
+      if (before !== p.deity){
+        sessionStorage.setItem('__pendingDetail__', JSON.stringify(p));
+      }
+    }catch(e){}
+  }
+
+  // Compute "current deity" for /check fallback (when getPendingDeity() returns blank)
+  function computeCurrentDeity(){
+    // 1) pending first
+    try{
+      var p = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
+      if (p && p.deity) return String(p.deity).toUpperCase();
+    }catch(e){}
+    // 2) if cart has only one distinct deity, use it
+    try{
+      var cart = JSON.parse(localStorage.getItem('cart')||'[]');
+      if (Array.isArray(cart) && cart.length){
+        var set = new Set();
+        cart.forEach(function(it){
+          if (it && it.deity) set.add(String(it.deity).toUpperCase());
+          else {
+            var d = inferDeityFromName((it && (it.name||it.title||''))||'');
+            if (d) set.add(d);
+          }
+        });
+        if (set.size === 1) return Array.from(set)[0];
+      }
+    }catch(e){}
+    // 3) fallback: from current product dialog dataset/name
+    try{
+      var dlg = document.getElementById('dlg');
+      var d = (dlg && (dlg.getAttribute('data-product-deity') || dlg.getAttribute('data-deity'))) || '';
+      if (d) return String(d).toUpperCase();
+      var nm = (document.getElementById('dlgTitle') && document.getElementById('dlgTitle').textContent) || '';
+      var g = inferDeityFromName(nm);
+      if (g) return g;
+    }catch(e){}
+    return '';
+  }
+
+  // Hook coupon "套用" 按鈕，若 deity 取不到則用 computeCurrentDeity()
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!(t && t.id === 'bfCouponApply')) return;
+    setTimeout(function(){
+      try{
+        // normalize first
+        normalizePending();
+        normalizeCart();
+        // if the existing script's getPendingDeity()回傳空，這裡補上 dataset
+        var deity = computeCurrentDeity();
+        if (deity){
+          // 暫存到 session 讓原流程也能拿到
+          try{
+            var raw = sessionStorage.getItem('__pendingDetail__');
+            var obj = raw ? JSON.parse(raw) : {};
+            if (typeof obj !== 'object' || !obj) obj = {};
+            obj.deity = deity;
+            sessionStorage.setItem('__pendingDetail__', JSON.stringify(obj));
+          }catch(e){}
+        }
+      }catch(e){}
+    }, 0);
+  }, true);
+
+  // When opening the bank dialog, normalize first
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (t && (t.id==='pay711' || t.id==='cartGo711' || (t.closest && t.closest('#pay711,#cartGo711')))){
+      setTimeout(function(){ normalizePending(); normalizeCart(); }, 0);
+    }
+  }, true);
+
+  // Initial pass on load
+  document.addEventListener('DOMContentLoaded', function(){
+    normalizePending();
+    normalizeCart();
+  });
+})();
+</script>
+<script src="/js/utils.js"></script>
+<script src="/js/cart.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/main.js"></script>
+<script src="/js/checkout.js"></script>
+</body>
+</html>
