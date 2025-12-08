@@ -125,6 +125,17 @@ async function getProofFromStore(env, rawKey) {
   return null;
 }
 
+function __headersJSON__() {
+  return {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+    'Cache-Control': 'no-store'
+  };
+}
+
+
 export async function onRequest(context) {
   // The context object contains request, env, and other properties.
   // We can destructure it to get what we need.
@@ -209,16 +220,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       'Cache-Control': 'no-store'
     }
   });
-}
-
-function __headersJSON__() {
-  return {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
-    'Cache-Control': 'no-store'
-  };
 }
 
 if (pathname === '/api/order/store-select' && request.method === 'POST') {
@@ -371,7 +372,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     }
 
     // ---- source detection: cart vs direct-buy (do not mix) ----
-    function isTruthy(x){ return x === true || x === 1 || x === '1' || x === 'true' || x === 'yes' || x === 'on'; }
+    const isTruthy = (x) => x === true || x === 1 || x === '1' || x === 'true' || x === 'yes' || x === 'on';
     const hintMode   = (body.mode || '').toLowerCase();           // 'cart' | 'direct' (if provided)
     const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
     const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
@@ -1002,13 +1003,6 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
   }
   // Read query params with aliases (front-end may send different names)
-  function getAny(sp, keys){
-    for (const k of keys){
-      const v = sp.get(k);
-      if (v && String(v).trim()) return String(v).trim();
-    }
-    return '';
-  }
   const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
   const qPhone = normalizePhone(qPhoneRaw);
@@ -1128,15 +1122,7 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
   }
   try {
     const origin = new URL(request.url).origin;
-    // optional: ids=ID1,ID2,...  OR use same qPhone/qLast5 filters as /api/orders
     const idsParam = (url.searchParams.get('ids') || '').trim();
-    function getAny(sp, keys){
-      for (const k of keys){
-        const v = sp.get(k);
-        if (v && String(v).trim()) return String(v).trim();
-      }
-      return '';
-    }
     const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
     const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
     const qPhone = normalizePhone(qPhoneRaw);
@@ -2431,6 +2417,14 @@ async function resizeImage(url, env, origin){
   }catch(e){
     return withCORS(json({ok:false, error:String(e)}, 500));
   }
+}
+
+function getAny(sp, keys){
+  for (const k of keys){
+    const v = sp.get(k);
+    if (v && String(v).trim()) return String(v).trim();
+  }
+  return '';
 }
 
 // Helper: tolerant phone and last5 match functions
