@@ -3615,6 +3615,19 @@ try{
   }
   try{ window.__syncStorePreviewFromBank = syncStorePreviewFromBank; }catch(_){}
 
+  // 新增：將門市預覽欄位的資料，同步到最終的匯款表單欄位
+  function syncStoreToBankForm(){
+    try {
+      var previewInput = document.getElementById('bfStorePreview');
+      var bankInput = document.getElementById('bfStore');
+      if (previewInput && bankInput) {
+        bankInput.value = previewInput.value;
+      }
+    } catch(e) {}
+  }
+  try{ window.syncStoreToBankForm = syncStoreToBankForm; }catch(e){}
+
+
   // pay711 / cartGo711 進入第一步：訂單確認
   document.addEventListener('click', function(e){
     var t = e.target;
@@ -3648,8 +3661,11 @@ try{
     }
     if (btn.id === 'storeNextBtn'){
       // 允許服務性商品直接略過門市，或在已選門市後進入匯款頁
-      try{ syncStorePreviewFromBank(); }catch(e){}
       closeStoreDialog();
+      // 確保在開啟匯款視窗前，將門市選擇的結果同步過去
+      try{
+        if (typeof window.syncStoreToBankForm === 'function') window.syncStoreToBankForm();
+      }catch(e){}
       openBankStep();
       return;
     }
