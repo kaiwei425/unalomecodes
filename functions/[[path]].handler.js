@@ -1967,11 +1967,9 @@ async function listProducts(url, env) {
     const raw = await env.PRODUCTS.get(`PRODUCT:${id}`);
     if (!raw) continue;
     const p = JSON.parse(raw);
+    // 使用智慧分類函式來補全或修正舊資料的分類
+    p.category = inferCategory(p);
     if (active === "true" && p.active !== true) continue;
-    // 若無 category 屬性則補上 "佛牌"
-    if (!("category" in p)) {
-      p.category = "佛牌";
-    }
     // 分類篩選
     if (category && p.category !== category) continue;
     items.push(p);
