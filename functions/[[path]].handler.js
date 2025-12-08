@@ -134,48 +134,53 @@ export async function onRequest(context) {
     /*__CVS_CALLBACK_MERGE_FINAL__*/
     try{
       const _u = new URL(request.url);
-      if (_u.pathname === "/cvs_callback") {
-        // 7-11 emap 可能用 GET 或 POST 回傳，這裡統一處理
-        if (request.method === "GET" || request.method === "POST") {
-          let source;
-          if (request.method === "POST") {
-            source = await request.formData();
-          } else { // GET
-            source = _u.searchParams;
-          }
-
-          const pick = (src, ...keys) => {
-            for (const k of keys) {
-              const v = src.get(k);
-              if (v) return String(v);
-            }
-            return "";
-          };
-
-          const storeId    = pick(source, "storeid", "StoreId", "stCode", "code", "store");
-          const storeName  = pick(source, "storename", "StoreName", "stName", "name");
-          const address    = pick(source, "storeaddress", "StoreAddress", "address", "Addr");
-          const tel        = pick(source, "storetel", "StoreTel", "tel", "TEL");
-
-          const ret = _u.searchParams.get("ret") || "https://shopunalomecodes.pages.dev/shop.html#bank";
-          const orig = new URL(ret);
-          const back = new URL(ret);
-
-          // merge existing search params
-          for (const [k, v] of orig.searchParams) back.searchParams.set(k, v);
-          if (storeId)   back.searchParams.set("storeid", storeId);
-          if (storeName) back.searchParams.set("storename", storeName);
-          if (address)   back.searchParams.set("storeaddress", address);
-          if (tel)       back.searchParams.set("storetel", tel);
-
-          // preserve hash
-          back.hash = orig.hash || back.hash;
-          if ((back.hash || "").toLowerCase() === "#bank") {
-            back.searchParams.set("bank", "1");
-          }
-
-          return Response.redirect(back.toString(), 302);
+      if (_u.pathname === "/cvs_callback" && (request.method === "GET" || request.method === "POST")) {
+        let source;
+        if (request.method === "POST") {
+          source = await request.formData();
+        } else { // GET
+          source = _u.searchParams;
         }
+
+        const pick = (src, ...keys) => {
+          for (const k of keys) {
+            const v = src.get(k);
+            if (v) return String(v);
+          }
+          return "";
+        };
+
+        const data = {
+          __cvs_store__: true,
+          storeid:   pick(source, "storeid", "StoreId", "stCode", "code", "store"),
+          storename: pick(source, "storename", "StoreName", "stName", "name"),
+          storeaddress: pick(source, "storeaddress", "StoreAddress", "address", "Addr"),
+          storetel: pick(source, "storetel", "StoreTel", "tel", "TEL")
+        };
+        const dataJson = JSON.stringify(data);
+
+        const html = `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>處理中...</title></head>
+<body>
+  <p>已選擇門市，正在返回...</p>
+  <script>
+    (function(){
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(${dataJson}, "*");
+        }
+      } catch(e) { console.error(e); }
+      try { window.close(); } catch(e) {}
+    })();
+  </script>
+</body>
+</html>`;
+
+        return new Response(html, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+        });
       }
     }catch(e){ /* ignore and continue */ }
     

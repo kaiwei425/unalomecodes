@@ -3235,6 +3235,20 @@ function ensureCandleFields(required){
   try{ window.syncStoreToBankForm = syncStoreToBankForm; }catch(e){}
 
 
+  // --- 7-11 門市選擇：postMessage 監聽器 ---
+  // 監聽來自 7-11 callback 彈出視窗的訊息
+  window.addEventListener('message', function(ev){
+    try {
+      var d = ev.data || {};
+      // 確認是我們需要的門市資料
+      if (d && d.__cvs_store__) {
+        // 呼叫統一的填寫函式，將資料填入所有相關欄位
+        if (typeof fillStoreIntoForm === 'function') {
+          fillStoreIntoForm(d);
+        }
+      }
+    } catch(e) {}
+  });
   // pay711 / cartGo711 進入第一步：訂單確認
   document.addEventListener('click', function(e){
     var t = e.target;
@@ -3417,15 +3431,18 @@ function ensureCandleFields(required){
     var t = e.target;
     if (!t || t.id !== 'storeOpenCvsBtn') return;
     e.preventDefault();
-    try{
-      var originalLink = document.getElementById('bfStoreLink');
-      var href = originalLink && originalLink.getAttribute('href');
-      if (!href){
-        alert('目前無法開啟 7-11 門市地圖，請稍後再試');
-        return;
-      }
+    try {
+      // 動態產生 7-11 地圖的 URL
+      var base = "https://emap.presco.com.tw/c2cemap.ashx";
+      var params = new URLSearchParams();
+      params.set("eshopid", "870");
+      params.set("servicetype", "1");
+      // 設定 callback URL 為我們的後端 Function
+      var callbackUrl = new URL("/cvs_callback", location.origin);
+      params.set("url", callbackUrl.toString());
+      var href = base + "?" + params.toString();
+
       var w = window.open(href, 'cvs_popup', 'width=980,height=720,resizable=yes,scrollbars=yes');
-      try{ w && w.focus && w.focus(); }catch(_){ }
     }catch(err){}
   });
 
