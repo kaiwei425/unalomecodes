@@ -142,6 +142,11 @@ export async function onRequest(context) {
   const { request, env, next } = context;
 
   const url = new URL(request.url);
+  const { pathname, origin } = url;
+
+  // =================================================================
+  //  主要 API 路由器 (Main API Router)
+  // =================================================================
     /*__CVS_CALLBACK_MERGE_FINAL__*/
     try{
       const _u = new URL(request.url);
@@ -190,12 +195,6 @@ export async function onRequest(context) {
       }
     }catch(e){ /* ignore and continue */ }
     
-    
-const { pathname, origin } = url;
-
-    // =================================================================
-    //  主要 API 路由 (提前處理，避免被 fallback 攔截)
-    // =================================================================
 
     // 商品列表 / 新增
   if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
