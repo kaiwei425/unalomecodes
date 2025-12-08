@@ -1774,16 +1774,19 @@ try{
 
 <script id="bankAutoReopen">
 (function(){
-  function qs(){ return new URLSearchParams(location.search); }
   function refillFromQuery(){
-    var sp = qs();
+    var sp = new URLSearchParams(location.search);
     var name = sp.get('storename') || '';
     var id   = sp.get('storeid') || '';
     var addr = sp.get('storeaddress') || '';
     var tel  = sp.get('storetel') || '';
 
     var val = '';
-    if (name && id) val = name + ' (' + id + ')';
+    // 修正：優先使用 fillStoreIntoForm 函式來確保格式一致
+    if (typeof fillStoreIntoForm === 'function') {
+      fillStoreIntoForm({ storename: name, storeid: id, storeaddress: addr, storetel: tel });
+    } else if (name && id) {
+      val = name + ' (' + id + ')';
     else if (name)  val = name;
     else if (id)    val = id;
 
@@ -1794,26 +1797,31 @@ try{
       box.setAttribute('data-storename', name);
       box.setAttribute('data-storeaddress', addr);
       box.setAttribute('data-storetel', tel);
+
+      // 同時更新 Step 2 的預覽欄位
+      var preview = document.getElementById('dlgStoreInput');
+      if (preview) {
+        preview.value = val;
+      }
     }
   }
 
   function reopenIfNeeded(){
-    var sp = qs();
+    var sp = new URLSearchParams(location.search);
     var shouldOpen = (location.hash && location.hash.toLowerCase() === '#bank') || sp.get('bank') === '1';
-    if (!shouldOpen) return;
-
-    // try to open the bank dialog; prefer your existing helper
-    try{
-      if (typeof openBankDialog === 'function') {
-        openBankDialog('detail');
-        return;
+    // 停用自動開啟 Step 3 的功能，將控制權交給新的流程
+    if (shouldOpen) {
+      // 只需確保 Step 2 的對話框被打開
+      var dlgStore = document.getElementById('dlgStore');
+      if (dlgStore && typeof dlgStore.showModal === 'function' && !dlgStore.open) {
+        try {
+          // 檢查是否有更上層的對話框，若無則開啟
+          if (!document.querySelector('dialog[open]')) {
+             dlgStore.showModal();
+          }
+        } catch(e) {}
       }
-    }catch(e){}
-    // fallback to show dialog element
-    try{
-      var dlg = document.getElementById('dlgBank');
-      if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
-    }catch(e){}
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function(){
