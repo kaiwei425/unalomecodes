@@ -1707,16 +1707,6 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
 }
-// 非 /api/* 的請求一律交回 Pages 靜態資產（含 /admin/ -> admin/index.html）
-    if (!pathname.startsWith("/api/")) {
-      return next();
-    }
-
-    // CORS Preflight
-    if (request.method === "OPTIONS") {
-      if (pathname.startsWith("/api/")) return corsPreflight();
-    }
-
     // 圖片上傳
     if (pathname === "/api/upload" && request.method === "POST") {
       return handleUpload(request, env, origin);
@@ -1732,7 +1722,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     }
 
     // 商品列表 / 新增
-    if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
+    if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") { // Keep alias
       return listProducts(url, env);
     }
     if (pathname === "/api/products" && request.method === "POST") {
@@ -1740,13 +1730,18 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     }
 
     // 商品單筆
-    const prodIdMatch = pathname.match(/^\/api\/products\/([^/]+)$/);
+    const prodIdMatch = pathname.match(/^\/api\/products\/([^/]+)$/) || pathname.match(/^\/products\/([^/]+)$/);
     if (prodIdMatch) {
       const id = decodeURIComponent(prodIdMatch[1]);
       if (request.method === "GET")   return getProduct(id, env);
       if (request.method === "PUT")   return putProduct(id, request, env);
       if (request.method === "PATCH") return patchProduct(id, request, env);
       if (request.method === "DELETE")return deleteProduct(id, env);
+    }
+
+    // CORS Preflight for all /api/ routes
+    if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
+      return corsPreflight();
     }
 
     // 公開讀取 R2 檔案
@@ -1879,7 +1874,12 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
       return resizeImage(url, env, origin);
     }
 
-    // 預設回退
+    // 預設回退: 如果請求路徑不是以 /api/ 開頭，則交給靜態資源處理
+    if (!pathname.startsWith("/api/")) {
+      return next();
+    }
+
+    // 如果是未匹配的 /api/ 路由，回傳 404
     return next();
 }
 
