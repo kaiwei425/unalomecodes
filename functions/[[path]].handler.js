@@ -1,3 +1,4 @@
+// functions/[[path]].handler.js
 // 標準化所有樣式來源：於表單頁面載入時呼叫，統一欄位樣式，避免多重 CSS 衝突
 function resetFormStyles() {
   const style = document.createElement('style');
@@ -87,6 +88,42 @@ function makeToken(len=32){
   return s;
 }
 
+// === Helper: unified proof retriever (R2 first, then KV) ===
+async function getProofFromStore(env, rawKey) {
+  const k = String(rawKey || '');
+  if (!k) return null;
+
+  // 1. Try exact or decoded key from R2 bucket
+  const tryKeys = [k];
+  try { tryKeys.push(decodeURIComponent(k)); } catch {}
+  for (const key of tryKeys) {
+    try {
+      const obj = await env.R2_BUCKET.get(key);
+      if (obj) {
+        const bin = await obj.arrayBuffer();
+        const contentType = (obj.httpMetadata && obj.httpMetadata.contentType) || 'image/jpeg';
+        return { source: 'r2', key, bin, metadata: { contentType } };
+      }
+    } catch (e) {
+      console.log('R2 get failed for', key, e);
+    }
+  }
+
+  // 2. Fallback: try KV (RECEIPTS)
+  try {
+    const res = env.RECEIPTS.getWithMetadata
+      ? await env.RECEIPTS.getWithMetadata(k)
+      : { value: await env.RECEIPTS.get(k, { type: 'arrayBuffer' }), metadata: {} };
+    const bin = res && res.value;
+    if (bin instanceof ArrayBuffer || (bin && typeof bin.byteLength === 'number')) {
+      return { source: 'kv', key: k, bin, metadata: res.metadata || {} };
+    }
+  } catch (e) {
+    console.log('KV get failed for', k, e);
+  }
+
+  return null;
+}
 
 export async function onRequest(context) {
   // The context object contains request, env, and other properties.
@@ -139,19 +176,18 @@ export async function onRequest(context) {
     
     
 const { pathname, origin } = url;
-// === Helper: unified proof retriever (R2 first, then KV) ===
 
     // =================================================================
     //  主要 API 路由 (提前處理，避免被 fallback 攔截)
     // =================================================================
 
     // 商品列表 / 新增
-    if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
-      return listProducts(url, env);
-    }
-    if (pathname === "/api/products" && request.method === "POST") {
-      return createProduct(request, env);
-    }
+  if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
+    return listProducts(url, env);
+  }
+  if (pathname === "/api/products" && request.method === "POST") {
+    return createProduct(request, env);
+  }
 
     // 商品單筆
     const prodIdMatch = pathname.match(/^\/api\/products\/([^/]+)$/) || pathname.match(/^\/products\/([^/]+)$/);
@@ -160,43 +196,7 @@ const { pathname, origin } = url;
       if (request.method === "GET")   return getProduct(id, env);
       if (request.method === "PUT")   return putProduct(id, request, env);
       if (request.method === "PATCH") return patchProduct(id, request, env);
-      if (request.method === "DELETE")return deleteProduct(id, env);
-    }
-
-async function getProofFromStore(env, rawKey) {
-  const k = String(rawKey || '');
-  if (!k) return null;
-
-  // 1. Try exact or decoded key from R2 bucket
-  const tryKeys = [k];
-  try { tryKeys.push(decodeURIComponent(k)); } catch {}
-  for (const key of tryKeys) {
-    try {
-      const obj = await env.R2_BUCKET.get(key);
-      if (obj) {
-        const bin = await obj.arrayBuffer();
-        const contentType = (obj.httpMetadata && obj.httpMetadata.contentType) || 'image/jpeg';
-        return { source: 'r2', key, bin, metadata: { contentType } };
-      }
-    } catch (e) {
-      console.log('R2 get failed for', key, e);
-    }
-  }
-
-  // 2. Fallback: try KV (RECEIPTS)
-  try {
-    const res = env.RECEIPTS.getWithMetadata
-      ? await env.RECEIPTS.getWithMetadata(k)
-      : { value: await env.RECEIPTS.get(k, { type: 'arrayBuffer' }), metadata: {} };
-    const bin = res && res.value;
-    if (bin instanceof ArrayBuffer || (bin && typeof bin.byteLength === 'number')) {
-      return { source: 'kv', key: k, bin, metadata: res.metadata || {} };
-    }
-  } catch (e) {
-    console.log('KV get failed for', k, e);
-  }
-
-  return null;
+      if (request.method === "DELETE") return deleteProduct(id, env);
 }
 // ======== Bank Transfer Additions (non-breaking) ========
 if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathname === '/api/order/confirm-transfer')) {
@@ -2327,4 +2327,118 @@ async function decStockCounters(env, items, fallbackProductId, fallbackVariantNa
       await decStockSingle(env, fallbackProductId, fallbackVariantName || '', fallbackQty || 1);
     }
   }catch(_){}
+}
+
+/* ========== /api/stories ========== */
+async function listStories(url, env){
+  const code = (url.searchParams.get("code")||"").toUpperCase();
+  if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
+  const idxRaw = await env.STORIES.get(`IDX:${code}`);
+  const ids = idxRaw ? JSON.parse(idxRaw) : [];
+  const items = [];
+  for (const id of ids.slice(0, 120)){
+    const raw = await env.STORIES.get(`STORY:${id}`);
+    if (!raw) continue;
+    try{ items.push(JSON.parse(raw)); }catch{}
+  }
+  items.sort((a,b)=> new Date(b.ts||0) - new Date(a.ts||0));
+  return withCORS(json({ok:true, items}));
+}
+
+async function createStory(request, env){
+  try{
+    const body = await request.json();
+    const code = String((body.code||"").toUpperCase());
+    const nick = String(body.nick||"訪客").slice(0, 20);
+    const msg  = String(body.msg||"").trim();
+    if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
+    if (!msg || msg.length < 2) return withCORS(json({ok:false, error:"Message too short"}, 400));
+    if (msg.length > 800) return withCORS(json({ok:false, error:"Message too long"}, 400));
+    const now = new Date().toISOString();
+    const id = `${code}:${now}:${crypto.randomUUID()}`;
+    const item = { id, code, nick, msg, ts: now };
+    await env.STORIES.put(`STORY:${id}`, JSON.stringify(item));
+    const idxKey = `IDX:${code}`;
+    const idxRaw = await env.STORIES.get(idxKey);
+    const ids = idxRaw ? JSON.parse(idxRaw) : [];
+    ids.unshift(id);
+    if (ids.length > 300) ids.length = 300;
+    await env.STORIES.put(idxKey, JSON.stringify(ids));
+    return withCORS(json({ok:true, item}));
+  }catch(e){
+    return withCORS(json({ok:false, error:String(e)}, 500));
+  }
+}
+
+/* ========== /api/stories: DELETE (single or bulk) ========== */
+// Modes:
+//   A) ?code=XXXX&id=STORYID -> delete single story
+//   B) ?code=XXXX            -> delete all stories under this code (capped at 200)
+async function deleteStories(url, env){
+  const code = (url.searchParams.get("code")||"").toUpperCase();
+  const id   = url.searchParams.get("id") || "";
+  if (!code) return withCORS(json({ ok:false, error:"Missing code" }, 400));
+
+  const idxKey = `IDX:${code}`;
+  const idxRaw = await env.STORIES.get(idxKey);
+  const ids = idxRaw ? JSON.parse(idxRaw) : [];
+
+  if (id) {
+    // delete single item
+    await env.STORIES.delete(`STORY:${id}`);
+    const next = ids.filter(x => x !== id);
+    await env.STORIES.put(idxKey, JSON.stringify(next));
+    return withCORS(json({ ok:true, deleted: 1 }));
+  }
+
+  // bulk delete (cap to avoid long-running)
+  let n = 0;
+  for (const sid of ids.slice(0, 200)) {
+    await env.STORIES.delete(`STORY:${sid}`);
+    n++;
+  }
+  await env.STORIES.put(idxKey, JSON.stringify([]));
+  return withCORS(json({ ok:true, deleted: n }));
+}
+
+
+
+/* ========== /api/img (Image resize proxy) ========== */
+async function resizeImage(url, env, origin){
+  try{
+    const u = url.searchParams.get("u") || "";
+    const key = url.searchParams.get("key") || "";
+    const w = Math.max(1, Math.min(4096, Number(url.searchParams.get("w")||800)|0));
+    const q = Math.max(10, Math.min(95, Number(url.searchParams.get("q")||75)|0));
+    const fmt = (url.searchParams.get("fmt")||"webp").toLowerCase(); // webp/avif/jpg/png
+
+    let target = u;
+    if (!target && key){
+      target = `${origin}/api/file/${encodeURIComponent(key)}`;
+    }
+    if (!target) return withCORS(json({ok:false, error:"Missing u or key"}, 400));
+
+    const req = new Request(target, {
+      headers: { 'Accept': 'image/*' },
+      cf: { image: { width: w, quality: q, fit: 'scale-down', format: fmt } }
+    });
+    const resp = await fetch(req);
+    // add long cache
+    const h = new Headers(resp.headers);
+    h.set('Cache-Control', 'public, max-age=31536000, immutable');
+    h.set('Access-Control-Allow-Origin','*');
+    return new Response(resp.body, { status: resp.status, headers: h });
+  }catch(e){
+    return withCORS(json({ok:false, error:String(e)}, 500));
+  }
+}
+
+// Helper: tolerant phone and last5 match functions
+function matchPhone(candidate, query) {
+  if (!candidate || !query) return false;
+  return normalizePhone(candidate) === normalizePhone(query);
+}
+function matchLast5(candidate, query) {
+  if (!candidate || !query) return false;
+  return String(candidate).replace(/\D/g,'').slice(-5) === String(query).replace(/\D/g,'').slice(-5);
 }
