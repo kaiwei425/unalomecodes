@@ -2158,6 +2158,14 @@ function inferCategory(body) {
   return "佛牌/聖物";
 }
 
+function getAny(sp, keys){
+  for (const k of keys){
+    const v = sp.get(k);
+    if (v && String(v).trim()) return String(v).trim();
+  }
+  return '';
+}
+
 function normalizePhone(s = '') {
   const digits = String(s || '').replace(/\D/g, '');
   if (!digits) return '';
