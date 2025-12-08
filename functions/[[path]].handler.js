@@ -2448,4 +2448,3 @@ function matchLast5(candidate, query) {
   if (!candidate || !query) return false;
   return String(candidate).replace(/\D/g,'').slice(-5) === String(query).replace(/\D/g,'').slice(-5);
 }
-}
