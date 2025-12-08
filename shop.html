@@ -4466,6 +4466,13 @@ try{
     return originalFetch.call(this, url, init);
   };
 })();
+
+// 確保在所有腳本（包含攔截器）都載入後才執行 main.js 的主要邏輯
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof window.runMain === 'function') {
+    window.runMain();
+  }
+});
 </script>
 <script src="/js/utils.js"></script>
 <script src="/js/cart.js"></script>
