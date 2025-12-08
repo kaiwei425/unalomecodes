@@ -2141,6 +2141,20 @@ function arrayBufferToBase64(bin){
   return btoa(ascii);
 }
 
+// --- 智慧商品分類輔助函式 ---
+function inferCategory(body) {
+  // 1. 優先使用前端明確指定的分類
+  if (body && body.category && ["佛牌/聖物", "蠟燭加持祈福", "跑廟行程", "其他"].includes(body.category)) {
+    return body.category;
+  }
+  // 2. 若無指定，則根據商品名稱中的關鍵字推斷
+  const name = String(body.name || "").toLowerCase();
+  if (name.includes("蠟燭")) return "蠟燭加持祈福";
+  if (name.includes("跑廟")) return "跑廟行程";
+  // 3. 預設分類
+  return "佛牌/聖物";
+}
+
 function normalizePhone(s = '') {
   const digits = String(s || '').replace(/\D/g, '');
   if (!digits) return '';
@@ -2158,7 +2172,7 @@ function normalizePhone(s = '') {
 // 前端可於管理端提供分類下拉式選單（佛牌、蠟燭、靈符、服飾）供選擇
 function normalizeProduct(body, nowIso) {
   return {
-    id: String(body.id),
+    id: String(body.id || crypto.randomUUID()),
     name: String(body.name),
     deity: String(body.deity || ""),
     basePrice: Number(body.basePrice ?? 0),
