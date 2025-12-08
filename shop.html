@@ -2677,11 +2677,7 @@ function ensureCandleFields(required){
     if (box) return box;
 
     var dlg = document.getElementById('dlgBank');
-    if (!dlg) return null;
-
-    // 優先放在匯款表單中，若沒有 form 就放在對話框內容最下方
-    var form = dlg.querySelector('form');
-    var host = form || dlg;
+    var hintEl = document.getElementById('bfCouponBackHint');
 
     box = document.createElement('div');
     box.id = 'bfCouponList';
@@ -2689,7 +2685,13 @@ function ensureCandleFields(required){
     box.style.fontSize = '13px';
     box.style.lineHeight = '1.5';
 
-    host.appendChild(box);
+    // 將優惠券列表插入到提示文字的下方
+    if (hintEl && hintEl.parentNode) {
+      hintEl.parentNode.insertBefore(box, hintEl.nextSibling);
+    } else if (dlg) {
+      // Fallback: 如果找不到提示文字，就加到 dialog 的最下方
+      dlg.appendChild(box);
+    }
     return box;
   }
 
