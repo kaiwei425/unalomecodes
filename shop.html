@@ -2577,19 +2577,25 @@ try{
   }
 
   // ---------- 遠端檢查優惠碼 ----------
-  async function checkCoupon(code, deity){
+  async function checkCoupon(code, deity) {
     // 先檢查這張券是否在本機已經被標記為「使用過」
-    if (isCouponUsedLocal(code)){
-      return { ok:false, reason:'already_used_local' };
+    if (isCouponUsedLocal(code)) {
+      return { ok: false, reason: 'already_used_local' };
     }
-    try{
-      var base = 'https://coupon-service.kaiwei425.workers.dev';
-      var qs = 'code=' + encodeURIComponent(code);
-      if (deity) qs += '&deity=' + encodeURIComponent(deity);
-      var r = await fetch(base + '/check?' + qs, { method:'GET', mode:'cors', credentials:'omit', cache:'no-store' });
-      var j = await r.json().catch(function(){ return {}; });
-      return j && j.ok ? j : { ok:false };
-    }catch(e){ return { ok:false }; }
+    try {
+      // 改為呼叫我們自己的後端 API，由後端去安全地驗證優惠券
+      const res = await fetch('/api/coupons/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ code, deity })
+      });
+      const data = await res.json();
+      return data && data.ok ? data : { ok: false, reason: data.reason || 'check_failed' };
+    } catch (e) {
+      return { ok: false, reason: 'fetch_error' };
+    }
   }
 
   function computeCartDeitySet(items){
