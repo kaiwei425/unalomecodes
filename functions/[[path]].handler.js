@@ -2064,11 +2064,6 @@ async function patchProduct(id, request, env) {
     if (typeof patch.category !== "undefined") {
       next.category = String(patch.category);
     }
-    // 確保 patch 後的分類也是正確的
-    // 即使只改了 name，也要重新推斷分類
-    if (typeof patch.name !== "undefined") {
-      next.category = inferCategory(next);
-    }
 
     next.updatedAt = new Date().toISOString();
     await env.PRODUCTS.put(`PRODUCT:${id}`, JSON.stringify(next));
@@ -2452,4 +2447,5 @@ function matchPhone(candidate, query) {
 function matchLast5(candidate, query) {
   if (!candidate || !query) return false;
   return String(candidate).replace(/\D/g,'').slice(-5) === String(query).replace(/\D/g,'').slice(-5);
+}
 }
