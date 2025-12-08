@@ -221,19 +221,9 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
   // 包一層 renderList：先依分類規則過濾，再交回原邏輯
   const __renderList0 = window.renderList;
   if (typeof __renderList0 === 'function'){
-    window.renderList = function(items){
-      try{
-        // 先幫每個 item 設定分類（若後台未設定就用關鍵字歸類）
-        const prepared = (Array.isArray(items)?items:[]).map(p => {
-          try{ p.category = classify(p); }catch(e){}
-          return p;
-        });
-        const filtered = prepared.filter(p => !selectedCat || p.category === selectedCat);
-        return __renderList0.call(this, filtered);
-      }catch(e){
-        // 若有意外，回退原本行為，避免商品消失
-        return __renderList0.apply(this, arguments);
-      }
+    window.renderList = function(items) {
+      const filtered = (items || []).filter(p => !selectedCat || (p && p.category) === selectedCat);
+      return __renderList0.call(this, filtered);
     };
   }
 

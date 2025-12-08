@@ -9,52 +9,68 @@
 <meta name="theme-color" content="#0b0b0d" />
 <style>
   :root{
-    --bg:#0b0b0d; --panel:#151518; --fg:#f6f7fb; --muted:#b7b7c0; --line:#262730;
-    --primary:#7c5cff; --ok:#16c784; --warn:#ffb020; --danger:#ff4d4f;
+    --bg: #111827; --panel: #1f2937; --fg: #f9fafb; --muted: #9ca3af; --line: #374151;
+    --primary: #6366f1; --ok: #22c55e; --warn: #f59e0b; --danger: #ef4444;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
   .wrap{max-width:1200px;margin:0 auto;padding:16px}
-  h1{margin:0 0 12px;font-size:20px}
+  h1{margin:0 0 16px;font-size:24px; font-weight: 800;}
+  h3{margin:0 0 10px;font-size:18px; font-weight: 700;}
   .grid{display:grid;grid-template-columns:380px 1fr;gap:16px}
   @media(max-width:980px){ .grid{grid-template-columns:1fr;}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);}
   .row{display:flex;gap:10px}
   label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
-  input,textarea,select{width:100%;background:#101116;border:1px solid var(--line);color:var(--fg);
-    padding:10px;border-radius:10px;font-size:14px}
+  input,textarea,select{
+    width:100%;background:#111827;border:1px solid var(--line);color:var(--fg);
+    padding:10px 12px;border-radius:10px;font-size:14px; transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  input:focus,textarea:focus,select:focus{
+    outline:none; border-color:var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
   textarea{min-height:110px;line-height:1.5}
-  .btn{appearance:none;border:1px solid var(--line);background:#1b1c22;color:var(--fg);
-    padding:10px 12px;border-radius:10px;font-weight:700;cursor:pointer}
-  .btn.primary{background:var(--primary);border-color:transparent}
-  .btn.ok{background:var(--ok);border-color:transparent;color:#0b0b0d}
-  .btn.warn{background:var(--warn);border-color:transparent;color:#0b0b0d}
-  .btn.danger{background:var(--danger);border-color:transparent}
-  .btn.ghost{background:transparent}
+  .btn{
+    appearance:none;border:1px solid var(--line);background:#374151;color:var(--fg);
+    padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;
+    transition: all .2s ease;
+  }
+  .btn:hover{filter: brightness(1.1); transform: translateY(-1px);}
+  .btn:active{filter: brightness(0.95); transform: translateY(0);}
+  .btn.primary{background:var(--primary);border-color:var(--primary); color: #fff;}
+  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .btn.warn{background:var(--warn);border-color:var(--warn);color:#111827}
+  .btn.danger{background:var(--danger);border-color:var(--danger); color: #fff;}
+  .btn.ghost{background:transparent; border-color: var(--line);}
   .muted{color:var(--muted);font-size:12px}
   .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
   .thumb{position:relative}
-  .thumb img{width:84px;height:84px;object-fit:cover;border:1px solid var(--line);border-radius:8px;background:#0e0e12}
-  .thumb .x{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border:none;border-radius:50%;
-    width:22px;height:22px;cursor:pointer;font-weight:700}
+  .thumb img{width:84px;height:84px;object-fit:cover;border:1px solid var(--line);border-radius:10px;background:#111827}
+  .thumb .x{
+    position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;border:2px solid var(--panel);border-radius:50%;
+    width:24px;height:24px;cursor:pointer;font-weight:700; display:flex; align-items:center; justify-content:center;
+    transition: transform .2s ease;
+  }
+  .thumb .x:hover{ transform: scale(1.1); }
   .hr{height:1px;background:var(--line);margin:12px 0}
   table{width:100%;border-collapse:collapse}
   th,td{border-bottom:1px dashed var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}
-  th{color:#cfd0e6;font-weight:700}
+  th{color:var(--muted);font-weight:600; padding-top: 0; padding-bottom: 12px;}
+  tbody tr:hover{ background: #2a3647; }
   .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{font-size:12px;background:#eaeaf8;color:#0b0b0d;border-radius:999px;padding:4px 8px}
-  .chip.alt{background:#e6fff6}
+  .chip{font-size:12px;background:#374151;color:#e5e7eb;border-radius:999px;padding:4px 10px; font-weight: 500;}
+  .chip.alt{background:#166534;color:#dcfce7;}
   .tools{display:flex;gap:6px;flex-wrap:wrap}
   .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 12px}
-  .pill{display:inline-flex;gap:6px;align-items:center;background:#101116;border:1px solid var(--line);border-radius:999px;padding:6px 8px}
+  .pill{display:inline-flex;gap:6px;align-items:center;background:#111827;border:1px solid var(--line);border-radius:999px;padding:6px 10px}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
   .badge.green{background:#103a2b;color:#71f0bb}
   .badge.gray{background:#23242c;color:#c7c8d8}
   .hint{font-size:12px;color:var(--muted)}
   .footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
   /* Modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;overflow:auto}
-  .modal .box{max-width:680px;width:100%;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .modal{position:fixed;inset:0;background:rgba(17, 24, 39, 0.8); backdrop-filter: blur(4px); display:none;align-items:center;justify-content:center;padding:16px;overflow:auto}
+  .modal .box{max-width:680px;width:100%;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);}
   .modal .head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;background:var(--panel);border-bottom:1px solid var(--line)}
   .modal .close{background:transparent;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:6px 10px;cursor:pointer}
   .variants{display:grid;gap:8px}
@@ -163,6 +179,7 @@
           <tr>
             <th style="width:60px">圖</th>
             <th>商品</th>
+            <th style="width:120px">分類</th>
             <th style="width:110px">價格</th>
             <th style="width:100px">已售出</th>
             <th style="width:210px">操作</th>
@@ -190,7 +207,6 @@
 <script>
 (function(){
   const apiBase = location.origin;
-  let currentCategory = null; // 追蹤編輯視窗中的分類，避免 PATCH 覆蓋成預設
   // ==== 神祇代碼驗證 ====
   const VALID_DEITY_CODES = ["WE","XZ","KP","CD","RH","HM","FM","GA","JL","ZD","ZF","HP"];
   // 名稱對應代碼對照表
@@ -208,6 +224,17 @@
     "澤度金": "ZD",
     "魂魄勇": "HP"
   };
+
+  // --- 與 shop.html 同步的分類正規化函式 ---
+  const ALL_CATEGORIES = ["佛牌/聖物", "蠟燭加持祈福", "跑廟行程", "其他"];
+  function normalizeCategory(p) {
+    const cat = p && p.category;
+    if (cat && ALL_CATEGORIES.includes(cat)) return cat;
+    const name = (p && p.name || "").toLowerCase();
+    if (name.includes("蠟燭")) return "蠟燭加持祈福";
+    if (name.includes("跑廟")) return "跑廟行程";
+    return "佛牌/聖物";
+  }
 
   // ==== 工具 ====
   const $ = (id)=>document.getElementById(id);
@@ -365,6 +392,7 @@
       tr.append(
         tdImg(firstImg),
         tdInfo(p),
+        tdCategory(p),
         tdPrice(p),
         tdSold(p),
         tdTools(p)
@@ -392,6 +420,12 @@
     if (p.deityCode) chips.append(el("div",{ class:"chip" },"代碼："+escapeHtml(p.deityCode)));
     chips.append(el("div",{ class:"chip "+(p.active? "alt": "") }, p.active ? "上架中" : "已下架"));
     td.append(t, chips);
+    return td;
+  }
+  function tdCategory(p){
+    const td = el("td");
+    const cat = normalizeCategory(p);
+    td.textContent = cat;
     return td;
   }
   function tdPrice(p){
@@ -453,7 +487,6 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error||"讀取失敗");
       const p = data.product;
-      currentCategory = p.category || "佛牌/聖物";
       renderEdit(p);
       modal.style.display = "flex";
     }catch(e){ alert(e.message||e); }
@@ -490,7 +523,8 @@
     const catSel  = el("select");
     ["佛牌/聖物","蠟燭加持祈福","跑廟行程","其他"].forEach(v=>{
       const opt = el("option",{ value:v }, v);
-      if ((p.category || "佛牌/聖物") === v) opt.selected = true;
+      // 使用新的正規化函式來確保正確選中
+      if (normalizeCategory(p) === v) opt.selected = true;
       catSel.append(opt);
     });
     catWrap.append(catLab, catSel);
@@ -557,7 +591,6 @@
         images: p.images||[],
         variants: p.variants||[]
       };
-      currentCategory = catSel.value;
       await savePatch(p.id, payload, true);
       await reloadList();
       alert("已儲存");
@@ -602,7 +635,6 @@
     });
     // 分類變動即存
     catSel.addEventListener("change", ()=> {
-      currentCategory = catSel.value;
       queueSave(p.id, { category: catSel.value });
     });
   }
@@ -685,10 +717,6 @@
 
   let saveTimer = null, savePayload = null, saveId = null;
   function queueSave(id, payload){
-    // 若在編輯視窗中且這次 payload 沒有帶 category，就自動補上目前的分類
-    if (currentCategory != null && payload && typeof payload === 'object' && !('category' in payload)){
-      payload = Object.assign({}, payload, { category: currentCategory });
-    }
     saveId = id;
     savePayload = Object.assign({}, savePayload || {}, payload);
     if (saveTimer) clearTimeout(saveTimer);
