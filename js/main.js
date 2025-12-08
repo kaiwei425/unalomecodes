@@ -106,4 +106,10 @@ document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
 
-loadProducts();
+// 將 loadProducts() 包在一個函式中，等待 shop.html 中的 DOMContentLoaded 事件觸發
+function runMain() {
+  loadProducts();
+}
+
+// 將 runMain 函式掛載到 window 物件上，以便 shop.html 可以呼叫它
+window.runMain = runMain;

@@ -140,6 +140,29 @@ export async function onRequest(context) {
     
 const { pathname, origin } = url;
 // === Helper: unified proof retriever (R2 first, then KV) ===
+
+    // =================================================================
+    //  主要 API 路由 (提前處理，避免被 fallback 攔截)
+    // =================================================================
+
+    // 商品列表 / 新增
+    if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
+      return listProducts(url, env);
+    }
+    if (pathname === "/api/products" && request.method === "POST") {
+      return createProduct(request, env);
+    }
+
+    // 商品單筆
+    const prodIdMatch = pathname.match(/^\/api\/products\/([^/]+)$/) || pathname.match(/^\/products\/([^/]+)$/);
+    if (prodIdMatch) {
+      const id = decodeURIComponent(prodIdMatch[1]);
+      if (request.method === "GET")   return getProduct(id, env);
+      if (request.method === "PUT")   return putProduct(id, request, env);
+      if (request.method === "PATCH") return patchProduct(id, request, env);
+      if (request.method === "DELETE")return deleteProduct(id, env);
+    }
+
 async function getProofFromStore(env, rawKey) {
   const k = String(rawKey || '');
   if (!k) return null;
@@ -1719,24 +1742,6 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     }
     if (pathname === "/api/deleteFile" && request.method === "POST") {
       return deleteR2FileViaBody(request, env);
-    }
-
-    // 商品列表 / 新增
-    if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") { // Keep alias
-      return listProducts(url, env);
-    }
-    if (pathname === "/api/products" && request.method === "POST") {
-      return createProduct(request, env);
-    }
-
-    // 商品單筆
-    const prodIdMatch = pathname.match(/^\/api\/products\/([^/]+)$/) || pathname.match(/^\/products\/([^/]+)$/);
-    if (prodIdMatch) {
-      const id = decodeURIComponent(prodIdMatch[1]);
-      if (request.method === "GET")   return getProduct(id, env);
-      if (request.method === "PUT")   return putProduct(id, request, env);
-      if (request.method === "PATCH") return patchProduct(id, request, env);
-      if (request.method === "DELETE")return deleteProduct(id, env);
     }
 
     // CORS Preflight for all /api/ routes
