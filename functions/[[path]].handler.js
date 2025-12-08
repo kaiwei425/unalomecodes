@@ -134,27 +134,35 @@ export async function onRequest(context) {
     /*__CVS_CALLBACK_MERGE_FINAL__*/
     try{
       const _u = new URL(request.url);
-      if (_u.pathname === "/cvs_callback"){
-        if (request.method === "POST"){
-          const form = await request.formData();
-          const pick = (...keys) => {
-            for (const k of keys){
-              const v = form.get(k);
+      if (_u.pathname === "/cvs_callback") {
+        // 7-11 emap 可能用 GET 或 POST 回傳，這裡統一處理
+        if (request.method === "GET" || request.method === "POST") {
+          let source;
+          if (request.method === "POST") {
+            source = await request.formData();
+          } else { // GET
+            source = _u.searchParams;
+          }
+
+          const pick = (src, ...keys) => {
+            for (const k of keys) {
+              const v = src.get(k);
               if (v) return String(v);
             }
             return "";
           };
-          const storeId    = pick("storeid","StoreId","stCode","code","store");
-          const storeName  = pick("storename","StoreName","stName","name");
-          const address    = pick("storeaddress","StoreAddress","address","Addr");
-          const tel        = pick("storetel","StoreTel","tel","TEL");
+
+          const storeId    = pick(source, "storeid", "StoreId", "stCode", "code", "store");
+          const storeName  = pick(source, "storename", "StoreName", "stName", "name");
+          const address    = pick(source, "storeaddress", "StoreAddress", "address", "Addr");
+          const tel        = pick(source, "storetel", "StoreTel", "tel", "TEL");
 
           const ret = _u.searchParams.get("ret") || "https://shopunalomecodes.pages.dev/shop.html#bank";
           const orig = new URL(ret);
           const back = new URL(ret);
 
           // merge existing search params
-          for (const [k,v] of orig.searchParams) back.searchParams.set(k, v);
+          for (const [k, v] of orig.searchParams) back.searchParams.set(k, v);
           if (storeId)   back.searchParams.set("storeid", storeId);
           if (storeName) back.searchParams.set("storename", storeName);
           if (address)   back.searchParams.set("storeaddress", address);
@@ -162,14 +170,11 @@ export async function onRequest(context) {
 
           // preserve hash
           back.hash = orig.hash || back.hash;
-          if ((back.hash||"").toLowerCase() === "#bank"){
+          if ((back.hash || "").toLowerCase() === "#bank") {
             back.searchParams.set("bank", "1");
           }
 
           return Response.redirect(back.toString(), 302);
-        }
-        if (request.method === "GET"){
-          return new Response("7-11 門市 callback ready", { status: 200 });
         }
       }
     }catch(e){ /* ignore and continue */ }
