@@ -585,8 +585,16 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     };
 
     await env.ORDERS.put(order.id, JSON.stringify(order));
-    const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX')); // backward compat
-    const ids = idxRaw ? JSON.parse(idxRaw) : [];
+    const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
+    let ids = [];
+    if (idxRaw) {
+      try {
+        const parsed = JSON.parse(idxRaw);
+        if (Array.isArray(parsed)) ids = parsed;
+      } catch (e) {
+        // Index is corrupted, start a new one.
+      }
+    }
     ids.unshift(order.id);
     if (ids.length > 1000) ids.length = 1000;
     await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
