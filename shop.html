@@ -208,23 +208,19 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       b.textContent = cat; b.dataset.cat = cat;
       if(cat===selectedCat) b.classList.add('active');
       b.addEventListener('click', ()=>{
-        selectedCat = cat;
+        if (selectedCat === cat) {
+          selectedCat = null;
+        } else {
+          selectedCat = cat;
+        }
         [...list.children].forEach(x=> x.classList.toggle('active', x===b));
+        // 將選擇的分類存到全域變數，然後呼叫 main.js 的 applyFilter
+        window.__currentCategoryFilter = selectedCat;
         if(typeof applyFilter === 'function') applyFilter();
-        else if(typeof renderList === 'function' && Array.isArray(window.viewItems)) renderList(window.viewItems);
       });
       list.appendChild(b);
     });
     side.appendChild(box);
-  }
-
-  // 包一層 renderList：先依分類規則過濾，再交回原邏輯
-  const __renderList0 = window.renderList;
-  if (typeof __renderList0 === 'function'){
-    window.renderList = function(items) {
-      const filtered = (items || []).filter(p => !selectedCat || (p && p.category) === selectedCat);
-      return __renderList0.call(this, filtered);
-    };
   }
 
   document.addEventListener('DOMContentLoaded', buildCats);

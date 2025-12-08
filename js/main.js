@@ -50,11 +50,16 @@ function applyFilter(){
   const max = maxVal === '' ? Infinity : Number(maxVal);
   const sort = document.getElementById('fSort').value;
 
+  // 從 shop.html 的 cats-inline 腳本讀取當前選擇的分類
+  // 這裡使用一個全域變數來溝通
+  const category = window.__currentCategoryFilter || null;
+
   viewItems = rawItems.filter(p=>{
     const price = minPrice(p);
     if (deity && p.deity !== deity) return false;
     if (price < min) return false;
     if (price > max) return false;
+    if (category && p.category !== category) return false;
     return true;
   });
 
