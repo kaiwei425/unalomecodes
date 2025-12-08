@@ -1732,7 +1732,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     }
 
     // 商品列表 / 新增
-    if (pathname === "/api/products" && request.method === "GET") {
+    if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
       return listProducts(url, env);
     }
     if (pathname === "/api/products" && request.method === "POST") {
