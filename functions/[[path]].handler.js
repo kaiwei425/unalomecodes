@@ -2024,7 +2024,7 @@ async function putProduct(id, request, env) {
     const now = new Date().toISOString();
     // 確保 category 被傳入 normalizeProduct
     const product = normalizeProduct({ ...body, id, category: body.category }, now);
-    await env.PRODUCTS.put(`PRODUCT:${id}`, JSON.stringify(product));
+    await env.PRODUCTS.put(`PRODUCT:${id}`, JSON.stringify(product)); // product 已包含正確的 category
 
     const indexRaw = await env.PRODUCTS.get("INDEX");
     const ids = indexRaw ? JSON.parse(indexRaw) : [];
@@ -2066,7 +2066,7 @@ async function patchProduct(id, request, env) {
     if (typeof patch.category !== "undefined") {
       next.category = String(patch.category);
     }
-
+    next.category = inferCategory(next); // 確保 patch 後的分類也是正確的
     next.updatedAt = new Date().toISOString();
     await env.PRODUCTS.put(`PRODUCT:${id}`, JSON.stringify(next));
 
@@ -2138,6 +2138,20 @@ function arrayBufferToBase64(bin){
   return btoa(ascii);
 }
 
+// --- 智慧商品分類輔助函式 ---
+function inferCategory(body) {
+  // 1. 優先使用前端明確指定的分類
+  if (body && body.category && ["佛牌/聖物", "蠟燭加持祈福", "跑廟行程", "其他"].includes(body.category)) {
+    return body.category;
+  }
+  // 2. 若無指定，則根據商品名稱中的關鍵字推斷
+  const name = String(body.name || "").toLowerCase();
+  if (name.includes("蠟燭")) return "蠟燭加持祈福";
+  if (name.includes("跑廟")) return "跑廟行程";
+  // 3. 預設分類
+  return "佛牌/聖物";
+}
+
 function normalizePhone(s = '') {
   const digits = String(s || '').replace(/\D/g, '');
   if (!digits) return '';
@@ -2155,7 +2169,7 @@ function normalizePhone(s = '') {
 // 前端可於管理端提供分類下拉式選單（佛牌、蠟燭、靈符、服飾）供選擇
 function normalizeProduct(body, nowIso) {
   return {
-    id: String(body.id),
+    id: String(body.id || crypto.randomUUID()),
     name: String(body.name),
     deity: String(body.deity || ""),
     basePrice: Number(body.basePrice ?? 0),
@@ -2168,7 +2182,7 @@ function normalizeProduct(body, nowIso) {
       priceDiff: Number(v.priceDiff ?? 0),
       stock: Number(v.stock ?? 0)
     })) : [],
-    category: String(body.category || "佛牌"),
+    category: inferCategory(body), // 改為使用智慧分類函式
     active: body.active !== false,
     createdAt: body.createdAt || nowIso,
     updatedAt: nowIso
