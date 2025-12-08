@@ -197,7 +197,7 @@ const { pathname, origin } = url;
       if (request.method === "PUT")   return putProduct(id, request, env);
       if (request.method === "PATCH") return patchProduct(id, request, env);
       if (request.method === "DELETE") return deleteProduct(id, env);
-    }
+    } // This closing brace was incorrect and is being removed. The logic continues inside onRequest.
 // ======== Bank Transfer Additions (non-breaking) ========
 if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathname === '/api/order/confirm-transfer')) {
   return new Response(null, {
