@@ -125,60 +125,36 @@ async function getProofFromStore(env, rawKey) {
   return null;
 }
 
-function __headersJSON__() {
-  return {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
-    'Cache-Control': 'no-store'
-  };
-}
-
-
 export async function onRequest(context) {
   // The context object contains request, env, and other properties.
   // We can destructure it to get what we need.
   const { request, env, next } = context;
 
   const url = new URL(request.url);
-  const { pathname, origin } = url;
-
-  // =================================================================
-  //  主要 API 路由器 (Main API Router)
-  // =================================================================
     /*__CVS_CALLBACK_MERGE_FINAL__*/
     try{
       const _u = new URL(request.url);
-      if (_u.pathname === "/cvs_callback") {
-        // 7-11 emap 可能用 GET 或 POST 回傳，這裡統一處理
-        if (request.method === "GET" || request.method === "POST") {
-          let source;
-          if (request.method === "POST") {
-            source = await request.formData();
-          } else { // GET
-            source = _u.searchParams;
-          }
-
-          const pick = (src, ...keys) => {
-            for (const k of keys) {
-              const v = src.get(k);
+      if (_u.pathname === "/cvs_callback"){
+        if (request.method === "POST"){
+          const form = await request.formData();
+          const pick = (...keys) => {
+            for (const k of keys){
+              const v = form.get(k);
               if (v) return String(v);
             }
             return "";
           };
-
-          const storeId    = pick(source, "storeid", "StoreId", "stCode", "code", "store");
-          const storeName  = pick(source, "storename", "StoreName", "stName", "name");
-          const address    = pick(source, "storeaddress", "StoreAddress", "address", "Addr");
-          const tel        = pick(source, "storetel", "StoreTel", "tel", "TEL");
+          const storeId    = pick("storeid","StoreId","stCode","code","store");
+          const storeName  = pick("storename","StoreName","stName","name");
+          const address    = pick("storeaddress","StoreAddress","address","Addr");
+          const tel        = pick("storetel","StoreTel","tel","TEL");
 
           const ret = _u.searchParams.get("ret") || "https://shopunalomecodes.pages.dev/shop.html#bank";
           const orig = new URL(ret);
           const back = new URL(ret);
 
           // merge existing search params
-          for (const [k, v] of orig.searchParams) back.searchParams.set(k, v);
+          for (const [k,v] of orig.searchParams) back.searchParams.set(k, v);
           if (storeId)   back.searchParams.set("storeid", storeId);
           if (storeName) back.searchParams.set("storename", storeName);
           if (address)   back.searchParams.set("storeaddress", address);
@@ -186,15 +162,24 @@ export async function onRequest(context) {
 
           // preserve hash
           back.hash = orig.hash || back.hash;
-          if ((back.hash || "").toLowerCase() === "#bank") {
+          if ((back.hash||"").toLowerCase() === "#bank"){
             back.searchParams.set("bank", "1");
           }
 
           return Response.redirect(back.toString(), 302);
         }
+        if (request.method === "GET"){
+          return new Response("7-11 門市 callback ready", { status: 200 });
+        }
       }
     }catch(e){ /* ignore and continue */ }
     
+    
+const { pathname, origin } = url;
+
+    // =================================================================
+    //  主要 API 路由 (提前處理，避免被 fallback 攔截)
+    // =================================================================
 
     // 商品列表 / 新增
   if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
@@ -224,6 +209,16 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       'Cache-Control': 'no-store'
     }
   });
+}
+
+function __headersJSON__() {
+  return {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+    'Cache-Control': 'no-store'
+  };
 }
 
 if (pathname === '/api/order/store-select' && request.method === 'POST') {
@@ -376,7 +371,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     }
 
     // ---- source detection: cart vs direct-buy (do not mix) ----
-    const isTruthy = (x) => x === true || x === 1 || x === '1' || x === 'true' || x === 'yes' || x === 'on';
+    function isTruthy(x){ return x === true || x === 1 || x === '1' || x === 'true' || x === 'yes' || x === 'on'; }
     const hintMode   = (body.mode || '').toLowerCase();           // 'cart' | 'direct' (if provided)
     const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
     const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
@@ -1006,7 +1001,6 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
   }
-  // Read query params with aliases (front-end may send different names)
   const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
   const qPhone = normalizePhone(qPhoneRaw);
@@ -2421,14 +2415,6 @@ async function resizeImage(url, env, origin){
   }catch(e){
     return withCORS(json({ok:false, error:String(e)}, 500));
   }
-}
-
-function getAny(sp, keys){
-  for (const k of keys){
-    const v = sp.get(k);
-    if (v && String(v).trim()) return String(v).trim();
-  }
-  return '';
 }
 
 // Helper: tolerant phone and last5 match functions
