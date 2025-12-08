@@ -1023,7 +1023,13 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
   const qPhone = normalizePhone(qPhoneRaw);
   const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
-  const needFilter = !!(qPhone || qLast5);
+  const needFilter = !!(qPhone && qLast5);
+  const isPartialLookup = !!(qPhone || qLast5) && !needFilter;
+
+  if (isPartialLookup) {
+    // If only one of the two is provided, return empty list, as per user request to require both.
+    return new Response(JSON.stringify({ ok:true, orders: [] }), { status:200, headers: jsonHeaders });
+  }
   try {
     const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
     const ids = idxRaw ? JSON.parse(idxRaw) : [];
@@ -1043,16 +1049,9 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
         ].filter(Boolean);
 
         if (needFilter) {
-          // Phone: at least one candidate matches (if qPhone provided)
-          if (qPhone) {
-            const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
-            if (!pOK) continue;
-          }
-          // Last5: at least one candidate matches (if qLast5 provided)
-          if (qLast5) {
-            const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
-            if (!lOK) continue;
-          }
+          const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
+          const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
+          if (!pOK || !lOK) continue;
         }
         (()=>{
           const rec = normalizeReceiptUrl(obj, origin);

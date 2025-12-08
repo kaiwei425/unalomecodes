@@ -3440,20 +3440,20 @@ function ensureCandleFields(required){
   <dialog id="dlgLookup" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;">
     <div style="padding:18px 18px 10px;">
       <div style="font-weight:800;font-size:18px;">查詢訂單狀態</div>
-      <div style="color:#6b7280;font-size:14px;margin-top:4px">請輸入 <b>手機號碼</b> 或 <b>匯款末五碼</b>（至少擇一）。</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px">請輸入 <b>手機號碼</b> 與 <b>匯款末五碼</b>（兩者皆須輸入）。</div>
     </div>
     <form id="lookupForm" style="padding:0 18px 16px;display:grid;gap:10px">
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">手機號碼（09 開頭）</label>
         <input id="qPhone" name="phone" type="tel" inputmode="tel"
-               pattern="^(?:\+?886[-\s]?9\d{8}|09\d{8}|\d{9,13})$"
+               pattern="^(?:\+?886[-\s]?9\d{8}|09\d{8}|\d{9,13})$" required
                placeholder="例：0969123456 或 +886 969 123 456"
                title="請輸入 09 開頭或 +8869 開頭的手機號碼（允許空白與破折號）"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">匯款末五碼</label>
-        <input id="qLast5" name="last5" type="text" pattern="\d{5}" placeholder="12345" title="請輸入匯款末五碼（5 位數字）"
+        <input id="qLast5" name="last5" type="text" pattern="\d{5}" placeholder="12345" title="請輸入匯款末五碼（5 位數字）" required
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div class="cta" style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
@@ -3461,7 +3461,7 @@ function ensureCandleFields(required){
         <button type="submit" id="lookupSubmit" class="btn primary">查詢</button>
       </div>
       <div id="lookupHint" style="font-size:12px;color:#6b7280;line-height:1.6">
-        可輸入手機號碼或匯款末五碼，至少一項。
+        請同時輸入手機號碼與匯款末五碼。
       </div>
     </form>
 
@@ -3560,18 +3560,8 @@ function ensureCandleFields(required){
       ].filter(Boolean).map(function(x){ return String(x||'').replace(/\D+/g,'').slice(-5); });
 
       var l5Ok = last5Candidates.some(function(v){ return v === l5User; });
-
-      // Fallback: try to read any standalone 5 digits in notes/remarks
-      if (!l5Ok){
-        var textPool = [
-          (o && (o.notes || o.note || o.remark || o.memo || '')) || '',
-          (o && o.payment && (o.payment.note || o.payment.remark || '')) || ''
-        ].join(' ');
-        var m = textPool.match(/\b(\d{5})\b/);
-        l5Ok = !!(m && m[1] === l5User);
-      }
-
-      return !!((wantPhone ? phoneOk : true) && (wantL5 ? l5Ok : true));
+      
+      return phoneOk && l5Ok;
     }catch(e){ return false; }
   }
   function filterOrdersByQuery(list, phone, last5){
@@ -3747,8 +3737,8 @@ function ensureCandleFields(required){
       var last5 = (document.getElementById('qLast5').value||'').trim();
       var hasPhone = !!phone.trim();
       var hasLast5 = !!last5.trim();
-      if (!hasPhone && !hasLast5){
-        alert('請至少填寫手機號碼或匯款末五碼');
+      if (!hasPhone || !hasLast5){
+        alert('請同時輸入手機號碼與匯款末五碼');
         return;
       }
       last5 = String(last5).replace(/\D+/g,'').slice(-5);
