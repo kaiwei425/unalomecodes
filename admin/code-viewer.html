@@ -132,7 +132,7 @@ async function loadProducts(){
     const items = data.items || [];
     if(!items.length){ list.textContent = '目前沒有上架商品'; return; }
     list.innerHTML = items.map(p => `
-      <div class="item" data-id="${esc(p.id||'')}">
+      <div class="item" data-id="${esc(p.id||'')}" data-deity-code="${esc(p.deityCode || p.deity || '')}">
         <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
         <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
         ${p.deity?`<div class="deity-info">神祇：${esc(p.deity)}</div>`:''}
@@ -156,16 +156,18 @@ function handleListAction(e){
   if (!act) return;
   const wrap = t.closest('.item');
   if (!wrap) return;
-  const id = (wrap.getAttribute('data-id')||'');
-  if (!id) return toast('找不到此商品 ID');
+  const deityCode = (wrap.getAttribute('data-deity-code')||'');
+  console.log('Action:', act, 'Deity Code:', deityCode);
+  if (!deityCode) return toast('找不到此商品的神祇代碼 (deityCode)');
+
   if (act === 'view'){
-    window.open(API_BASE + '/api/stories?code=' + encodeURIComponent(id), '_blank');
+    window.open(API_BASE + '/api/stories?code=' + encodeURIComponent(deityCode), '_blank');
   }
   if (act === 'del'){
-    delAllViaPost(id);
+    delAllViaPost(deityCode);
   }
   if (act === 'manage'){
-    openOverlay(id);
+    openOverlay(deityCode);
   }
 }
 
@@ -210,10 +212,12 @@ async function openOverlay(code){
   ovRaw.value = '（等待載入）';
   overlay.style.display = 'block';
   try{
+    console.log('Fetching stories for code:', code);
     const data = await fetchStories(code);
+    console.log('Received stories data:', data);
     renderMessages(code, data);
   }catch(e){
-    ovList.textContent = '讀取失敗：' + e.message;
+    ovList.textContent = '讀取留言失敗：' + e.message;
     ovRaw.value = '讀取失敗：' + e.message;
   }
 }
