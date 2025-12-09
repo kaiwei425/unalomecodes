@@ -4207,26 +4207,32 @@ window.loadReviews = async function(productCode) {
       const itemEl = document.createElement('div');
       itemEl.className = 'rvItem';
 
+      // 1. Create image element (if imageUrl exists)
+      if (item.imageUrl) {
+        const link = document.createElement('a');
+        link.href = escapeHtml(item.imageUrl);
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.innerHTML = `<img src="${escapeHtml(item.imageUrl)}" class="rvImage" loading="lazy" alt="顧客分享的圖片">`;
+        itemEl.appendChild(link);
+      }
+
+      // 2. Create a container for all text content
+      const contentEl = document.createElement('div');
+      contentEl.className = 'rvContent';
+
       // Format date to YYYY-MM-DD
       const date = new Date(item.ts).toLocaleDateString('sv-SE');
 
-      let imageHtml = '';
-      if (item.imageUrl) {
-        imageHtml = `
-          <a href="${escapeHtml(item.imageUrl)}" target="_blank" rel="noopener">
-            <img src="${escapeHtml(item.imageUrl)}" class="rvImage" loading="lazy" alt="顧客分享的圖片">
-          </a>
-        `;
-      }
-
-      itemEl.innerHTML = `
+      contentEl.innerHTML = `
         <div class="rvHead">
           <strong class="rvNick">${escapeHtml(item.nick)}</strong>
           <span class="rvDate">${date}</span>
         </div>
-        ${imageHtml}
         <div class="rvMsg">${escapeHtml(item.msg)}</div>
       `;
+      itemEl.appendChild(contentEl);
+
       listEl.appendChild(itemEl);
     });
 

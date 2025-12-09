@@ -575,23 +575,58 @@ aside .cats .list button.active {
     visibility:visible !important;
   }
 
-/* --- Enhanced Review/Story Item Styling --- */
+/* --- Enhanced Review/Story Item Styling (v2) --- */
 .rvItem {
-  background: #f9fafb; /* Lighter background for each item */
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  margin: 8px 0;
+  display: flex;
+  gap: 16px; /* Space between image and text */
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+  background: none;
+  border-radius: 0;
+  margin: 0;
+  border-top: none;
+  border-left: none;
+  border-right: none;
 }
+/* Remove border from the last item */
+#rvList > .rvItem:last-child {
+  border-bottom: none;
+}
+
+/* The link wrapping the image */
+.rvItem > a {
+  flex-shrink: 0;
+}
+
+.rvImage {
+  display: block;
+  width: 72px; /* Smaller thumbnail */
+  height: 72px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #e5e7eb;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.rvImage:hover {
+  opacity: 0.85;
+}
+
+/* Container for all text content */
+.rvContent {
+  flex-grow: 1;
+  min-width: 0; /* Fix for flexbox overflow */
+}
+
 .rvHead {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .rvNick {
-  font-weight: 700;
+  font-weight: 600;
   color: #111827;
 }
 .rvDate {
@@ -599,25 +634,13 @@ aside .cats .list button.active {
   color: #9ca3af;
   white-space: nowrap;
 }
-.rvImage {
-  display: block;
-  max-width: 100%;
-  max-height: 400px; /* Limit image height */
-  border-radius: 8px;
-  margin-top: 8px;
-  background: #e5e7eb;
-  cursor: pointer; /* Indicate it's clickable */
-  transition: opacity 0.2s ease;
-}
-.rvImage:hover {
-  opacity: 0.9;
-}
 .rvMsg {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   white-space: pre-wrap; /* Preserve line breaks */
-  margin-top: 8px;
+  margin-top: 4px;
   color: #374151;
+  word-break: break-word; /* Prevent long text from breaking layout */
 }
 /* Empty state for reviews */
 #rvList:empty::before {
@@ -629,4 +652,5 @@ aside .cats .list button.active {
   font-size: 14px;
   border: 1px dashed #e5e7eb;
   border-radius: 12px;
+  margin-top: 8px;
 }
