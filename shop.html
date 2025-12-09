@@ -4117,7 +4117,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const newBtn = submitBtn.cloneNode(true);
   submitBtn.parentNode.replaceChild(newBtn, submitBtn);
 
-  newBtn.addEventListener('click', async function() {
+  newBtn.addEventListener('click', async function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
     const dlg = document.getElementById('dlg');
     // 留言是跟著「神祇」的，我們從商品視窗的資料屬性中取得神祇代碼
     const productCode = dlg ? (dlg.dataset.productDeity || '') : '';
