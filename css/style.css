@@ -72,7 +72,7 @@
 /* --- 左側神祇介紹側欄 --- */
 .store{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start}
 @media(max-width: 900px){ .store{grid-template-columns:1fr} #sideDeities{order:-1} }
-#sideDeities{position:sticky; top:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;}
+#sideDeities{position:sticky; top:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; z-index: 10;}
 #sideDeities h3{margin:6px 0 10px; font-size:16px; font-weight:800;}
 #sideDeities .list{display:flex; flex-direction:column; gap:6px; max-height:70vh; overflow:auto;}
 #sideDeities .list a{display:block; font-size:14px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); text-decoration:none; color:inherit;}
