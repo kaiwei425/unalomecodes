@@ -574,3 +574,59 @@ aside .cats .list button.active {
     opacity:1 !important;
     visibility:visible !important;
   }
+
+/* --- Enhanced Review/Story Item Styling --- */
+.rvItem {
+  background: #f9fafb; /* Lighter background for each item */
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+.rvHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rvNick {
+  font-weight: 700;
+  color: #111827;
+}
+.rvDate {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+.rvImage {
+  display: block;
+  max-width: 100%;
+  max-height: 400px; /* Limit image height */
+  border-radius: 8px;
+  margin-top: 8px;
+  background: #e5e7eb;
+  cursor: pointer; /* Indicate it's clickable */
+  transition: opacity 0.2s ease;
+}
+.rvImage:hover {
+  opacity: 0.9;
+}
+.rvMsg {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap; /* Preserve line breaks */
+  margin-top: 8px;
+  color: #374151;
+}
+/* Empty state for reviews */
+#rvList:empty::before {
+  content: "還沒有人分享故事，成為第一個分享的人吧！";
+  display: block;
+  padding: 20px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
+}

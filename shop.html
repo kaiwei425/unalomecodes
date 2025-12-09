@@ -4097,5 +4097,134 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/ui.js"></script>
 <script src="/js/main.js"></script>
 <script src="/js/checkout.js"></script>
+<script id="story-submission-logic">
+document.addEventListener('DOMContentLoaded', function() {
+  const submitBtn = document.getElementById('rvSubmit');
+  if (!submitBtn) return;
+
+  // 為了安全地覆蓋掉可能存在於外部 JS 檔案中的舊版點擊事件，
+  // 我們複製按鈕並取代它，這樣可以清除所有舊的事件監聽器。
+  const newBtn = submitBtn.cloneNode(true);
+  submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+
+  newBtn.addEventListener('click', async function() {
+    const dlg = document.getElementById('dlg');
+    // 留言是跟著「神祇」的，我們從商品視窗的資料屬性中取得神祇代碼
+    const productCode = dlg ? (dlg.dataset.productDeity || '') : '';
+    if (!productCode) {
+      alert('無法取得商品資訊，請重新開啟商品視窗。');
+      return;
+    }
+
+    const nickInput = document.getElementById('rvNick');
+    const textInput = document.getElementById('rvText');
+    const fileInput = document.getElementById('rvFile');
+
+    const nick = nickInput ? nickInput.value.trim() : '';
+    const msg = textInput ? textInput.value.trim() : '';
+    const file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+    if (!nick) {
+      alert('請輸入您的名字或暱稱。');
+      nickInput.focus();
+      return;
+    }
+    if (!msg) {
+      alert('請分享您的體驗或故事。');
+      textInput.focus();
+      return;
+    }
+
+    newBtn.disabled = true;
+    newBtn.textContent = '送出中...';
+
+    try {
+      let imageUrl = '';
+      if (file) {
+        const formData = new FormData();
+        formData.append('files[]', file);
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || !uploadData.ok || !uploadData.files || !uploadData.files.length) throw new Error(uploadData.error || '圖片上傳失敗');
+        imageUrl = uploadData.files[0].url;
+      }
+
+      const storyPayload = { code: productCode, nick: nick, msg: msg, imageUrl: imageUrl };
+      const storyRes = await fetch('/api/stories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(storyPayload) });
+      const storyData = await storyRes.json();
+      if (!storyRes.ok || !storyData.ok) throw new Error(storyData.error || '送出分享失敗');
+
+      alert('感謝您的分享！');
+      if (nickInput) nickInput.value = '';
+      if (textInput) textInput.value = '';
+      if (fileInput) fileInput.value = '';
+      if (typeof loadReviews === 'function') loadReviews(productCode);
+    } catch (err) {
+      alert('發生錯誤：' + err.message);
+    } finally {
+      newBtn.disabled = false;
+      newBtn.textContent = '送出分享';
+    }
+  });
+});
+</script>
+<script id="story-display-logic">
+// This function will be called to load and display stories/reviews.
+// It's designed to override any existing `loadReviews` function.
+window.loadReviews = async function(productCode) {
+  const listEl = document.getElementById('rvList');
+  if (!listEl) return;
+
+  listEl.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:10px;">讀取中...</div>';
+
+  try {
+    const res = await fetch(`/api/stories?code=${encodeURIComponent(productCode)}`);
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error('無法讀取留言');
+
+    listEl.innerHTML = ''; // Clear loading message
+
+    if (!data.items || data.items.length === 0) {
+      // The empty state is now handled by the CSS :empty::before pseudo-element
+      return;
+    }
+
+    data.items.forEach(item => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'rvItem';
+
+      // Format date to YYYY-MM-DD
+      const date = new Date(item.ts).toLocaleDateString('sv-SE');
+
+      let imageHtml = '';
+      if (item.imageUrl) {
+        imageHtml = `
+          <a href="${escapeHtml(item.imageUrl)}" target="_blank" rel="noopener">
+            <img src="${escapeHtml(item.imageUrl)}" class="rvImage" loading="lazy" alt="顧客分享的圖片">
+          </a>
+        `;
+      }
+
+      itemEl.innerHTML = `
+        <div class="rvHead">
+          <strong class="rvNick">${escapeHtml(item.nick)}</strong>
+          <span class="rvDate">${date}</span>
+        </div>
+        ${imageHtml}
+        <div class="rvMsg">${escapeHtml(item.msg)}</div>
+      `;
+      listEl.appendChild(itemEl);
+    });
+
+  } catch (err) {
+    listEl.innerHTML = `<div style="text-align:center; color:#ef4444; padding:10px;">${err.message || '讀取失敗'}</div>`;
+  }
+};
+
+// Helper to escape HTML to prevent XSS
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
 </body>
 </html>

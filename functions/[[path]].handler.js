@@ -2372,12 +2372,13 @@ async function createStory(request, env){
     const code = String((body.code||"").toUpperCase());
     const nick = String(body.nick||"訪客").slice(0, 20);
     const msg  = String(body.msg||"").trim();
+    const imageUrl = String(body.imageUrl || "").trim();
     if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
     if (!msg || msg.length < 2) return withCORS(json({ok:false, error:"Message too short"}, 400));
     if (msg.length > 800) return withCORS(json({ok:false, error:"Message too long"}, 400));
     const now = new Date().toISOString();
     const id = `${code}:${now}:${crypto.randomUUID()}`;
-    const item = { id, code, nick, msg, ts: now };
+    const item = { id, code, nick, msg, ts: now, imageUrl: imageUrl || undefined };
     await env.STORIES.put(`STORY:${id}`, JSON.stringify(item));
     const idxKey = `IDX:${code}`;
     const idxRaw = await env.STORIES.get(idxKey);
