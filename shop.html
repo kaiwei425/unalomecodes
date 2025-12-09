@@ -105,8 +105,18 @@
       <div class="reviews">
         <div style="font-weight:800;margin-bottom:6px">顧客評價／真實故事</div>
         <div id="rvList"></div>
-        <div style="margin-top:8px">
-          <textarea id="rvText" placeholder="分享你的佩戴體驗、感應或故事（送出後暫存於本機；之後可接後台）"></textarea>
+        <div style="margin-top:12px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+          <div style="display:grid; gap:12px; margin-bottom:12px;">
+            <div style="display:grid; gap:6px;">
+              <label for="rvNick" style="font-size:12px;color:#6b7280">您的名字 (或暱稱)</label>
+              <input id="rvNick" type="text" placeholder="例：林小姐" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+            </div>
+            <div style="display:grid; gap:6px;">
+              <label for="rvFile" style="font-size:12px;color:#6b7280">上傳圖片 (選填)</label>
+              <input id="rvFile" type="file" accept="image/*" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+            </div>
+          </div>
+          <textarea id="rvText" placeholder="分享您的真實體驗、感應或故事..."></textarea>
           <div class="cta" style="margin-top:8px">
             <button class="btn primary" id="rvSubmit">送出分享</button>
           </div>
