@@ -426,8 +426,8 @@
   --border-light: #f3f4f6; /* Softer border color */
   --text-main: #111827; /* Main text, dark gray */
   --text-subtle: #6b7280; /* Subtler text for meta info */
-  --primary-brand: #4f46e5; /* A nice indigo/purple for buttons */
-  --primary-brand-hover: #4338ca;
+  --primary-brand: #16a34a; /* Reverted to original brand green */
+  --primary-brand-hover: #14532d; /* Darker green for hover */
 }
 
 /* Apply a more modern font and refined background */
