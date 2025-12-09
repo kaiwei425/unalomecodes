@@ -2220,6 +2220,7 @@ function withCORS(res) {
   h.set("Access-Control-Allow-Origin", "*");
   h.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   h.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Key, x-admin-key");
+  h.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   return new Response(res.body, { status: res.status, headers: h });
 }
 

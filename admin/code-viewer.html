@@ -32,9 +32,9 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>商品留言管理（POST 刪除兼容版，不改站）</h1>
+  <h1>商品留言管理</h1>
   <div class="card">
-    <p class="muted">本頁從 <code>/api/products</code> 讀取商品清單；「管理留言」可載入該商品的所有留言，逐筆刪除或一鍵全刪。<b>刪除請求一律使用 POST + <code>_method=DELETE</code></b>，因此就算伺服器不允許 DELETE，也能刪除。</p>
+    <p class="muted">本頁從 <code>/api/products</code> 讀取商品清單；「管理留言」可載入該商品的所有留言，逐筆刪除或一鍵全刪。</p>
     <div id="productList" class="grid">讀取中...</div>
     <div id="log" class="muted"></div>
   </div>
@@ -43,21 +43,26 @@
 <div class="overlay" id="overlay">
   <div class="panel">
     <header>
-      <div>
-        <strong>留言管理</strong>
-        <span class="muted" id="ovCode"></span>
+      <div style="display:flex;align-items:baseline;">
+        <strong>留言管理：</strong>
+        <span class="ov-code" id="ovCode"></span>
       </div>
       <div class="row">
-        <button class="btn warn" id="ovDelAll">刪除全部</button>
+        <button class="btn danger" id="ovDelAll">刪除全部</button>
         <button class="btn primary" id="ovClose">關閉</button>
       </div>
     </header>
     <main id="ovList">載入中…</main>
-    <div style="padding:10px;border-top:1px solid #263041">
+    <footer>
       <div class="muted" style="margin-bottom:6px">原始回應（除錯用）：</div>
       <textarea class="raw" id="ovRaw" readonly>（等待載入）</textarea>
-    </div>
+    </footer>
   </div>
+</div>
+
+<!-- Image Lightbox for Message Images -->
+<div id="imageLightbox" class="overlay">
+  <img id="imageLightboxImg" src="" alt="留言圖片">
 </div>
 
 <script>
@@ -79,7 +84,7 @@ async function loadProducts(){
       <div class="item" data-id="${esc(p.id||'')}">
         <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
         <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
-        ${p.deity?`<div class="muted">神祇：${esc(p.deity)}</div>`:''}
+        ${p.deity?`<div class="deity-info">神祇：${esc(p.deity)}</div>`:''}
         <div class="row">
           <button class="btn" data-act="view">查看留言(JSON)</button>
           <button class="btn primary" data-act="manage">管理留言</button>
@@ -155,23 +160,47 @@ async function openOverlay(code){
   overlay.style.display = 'block';
   try{
     const data = await fetchStories(code);
+    renderMessages(code, data);
+  }catch(e){
+    ovList.textContent = '讀取失敗：' + e.message;
+    ovRaw.value = '讀取失敗：' + e.message;
+  }
+}
+
+function renderMessages(code, data){
     ovRaw.value = JSON.stringify(data, null, 2);
     const arr = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
     if (!arr.length){
-      ovList.innerHTML = '<div class="muted">目前沒有留言</div>';
+      ovList.innerHTML = ''; // Let CSS handle the empty state message
       return;
     }
     ovList.innerHTML = arr.map(m => `
       <div class="msg" data-id="${esc(m.id||'')}">
-        <div><span class="chip">${m.ts ? new Date(m.ts).toLocaleString() : '-'}</span></div>
-        <div style="margin:6px 0">${esc(m.msg||m.text||'')}</div>
-        <div class="row"><button class="btn warn" data-act="del-one">刪除此則</button></div>
+        ${m.imageUrl ? `<div class="msg-left"><img src="${esc(m.imageUrl)}" class="msg-img" data-caption="${esc((m.nick || '匿名') + ' 的分享')}" alt="留言圖片"></div>` : ''}
+        <div class="msg-body">
+          <div class="msg-head">
+            <div class="msg-nick">${esc(m.nick || '匿名')}</div>
+            <div class="msg-date">${m.ts ? new Date(m.ts).toLocaleString() : '-'}</div>
+          </div>
+          <div class="msg-text">${esc(m.msg||m.text||'')}</div>
+          <div class="msg-actions"><button class="btn danger del-one" data-act="del-one">刪除此則</button></div>
+        </div>
       </div>
     `).join('');
+
+    // Add event listener for image lightbox
+    ovList.querySelectorAll('.msg-img').forEach(img => {
+      img.addEventListener('click', (e) => {
+        const lightbox = document.getElementById('imageLightbox');
+        const lightboxImg = document.getElementById('imageLightboxImg');
+        lightboxImg.src = e.target.src;
+        lightbox.style.display = 'flex';
+      });
+    });
+
     ovList.onclick = async (e)=>{
       const t = e.target;
-      if (!(t instanceof Element)) return;
-      if (t.getAttribute('data-act') !== 'del-one') return;
+      if (!(t instanceof Element) || !t.classList.contains('del-one')) return;
       const msgEl = t.closest('.msg');
       const mid = msgEl && msgEl.getAttribute('data-id');
       if (!mid) return alert('找不到留言ID');
@@ -184,20 +213,23 @@ async function openOverlay(code){
           body: JSON.stringify({ _method: 'DELETE' })
         });
         if (!rr.ok) throw new Error('HTTP '+rr.status);
-        msgEl.remove();
+        // After deletion, re-fetch and re-render to update the list
+        const updatedData = await fetchStories(code);
+        renderMessages(code, updatedData);
       }catch(err){
         alert('刪除失敗：'+err.message);
       }finally{
         t.disabled = false;
       }
     };
-  }catch(e){
-    ovList.textContent = '讀取失敗：' + e.message;
-    ovRaw.value = '讀取失敗：' + e.message;
-  }
 }
 
 document.addEventListener('DOMContentLoaded', loadProducts);
+
+// Close image lightbox when clicking it
+document.getElementById('imageLightbox').addEventListener('click', (e) => {
+  e.currentTarget.style.display = 'none';
+});
 </script>
 </body>
 </html>
