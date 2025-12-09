@@ -2184,6 +2184,7 @@ function normalizeProduct(body, nowIso) {
   return {
     id: String(body.id || crypto.randomUUID()),
     name: String(body.name),
+    deityCode: String(body.deityCode || ""),
     deity: String(body.deity || ""),
     basePrice: Number(body.basePrice ?? 0),
     sold: Number(body.sold ?? 0),

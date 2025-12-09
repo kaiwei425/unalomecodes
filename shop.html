@@ -4117,6 +4117,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const newBtn = submitBtn.cloneNode(true);
   submitBtn.parentNode.replaceChild(newBtn, submitBtn);
 
+  function getDeityCodeFromName(name) {
+    if (!name) return '';
+    const s = String(name).toUpperCase();
+    if (/^[A-Z]{2}$/.test(s)) return s; // Already a code
+    if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/i.test(name)) return 'FM';
+    if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/i.test(name)) return 'GA';
+    if (/崇迪|SOMDEJ|SOMDET/i.test(name)) return 'CD';
+    if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/i.test(name)) return 'KP';
+    if (/哈魯曼|H(AN|AR)UMAN/i.test(name)) return 'HM';
+    if (/拉胡|RAHU/i.test(name)) return 'RH';
+    if (/迦樓羅|GARUDA|K(AR|AL)UDA/i.test(name)) return 'JL';
+    if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/i.test(name)) return 'ZD';
+    if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/i.test(name)) return 'ZF';
+    if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/i.test(name)) return 'WE';
+    if (/徐祝|XU\s*ZHU|XUZHU/i.test(name)) return 'XZ';
+    if (/魂魄勇|HUN\s*PO\s*YONG|HPY/i.test(name)) return 'HP';
+    return ''; // Fallback
+  }
+
   newBtn.addEventListener('click', async function(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -4124,7 +4143,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const dlg = document.getElementById('dlg');
     // 留言是跟著「神祇」的，我們從商品視窗的資料屬性中取得神祇代碼
-    const productCode = dlg ? (dlg.dataset.productDeity || '') : '';
+    // 優先使用 deityCode，若無則從 deity 名稱推斷
+    let productCode = '';
+    if (dlg) {
+      productCode = dlg.dataset.productDeityCode || getDeityCodeFromName(dlg.dataset.productDeity);
+    }
     if (!productCode) {
       alert('無法取得商品資訊，請重新開啟商品視窗。');
       return;

@@ -2,8 +2,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>商品留言管理（POST 刪除兼容版）｜守護指引</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>後台｜商品留言管理</title>
 <style>
   :root {
     --bg: #111827;
@@ -81,6 +81,7 @@
   #imageLightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5);cursor:pointer;}
 </style>
 </head>
+
 <body>
 <div class="wrap">
   <h1>商品留言管理</h1>
@@ -212,9 +213,7 @@ async function openOverlay(code){
   ovRaw.value = '（等待載入）';
   overlay.style.display = 'block';
   try{
-    console.log('Fetching stories for code:', code);
     const data = await fetchStories(code);
-    console.log('Received stories data:', data);
     renderMessages(code, data);
   }catch(e){
     ovList.textContent = '讀取留言失敗：' + e.message;
@@ -231,7 +230,7 @@ function renderMessages(code, data){
     }
     ovList.innerHTML = arr.map(m => `
       <div class="msg" data-id="${esc(m.id||'')}">
-        ${m.imageUrl ? `<div class="msg-left"><img src="${esc(m.imageUrl)}" class="msg-img" data-caption="${esc((m.nick || '匿名') + ' 的分享')}" alt="留言圖片"></div>` : ''}
+        ${m.imageUrl ? `<div class="msg-left"><img src="${esc(m.imageUrl)}" class="msg-img" alt="留言圖片"></div>` : ''}
         <div class="msg-body">
           <div class="msg-head">
             <div class="msg-nick">${esc(m.nick || '匿名')}</div>
