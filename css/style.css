@@ -1,40 +1,58 @@
-  /* —— 淺色主題 —— */
-  :root{
-    --bg:#ffffff; --fg:#111827; --muted:#6b7280;
-    --card:#ffffff; --line:#e5e7eb; --brand:#16a34a; --brand-ink:#ffffff;
-    --chip:#f3f4f6;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1040px;margin:0 auto;padding:18px 16px 28px}
+/* —— 全新淺色質感主題 —— */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#f4f6fb;
+  --fg:#0f172a;
+  --muted:#6b7280;
+  --card:#ffffff;
+  --line:#e5e7eb;
+  --brand:#18a168;
+  --brand-ink:#ffffff;
+  --chip:#eef2ff;
+  --shadow:0 20px 50px rgba(15,23,42,0.1);
+  --glow:linear-gradient(135deg, rgba(24,161,104,.1), rgba(96,165,250,.1));
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  min-height:100%;
+  background:radial-gradient(circle at 10% 10%, rgba(24,161,104,.08), transparent 32%), radial-gradient(circle at 85% 0%, rgba(96,165,250,.12), transparent 28%), var(--bg);
+  color:var(--fg);
+  font-family:'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 18px 32px}
 
   /* 頂部 */
-  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .brand img{width:40px;height:40px;border-radius:10px;object-fit:cover}
-  .brand .t1{font-weight:800;font-size:16px}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand img{width:46px;height:46px;border-radius:12px;object-fit:cover;box-shadow:0 8px 20px rgba(0,0,0,0.08)}
+  .brand .t1{font-weight:800;font-size:18px;letter-spacing:.2px}
   .brand .t2{font-size:12px;color:var(--muted)}
   .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  @media(min-width:720px){.filters{grid-template-columns:220px 220px 1fr 1fr}}
-  select,input{width:100%;padding:10px 12px;border:1px solid var(--line);background:#fff;color:var(--fg);border-radius:10px}
+  @media(min-width:720px){.filters{grid-template-columns:200px 200px 1fr 1fr}}
+  select,input{width:100%;padding:11px 12px;border:1px solid var(--line);background:linear-gradient(180deg,#fff, #f8fafc);color:var(--fg);border-radius:12px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);}
 
   /* 商品格 */
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:10px}
   @media(min-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 10px rgba(17,24,39,.04)}
-  .card .pic{position:relative;background:#fff}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(15,23,42,.08);transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;}
+  .card:hover{transform:translateY(-4px);border-color:rgba(24,161,104,.25);box-shadow:0 18px 40px rgba(15,23,42,.12);}
+  .card .pic{position:relative;background:linear-gradient(135deg, #f8fafc, #edf2ff);}
   /* 以 1:1 方形預覽框，圖片完整顯示（contain），不再被裁切 */
   .card .pic::before{content:"";display:block;padding-top:100%}
   .card .pic img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;image-rendering:auto;transition:transform .2s}
-  .card .pic:hover img{transform:scale(1.02)}
-  .card .body{padding:12px}
-  .name{font-weight:700}
+  .card .pic:hover img{transform:scale(1.03)}
+  .card .body{padding:14px 14px 16px}
+  .name{font-weight:800;font-size:16px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:44px;}
   .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;margin:6px 0}
-  .price{font-weight:800;margin-top:4px}
-  .cta{display:flex;gap:8px;margin-top:10px}
-  .btn{flex:1;appearance:none;border:1px solid var(--line);background:#f9fafb;color:#111;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;text-align:center}
-  .btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+  .price{font-weight:800;margin-top:6px;font-size:17px}
+  .cta{display:flex;gap:8px;margin-top:12px}
+  .btn{flex:1;appearance:none;border:1px solid var(--line);background:#f9fafb;color:#0f172a;border-radius:12px;padding:11px 12px;font-weight:800;cursor:pointer;text-align:center;transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;}
+  .btn:hover{transform:translateY(-2px);border-color:rgba(24,161,104,.3);box-shadow:0 10px 20px rgba(15,23,42,.12);}
+  .btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);border-color:#1095d6;color:#fff;box-shadow:0 10px 20px rgba(16,149,214,.25);}
+  .btn.primary:hover{filter:brightness(1.03);}
   .btn.link{
   background:#facc15;        /* 金色或亮黃色底 */
   border-color:#eab308;
@@ -44,30 +62,31 @@
 .btn.link:hover{
   filter:brightness(1.1);
 }
-  .empty{opacity:.8;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:12px;margin-top:10px}
-  .footer{margin:24px 0 6px;color:var(--muted);font-size:12px;text-align:center}
+  .empty{opacity:.85;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:14px;margin-top:12px;background:var(--card)}
+  .footer{margin:28px 0 8px;color:var(--muted);font-size:12px;text-align:center}
 
   /* 詳情 Dialog（白底） */
-  dialog{border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--fg);max-width:900px;width:96%}
-  .closeBar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
-  .xbtn{appearance:none;background:transparent;border:0;color:#111;font-size:18px;cursor:pointer}
-  .dlgBody{display:grid;grid-template-columns:1fr;gap:16px;padding:14px}
+  dialog{border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--fg);max-width:920px;width:96%;box-shadow:0 18px 60px rgba(15,23,42,.25);}
+  .closeBar{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(255,255,255,.2));border-radius:16px 16px 0 0;}
+  .xbtn{appearance:none;background:rgba(15,23,42,.06);border:1px solid var(--line);color:#111;font-size:18px;cursor:pointer;border-radius:10px;width:34px;height:34px;display:grid;place-items:center;}
+  .dlgBody{display:grid;grid-template-columns:1fr;gap:18px;padding:16px}
   @media(min-width:820px){.dlgBody{grid-template-columns:1fr 1fr}}
-  .bigBox{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .bigBox{position:relative;background:#f8fafc;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
   .bigBox::before{content:"";display:block;padding-top:100%}
   .big{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;object-fit:contain}
   .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .thumbs img{width:64px;height:64px;border-radius:8px;border:1px solid var(--line);object-fit:cover;cursor:pointer;background:#fff}
+  .thumbs img{width:70px;height:70px;border-radius:10px;border:1px solid var(--line);object-fit:cover;cursor:pointer;background:#fff;transition:transform .15s ease, box-shadow .15s ease;}
+  .thumbs img:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,.12);}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .row .field{display:flex;flex-direction:column;gap:6px}
   label{font-size:12px;color:var(--muted)}
   .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:#374151}
 
   /* 評價區 */
-  .reviews{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
-  .rvItem{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;background:#fff}
-  .rvHead{font-size:12px;color:#6b7280;margin-bottom:6px}
-  textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
+  .reviews{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .rvItem{border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0;background:#f9fafb;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
+  .rvHead{font-size:12px;color:#6b7280;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:12px;padding:12px;resize:vertical;font-family:inherit;}
 
 /* --- 左側神祇介紹側欄 --- */
 .store{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start}
@@ -78,8 +97,8 @@
 #sideDeities{position:sticky; top:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; z-index: 10;}
 #sideDeities h3{margin:6px 0 10px; font-size:16px; font-weight:800;}
 #sideDeities .list{display:flex; flex-direction:column; gap:6px; max-height:70vh; overflow:auto;}
-#sideDeities .list a{display:block; font-size:14px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); text-decoration:none; color:inherit;}
-#sideDeities .list a:hover{background:#f3f4f6;}
+#sideDeities .list a{display:block; font-size:14px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); text-decoration:none; color:inherit; background:rgba(255,255,255,0.6); transition:all .18s ease;}
+#sideDeities .list a:hover{background:#eef2ff; border-color:rgba(24,161,104,.25);}
 
 /* --- Cart preview UI --- */
 #cartFab{position:fixed; right:16px; bottom:16px; z-index:50; display:flex; align-items:center; gap:8px;
@@ -419,162 +438,6 @@
     visibility:visible !important;
   }
 
-/* === UI Enhancement (Premium Light Theme) === */
-/* This block enhances the original light theme for a more professional look. */
-
-:root {
-  /* Refined Light Theme Palette */
-  --bg-light: #f9fafb; /* Slightly off-white for body background */
-  --panel-light: #ffffff; /* Pure white for cards */
-  --border-light: #f3f4f6; /* Softer border color */
-  --text-main: #111827; /* Main text, dark gray */
-  --text-subtle: #6b7280; /* Subtler text for meta info */
-  --primary-brand: #16a34a; /* Reverted to original brand green */
-  --primary-brand-hover: #14532d; /* Darker green for hover */
-}
-
-/* Apply a more modern font and refined background */
-body {
-  background-color: var(--bg-light) !important;
-  color: var(--text-main) !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Ensure all text elements are readable on the light background */
-.top .brand .t1, .top .brand .t2,
-aside h3, aside .list a,
-aside .cats h4 {
-  color: var(--text-main);
-}
-
-aside .list a:hover {
-    background: var(--border-light);
-}
-
-/* Style form elements for the light theme */
-.filters input, .filters select,
-aside .cats .list button {
-  background-color: var(--panel-light);
-  color: var(--text-main);
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-}
-.filters input::placeholder { color: var(--text-subtle); }
-
-aside .cats .list button.active {
-  background-color: var(--primary-brand);
-  color: #fff;
-  border-color: var(--primary-brand);
-  font-weight: 600;
-}
-
-.footer {
-  color: var(--text-subtle);
-  border-top: 1px solid var(--border-light);
-}
-
-/* --- Enhanced Product Card Styling --- */
-#list.grid .card {
-  background: var(--panel-light);
-  border: 1px solid var(--border-light);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.07);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-#list.grid .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-}
-
-#list.grid .card .pic {
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  background-color: #f9fafb;
-}
-
-#list.grid .card:hover .pic img {
-  transform: scale(1.05);
-}
-
-#list.grid .card .name {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text-main);
-  line-height: 1.5;
-  height: 48px; /* 2 lines */
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-#list.grid .card .meta .badge {
-  font-size: 12px;
-  background: #f3f4f6;
-  color: var(--text-subtle);
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-weight: 500;
-  border: none;
-}
-
-#list.grid .card .price {
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--text-main);
-}
-
-#list.grid .card .cta {
-  margin-top: auto; /* Pushes button to the bottom */
-}
-
-#list.grid .card .cta .btn.primary {
-  width: 100%;
-  padding: 10px 14px;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--primary-brand);
-  color: #fff;
-  transition: background-color 0.2s ease;
-}
-
-#list.grid .card .cta .btn.primary:hover {
-  background-color: var(--primary-brand-hover);
-  filter: none;
-}
-
-/* Empty state message */
-.main .empty {
-  color: var(--text-subtle);
-  background-color: var(--panel-light);
-  border: 1px dashed #d1d5db;
-  border-radius: 16px;
-  padding: 40px 20px;
-  text-align: center;
-}
-
-/* Override original light-theme card styles to ensure consistency */
-.card .pic img {
-  object-fit: cover !important; /* Change from contain to cover for the new design */
-  transition: transform 0.3s ease;
-}
-
-  /* 若有 lazy 區塊還原可見性 */
-  .card .pic [data-lazy-img]{
-    display:block !important;
-    opacity:1 !important;
-    visibility:visible !important;
-  }
-
 /* --- Enhanced Review/Story Item Styling (v2) --- */
 .rvItem {
   display: flex;
@@ -627,11 +490,11 @@ aside .cats .list button.active {
 }
 .rvNick {
   font-weight: 600;
-  color: #111827;
+  color: var(--fg);
 }
 .rvDate {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--muted);
   white-space: nowrap;
 }
 .rvMsg {
@@ -639,7 +502,7 @@ aside .cats .list button.active {
   line-height: 1.7;
   white-space: pre-wrap; /* Preserve line breaks */
   margin-top: 4px;
-  color: #374151;
+  color: var(--fg);
   word-break: break-word; /* Prevent long text from breaking layout */
 }
 /* Empty state for reviews */
@@ -648,7 +511,7 @@ aside .cats .list button.active {
   display: block;
   padding: 20px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--muted);
   font-size: 14px;
   border: 1px dashed #e5e7eb;
   border-radius: 12px;
