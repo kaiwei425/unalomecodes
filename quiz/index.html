@@ -145,7 +145,10 @@ const BRAND_LOGO = 'https://i.ibb.co/7mtppQQ/logo.jpg';
 // Coupon service endpoint + token reader (needed for REAL issuance)
 const COUPON_API = 'https://coupon-service.kaiwei425.workers.dev';
 function readQuizToken(){
-  try{ return (document.querySelector('meta[name="quiz-token"]')?.content||'').trim(); }catch(e){ return ''; }
+  try{
+    var el = document.querySelector('meta[name="quiz-token"]');
+    return el && el.content ? String(el.content).trim() : '';
+  }catch(e){ return ''; }
 }
 
 /* =====================
@@ -452,7 +455,7 @@ async function showResult(){
     const btn = document.getElementById('getCouponBtn');
     const box = document.getElementById('couponWrap');
     const copyBtn = document.getElementById('copyCouponBtn');
-    const shopBtn = Array.from(document.querySelectorAll('#resultBox .footer a')).find(a=>/shopunalomecodes\.pages\.dev\/shop/.test(a.href) || /\\/shop$/.test(a.pathname));
+    const shopBtn = Array.from(document.querySelectorAll('#resultBox .footer a')).find(a=>/shopunalomecodes\.pages\.dev\/shop/.test(a.href) || /\/shop$/.test(a.pathname));
     if (btn && !btn._bound){
       btn._bound = true;
       btn.addEventListener('click', async ()=>{
