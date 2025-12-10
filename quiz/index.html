@@ -508,10 +508,14 @@ async function showResult(){
             }
           }
         }catch(err){
-          // 完全停用本地臨時券：若發券失敗，改為顯示友善訊息
+          // 後端發券失敗時，給出友善訊息並提供臨時碼（仍以正式券優先）
+          var fallback = generateCoupon(code);
           box.style.display = 'block';
-          box.textContent = '目前系統暫時無法發放優惠碼，請稍後再試或聯繫客服協助';
-          if (copyBtn) copyBtn.style.display = 'none';
+          box.textContent = '目前系統暫時無法發放正式優惠碼，先提供臨時代碼：'+ fallback +'\n請稍後再試或聯繫客服協助。';
+          if (copyBtn){
+            copyBtn.style.display = 'inline-flex';
+            copyBtn.dataset.code = fallback;
+          }
         }
       });
     }
