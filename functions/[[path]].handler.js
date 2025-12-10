@@ -773,6 +773,35 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
   }
 }
 
+// Proxy coupon issue to coupon service to bypass browser CORS
+if (pathname === '/api/coupons/issue' && request.method === 'POST') {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const deity  = String(body.deity || body.code || '').trim().toUpperCase();
+    const amount = Number(body.amount || 200) || 200;
+    const token  = String(body.quizToken || body.token || body['x-quiz-token'] || '').trim();
+    if (!deity) {
+      return new Response(JSON.stringify({ ok:false, error:'Missing deity' }), { status:400, headers: jsonHeaders });
+    }
+    const api = getCouponAPI(env);
+    const headers = { 'content-type':'application/json' };
+    if (token) headers['X-Quiz-Token'] = token;
+    const upstream = await fetch(`${api}/issue`, {
+      method:'POST',
+      headers,
+      body: JSON.stringify({ deity, amount })
+    });
+    const text = await upstream.text();
+    const resHeaders = { ...jsonHeaders };
+    // override to allow browser access
+    resHeaders['Access-Control-Allow-Origin'] = '*';
+    return new Response(text, { status: upstream.status, headers: resHeaders });
+  } catch (e) {
+    const resHeaders = { ...jsonHeaders, 'Access-Control-Allow-Origin':'*' };
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: resHeaders });
+  }
+}
+
 // ======== Coupon one-time usage lock (per code) ========
 async function markCouponUsageOnce(env, code, orderId) {
   const c = (code || "").toUpperCase().trim();

@@ -143,7 +143,7 @@ const DEITY_IMG_OVERRIDES = { CD:'https://i.ibb.co/rGpp2w1s/image.jpg', RH:'http
 const BRAND_NAME = '守護指引';
 const BRAND_LOGO = 'https://i.ibb.co/7mtppQQ/logo.jpg';
 // Coupon service endpoint + token reader (needed for REAL issuance)
-const COUPON_API = 'https://coupon-service.kaiwei425.workers.dev';
+const COUPON_API = (function(){ try{ return location.origin + '/api/coupons'; }catch(e){ return '/api/coupons'; }})();
 function readQuizToken(){
   try{
     var el = document.querySelector('meta[name="quiz-token"]');
@@ -368,11 +368,11 @@ async function issueCoupon(deityCode, amount){
   const token = readQuizToken();
   const payload = { deity: String(deityCode||'').toUpperCase(), amount: Number(amount||200) };
   const headers = { 'Content-Type':'application/json' };
-  if (token) headers['X-Quiz-Token'] = token; // 讓後端驗證請求來源
+  // quizToken 交給本域 proxy，由 proxy 轉給 coupon service
   const res = await fetch(`${COUPON_API}/issue`, {
     method: 'POST',
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, quizToken: token }),
     credentials: 'omit',
     cache: 'no-store'
   });
