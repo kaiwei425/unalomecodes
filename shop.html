@@ -1697,22 +1697,16 @@ function ensureCandleFields(required){
   if (window.__cartCouponPatchedMulti__) return; 
   window.__cartCouponPatchedMulti__ = true;
 
-  // 每次重新載入購物頁時，不自動沿用上一筆訂單的優惠券狀態
+  // 初始化多券狀態：優先讀取 localStorage
+  var __cartCouponsMem = [];
+  var __cartCouponsMemSig = '';
   try{
-    localStorage.removeItem('__cartCoupons__');
-    localStorage.removeItem('__cartCouponsCartSig__');
-    // 同時清除舊版購物車優惠暫存，避免一打開購物車就出現上一筆訂單的折扣
-    localStorage.removeItem('__activeCoupons__');
-    localStorage.removeItem('__activeCoupon__');
-    // 也一併清除舊版以 coupon_* 命名的 sessionStorage 折扣暫存，避免殘留 -200 狀態
-    try{
-      sessionStorage.removeItem('coupon_subtotal');
-      sessionStorage.removeItem('coupon_discount');
-      sessionStorage.removeItem('coupon_grand');
-      sessionStorage.removeItem('coupon_lines');
-      sessionStorage.removeItem('__activeCoupons__');
-    }catch(_){}
-  }catch(e){}
+    var _raw = localStorage.getItem('__cartCoupons__');
+    var _sig = localStorage.getItem('__cartCouponsCartSig__') || '';
+    var _arr = _raw ? JSON.parse(_raw) : [];
+    if (Array.isArray(_arr)) __cartCouponsMem = _arr;
+    __cartCouponsMemSig = _sig;
+  }catch(_){}
 
   // 若 URL 帶有 coupon/deity（例如測驗頁返回），自動套用到本地優惠券狀態
   try{
@@ -1738,10 +1732,9 @@ function ensureCandleFields(required){
         };
       }catch(_){}
       try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+      try{ if (typeof updateCartTotals === 'function') updateCartTotals(); }catch(_){}
     }
   }catch(_){}
-  var __cartCouponsMem = [];
-  var __cartCouponsMemSig = '';
 
   // ---------- 基本工具 ----------
   function deityCodeOf(input){
@@ -1801,21 +1794,8 @@ function ensureCandleFields(required){
   // ---------- 優惠券存取：支援多張 ----------
   function getCartCoupons(){
     try{
-      // 若購物車目前是空的，視為新的購物流程，強制清除所有舊優惠券
-      var itemsNow = readCart();
-      if (!itemsNow || !itemsNow.length){
-        __cartCouponsMem = [];
-        __cartCouponsMemSig = '';
-        try{
-          localStorage.removeItem('__cartCoupons__');
-          localStorage.removeItem('__cartCouponsCartSig__');
-        }catch(_){ }
-        return [];
-      }
-
       var curSig = cartSignature();
       // 更新目前購物車簽章，但保留已套用的優惠券
-      // 只在購物車完全清空時（上方條件）才會強制清除優惠狀態
       __cartCouponsMemSig = curSig;
 
       // 回傳一份拷貝，避免外部意外修改
