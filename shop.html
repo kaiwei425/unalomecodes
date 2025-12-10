@@ -4237,8 +4237,12 @@ window.loadReviews = async function(productCode) {
       const contentEl = document.createElement('div');
       contentEl.className = 'rvContent';
 
-      // Format date to YYYY-MM-DD
-      const date = new Date(item.ts).toLocaleDateString('sv-SE');
+      // Format date to YYYY-MM-DD HH:mm:ss (24h)
+      const date = new Date(item.ts).toLocaleString('zh-TW', {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit',
+        hour12:false
+      });
 
       contentEl.innerHTML = `
         <div class="rvHead">

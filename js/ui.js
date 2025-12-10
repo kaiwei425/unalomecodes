@@ -230,9 +230,14 @@ function renderReviews(pidOrCode){
       arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
       arr.forEach(it=>{
         const d = new Date(it.ts || Date.now());
+        const ts = d.toLocaleString('zh-TW', {
+          year:'numeric', month:'2-digit', day:'2-digit',
+          hour:'2-digit', minute:'2-digit', second:'2-digit',
+          hour12:false
+        });
         const div = document.createElement('div');
         div.className = 'rvItem';
-        div.innerHTML = `<div class="rvHead">${d.toLocaleString()}</div><div>${escapeHtml(it.msg || it.text || '')}</div>`;
+        div.innerHTML = `<div class="rvHead">${ts}</div><div>${escapeHtml(it.msg || it.text || '')}</div>`;
         box.appendChild(div);
       });
     }catch(e){
