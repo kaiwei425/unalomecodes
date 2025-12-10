@@ -7,129 +7,153 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
 :root{
-  --bg: #0d1117;
-  --panel: #0f172a;
-  --card: #111a2f;
-  --line: #1f2a44;
-  --muted: #9fb2d3;
-  --fg: #e8f1ff;
-  --primary: #7c7cff;
-  --primary-strong: #5d5de6;
-  --accent: #58e1c1;
-  --danger: #f1607d;
+  --bg:#f7f8fb;
+  --fg:#0f172a;
+  --muted:#6b7280;
+  --panel:#ffffff;
+  --line:#e5e7eb;
+  --accent:#2563eb;
+  --accent-2:#10b981;
+  --card-shadow:0 16px 40px rgba(15,23,42,.08);
 }
 *{box-sizing:border-box;}
 html,body{
   margin:0;padding:0;min-height:100%;
   font-family:"Space Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(124,124,255,0.12), transparent 38%),
-    radial-gradient(circle at 80% 0%, rgba(88,225,193,0.12), transparent 30%),
-    linear-gradient(145deg, #0b1020 0%, #0f162b 60%, #0c1626 100%);
+  background:radial-gradient(circle at 15% 20%, rgba(37,99,235,.08), transparent 30%), radial-gradient(circle at 85% 10%, rgba(16,185,129,.08), transparent 26%), var(--bg);
   color:var(--fg);
   -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1100px;margin:0 auto;padding:28px 18px 32px;}
-.hero{
-  background:linear-gradient(135deg, rgba(124,124,255,0.16), rgba(88,225,193,0.12));
-  border:1px solid rgba(124,124,255,0.35);
-  border-radius:18px;
-  padding:22px 22px 20px;
-  box-shadow:0 18px 35px rgba(0,0,0,0.35);
+.wrap{max-width:1200px;margin:0 auto;padding:28px 18px 36px;}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:14px 16px;box-shadow:var(--card-shadow);
 }
-.eyebrow{letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--accent);margin:0 0 6px;font-weight:700;}
-h1{margin:0;font-size:30px;font-weight:800;letter-spacing:.4px;}
-.muted{color:var(--muted);font-size:14px;line-height:1.7;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-badge{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#10b981);display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;}
+.brand h1{margin:0;font-size:20px;letter-spacing:.3px;}
+.brand .muted{margin:0;font-size:13px;}
+.nav{display:flex;gap:10px;flex-wrap:wrap;}
+.nav a{
+  text-decoration:none;
+  color:var(--fg);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:700;
+  display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 6px 16px rgba(15,23,42,.08);
+  transition:all .18s ease;
+}
+.nav a:hover{transform:translateY(-1px);border-color:#c7d2fe;}
+.hero{
+  margin-top:16px;
+  background:linear-gradient(135deg, rgba(37,99,235,.12), rgba(16,185,129,.12));
+  border:1px solid #dbeafe;
+  border-radius:18px;
+  padding:18px 18px 16px;
+  box-shadow:var(--card-shadow);
+}
+.hero h2{margin:0 0 6px;font-size:24px;font-weight:800;}
+.hero .muted{margin:0;font-size:14px;line-height:1.7;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.chip{padding:6px 10px;border-radius:999px;background:#e0e7ff;border:1px solid #c7d2fe;color:#1e3a8a;font-weight:700;font-size:12px;}
 .grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:14px;
   margin-top:18px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:14px;
 }
 .card{
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+  background:var(--panel);
   border:1px solid var(--line);
-  border-radius:14px;
+  border-radius:16px;
   padding:16px;
   display:flex;
   flex-direction:column;
   gap:10px;
-  box-shadow:0 12px 26px rgba(0,0,0,0.25);
-  transition:all .18s ease;
+  box-shadow:var(--card-shadow);
+  transition:all .2s ease;
 }
-.card:hover{transform:translateY(-4px);border-color:rgba(124,124,255,0.4);box-shadow:0 16px 28px rgba(0,0,0,0.28);}
+.card:hover{transform:translateY(-3px);border-color:#bfdbfe;box-shadow:0 20px 40px rgba(15,23,42,.12);}
 .card h3{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
 .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
 .tag::before{content:"●";color:var(--accent);font-size:10px;}
+.muted{color:var(--muted);font-size:14px;}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;}
 .btn{
-  appearance:none;
-  border:1px solid var(--line);
-  background:rgba(255,255,255,0.05);
-  color:var(--fg);
-  border-radius:10px;
-  padding:10px 12px;
-  cursor:pointer;
-  font-weight:700;
-  font-size:14px;
-  letter-spacing:0.01em;
-  transition:all 0.18s ease;
-  text-decoration:none;
-  text-align:center;
+  appearance:none;border:1px solid var(--line);background:#eff6ff;color:#0f172a;
+  border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:800;font-size:14px;
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .18s ease;
 }
-.btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.25);box-shadow:0 8px 16px rgba(0,0,0,0.2);}
-.btn.primary{background:var(--primary);border-color:var(--primary-strong);color:#fff;}
-.btn.primary:hover{background:var(--primary-strong);}
-.quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;background:rgba(255,255,255,0.06);border:1px solid var(--line);color:var(--muted);}
+.btn:hover{transform:translateY(-1px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.08);}
+.btn.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1d4ed8;color:#fff;}
 .footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center;}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">UA</div>
+      <div>
+        <h1>unalomecodes 後台</h1>
+        <p class="muted">集中入口，快速切換各模組</p>
+      </div>
+    </div>
+    <div class="nav">
+      <a href="./products.html">📦 商品</a>
+      <a href="./code-viewer.html">💬 留言</a>
+      <a href="./orders.html">📑 訂單</a>
+    </div>
+  </div>
+
   <div class="hero">
-    <p class="eyebrow">Unified Admin</p>
-    <h1>後台總覽入口</h1>
-    <p class="muted">集中管理商品、留言與訂單。點擊下方卡片快速進入，必要時可在新分頁開啟以保留工作進度。</p>
-    <div class="quick">
-      <span class="badge">一鍵跳轉</span>
-      <span class="badge">沿用既有權限與 API</span>
-      <span class="badge">建議以桌機操作</span>
+    <h2>工作區總覽</h2>
+    <p class="muted">選擇下列模組進入：商品管理、顧客留言管理、訂單/出貨。可在同一瀏覽器開多分頁維持工作進度。</p>
+    <div class="chips">
+      <span class="chip">帳號權限沿用</span>
+      <span class="chip">一鍵跳轉</span>
+      <span class="chip">桌機體驗佳</span>
     </div>
   </div>
 
   <div class="grid">
     <div class="card">
       <h3>商品管理</h3>
-      <div class="tag">新增 / 編輯 / 下架 / 圖片維護</div>
-      <p class="muted">原本的商品上架頁面，功能維持不變。可調整名稱、神祇代碼、分類、售價與規格。</p>
-      <div style="margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn primary" href="./products.html">開啟</a>
+      <div class="tag">新增 / 編輯 / 上架下架</div>
+      <p class="muted">維持原商品上架頁功能，可調整名稱、神祇代碼、分類、售價與規格。</p>
+      <div class="actions">
+        <a class="btn primary" href="./products.html">進入商品</a>
         <a class="btn" href="./products.html" target="_blank" rel="noopener">新分頁</a>
       </div>
     </div>
 
     <div class="card">
       <h3>留言管理</h3>
-      <div class="tag">顧客留言檢視 / 單筆刪除 / 全刪</div>
-      <p class="muted">對應前台顧客分享。依神祇代碼載入留言，支援圖片預覽與批次刪除。</p>
-      <div style="margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn primary" href="./code-viewer.html">開啟</a>
+      <div class="tag">顧客分享 / 單筆刪除 / 全刪</div>
+      <p class="muted">依神祇代碼載入留言，支援圖片預覽與批次刪除，與前台故事同步。</p>
+      <div class="actions">
+        <a class="btn primary" href="./code-viewer.html">進入留言</a>
         <a class="btn" href="./code-viewer.html" target="_blank" rel="noopener">新分頁</a>
       </div>
     </div>
 
     <div class="card">
       <h3>訂單 / 出貨</h3>
-      <div class="tag">訂單查詢 / 狀態更新 / 出貨資訊</div>
-      <p class="muted">查看訂單列表、更新付款與出貨狀態，保持客服同步資訊。</p>
-      <div style="margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn primary" href="./orders.html">開啟</a>
+      <div class="tag">訂單查詢 / 狀態更新</div>
+      <p class="muted">查看訂單、更新付款與出貨狀態，對齊客服與物流資訊。</p>
+      <div class="actions">
+        <a class="btn primary" href="./orders.html">進入訂單</a>
         <a class="btn" href="./orders.html" target="_blank" rel="noopener">新分頁</a>
       </div>
     </div>
   </div>
 
-  <div class="footer">若需要新增模組，請保留此入口並加入新卡片連結以便管理。</div>
+  <div class="footer">需要新增模組？保留此入口並加入新卡片連結即可。</div>
 </div>
 </body>
 </html>
