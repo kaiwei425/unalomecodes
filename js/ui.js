@@ -1,5 +1,19 @@
 const dlg = document.getElementById('dlg');
 
+function storyCodeFromProduct(p){
+  try{
+    if (p && p.deityCode){
+      const c = String(p.deityCode).trim().toUpperCase();
+      if (c) return c;
+    }
+    const name = (p && (p.deity || p.name)) || '';
+    const nameCode = toDeityCode(name);
+    if (nameCode) return nameCode;
+    if (p && p.id) return __kvOnlyCode(p.id);
+  }catch(e){}
+  return '';
+}
+
 function openDetail(p){
   // expose product id to DOM for order fallback
   try {
@@ -19,7 +33,7 @@ function openDetail(p){
         }
       }catch(e){}
       try{
-        var __code = toDeityCode(p.deity || p.name || '');
+        var __code = storyCodeFromProduct(p);
         if (__code) __dlg.setAttribute('data-product-deitycode', __code);
       }catch(_){}
     }
@@ -148,8 +162,13 @@ function openDetail(p){
     }
   };
 
-  // 評價（本機暫存，key 以產品 id 區分）
-  renderReviews(p.id);
+  // 評價：立即用神祇代碼讀取雲端留言
+  const rvCode = storyCodeFromProduct(p);
+  if (typeof window.loadReviews === 'function') {
+    window.loadReviews(rvCode);
+  } else {
+    renderReviews(rvCode);
+  }
 
   // 綁定送出分享（暫存到 localStorage，並複製內容）
   document.getElementById('rvSubmit').onclick = () => {
@@ -158,7 +177,7 @@ function openDetail(p){
     if (!txt) return alert('請先輸入你的分享內容～');
     (async()=>{
       try{
-        const payload = { code: __kvOnlyCode(p.id), nick: '訪客', msg: txt };
+        const payload = { code: storyCodeFromProduct(p), nick: '訪客', msg: txt };
         const res = await fetch('/api/stories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -169,7 +188,7 @@ function openDetail(p){
           throw new Error('Stories POST failed: ' + res.status);
         }
         ta.value='';
-        renderReviews(p.id);
+        renderReviews(storyCodeFromProduct(p));
         alert('已送出，感謝你的分享！');
       }catch(e){
         console.error(e);
@@ -181,9 +200,21 @@ function openDetail(p){
   dlg.showModal();
 }
 
-function renderReviews(pid){
+function renderReviews(pidOrCode){
   const box = document.getElementById('rvList');
-  const code = __kvOnlyCode(pid);
+  if (!box) return;
+  const dlgEl = document.getElementById('dlg');
+  const raw = pidOrCode ||
+    (dlgEl && (dlgEl.getAttribute('data-product-deitycode') || dlgEl.getAttribute('data-product-deity') || dlgEl.getAttribute('data-deity') || dlgEl.getAttribute('data-product-name'))) ||
+    '';
+  const code = toDeityCode(raw) || __kvOnlyCode(raw);
+  if (!code){
+    box.innerHTML = '<div class="rvItem" style="opacity:.85">暫時無法取得留言代碼</div>';
+    return;
+  }
+  if (typeof window.loadReviews === 'function') {
+    return window.loadReviews(code);
+  }
   box.innerHTML = '<div class="rvItem" style="opacity:.7">讀取中…</div>';
   (async()=>{
     try{

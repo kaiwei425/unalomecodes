@@ -123,6 +123,37 @@ const $ = (s)=>document.querySelector(s);
 function toast(msg){ $('#log').textContent = msg; }
 function esc(s){ return String(s||'').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 
+function toDeityCode(name=''){
+  const s = String(name||'').trim();
+  if (!s) return '';
+  const u = s.toUpperCase();
+  if (/^[A-Z]{2}$/.test(u)) return u;
+  if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/.test(s)) return 'FM';
+  if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/.test(s))   return 'GA';
+  if (/崇迪|SOMDEJ|SOMDET/.test(s))                      return 'CD';
+  if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/.test(s))  return 'KP';
+  if (/哈魯曼|H(AN|AR)UMAN/.test(s))                     return 'HM';
+  if (/拉胡|RAHU/.test(s))                                return 'RH';
+  if (/迦樓羅|GARUDA|K(AR|AL)UDA/.test(s))               return 'JL';
+  if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/.test(s)) return 'ZD';
+  if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/.test(s))          return 'ZF';
+  if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/.test(s)) return 'WE';
+  if (/徐祝|XU\s*ZHU|XUZHU/.test(s))                     return 'XZ';
+  if (/魂魄勇|HUN\s*PO\s*YONG|HPY/.test(s))              return 'HP';
+  return '';
+}
+
+function storyCodeFromProduct(p){
+  if (p && p.deityCode) {
+    const c = String(p.deityCode).trim().toUpperCase();
+    if (c) return c;
+  }
+  const guess = toDeityCode((p && (p.deity || p.name)) || '');
+  if (guess) return guess;
+  if (p && p.id) return String(p.id).trim().toUpperCase();
+  return '';
+}
+
 async function loadProducts(){
   const list = $('#productList');
   list.textContent = '載入中...';
@@ -133,7 +164,7 @@ async function loadProducts(){
     const items = data.items || [];
     if(!items.length){ list.textContent = '目前沒有上架商品'; return; }
     list.innerHTML = items.map(p => `
-      <div class="item" data-id="${esc(p.id||'')}" data-deity-code="${esc(p.deityCode || p.deity || '')}">
+      <div class="item" data-id="${esc(p.id||'')}" data-deity-code="${esc(storyCodeFromProduct(p))}">
         <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
         <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
         ${p.deity?`<div class="deity-info">神祇：${esc(p.deity)}</div>`:''}
@@ -157,7 +188,7 @@ function handleListAction(e){
   if (!act) return;
   const wrap = t.closest('.item');
   if (!wrap) return;
-  const deityCode = (wrap.getAttribute('data-deity-code')||'');
+  const deityCode = (wrap.getAttribute('data-deity-code')||'').trim().toUpperCase();
   console.log('Action:', act, 'Deity Code:', deityCode);
   if (!deityCode) return toast('找不到此商品的神祇代碼 (deityCode)');
 
@@ -173,7 +204,7 @@ function handleListAction(e){
 }
 
 async function delAllViaPost(id){
-  const code = id;
+  const code = (id || '').toString().trim().toUpperCase();
   if (!confirm('刪除 '+code+' 的所有留言？')) return;
   try{
     const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code) + '&_method=DELETE', {
@@ -189,7 +220,9 @@ async function delAllViaPost(id){
 }
 
 async function fetchStories(code){
-  const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code), { cache:'no-store' });
+  const realCode = (code || '').toString().trim().toUpperCase();
+  if (!realCode) throw new Error('缺少神祇代碼');
+  const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(realCode), { cache:'no-store' });
   const js = await r.json();
   return js;
 }

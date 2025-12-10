@@ -4125,7 +4125,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const dlg = document.getElementById('dlg');
     // 留言是跟著「神祇」的，我們直接從商品視窗的資料屬性中取得神祇代碼
     // 後端 API 現在會確保所有商品都有 deityCode
-    const productCode = dlg ? (dlg.dataset.productDeityCode || '') : '';
+    const productCode = (() => {
+      if (!dlg) return '';
+      const raw = dlg.getAttribute('data-product-deitycode')
+        || dlg.getAttribute('data-product-deity')
+        || dlg.getAttribute('data-deity')
+        || dlg.dataset.productDeitycode
+        || dlg.dataset.productDeityCode
+        || dlg.getAttribute('data-product-name')
+        || '';
+      const code = (typeof toDeityCode === 'function') ? (toDeityCode(raw) || raw) : raw;
+      return (code || '').toString().trim().toUpperCase();
+    })();
 
     if (!productCode) {
       alert('無法取得商品資訊，請重新開啟商品視窗。');
@@ -4194,8 +4205,10 @@ window.loadReviews = async function(productCode) {
   listEl.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:10px;">讀取中...</div>';
 
   try {
+    const code = (productCode || '').toString().trim().toUpperCase();
+    if (!code) throw new Error('無法取得留言代碼');
     const cacheBust = new Date().getTime();
-    const res = await fetch(`/api/stories?code=${encodeURIComponent(productCode)}&_=${cacheBust}`);
+    const res = await fetch(`/api/stories?code=${encodeURIComponent(code)}&_=${cacheBust}`);
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error('無法讀取留言');
 
