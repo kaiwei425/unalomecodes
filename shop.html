@@ -1722,12 +1722,22 @@ function ensureCandleFields(required){
     var qa = Number(sp.get('amount') || sp.get('off') || 200) || 200;
     if (qc){
       var obj = { code: qc, deity: qd || '', amount: qa };
-      localStorage.setItem('__activeCoupon__', JSON.stringify(obj));
-      window.__coupon = window.__coupon || {};
-      window.__coupon.getActiveCoupon = function(){
-        try{ var raw=localStorage.getItem('__activeCoupon__'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
-      };
-      try{ window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+      // 推入多券系統（避免重複）
+      var cur = getCartCoupons();
+      var dup = cur.some(function(c){ return String(c.code||'').toUpperCase() === qc.toUpperCase(); });
+      if (!dup){
+        cur.push(obj);
+        setCartCoupons(cur);
+      }
+      // 也寫入舊版 activeCoupon，供 direct-buy 流程使用
+      try{
+        localStorage.setItem('__activeCoupon__', JSON.stringify(obj));
+        window.__coupon = window.__coupon || {};
+        window.__coupon.getActiveCoupon = function(){
+          try{ var raw=localStorage.getItem('__activeCoupon__'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+        };
+      }catch(_){}
+      try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
     }
   }catch(_){}
   var __cartCouponsMem = [];
