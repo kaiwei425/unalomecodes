@@ -478,6 +478,7 @@ async function showResult(){
             const u = new URL(shopBtn.href, location.origin);
             u.searchParams.set('coupon', coupon);
             u.searchParams.set('deity', code);
+            u.searchParams.set('amount', '200');
             shopBtn.href = u.toString();
           }
           if (copyBtn){
@@ -515,6 +516,13 @@ async function showResult(){
           if (copyBtn){
             copyBtn.style.display = 'inline-flex';
             copyBtn.dataset.code = fallback;
+          }
+          if (shopBtn){
+            const u = new URL(shopBtn.href, location.origin);
+            u.searchParams.set('coupon', fallback);
+            u.searchParams.set('deity', code);
+            u.searchParams.set('amount', '200');
+            shopBtn.href = u.toString();
           }
         }
       });

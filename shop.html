@@ -1713,6 +1713,23 @@ function ensureCandleFields(required){
       sessionStorage.removeItem('__activeCoupons__');
     }catch(_){}
   }catch(e){}
+
+  // 若 URL 帶有 coupon/deity（例如測驗頁返回），自動套用到本地優惠券狀態
+  try{
+    var sp = new URLSearchParams((window && window.location && window.location.search) || '');
+    var qc = (sp.get('coupon') || '').trim();
+    var qd = (sp.get('deity') || '').trim();
+    var qa = Number(sp.get('amount') || sp.get('off') || 200) || 200;
+    if (qc){
+      var obj = { code: qc, deity: qd || '', amount: qa };
+      localStorage.setItem('__activeCoupon__', JSON.stringify(obj));
+      window.__coupon = window.__coupon || {};
+      window.__coupon.getActiveCoupon = function(){
+        try{ var raw=localStorage.getItem('__activeCoupon__'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+      };
+      try{ window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+    }
+  }catch(_){}
   var __cartCouponsMem = [];
   var __cartCouponsMemSig = '';
 
