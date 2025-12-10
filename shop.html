@@ -2147,38 +2147,8 @@ function ensureCandleFields(required){
     }
   }catch(_){ }
 
-  // 本機紀錄：已使用過的優惠碼（以防使用者在同一瀏覽器重複使用）
-  function getUsedCouponsLocal(){
-    try{
-      var raw = localStorage.getItem('__usedCoupons__');
-      var arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    }catch(e){ return []; }
-  }
-  function isCouponUsedLocal(code){
-    var uc = String(code || '').toUpperCase();
-    if (!uc) return false;
-    var arr = getUsedCouponsLocal();
-    return arr.indexOf(uc) !== -1;
-  }
-  function markCouponUsedLocal(code){
-    try{
-      var uc = String(code || '').toUpperCase();
-      if (!uc) return;
-      var arr = getUsedCouponsLocal();
-      if (arr.indexOf(uc) === -1){
-        arr.push(uc);
-        localStorage.setItem('__usedCoupons__', JSON.stringify(arr));
-      }
-    }catch(e){}
-  }
-
   // ---------- 遠端檢查優惠碼 ----------
   async function checkCoupon(code, deity) {
-    // 先檢查這張券是否在本機已經被標記為「使用過」
-    if (isCouponUsedLocal(code)) {
-      return { ok: false, reason: 'already_used_local' };
-    }
     try {
       // 改為呼叫我們自己的後端 API，由後端去安全地驗證優惠券
       const res = await fetch('/api/coupons/check', {
@@ -2314,8 +2284,6 @@ function ensureCandleFields(required){
 
       // 正式加入
       existing.push(newCoupon);
-      // 一旦成功套用，即視為這張券已在本機使用過，避免後續重複使用
-      markCouponUsedLocal(newCoupon.code || code);
       setCartCoupons(existing);
       updateCartTotals();
       try{
