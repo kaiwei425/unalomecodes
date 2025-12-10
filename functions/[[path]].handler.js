@@ -1974,6 +1974,12 @@ async function listProducts(url, env) {
     const raw = await env.PRODUCTS.get(`PRODUCT:${id}`);
     if (!raw) continue;
     const p = JSON.parse(raw);
+
+    // --- FIX: Ensure deityCode exists for backward compatibility ---
+    if (!p.deityCode && p.deity) {
+      p.deityCode = getDeityCodeFromName(p.deity);
+    }
+
     // 使用智慧分類函式來補全或修正舊資料的分類
     p.category = inferCategory(p);
     if (active === "true" && p.active !== true) continue;
@@ -2177,6 +2183,26 @@ function normalizePhone(s = '') {
   if (digits.startsWith('9') && digits.length === 9) return '0' + digits;
   if (digits.length >= 10 && digits.startsWith('0')) return digits.slice(0, 10);
   return digits;
+}
+
+// --- 神祇代碼推斷輔助函式 ---
+function getDeityCodeFromName(name) {
+  if (!name) return '';
+  const s = String(name).toUpperCase();
+  if (/^[A-Z]{2}$/.test(s)) return s; // Already a code
+  if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/i.test(name)) return 'FM';
+  if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/i.test(name)) return 'GA';
+  if (/崇迪|SOMDEJ|SOMDET/i.test(name)) return 'CD';
+  if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/i.test(name)) return 'KP';
+  if (/哈魯曼|H(AN|AR)UMAN/i.test(name)) return 'HM';
+  if (/拉胡|RAHU/i.test(name)) return 'RH';
+  if (/迦樓羅|GARUDA|K(AR|AL)UDA/i.test(name)) return 'JL';
+  if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/i.test(name)) return 'ZD';
+  if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/i.test(name)) return 'ZF';
+  if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/i.test(name)) return 'WE';
+  if (/徐祝|XU\s*ZHU|XUZHU/i.test(name)) return 'XZ';
+  if (/魂魄勇|HUN\s*PO\s*YONG|HPY/i.test(name)) return 'HP';
+  return ''; // Fallback
 }
 // 商品資料標準化，預設 category 為「佛牌」，並確保回傳
 // 前端可於管理端提供分類下拉式選單（佛牌、蠟燭、靈符、服飾）供選擇
