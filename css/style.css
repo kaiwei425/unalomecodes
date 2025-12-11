@@ -102,6 +102,7 @@ html,body{
 /* 小工具區塊 */
 #sideDeities .tools-box{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);}
 #sideDeities .tools-box h4{margin:0 0 6px 0;font-size:14px;font-weight:800;color:#111827;}
+#sideDeities .tool-card{background:rgba(255,255,255,0.6);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,0.06);}
 
 /* --- Cart preview UI --- */
 #cartFab{position:fixed; right:16px; bottom:16px; z-index:50; display:flex; align-items:center; gap:8px;

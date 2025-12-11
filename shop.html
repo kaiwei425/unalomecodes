@@ -52,7 +52,27 @@
         即將推出：寺廟地圖、供奉指南、匯率換算等實用工具。
       </div>
       <div class="list" id="toolsList">
-        <div style="font-size:13px;color:#6b7280;">敬請期待</div>
+        <div class="tool-card">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">匯率試算 (THB ↔ TWD)</div>
+          <div id="fxStatus" class="muted" style="font-size:12px;margin-bottom:6px;">取得即時匯率中…</div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <input id="fxRate" type="number" step="0.0001" placeholder="1 THB = ? TWD" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+            <button type="button" id="fxRefresh" class="btn" style="padding:8px 10px;font-size:12px;white-space:nowrap;">重新取得</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr;gap:6px;">
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+              <input id="fxTHB" type="number" placeholder="泰銖 THB" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+              <div style="font-size:12px;color:#6b7280;">→</div>
+              <input id="fxTWD" type="number" placeholder="新台幣 TWD" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+              <input id="fxTWD2" type="number" placeholder="新台幣 TWD" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+              <div style="font-size:12px;color:#6b7280;">→</div>
+              <input id="fxTHB2" type="number" placeholder="泰銖 THB" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+            </div>
+          </div>
+          <div class="muted" style="font-size:11px;margin-top:6px;">資料來源：SuperRich Thailand 或公開匯率 API，若無法連線請手動輸入匯率。</div>
+        </div>
       </div>
     </div>
 </aside>
@@ -294,7 +314,90 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
   }
 })();
 </script>
+<script id="fx-widget">
+(function(){
+  var rateInput = document.getElementById('fxRate');
+  var thb1 = document.getElementById('fxTHB');
+  var twd1 = document.getElementById('fxTWD');
+  var twd2 = document.getElementById('fxTWD2');
+  var thb2 = document.getElementById('fxTHB2');
+  var statusEl = document.getElementById('fxStatus');
+  var btn = document.getElementById('fxRefresh');
 
+  function setStatus(msg, ok){
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = ok ? '#16a34a' : '#ef4444';
+  }
+
+  function updateFromRate(){
+    var r = Number(rateInput && rateInput.value);
+    if (!r || r<=0) return;
+    if (thb1 && thb1.value){
+      twd1.value = (Number(thb1.value||0) * r).toFixed(2);
+    }
+    if (twd2 && twd2.value){
+      thb2.value = (Number(twd2.value||0) / r).toFixed(2);
+    }
+  }
+
+  function bindInputs(){
+    if (thb1 && twd1){
+      thb1.oninput = function(){
+        var r = Number(rateInput && rateInput.value);
+        if (!r || r<=0) return;
+        twd1.value = (Number(thb1.value||0) * r).toFixed(2);
+      };
+      twd1.oninput = function(){
+        var r = Number(rateInput && rateInput.value);
+        if (!r || r<=0) return;
+        thb1.value = (Number(twd1.value||0) / r).toFixed(2);
+      };
+    }
+    if (twd2 && thb2){
+      twd2.oninput = function(){
+        var r = Number(rateInput && rateInput.value);
+        if (!r || r<=0) return;
+        thb2.value = (Number(twd2.value||0) / r).toFixed(2);
+      };
+      thb2.oninput = function(){
+        var r = Number(rateInput && rateInput.value);
+        if (!r || r<=0) return;
+        twd2.value = (Number(thb2.value||0) * r).toFixed(2);
+      };
+    }
+  }
+
+  async function fetchRate(){
+    if (btn) btn.disabled = true;
+    setStatus('取得即時匯率中…', true);
+    var ok = false;
+    try{
+      var r = await fetch('https://api.exchangerate.host/latest?base=THB&symbols=TWD');
+      if (r.ok){
+        var j = await r.json();
+        var val = j && j.rates && j.rates.TWD;
+        if (val){
+          rateInput.value = Number(val).toFixed(4);
+          setStatus('1 THB ≈ ' + Number(val).toFixed(4) + ' TWD', true);
+          ok = true;
+          updateFromRate();
+        }
+      }
+    }catch(_){}
+    if (!ok){
+      setStatus('無法取得即時匯率，請手動輸入', false);
+    }
+    if (btn) btn.disabled = false;
+  }
+
+  bindInputs();
+  fetchRate();
+  if (btn){
+    btn.onclick = function(e){ e.preventDefault(); fetchRate(); };
+  }
+})();
+</script>
 
   <!-- 門市選擇 Dialog（新） -->
   <dialog id="dlgStore" style="border:none;border-radius:16px;padding:0;max-width:520px;width:92%;">
