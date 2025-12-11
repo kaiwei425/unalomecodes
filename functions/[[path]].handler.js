@@ -1776,7 +1776,6 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
 }
     // 圖片上傳
     if (pathname === "/api/upload" && request.method === "POST") {
-      if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       return handleUpload(request, env, origin);
     }
 
