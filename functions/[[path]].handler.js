@@ -31,6 +31,12 @@ const jsonHeaders = {
 };
 
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
+function isAdmin(request, env){
+  try{
+    const key = (request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key') || '').trim();
+    return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
+  }catch(e){ return false; }
+}
 
 // === Coupon Service config ===
 function getCouponAPI(env){
@@ -196,6 +202,7 @@ const { pathname, origin } = url;
     return listProducts(url, env);
   }
   if (pathname === "/api/products" && request.method === "POST") {
+    if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
     return createProduct(request, env);
   }
 
@@ -204,9 +211,9 @@ const { pathname, origin } = url;
     if (prodIdMatch) {
       const id = decodeURIComponent(prodIdMatch[1]);
       if (request.method === "GET")   return getProduct(id, env);
-      if (request.method === "PUT")   return putProduct(id, request, env);
-      if (request.method === "PATCH") return patchProduct(id, request, env);
-      if (request.method === "DELETE") return deleteProduct(id, env);
+      if (request.method === "PUT")   { if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return putProduct(id, request, env); }
+      if (request.method === "PATCH") { if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return patchProduct(id, request, env); }
+      if (request.method === "DELETE"){ if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return deleteProduct(id, env); }
     }
 // ======== Bank Transfer Additions (non-breaking) ========
 if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathname === '/api/order/confirm-transfer')) {
@@ -1706,6 +1713,9 @@ if (pathname === '/api/order') {
   }
 
   if (request.method === 'DELETE') {
+    if (!isAdmin(request, env)) {
+      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    }
     try {
       const id = url.searchParams.get('id');
       if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
@@ -1726,6 +1736,9 @@ if (pathname === '/api/order') {
 if (pathname === '/api/order/status' && request.method === 'POST') {
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
+  if (!isAdmin(request, env)) {
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   }
   try {
     
@@ -1763,15 +1776,18 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
 }
     // 圖片上傳
     if (pathname === "/api/upload" && request.method === "POST") {
+      if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       return handleUpload(request, env, origin);
     }
 
     // 圖片刪除
     if (pathname.startsWith("/api/file/") && request.method === "DELETE") {
+      if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       const key = decodeURIComponent(pathname.replace("/api/file/", ""));
       return deleteR2FileByKey(key, env);
     }
     if (pathname === "/api/deleteFile" && request.method === "POST") {
+      if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       return deleteR2FileViaBody(request, env);
     }
 
@@ -1898,11 +1914,13 @@ if (pathname === "/api/stories" && request.method === "POST") {
   // Support method override: POST + _method=DELETE
   const _m = (url.searchParams.get("_method") || "").toUpperCase();
   if (_m === "DELETE") {
+    if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
     return deleteStories(url, env);
   }
   return createStory(request, env);
 }
 if (pathname === "/api/stories" && request.method === "DELETE") {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   return deleteStories(url, env);
 }
     // Image resize proxy
