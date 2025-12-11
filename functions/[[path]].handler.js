@@ -810,6 +810,86 @@ if (pathname === "/api/fx" && request.method === "GET") {
   }
 }
 
+// === SuperRich FX proxy (best-effort scrape) ===
+if (pathname === "/api/fx/superrich" && request.method === "GET") {
+  async function pickRateFromJson(j, symbol){
+    if (!j) return null;
+    const sym = symbol.toUpperCase();
+    const pools = [];
+    if (Array.isArray(j)) pools.push(j);
+    if (Array.isArray(j.data)) pools.push(j.data);
+    if (j.rates && typeof j.rates === 'object') {
+      const list = Object.entries(j.rates).map(([k,v]) => ({ code:k, ...v }));
+      pools.push(list);
+    }
+    for (const list of pools){
+      for (const item of list){
+        const code = String(item.code || item.ccy || item.currency || item.symbol || "").toUpperCase();
+        if (code !== sym) continue;
+        const buy = Number(item.buy || item.buying || item.buyRate || item.buy_cash || item.bid || 0);
+        const sell = Number(item.sell || item.selling || item.sellRate || item.sell_cash || item.ask || 0);
+        // SuperRich 通常「Sell」表示賣出外幣、你付 THB，換到外幣；取 sell 作為 1 THB -> 外幣
+        if (sell > 0) return 1 / sell; // convert to THB base -> foreign
+        if (buy > 0) return 1 / buy;
+      }
+    }
+    return null;
+  }
+  async function pickRateFromHtml(text, symbol){
+    if (!text) return null;
+    const sym = symbol.toUpperCase();
+    // 嘗試解析類似 JSON 片段
+    const reJSON = new RegExp(sym + `[^\\{\\[]*?\\{[^\\}]*?(buy|sell)[^\\d]*([\\d\\.]+)[^\\d]*?(buy|sell)?[^\\d]*([\\d\\.]+)?`, 'i');
+    const m = text.match(reJSON);
+    if (m){
+      const n1 = Number(m[2]||0), n2 = Number(m[4]||0);
+      const sell = /sell/i.test(m[1]) ? n1 : (/sell/i.test(m[3]) ? n2 : 0);
+      const buy  = /buy/i.test(m[1])  ? n1 : (/buy/i.test(m[3])  ? n2 : 0);
+      if (sell>0) return 1/sell;
+      if (buy>0)  return 1/buy;
+    }
+    // fallback: 抓取第一個數字
+    const reNum = new RegExp(sym + "[^\\d]{0,20}(\\d+(?:\\.\\d+)?)", "i");
+    const m2 = text.match(reNum);
+    if (m2){ const v = Number(m2[1]); if (v>0) return 1/v; }
+    return null;
+  }
+  try{
+    const symbol = (url.searchParams.get("symbol") || url.searchParams.get("symbols") || "TWD").toUpperCase();
+    const candidates = [
+      { url:"https://www.superrichthailand.com/api/v1/rates", json:true },
+      { url:"https://www.superrichthailand.com/api/v1/forex", json:true },
+      { url:"https://www.superrichthailand.com/api/v2/forex/rates", json:true },
+      { url:"https://www.superrichthailand.com/#!/en/exchange", json:false },
+    ];
+    let rate = null;
+    for (const c of candidates){
+      try{
+        const resp = await fetch(c.url);
+        const txt = await resp.text();
+        if (!resp.ok) continue;
+        if (c.json){
+          try{
+            const j = JSON.parse(txt);
+            rate = await pickRateFromJson(j, symbol);
+            if (rate) break;
+          }catch(_){}
+        } else {
+          rate = await pickRateFromHtml(txt, symbol);
+          if (rate) break;
+        }
+      }catch(_){}
+    }
+    const headers = { ...jsonHeaders, 'Access-Control-Allow-Origin':'*', 'Cache-Control':'no-store' };
+    if (!rate) {
+      return new Response(JSON.stringify({ ok:false, error:"RATE_NOT_FOUND", source:"superrich" }), { status:502, headers });
+    }
+    return new Response(JSON.stringify({ ok:true, source:"superrich", base:"THB", symbol, rate, rates:{ [symbol]: rate } }), { status:200, headers });
+  }catch(e){
+    return new Response(JSON.stringify({ ok:false, error:String(e), source:"superrich" }), { status:500, headers:{...jsonHeaders,'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'} });
+  }
+}
+
 // Proxy coupon issue to coupon service to bypass browser CORS
 if (pathname === '/api/coupons/issue' && request.method === 'POST') {
   try {

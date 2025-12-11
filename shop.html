@@ -378,18 +378,34 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     setStatus('取得即時匯率中…', true);
     var ok = false;
     try{
-      var r = await fetch('/api/fx?base=THB&symbol=TWD', { cache:'no-store' });
+      // 優先 SuperRich，失敗再退回一般匯率
+      var r = await fetch('/api/fx/superrich?base=THB&symbol=TWD', { cache:'no-store' });
       if (r.ok){
         var j = await r.json();
         var val = (j && (j.rate || (j.rates && (j.rates.TWD || j.rates.twd)))) || 0;
         if (val){
           rateInput.value = Number(val).toFixed(4);
-          setStatus('1 THB ≈ ' + Number(val).toFixed(4) + ' TWD', true);
+          setStatus('[SuperRich] 1 THB ≈ ' + Number(val).toFixed(4) + ' TWD', true);
           ok = true;
           updateFromRate();
         }
       }
     }catch(_){}
+    if (!ok){
+      try{
+        var r2 = await fetch('/api/fx?base=THB&symbol=TWD', { cache:'no-store' });
+        if (r2.ok){
+          var j2 = await r2.json();
+          var v2 = (j2 && (j2.rate || (j2.rates && (j2.rates.TWD || j2.rates.twd)))) || 0;
+          if (v2){
+            rateInput.value = Number(v2).toFixed(4);
+            setStatus('[備援] 1 THB ≈ ' + Number(v2).toFixed(4) + ' TWD', true);
+            ok = true;
+            updateFromRate();
+          }
+        }
+      }catch(_){}
+    }
     if (!ok){
       setStatus('無法取得即時匯率，請手動輸入', false);
     }
