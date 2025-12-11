@@ -808,22 +808,27 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
   }
 
   window.openCreditDialog = function(source){
-    const dlg = document.getElementById('dlgCC');
-    if (!dlg) return alert('無法顯示信用卡付款視窗');
-    const ctx = computeAmount();
-    dlg.__ctx = ctx;
-    const amtEl = document.getElementById('ccAmount');
-    if (amtEl) amtEl.textContent = 'NT$ ' + formatPrice(ctx.grand);
-    setCouponHint(ctx);
-    const storeFromDlg = document.getElementById('dlgStoreInput');
-    const storeField   = document.getElementById('ccStore');
-    if (storeField){
-      const pref = (storeFromDlg && storeFromDlg.value) || (document.getElementById('bfStore') && document.getElementById('bfStore').value) || '';
-      if (pref) storeField.value = pref;
+    try{
+      const dlg = document.getElementById('dlgCC');
+      if (!dlg) return alert('無法顯示信用卡付款視窗');
+      const ctx = computeAmount();
+      dlg.__ctx = ctx;
+      const amtEl = document.getElementById('ccAmount');
+      if (amtEl) amtEl.textContent = 'NT$ ' + formatPrice(ctx.grand);
+      setCouponHint(ctx);
+      const storeFromDlg = document.getElementById('dlgStoreInput');
+      const storeField   = document.getElementById('ccStore');
+      if (storeField){
+        const pref = (storeFromDlg && storeFromDlg.value) || (document.getElementById('bfStore') && document.getElementById('bfStore').value) || '';
+        if (pref) storeField.value = pref;
+      }
+      const dlgCheckout = document.getElementById('dlgCheckout');
+      if (dlgCheckout && typeof dlgCheckout.close === 'function') dlgCheckout.close();
+      if (typeof dlg.showModal === 'function') dlg.showModal(); else alert('請使用最新瀏覽器進行付款');
+    }catch(err){
+      console.error('openCreditDialog error', err);
+      alert('顯示信用卡付款視窗時發生錯誤，請重新整理再試。');
     }
-    const dlgCheckout = document.getElementById('dlgCheckout');
-    if (dlgCheckout && typeof dlgCheckout.close === 'function') dlgCheckout.close();
-    if (typeof dlg.showModal === 'function') dlg.showModal(); else alert('請使用最新瀏覽器進行付款');
   };
 
   const ccForm = document.getElementById('ccForm');

@@ -181,7 +181,7 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     <div style="padding:0 18px 18px;color:#6b7280;font-size:14px">請選擇你想使用的結帳方式</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px">
       <a id="pay711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
-      <button id="payCC" class="btn">信用卡付款</button>
+      <button id="payCC" class="btn" onclick="openCreditDialog('detail');return false;">信用卡付款</button>
       <button id="payClose" class="btn link" style="margin-left:auto">關閉</button>
     </div>
   </dialog>
@@ -225,7 +225,7 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       </div>
       <div class="cartActions">
         <button id="cartClear" class="btn">清空</button>
-        <a id="cartPayCC" class="btn" target="_blank" rel="noopener">信用卡付款</a>
+        <a id="cartPayCC" class="btn" target="_blank" rel="noopener" onclick="openCreditDialog('cart');return false;">信用卡付款</a>
         <a id="cartGo711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
       </div>
     </div>
