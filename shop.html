@@ -48,32 +48,8 @@
     </div>
     <div class="tools-box">
       <h4>泰國旅遊 / 寺廟小工具</h4>
-      <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;">
-        即將推出：寺廟地圖、供奉指南、匯率換算等實用工具。
-      </div>
-      <div class="list" id="toolsList">
-        <div class="tool-card">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">匯率試算 (THB ↔ TWD)</div>
-          <div id="fxStatus" class="muted" style="font-size:12px;margin-bottom:6px;">取得即時匯率中…</div>
-          <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <input id="fxRate" type="number" step="0.0001" placeholder="1 THB = ? TWD" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-            <button type="button" id="fxRefresh" class="btn" style="padding:8px 10px;font-size:12px;white-space:nowrap;">重新取得</button>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr;gap:6px;">
-            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
-              <input id="fxTHB" type="number" placeholder="泰銖 THB" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-              <div style="font-size:12px;color:#6b7280;">→</div>
-              <input id="fxTWD" type="number" placeholder="新台幣 TWD" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
-              <input id="fxTWD2" type="number" placeholder="新台幣 TWD" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-              <div style="font-size:12px;color:#6b7280;">→</div>
-              <input id="fxTHB2" type="number" placeholder="泰銖 THB" style="padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-            </div>
-          </div>
-          <div class="muted" style="font-size:11px;margin-top:6px;">資料來源：SuperRich Thailand 或公開匯率 API，若無法連線請手動輸入匯率。</div>
-        </div>
-      </div>
+      <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;">各種泰國旅遊/寺廟工具，點按下方按鈕使用。</div>
+      <button class="btn" id="btnFxTool" style="width:100%;justify-content:center;">匯率試算 (THB ↔ TWD)</button>
     </div>
 </aside>
     <div class="main">
@@ -314,8 +290,37 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
   }
 })();
 </script>
+<dialog id="fxDialog">
+  <div class="fxBody">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>匯率試算 (THB ↔ TWD)</h3>
+      <button class="btn" id="fxClose" style="padding:6px 10px;font-size:12px;">關閉</button>
+    </div>
+    <div id="fxStatus" class="muted">取得即時匯率中…</div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;">
+      <input id="fxRate" type="number" step="0.0001" placeholder="1 THB = ? TWD" style="padding:10px;border-radius:10px;border:1px solid #e5e7eb;">
+      <button type="button" id="fxRefresh" class="btn" style="padding:8px 10px;font-size:12px;white-space:nowrap;">重新取得</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;">
+        <input id="fxTHB" type="number" placeholder="泰銖 THB" style="padding:10px;border-radius:10px;border:1px solid #e5e7eb;">
+        <div style="font-size:12px;color:#6b7280;text-align:center;">→</div>
+        <input id="fxTWD" type="number" placeholder="新台幣 TWD" style="padding:10px;border-radius:10px;border:1px solid #e5e7eb;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;">
+        <input id="fxTWD2" type="number" placeholder="新台幣 TWD" style="padding:10px;border-radius:10px;border:1px solid #e5e7eb;">
+        <div style="font-size:12px;color:#6b7280;text-align:center;">→</div>
+        <input id="fxTHB2" type="number" placeholder="泰銖 THB" style="padding:10px;border-radius:10px;border:1px solid #e5e7eb;">
+      </div>
+    </div>
+    <div class="muted" style="font-size:11px;">資料來源：匯率 API（本站代理）。若無法連線請手動輸入匯率。</div>
+  </div>
+</dialog>
 <script id="fx-widget">
 (function(){
+  var dlg = document.getElementById('fxDialog');
+  var openBtn = document.getElementById('btnFxTool');
+  var closeBtn = document.getElementById('fxClose');
   var rateInput = document.getElementById('fxRate');
   var thb1 = document.getElementById('fxTHB');
   var twd1 = document.getElementById('fxTWD');
@@ -373,10 +378,10 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     setStatus('取得即時匯率中…', true);
     var ok = false;
     try{
-      var r = await fetch('https://api.exchangerate.host/latest?base=THB&symbols=TWD');
+      var r = await fetch('/api/fx?base=THB&symbol=TWD', { cache:'no-store' });
       if (r.ok){
         var j = await r.json();
-        var val = j && j.rates && j.rates.TWD;
+        var val = j && j.rates && (j.rates.TWD || j.rates.twd);
         if (val){
           rateInput.value = Number(val).toFixed(4);
           setStatus('1 THB ≈ ' + Number(val).toFixed(4) + ' TWD', true);
@@ -395,6 +400,12 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
   fetchRate();
   if (btn){
     btn.onclick = function(e){ e.preventDefault(); fetchRate(); };
+  }
+  if (openBtn && dlg && typeof dlg.showModal === 'function'){
+    openBtn.onclick = function(e){ e.preventDefault(); dlg.showModal(); };
+  }
+  if (closeBtn && dlg){
+    closeBtn.onclick = function(e){ e.preventDefault(); dlg.close(); };
   }
 })();
 </script>
