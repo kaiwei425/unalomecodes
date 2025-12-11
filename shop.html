@@ -4126,6 +4126,39 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/ui.js"></script>
 <script src="/js/main.js"></script>
 <script src="/js/checkout.js"></script>
+<!-- Fallback binder for信用卡按鈕：若主程式未綁定，確保至少能呼叫 openCreditDialog 或提示重整 -->
+<script>
+(function(){
+  function bindCC(){
+    var btn = document.getElementById('payCC');
+    if (btn && !btn.__ccBound){
+      btn.__ccBound = true;
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        if (typeof window.openCreditDialog === 'function'){
+          window.openCreditDialog('detail');
+        } else {
+          alert('信用卡付款模組尚未載入，請重新整理頁面後再試。');
+        }
+      });
+    }
+    var cbtn = document.getElementById('cartPayCC');
+    if (cbtn && !cbtn.__ccBound){
+      cbtn.__ccBound = true;
+      cbtn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        if (typeof window.openCreditDialog === 'function'){
+          window.openCreditDialog('cart');
+        } else {
+          alert('信用卡付款模組尚未載入，請重新整理頁面後再試。');
+        }
+      });
+    }
+  }
+  document.addEventListener('DOMContentLoaded', bindCC);
+  bindCC();
+})();
+</script>
 <script id="story-submission-logic">
 document.addEventListener('DOMContentLoaded', function() {
   const submitBtn = document.getElementById('rvSubmit');
