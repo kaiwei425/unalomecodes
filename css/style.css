@@ -99,6 +99,9 @@ html,body{
 #sideDeities .list{display:flex; flex-direction:column; gap:6px; max-height:70vh; overflow:auto;}
 #sideDeities .list a{display:block; font-size:14px; padding:8px 10px; border-radius:10px; border:1px solid var(--line); text-decoration:none; color:inherit; background:rgba(255,255,255,0.6); transition:all .18s ease;}
 #sideDeities .list a:hover{background:#eef2ff; border-color:rgba(24,161,104,.25);}
+/* 小工具區塊 */
+#sideDeities .tools-box{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);}
+#sideDeities .tools-box h4{margin:0 0 6px 0;font-size:14px;font-weight:800;color:#111827;}
 
 /* --- Cart preview UI --- */
 #cartFab{position:fixed; right:16px; bottom:16px; z-index:50; display:flex; align-items:center; gap:8px;
