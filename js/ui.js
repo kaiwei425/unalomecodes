@@ -152,7 +152,7 @@ function openDetail(p){
     const btnCC = document.getElementById('payCC');
     const btnClose = document.getElementById('payClose');
     if (a711){ a711.href = '#'; a711.onclick = (ev)=>{ ev.preventDefault(); openBankDialog('detail'); }; }
-    if (btnCC) btnCC.onclick = ()=> alert('信用卡付款暫未開放，敬請期待！');
+    if (btnCC) btnCC.onclick = ()=> { if (dlgPay && typeof dlgPay.close==='function') dlgPay.close(); openCreditDialog('detail'); };
     if (btnClose) btnClose.onclick = ()=> dlgPay.close();
     if (dlgPay && typeof dlgPay.showModal === 'function'){
       try{ var need = (typeof needCandleExtras==='function') ? needCandleExtras() : false; if (typeof ensureCandleFields==='function') ensureCandleFields(need); }catch(_){}

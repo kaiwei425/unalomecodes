@@ -712,3 +712,196 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     }catch(e){}
   };
 })();
+
+/* ==== ECPay credit card ==== */
+(function(){
+  function activeCoupon(){
+    try{ if (window.__coupon && typeof window.__coupon.getActiveCoupon==='function') return window.__coupon.getActiveCoupon(); }catch(e){}
+    try{ const raw = localStorage.getItem('__activeCoupon__'); if (raw) return JSON.parse(raw); }catch(_){}
+    return null;
+  }
+  function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
+  function capturePendingDetail(){
+    try{
+      const cached = sessionStorage.getItem('__pendingDetail__');
+      if (cached) return JSON.parse(cached);
+    }catch(_){}
+    try{
+      var nameEl = document.getElementById('dlgTitle');
+      var selEl  = document.getElementById('dlgVariant');
+      var qtyEl  = document.getElementById('dlgQty');
+      var priceNode = document.getElementById('dlgPrice');
+      var pName = (nameEl && nameEl.textContent || '').trim();
+      var spec  = (selEl && selEl.options && selEl.selectedIndex>=0) ? (selEl.options[selEl.selectedIndex].textContent||'').trim() : '';
+      if (spec) spec = spec.replace(/（\+[^）]*）/g,'').trim();
+      var qty   = qtyEl ? Math.max(1, Number(qtyEl.value||1)) : 1;
+      var total = 0;
+      if (priceNode){
+        var dp = Number(priceNode.getAttribute('data-price')||0);
+        if (!dp){
+          var txt = (priceNode.textContent||'').replace(/[ ,\s]/g,'');
+          dp = Number(txt)||0;
+        }
+        total = dp;
+      }
+      var unit  = qty ? (total/qty) : total;
+      var dlgEl = document.getElementById('dlg');
+      var cat   = dlgEl && dlgEl.getAttribute('data-product-cat');
+      var pid   = dlgEl && dlgEl.getAttribute('data-product-id');
+      var looks = /蠟燭/.test(pName);
+      var pending = pName ? {
+        id: pid || '',
+        productId: pid || '',
+        name: pName,
+        productName: pName,
+        variantName: spec || '',
+        qty: Number(qty||1),
+        price: Number(unit||0),
+        category: (cat === '蠟燭加持祈福' || looks) ? '蠟燭加持祈福' : (cat || '佛牌/聖物')
+      } : null;
+      if (pending){
+        pending.deity = toDeityCode(pending.name || '');
+        try{ sessionStorage.setItem('__pendingDetail__', JSON.stringify(pending)); }catch(_){}
+      }
+      return pending;
+    }catch(_){ return null; }
+  }
+  function computeAmount(){
+    const cart = readCart();
+    const items = Array.isArray(cart) && cart.length ? cart.slice() : [];
+    let pending = null;
+    if (!items.length){
+      pending = capturePendingDetail();
+      if (pending) items.push(pending);
+    } else {
+      try{
+        const cached = capturePendingDetail();
+        if (cached) pending = cached;
+      }catch(_){}
+    }
+    const subtotal = items.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
+    const coupon = activeCoupon();
+    let off = 0;
+    if (coupon && coupon.code){
+      const want = toDeityCode(coupon.deity || coupon.code || '');
+      if (want){
+        const elig = items.some(it => toDeityCode(it.deity || it.name || it.productName) === want);
+        if (elig) off = Number(coupon.amount || 200) || 200;
+      }
+    }
+    const grand = Math.max(0, Math.round(subtotal - off));
+    return { cart, pending, items, subtotal, off, grand, coupon };
+  }
+
+  function setCouponHint(ctx){
+    const hint = document.getElementById('ccCouponHint');
+    if (!hint) return;
+    if (ctx.coupon && ctx.coupon.code && ctx.off > 0){
+      hint.style.display = 'block';
+      hint.textContent = `已套用優惠碼 ${ctx.coupon.code}，折抵 NT$ ${formatPrice(ctx.off)}。`;
+    } else if (ctx.coupon && ctx.coupon.code){
+      hint.style.display = 'block';
+      hint.textContent = `優惠碼 ${ctx.coupon.code} 尚未符合折抵條件，請確認商品守護神是否相符。`;
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  window.openCreditDialog = function(source){
+    const dlg = document.getElementById('dlgCC');
+    if (!dlg) return alert('無法顯示信用卡付款視窗');
+    const ctx = computeAmount();
+    dlg.__ctx = ctx;
+    const amtEl = document.getElementById('ccAmount');
+    if (amtEl) amtEl.textContent = 'NT$ ' + formatPrice(ctx.grand);
+    setCouponHint(ctx);
+    const storeFromDlg = document.getElementById('dlgStoreInput');
+    const storeField   = document.getElementById('ccStore');
+    if (storeField){
+      const pref = (storeFromDlg && storeFromDlg.value) || (document.getElementById('bfStore') && document.getElementById('bfStore').value) || '';
+      if (pref) storeField.value = pref;
+    }
+    const dlgCheckout = document.getElementById('dlgCheckout');
+    if (dlgCheckout && typeof dlgCheckout.close === 'function') dlgCheckout.close();
+    if (typeof dlg.showModal === 'function') dlg.showModal(); else alert('請使用最新瀏覽器進行付款');
+  };
+
+  const ccForm = document.getElementById('ccForm');
+  if (ccForm){
+    const cancelBtn = document.getElementById('ccCancel');
+    if (cancelBtn) cancelBtn.onclick = ()=>{ const dlg = document.getElementById('dlgCC'); if (dlg) dlg.close(); };
+    ccForm.addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const dlg = document.getElementById('dlgCC');
+      const ctx = (dlg && dlg.__ctx) || computeAmount();
+      const cart = Array.isArray(ctx.cart) ? ctx.cart.slice() : [];
+      const payload = {
+        buyer:{
+          name: (ccForm.querySelector('[name="name"]')?.value || '').trim(),
+          phone: (ccForm.querySelector('[name="phone"]')?.value || '').trim(),
+          email: (ccForm.querySelector('[name="email"]')?.value || '').trim()
+        },
+        store: (ccForm.querySelector('[name="store"]')?.value || '').trim(),
+        note: (ccForm.querySelector('[name="note"]')?.value || '').trim()
+      };
+      if (cart.length){
+        payload.cart = cart;
+        payload.mode = 'cart';
+        payload.fromCart = '1';
+        payload.useCart = '1';
+      } else if (ctx.pending) {
+        payload.productId   = ctx.pending.productId || ctx.pending.id || '';
+        payload.productName = ctx.pending.productName || ctx.pending.name || '';
+        payload.price       = ctx.pending.price || 0;
+        payload.qty         = ctx.pending.qty || 1;
+        payload.deity       = ctx.pending.deity || ctx.pending.deityCode || '';
+        payload.variantName = ctx.pending.variantName || '';
+        payload.directBuy   = '1';
+      }
+      const c = ctx.coupon;
+      if (c && c.code){
+        payload.coupon = c.code;
+        if (c.deity) payload.coupon_deity = c.deity;
+        if (c.amount) payload.coupon_amount = c.amount;
+      }
+      const btn = document.getElementById('ccSubmit');
+      if (btn) btn.disabled = true;
+      try{
+        const res = await fetch('/api/payment/ecpay/create', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        submitECPayForm(data.action, data.params);
+        if (dlg) dlg.close();
+      }catch(err){
+        console.error(err);
+        alert('刷卡請求失敗，請稍後再試。\n' + (err && err.message ? err.message : err));
+      }finally{
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  function submitECPayForm(action, params){
+    if (!action || !params) {
+      alert('缺少付款資訊，請稍後再試');
+      return;
+    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = action;
+    form.style.display = 'none';
+    Object.entries(params).forEach(([k,v])=>{
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = k;
+      input.value = v;
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  }
+})();

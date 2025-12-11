@@ -55,6 +55,8 @@ function openCart(){
   const clearBtn = document.getElementById('cartClear');
   const go711 = document.getElementById('cartGo711');
   if (go711){ go711.href = '#'; go711.onclick = (ev)=>{ ev.preventDefault(); openBankDialog('cart'); }; }
+  const payCC = document.getElementById('cartPayCC');
+  if (payCC){ payCC.href = '#'; payCC.onclick = (ev)=>{ ev.preventDefault(); openCreditDialog('cart'); }; }
 
   if (closeBtn) closeBtn.onclick = ()=> dlg.close();
   if (clearBtn) clearBtn.onclick = ()=>{ cartSave([]); renderCart(); updateCartBadge(); try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(e){} };

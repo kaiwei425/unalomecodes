@@ -94,6 +94,35 @@ function makeToken(len=32){
   return s;
 }
 
+// ======== ECPay helpers ========
+function ecpayEndpoint(env){
+  const flag = String(env?.ECPAY_STAGE || env?.ECPAY_MODE || "").toLowerCase();
+  const isStage = flag === "stage" || flag === "test" || flag === "sandbox" || flag === "1" || flag === "true";
+  return isStage
+    ? "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5"
+    : "https://payment.ecpay.com.tw/Cashier/AioCheckOut/V5";
+}
+
+function ecpayNormalize(str=""){
+  return encodeURIComponent(str)
+    .toLowerCase()
+    .replace(/%20/g, "+")
+    .replace(/%21/g, "!")
+    .replace(/%28/g, "(")
+    .replace(/%29/g, ")")
+    .replace(/%2a/g, "*");
+}
+
+async function ecpayCheckMac(params, hashKey, hashIV){
+  const sorted = Object.keys(params).sort((a,b)=> a.localeCompare(b));
+  const query = sorted.map(k => `${k}=${params[k]}`).join("&");
+  const raw = `HashKey=${hashKey}&${query}&HashIV=${hashIV}`;
+  const normalized = ecpayNormalize(raw);
+  const data = new TextEncoder().encode(normalized);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+
 // === Helper: unified proof retriever (R2 first, then KV) ===
 async function getProofFromStore(env, rawKey) {
   const k = String(rawKey || '');
@@ -685,6 +714,160 @@ if (pathname === '/api/order/confirm-transfer' && request.method === 'POST') {
 }
 // ======== End of Bank Transfer Additions ========
 
+// ======== ECPay Credit Card ========
+if (request.method === 'OPTIONS' && (pathname === '/api/payment/ecpay/create' || pathname === '/api/payment/ecpay/notify')) {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
+  try {
+    if (!env.ORDERS) {
+      return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+    }
+    if (!env.ECPAY_MERCHANT_ID || !env.ECPAY_HASH_KEY || !env.ECPAY_HASH_IV) {
+      return new Response(JSON.stringify({ ok:false, error:'Missing ECPay config' }), { status:500, headers: jsonHeaders });
+    }
+    const ct = (request.headers.get('content-type') || '').toLowerCase();
+    const body = ct.includes('application/json') ? (await request.json()) : {};
+
+    const draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', lockCoupon:false });
+    const order = draft.order;
+    const totalAmount = Math.max(1, Math.round(order.amount || 0));
+
+    const gateway = ecpayEndpoint(env);
+    const merchantId = String(env.ECPAY_MERCHANT_ID);
+    const hashKey   = String(env.ECPAY_HASH_KEY);
+    const hashIV    = String(env.ECPAY_HASH_IV);
+
+    const tradeNoBase = (order.id || '').replace(/[^A-Za-z0-9]/g,'');
+    const merchantTradeNo = (env.ECPAY_PREFIX ? String(env.ECPAY_PREFIX) : 'U') + tradeNoBase;
+    const tradeNo = merchantTradeNo.slice(-20);
+
+    const now = new Date();
+    const ts = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const itemsStr = (order.items && order.items.length)
+      ? order.items.map(it => `${it.productName||''}x${Math.max(1, Number(it.qty||1))}`).join('#')
+      : `${order.productName || '訂單'}x${Math.max(1, Number(order.qty||1))}`;
+
+    const params = {
+      MerchantID: merchantId,
+      MerchantTradeNo: tradeNo,
+      MerchantTradeDate: ts,
+      PaymentType: 'aio',
+      TotalAmount: totalAmount,
+      TradeDesc: '聖物訂單',
+      ItemName: itemsStr,
+      ReturnURL: `${origin}/api/payment/ecpay/notify`,
+      OrderResultURL: `${origin}/payment-result`,
+      ClientBackURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}`,
+      ChoosePayment: 'Credit',
+      EncryptType: 1,
+      CustomField1: order.id
+    };
+    params.CheckMacValue = await ecpayCheckMac(params, hashKey, hashIV);
+
+    order.payment = {
+      gateway: 'ecpay',
+      tradeNo,
+      amount: totalAmount,
+      createdAt: new Date().toISOString(),
+      status: 'INIT'
+    };
+
+    await env.ORDERS.put(order.id, JSON.stringify(order));
+    const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
+    let ids = [];
+    if (idxRaw) { try { const parsed = JSON.parse(idxRaw); if (Array.isArray(parsed)) ids = parsed; } catch{} }
+    ids.unshift(order.id);
+    if (ids.length > 1000) ids.length = 1000;
+    await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
+    try { await bumpSoldCounters(env, draft.items, order.productId, order.qty); } catch(_){}
+    try { await decStockCounters(env, draft.items, order.productId, order.variantName, order.qty); } catch(_){}
+
+    return new Response(JSON.stringify({
+      ok:true,
+      orderId: order.id,
+      action: gateway,
+      params,
+      stage: String(env.ECPAY_STAGE || env.ECPAY_MODE || '').toLowerCase()
+    }), { status:200, headers: jsonHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
+}
+
+if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
+  try {
+    if (!env.ORDERS) {
+      return new Response('0|ORDERS_NOT_BOUND', { status:500, headers:{'Content-Type':'text/plain'} });
+    }
+    const hashKey   = String(env.ECPAY_HASH_KEY || '');
+    const hashIV    = String(env.ECPAY_HASH_IV || '');
+    if (!hashKey || !hashIV) {
+      return new Response('0|CONFIG_MISSING', { status:500, headers:{'Content-Type':'text/plain'} });
+    }
+
+    const ct = (request.headers.get('content-type') || '').toLowerCase();
+    let formObj = {};
+    if (ct.includes('application/json')) {
+      formObj = await request.json().catch(()=>({}));
+    } else {
+      const fd = await request.formData();
+      formObj = Object.fromEntries(Array.from(fd.entries()).map(([k,v])=>[k, typeof v === 'string' ? v : String(v)]));
+    }
+
+    const receivedMac = String(formObj.CheckMacValue || formObj.checkmacvalue || '').toUpperCase();
+    const macParams = { ...formObj };
+    delete macParams.CheckMacValue;
+    delete macParams.checkmacvalue;
+    const calcMac = await ecpayCheckMac(macParams, hashKey, hashIV);
+    if (!receivedMac || receivedMac !== calcMac) {
+      return new Response('0|MAC_INVALID', { status:400, headers:{'Content-Type':'text/plain'} });
+    }
+
+    const rtnCode = Number(formObj.RtnCode || formObj.rtncode || 0);
+    const orderId = String(formObj.CustomField1 || formObj.customfield1 || formObj.MerchantTradeNo || '').trim();
+    if (!orderId) {
+      return new Response('0|NO_ORDER', { status:400, headers:{'Content-Type':'text/plain'} });
+    }
+    const raw = await env.ORDERS.get(orderId);
+    if (!raw) {
+      return new Response('0|ORDER_NOT_FOUND', { status:404, headers:{'Content-Type':'text/plain'} });
+    }
+    const order = JSON.parse(raw);
+    if (!order.payment) order.payment = {};
+    order.payment.gateway = 'ecpay';
+    order.payment.tradeNo = String(formObj.TradeNo || order.payment.tradeNo || '');
+    order.payment.merchantTradeNo = String(formObj.MerchantTradeNo || order.payment.merchantTradeNo || '');
+    order.payment.rtnCode = rtnCode;
+    order.payment.message = String(formObj.RtnMsg || formObj.rtnmsg || '');
+    order.payment.paidAt = new Date().toISOString();
+    order.payment.amount = Number(formObj.TradeAmt || formObj.TotalAmount || order.payment.amount || order.amount || 0);
+    order.status = rtnCode === 1 ? '已付款待出貨' : '付款失敗';
+    order.updatedAt = new Date().toISOString();
+
+    if (rtnCode === 1 && order.coupon && order.coupon.code && !order.coupon.locked && !order.coupon.failed) {
+      try {
+        const lock = await markCouponUsageOnce(env, order.coupon.code, order.id);
+        if (lock?.ok) order.coupon.locked = true;
+      } catch(_){}
+    }
+
+    await env.ORDERS.put(orderId, JSON.stringify(order));
+    return new Response('1|OK', { status:200, headers:{'Content-Type':'text/plain'} });
+  } catch (e) {
+    return new Response('0|ERROR', { status:500, headers:{'Content-Type':'text/plain'} });
+  }
+}
+
 
 // 檢查優惠券是否可用（只檢查，不鎖券、不扣次數）
 if (pathname === '/api/coupons/check' && request.method === 'POST') {
@@ -878,6 +1061,176 @@ async function computeServerDiscount(env, items, couponInputs, orderId) {
   }
 
   return { total, lines: results };
+}
+
+// 共用：將前端傳入的訂單資料標準化，計算金額與優惠
+async function buildOrderDraft(env, body, origin, opts = {}) {
+  function isTruthy(x){ return x === true || x === 1 || x === '1' || String(x).toLowerCase() === 'true' || String(x).toLowerCase() === 'yes' || x === 'on'; }
+  const hintMode   = (body.mode || '').toLowerCase();
+  const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
+  const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
+  const cartHint   = hasCart && (isTruthy(body.fromCart) || isTruthy(body.useCart) || hintMode === 'cart');
+
+  const preferDirect = (hintMode !== 'cart') && (directHint || !!body.productId);
+  const useCartOnly  = !preferDirect && cartHint;
+
+  let items = [];
+  if (useCartOnly) {
+    const cartArr = Array.isArray(body.cart) ? body.cart : [];
+    items = cartArr.map(it => ({
+      productId:   String(it.id || it.productId || ''),
+      productName: String(it.name || it.title || it.productName || '商品'),
+      deity:       String(it.deity || ''),
+      variantName: String(it.variantName || it.variant || ''),
+      price:       Number(it.price ?? it.unitPrice ?? 0),
+      qty:         Math.max(1, Number(it.qty ?? it.quantity ?? 1)),
+      image:       String(it.image || '')
+    }));
+  }
+
+  let productId   = useCartOnly ? '' : String(body.productId || '');
+  let productName = useCartOnly ? '' : String(body.productName || '');
+  let price       = useCartOnly ? 0  : Number(body.price ?? 0);
+  let qty         = useCartOnly ? 0  : Number(body.qty   ?? 1);
+  let deity       = useCartOnly ? '' : String(body.deity || '');
+  let variantName = useCartOnly ? '' : String(body.variantName || '');
+
+  if (useCartOnly && items.length) {
+    const total = items.reduce((s, it) => s + (Number(it.price||0) * Math.max(1, Number(it.qty||1))), 0);
+    const totalQty = items.reduce((s, it) => s + Math.max(1, Number(it.qty||1)), 0);
+    productId   = items[0].productId || 'CART';
+    productName = items[0].productName || `購物車共 ${items.length} 項`;
+    price = total;
+    qty = totalQty;
+    deity = items[0].deity || '';
+    variantName = items[0].variantName || '';
+  }
+
+  const buyer = {
+    name:  String((body?.buyer?.name)  || body?.name  || body?.buyer_name  || body?.bfName    || ''),
+    email: String((body?.buyer?.email) || body?.email || body?.buyer_email || body?.bfEmail   || ''),
+    line:  String((body?.buyer?.line)  || body?.line  || body?.buyer_line  || ''),
+    phone: String((body?.buyer?.phone) || body?.phone || body?.contact || body?.buyer_phone || body?.bfContact || ''),
+    store: String((body?.buyer?.store) || body?.store || body?.buyer_store || body?.storeid   || '')
+  };
+
+  const noteVal = String(
+    body?.note ??
+    body?.remark ??
+    body?.buyer?.note ??
+    body?.buyer_note ??
+    body?.bfNote ??
+    ''
+  ).trim();
+
+  let amount = 0;
+  if (Array.isArray(items) && items.length) {
+    amount = items.reduce((s, it) => {
+      const unit = Number(it.price ?? it.unitPrice ?? 0) || 0;
+      const q    = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+      return s + unit * q;
+    }, 0);
+  } else if (productId || productName) {
+    amount = Number(price || 0) * Math.max(1, Number(qty || 1));
+  } else {
+    amount = Number(body.amount || 0) || 0;
+  }
+
+  const newId = await generateOrderId(env);
+
+  const couponCode  = String(body.coupon || body.couponCode || "").trim().toUpperCase();
+  let couponDeity   = String(body.coupon_deity || body.deity || "").trim().toUpperCase();
+  if (!couponDeity && items.length) {
+    const set = new Set(items.map(it => String(it.deity||'').toUpperCase()).filter(Boolean));
+    couponDeity = (set.size === 1) ? Array.from(set)[0] : '';
+  }
+  let couponApplied = null;
+
+  if (couponCode) {
+    if (Array.isArray(items) && items.length) {
+      const couponInputs = [{ code: couponCode, deity: couponDeity }];
+      try {
+        const discInfo = await computeServerDiscount(env, items, couponInputs, newId);
+        const totalDisc = Math.max(0, Number(discInfo?.total || 0));
+        if (totalDisc > 0) {
+          let locked = { ok:true };
+          if (opts.lockCoupon) locked = await markCouponUsageOnce(env, couponCode, newId);
+          if (!locked.ok) {
+            couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: locked.reason || 'already_used' };
+          } else {
+            amount = Math.max(0, Number(amount || 0) - totalDisc);
+            couponApplied = {
+              code: couponCode,
+              deity: couponDeity,
+              discount: totalDisc,
+              redeemedAt: Date.now(),
+              lines: Array.isArray(discInfo.lines) ? discInfo.lines : [],
+              locked: !!opts.lockCoupon
+            };
+          }
+        } else {
+          couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'invalid_or_not_applicable' };
+        }
+      } catch (e) {
+        console.error('computeServerDiscount error', e);
+        couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'error' };
+      }
+    } else {
+      try {
+        const r = await redeemCoupon(env, { code: couponCode, deity: couponDeity, orderId: newId });
+        if (r && r.ok) {
+          let locked = { ok:true };
+          if (opts.lockCoupon) locked = await markCouponUsageOnce(env, couponCode, newId);
+          if (!locked.ok) {
+            couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: locked.reason || 'already_used' };
+          } else {
+            const disc = Math.max(0, Number(r.amount || 200) || 200);
+            amount = Math.max(0, Number(amount || 0) - disc);
+            couponApplied = { code: couponCode, deity: r.deity || couponDeity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon };
+          }
+        } else {
+          couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: (r && r.reason) || 'invalid' };
+        }
+      } catch (e) {
+        console.error('redeemCoupon error', e);
+        couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'error' };
+      }
+    }
+  }
+
+  const ritualNameEn   = String(body.ritual_name_en || body.ritualNameEn || body.candle_name_en || '').trim();
+  const ritualBirthday = String(body.ritual_birthday || body.ritualBirthday || body.candle_birthday || '').trim();
+  const ritualPhotoUrl = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
+  const extra = {};
+  if (ritualNameEn || ritualBirthday || ritualPhotoUrl) {
+    extra.candle = {
+      nameEn: ritualNameEn || undefined,
+      birthday: ritualBirthday || undefined,
+      photoUrl: ritualPhotoUrl || undefined
+    };
+  }
+
+  const now = new Date().toISOString();
+  const order = {
+    id: newId,
+    productId, productName, price, qty,
+    deity, variantName,
+    items: useCartOnly && items.length ? items : undefined,
+    method: opts.method || '信用卡/綠界',
+    buyer,
+    note: noteVal,
+    amount: Math.max(0, Math.round(amount)),
+    status: opts.status || '待付款',
+    createdAt: now, updatedAt: now,
+    ritual_photo_url: ritualPhotoUrl || undefined,
+    ritualPhotoUrl: ritualPhotoUrl || undefined,
+    resultToken: makeToken(32),
+    results: [],
+    coupon: couponApplied || undefined,
+    ...(Object.keys(extra).length ? { extra } : {})
+  };
+
+  return { order, items, couponApplied, couponCode, couponDeity, useCartOnly };
 }
 
 /* ========== CSV helpers ========== */

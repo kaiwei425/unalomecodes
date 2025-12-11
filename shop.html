@@ -130,6 +130,46 @@
   </div>
 </dialog>
 
+  <!-- 信用卡付款 Dialog -->
+  <dialog id="dlgCC" style="border:none;border-radius:16px;padding:0;max-width:520px;width:96%;">
+    <div style="padding:18px 18px 6px;">
+      <div style="font-weight:800;font-size:18px;">信用卡付款</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px">填寫收件聯絡資訊後，將導向綠界安全頁面完成刷卡。</div>
+    </div>
+    <form id="ccForm" style="padding:0 18px 16px;display:grid;gap:12px;">
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:14px;color:#6b7280;">應付金額</div>
+        <div id="ccAmount" style="font-size:18px;font-weight:800;color:#111827;">NT$ 0</div>
+      </div>
+      <div id="ccCouponHint" style="display:none;font-size:12px;color:#16a34a;line-height:1.6;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px"></div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">收件人姓名</label>
+        <input name="name" id="ccName" type="text" placeholder="請輸入收件人姓名" required>
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">手機號碼</label>
+        <input name="phone" id="ccPhone" type="tel" placeholder="例：0969123456" pattern="^09\\d{8}$" inputmode="tel" required>
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">電子郵件（收據）</label>
+        <input name="email" id="ccEmail" type="email" placeholder="name@example.com" inputmode="email" autocomplete="email">
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">收件 7-11 門市（若非實體寄送商品可留空或填「無」）</label>
+        <input name="store" id="ccStore" type="text" placeholder="可先在上一步挑選門市，我們會自動帶入">
+      </div>
+      <div style="display:grid;gap:6px">
+        <label style="font-size:12px;color:#6b7280">備註（可選）</label>
+        <textarea name="note" id="ccNote" placeholder="想補充的資料（如：商品規格、地址、祈福資訊）"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button type="button" id="ccCancel" class="btn">取消</button>
+        <button type="submit" id="ccSubmit" class="btn primary">前往刷卡</button>
+      </div>
+      <div style="font-size:12px;color:#6b7280;line-height:1.6">提交後會跳轉至綠界安全刷卡頁面，刷卡成功會自動返回「付款結果」頁。</div>
+    </form>
+  </dialog>
+
 <script>
 const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
 
@@ -141,7 +181,7 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     <div style="padding:0 18px 18px;color:#6b7280;font-size:14px">請選擇你想使用的結帳方式</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px">
       <a id="pay711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
-      <button id="payCC" class="btn">信用卡（暫未開放）</button>
+      <button id="payCC" class="btn">信用卡付款</button>
       <button id="payClose" class="btn link" style="margin-left:auto">關閉</button>
     </div>
   </dialog>
@@ -185,6 +225,7 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       </div>
       <div class="cartActions">
         <button id="cartClear" class="btn">清空</button>
+        <a id="cartPayCC" class="btn" target="_blank" rel="noopener">信用卡付款</a>
         <a id="cartGo711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
       </div>
     </div>
