@@ -381,7 +381,7 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       var r = await fetch('/api/fx?base=THB&symbol=TWD', { cache:'no-store' });
       if (r.ok){
         var j = await r.json();
-        var val = j && j.rates && (j.rates.TWD || j.rates.twd);
+        var val = (j && (j.rate || (j.rates && (j.rates.TWD || j.rates.twd)))) || 0;
         if (val){
           rateInput.value = Number(val).toFixed(4);
           setStatus('1 THB ≈ ' + Number(val).toFixed(4) + ' TWD', true);

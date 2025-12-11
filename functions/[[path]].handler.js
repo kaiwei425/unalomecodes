@@ -773,18 +773,40 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
   }
 }
 
-// === Simple FX proxy (THB -> target currency) ===
+// === Simple FX proxy (THB -> target currency) with fallbacks ===
 if (pathname === "/api/fx" && request.method === "GET") {
   try {
     const base = (url.searchParams.get("base") || "THB").toUpperCase();
     const symbol = (url.searchParams.get("symbol") || url.searchParams.get("symbols") || "TWD").toUpperCase();
-    const upstream = `https://api.exchangerate.host/latest?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(symbol)}`;
-    const resp = await fetch(upstream);
-    const text = await resp.text();
-    const headers = { ...jsonHeaders, 'Access-Control-Allow-Origin':'*' };
-    return new Response(text, { status: resp.status, headers });
+    const sources = [
+      {
+        url: `https://api.exchangerate.host/latest?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(symbol)}`,
+        pick: (j)=> j && j.rates && j.rates[symbol]
+      },
+      {
+        url: `https://open.er-api.com/v6/latest/${encodeURIComponent(base)}`,
+        pick: (j)=> j && j.rates && j.rates[symbol]
+      }
+    ];
+    let rate = null;
+    let raw = null;
+    for (const s of sources){
+      try{
+        const r = await fetch(s.url);
+        raw = await r.text();
+        if (!r.ok) continue;
+        const j = JSON.parse(raw);
+        const val = s.pick(j);
+        if (val) { rate = Number(val); break; }
+      }catch(_){}
+    }
+    const headers = { ...jsonHeaders, 'Access-Control-Allow-Origin':'*', 'Cache-Control':'no-store' };
+    if (!rate) {
+      return new Response(JSON.stringify({ ok:false, error:"RATE_NOT_FOUND", base, symbol }), { status:502, headers });
+    }
+    return new Response(JSON.stringify({ ok:true, base, symbol, rate, rates:{ [symbol]: rate } }), { status:200, headers });
   } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers:{...jsonHeaders,'Access-Control-Allow-Origin':'*'} });
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers:{...jsonHeaders,'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'} });
   }
 }
 
