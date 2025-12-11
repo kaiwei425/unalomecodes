@@ -904,4 +904,18 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     document.body.appendChild(form);
     form.submit();
   }
+
+  // 保險：確保按鈕綁定到信用卡流程，不再顯示「暫未開放」
+  document.addEventListener('DOMContentLoaded', function(){
+    const payBtn = document.getElementById('payCC');
+    if (payBtn){
+      payBtn.textContent = '信用卡付款';
+      payBtn.onclick = function(ev){ ev.preventDefault(); openCreditDialog('detail'); };
+    }
+    const cartBtn = document.getElementById('cartPayCC');
+    if (cartBtn){
+      cartBtn.textContent = '信用卡付款';
+      cartBtn.onclick = function(ev){ ev.preventDefault(); openCreditDialog('cart'); };
+    }
+  });
 })();
