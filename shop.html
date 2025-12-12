@@ -137,6 +137,10 @@
       <div style="color:#6b7280;font-size:14px;margin-top:4px">填寫收件聯絡資訊後，將導向綠界安全頁面完成刷卡。</div>
     </div>
     <form id="ccForm" style="padding:0 18px 16px;display:grid;gap:12px;">
+      <div id="ccOrderInfo" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:grid;gap:6px;">
+        <div style="font-size:14px;color:#6b7280;">確認商品資訊</div>
+        <div id="ccOrderItems" style="font-size:13px;color:#374151;line-height:1.6;">載入中…</div>
+      </div>
       <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:14px;color:#6b7280;">應付金額</div>
         <div id="ccAmount" style="font-size:18px;font-weight:800;color:#111827;">NT$ 0</div>
@@ -148,7 +152,7 @@
       </div>
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">手機號碼</label>
-        <input name="phone" id="ccPhone" type="tel" placeholder="例：0969123456" pattern="^09\\d{8}$" inputmode="tel" required>
+        <input name="phone" id="ccPhone" type="tel" placeholder="例：0969123456" pattern="^(\\+?886[-\\s]?9\\d{8}|09\\d{8}|9\\d{8})$" inputmode="tel" required>
       </div>
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">電子郵件（收據）</label>
@@ -156,7 +160,8 @@
       </div>
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">收件 7-11 門市（若非實體寄送商品可留空或填「無」）</label>
-        <input name="store" id="ccStore" type="text" placeholder="可先在上一步挑選門市，我們會自動帶入">
+        <input name="store" id="ccStore" type="text" placeholder="可先在上一步挑選門市，我們會自動帶入" readonly>
+        <button type="button" id="ccBackStore" class="btn link" style="max-width:180px;justify-self:flex-start">返回上一頁修改門市</button>
       </div>
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">備註（可選）</label>
@@ -370,7 +375,7 @@
     <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #16a34a;color:#16a34a;">3 匯款資料</div>
   </div>
   <div style="padding:18px 18px 10px;">
-    <div style="font-weight:800;font-size:18px;">轉帳匯款資訊</div>
+    <div style="font-weight:800;font-size:18px;">收件人資料</div>
     <div style="color:#6b7280;font-size:14px;margin-top:4px">請先完成匯款，再上傳匯款憑證並填寫資料。</div>
   </div>
   <div style="padding:0 18px 16px;display:grid;gap:10px;">
@@ -2996,7 +3001,7 @@ function ensureCandleFields(required){
 
       var labels = Array.isArray(labelsOverride) && labelsOverride.length === 3
         ? labelsOverride
-        : ['確認訂單','選擇門市','填寫匯款資料'];
+        : ['確認訂單','選擇門市','收件人資料'];
       var steps = [
         { idx:1, label:labels[0] },
         { idx:2, label:labels[1] },

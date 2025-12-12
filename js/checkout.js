@@ -818,6 +818,24 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       if (!dlg) return alert('無法顯示信用卡付款視窗');
       const ctx = computeAmount();
       dlg.__ctx = ctx;
+      // 填入商品/金額摘要
+      try{
+        const box = document.getElementById('ccOrderItems');
+        if (box){
+          if (!ctx.items.length){
+            box.textContent = '目前沒有商品，請返回重新選購。';
+          } else {
+            const lines = ctx.items.map(it=>{
+              const name = (it.name || it.productName || '商品');
+              const spec = it.variantName ? `（${it.variantName}）` : '';
+              const qty  = Math.max(1, Number(it.qty||1));
+              const unit = Number(it.price||0);
+              return `${name}${spec} × ${qty}｜單價 NT$${unit}`;
+            });
+            box.textContent = lines.join('\n');
+          }
+        }
+      }catch(_){}
       const amtEl = document.getElementById('ccAmount');
       if (amtEl) amtEl.textContent = 'NT$ ' + formatPrice(ctx.grand);
       setCouponHint(ctx);
@@ -894,6 +912,24 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       }
     });
   }
+
+  // 返回上一頁修改門市（信用卡）
+  document.addEventListener('click', function(e){
+    const t = e.target;
+    if (!t || t.id !== 'ccBackStore') return;
+    e.preventDefault();
+    try{
+      const dlg = document.getElementById('dlgCC');
+      if (dlg && dlg.open) dlg.close();
+    }catch(_){}
+    try{
+      const storeDlg = document.getElementById('dlgStore');
+      if (storeDlg && typeof storeDlg.showModal === 'function'){
+        if (typeof renderStepBar === 'function') renderStepBar('dlgStore', 2, ['確認訂單','選擇門市','填寫付款資料']);
+        storeDlg.showModal();
+      }
+    }catch(_){}
+  }, true);
 
   function submitECPayForm(action, params){
     if (!action || !params) {
