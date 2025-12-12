@@ -822,17 +822,34 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       try{
         const box = document.getElementById('ccOrderItems');
         if (box){
+          box.innerHTML = '';
           if (!ctx.items.length){
             box.textContent = '目前沒有商品，請返回重新選購。';
           } else {
-            const lines = ctx.items.map(it=>{
+            ctx.items.forEach(it=>{
               const name = (it.name || it.productName || '商品');
               const spec = it.variantName ? `（${it.variantName}）` : '';
               const qty  = Math.max(1, Number(it.qty||1));
               const unit = Number(it.price||0);
-              return `${name}${spec} × ${qty}｜單價 NT$${unit}`;
+              const img  = it.image || '';
+              const row  = document.createElement('div');
+              row.style.display = 'grid';
+              row.style.gridTemplateColumns = '60px 1fr';
+              row.style.gap = '10px';
+              row.style.alignItems = 'center';
+              row.style.padding = '8px';
+              row.style.border = '1px solid #e5e7eb';
+              row.style.borderRadius = '10px';
+              row.innerHTML =
+                `<div style="width:60px;height:60px;border-radius:10px;overflow:hidden;background:#fff;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">`+
+                  (img ? `<img src="${escapeHtml(img)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : `<div style="font-size:12px;color:#9ca3af;">無圖</div>`) +
+                `</div>`+
+                `<div style="font-size:13px;line-height:1.5;">`+
+                  `<div style="font-weight:700;color:#111827;">${escapeHtml(name)}${spec}</div>`+
+                  `<div style="color:#6b7280;">數量：${qty}｜單價 NT$${unit}</div>`+
+                `</div>`;
+              box.appendChild(row);
             });
-            box.textContent = lines.join('\n');
           }
         }
       }catch(_){}
