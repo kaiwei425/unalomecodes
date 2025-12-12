@@ -99,6 +99,8 @@ function openDetail(p){
   // CTA
   const btnAdd = document.getElementById('btnAddCart');
   const btnCheckout = document.getElementById('btnCheckout');
+  const payBtn711 = document.getElementById('pay711');
+  const payBtnCC = document.getElementById('payCC');
 
   function isCandleItem(obj){
     try{
@@ -168,10 +170,17 @@ function openDetail(p){
   // 直接結帳：彈出兩種方式
   btnCheckout.onclick = ()=>{
     const dlgPay = document.getElementById('dlgCheckout');
-    const a711 = document.getElementById('pay711');
-    const btnCC = document.getElementById('payCC');
+    const a711 = payBtn711;
+    const btnCC = payBtnCC;
     const btnClose = document.getElementById('payClose');
     const isCandle = isCandleItem(p);
+    // 蠟燭商品：隱藏信用卡按鈕，並在匯款按鈕加上提示
+    if (a711){
+      a711.textContent = isCandle ? '轉帳匯款（蠟燭專用）' : '轉帳匯款';
+    }
+    if (btnCC){
+      btnCC.style.display = isCandle ? 'none' : 'inline-flex';
+    }
     if (a711){ a711.href = '#'; a711.onclick = (ev)=>{ ev.preventDefault(); openBankDialog('detail'); }; }
     if (btnCC) btnCC.onclick = ()=> {
       if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
