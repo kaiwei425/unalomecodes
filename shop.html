@@ -357,7 +357,7 @@
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
         <button type="button" id="storeBackBtn" class="btn">返回上一頁</button>
-        <button type="button" id="storeNextBtn" class="btn primary">下一步：填寫匯款資訊</button>
+        <button type="button" id="storeNextBtn" class="btn primary">下一步：填寫付款資料</button>
       </div>
     </div>
   </dialog>
@@ -1686,23 +1686,8 @@ function ensureCandleFields(required){
     return t;
   }
   function openBankIfPossible(){
-    // 若目前流程是信用卡，則不要自動跳到匯款表單
-    try{
-      var ch = 'bank';
-      try{
-        var cached = sessionStorage.getItem('__checkout_channel');
-        if (cached) ch = cached;
-      }catch(_){}
-      if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.get==='function'){
-        ch = window.__checkoutChannelRef.get();
-      }
-      if (ch === 'cc') return;
-    }catch(_){}
-    try{
-      if (typeof openBankDialog === 'function'){ openBankDialog('detail'); return; }
-      var dlg = document.getElementById('dlgBank');
-      if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
-    }catch(e){}
+    // 新規：不自動開啟任何付款視窗，留在步驟 2 讓使用者自行按下一步
+    return;
   }
   function fillIntoField(d){
     var text = composeText(d);
@@ -1734,7 +1719,8 @@ function ensureCandleFields(required){
     var has = data.id || data.name || data.addr || data.tel;
     if (!has) return;
     whenFieldReady(function(){
-      if (fillIntoField(data)) openBankIfPossible();
+      fillIntoField(data);
+      // 不自動跳下一步
     });
   });
 
@@ -1745,17 +1731,8 @@ function ensureCandleFields(required){
       if (!d.__cvs_store__) return;
       var got = { id: d.storeid||'', name: d.storename||'', addr: d.storeaddress||'', tel: d.storetel||'' };
       whenFieldReady(function(){
-        var ok = fillIntoField(got);
-        // 若當前流程為信用卡，不要自動跳到匯款；交由使用者按下一步
-        try{
-          var ch = 'bank';
-          try{ var cached = sessionStorage.getItem('__checkout_channel'); if (cached) ch = cached; }catch(_){}
-          if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.get==='function'){
-            ch = window.__checkoutChannelRef.get();
-          }
-          if (ch === 'cc') return;
-        }catch(_){}
-        if (ok) openBankIfPossible();
+        fillIntoField(got);
+        // 不自動跳下一步，讓使用者確認後再按
       });
     }catch(e){}
   });
@@ -2971,7 +2948,7 @@ function ensureCandleFields(required){
         </button>
         <button type="button" id="storeNextBtn"
                 style="padding:8px 16px;border-radius:10px;border:none;background:#16a34a;color:#ffffff;font-weight:700;font-size:13px;cursor:pointer;">
-          下一步：填寫匯款資料
+          下一步：填寫付款資料
         </button>
       </div>
     </form>
