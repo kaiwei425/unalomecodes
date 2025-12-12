@@ -1686,6 +1686,18 @@ function ensureCandleFields(required){
     return t;
   }
   function openBankIfPossible(){
+    // 若目前流程是信用卡，則不要自動跳到匯款表單
+    try{
+      var ch = 'bank';
+      try{
+        var cached = sessionStorage.getItem('__checkout_channel');
+        if (cached) ch = cached;
+      }catch(_){}
+      if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.get==='function'){
+        ch = window.__checkoutChannelRef.get();
+      }
+      if (ch === 'cc') return;
+    }catch(_){}
     try{
       if (typeof openBankDialog === 'function'){ openBankDialog('detail'); return; }
       var dlg = document.getElementById('dlgBank');
@@ -1733,7 +1745,17 @@ function ensureCandleFields(required){
       if (!d.__cvs_store__) return;
       var got = { id: d.storeid||'', name: d.storename||'', addr: d.storeaddress||'', tel: d.storetel||'' };
       whenFieldReady(function(){
-        if (fillIntoField(got)) openBankIfPossible();
+        var ok = fillIntoField(got);
+        // 若當前流程為信用卡，不要自動跳到匯款；交由使用者按下一步
+        try{
+          var ch = 'bank';
+          try{ var cached = sessionStorage.getItem('__checkout_channel'); if (cached) ch = cached; }catch(_){}
+          if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.get==='function'){
+            ch = window.__checkoutChannelRef.get();
+          }
+          if (ch === 'cc') return;
+        }catch(_){}
+        if (ok) openBankIfPossible();
       });
     }catch(e){}
   });
@@ -3325,6 +3347,17 @@ function ensureCandleFields(required){
         if (typeof fillStoreIntoForm === 'function') {
           fillStoreIntoForm(d);
         }
+        // 信用卡流程：自動同步門市到 cc 欄位，但不自動跳下一步
+        try{
+          var chMsg = 'bank';
+          try{ var cached = sessionStorage.getItem('__checkout_channel'); if (cached) chMsg = cached; }catch(_){}
+          if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.get==='function'){
+            chMsg = window.__checkoutChannelRef.get();
+          }
+          if (chMsg === 'cc' && typeof window.syncStoreToCCForm === 'function'){
+            window.syncStoreToCCForm();
+          }
+        }catch(_){}
       }
     } catch(e) {}
   });
