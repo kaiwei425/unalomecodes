@@ -3191,6 +3191,7 @@ function ensureCandleFields(required){
     var dlg = document.getElementById('dlgOrderConfirm');
     if (!dlg) return;
     try{ dlg.setAttribute('data-channel', checkoutChannel); }catch(_){}
+    try{ sessionStorage.setItem('__checkout_channel', checkoutChannel); }catch(_){}
     var totals = getTotals();
     if (!totals.items || !totals.items.length){
       alert('目前購物車沒有商品，無法進行結帳');
@@ -3354,6 +3355,7 @@ function ensureCandleFields(required){
       return;
     }
     if (btn.id === 'orderNextBtn'){
+      try{ sessionStorage.setItem('__checkout_channel', checkoutChannel); }catch(_){}
       closeOrderDialog();
       openStoreDialog();
       return;
@@ -3364,6 +3366,7 @@ function ensureCandleFields(required){
       return;
     }
     if (btn.id === 'storeNextBtn'){
+      if (!e.isTrusted){ return; } // 僅接受使用者真實點擊，避免外部程式觸發
       // 允許服務性商品直接略過門市，或在已選門市後進入匯款/信用卡頁
       closeStoreDialog();
       // 確保在開啟下一步前，同步門市選擇
