@@ -176,7 +176,7 @@
     <div style="padding:0 18px 18px;color:#6b7280;font-size:14px">請選擇你想使用的結帳方式</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px">
       <a id="pay711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
-      <button id="payCC" class="btn" onclick="openCreditDialog('detail');return false;">信用卡付款</button>
+      <button id="payCC" class="btn">信用卡付款</button>
       <button id="payClose" class="btn link" style="margin-left:auto">關閉</button>
     </div>
   </dialog>
@@ -220,7 +220,7 @@
       </div>
       <div class="cartActions">
         <button id="cartClear" class="btn">清空</button>
-        <a id="cartPayCC" class="btn" target="_blank" rel="noopener" onclick="openCreditDialog('cart');return false;">信用卡付款</a>
+        <a id="cartPayCC" class="btn" target="_blank" rel="noopener">信用卡付款</a>
         <a id="cartGo711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
       </div>
     </div>
@@ -497,6 +497,16 @@ function fillStoreIntoForm(p){
     bank.setAttribute('data-storename',    name || '');
     bank.setAttribute('data-storeaddress', addr || '');
     bank.setAttribute('data-storetel',     tel  || '');
+  }
+
+  // 5) 信用卡付款的門市欄位（若有）
+  var cc = document.getElementById('ccStore');
+  if (cc){
+    cc.value = text;
+    cc.setAttribute('data-storeid',      id   || '');
+    cc.setAttribute('data-storename',    name || '');
+    cc.setAttribute('data-storeaddress', addr || '');
+    cc.setAttribute('data-storetel',     tel  || '');
   }
 
   return true;
@@ -2950,6 +2960,13 @@ function ensureCandleFields(required){
 (function(){
   if (window.__orderConfirmUnified__) return;
   window.__orderConfirmUnified__ = true;
+  var checkoutChannel = 'bank'; // 'bank' | 'cc'
+  try{
+    window.__checkoutChannelRef = {
+      set:function(v){ checkoutChannel = (v==='cc') ? 'cc' : 'bank'; },
+      get:function(){ return checkoutChannel; }
+    };
+  }catch(_){}
 
   function tw(n){
     try{ return 'NT$ ' + Number(n||0).toLocaleString('zh-TW'); }
@@ -2957,7 +2974,7 @@ function ensureCandleFields(required){
   }
 
   // --- 共用：在三個 Dialog 上方畫出 1/2/3 步驟條 ---
-  function renderStepBar(dlgId, activeStep){
+  function renderStepBar(dlgId, activeStep, labelsOverride){
     try{
       var dlg = document.getElementById(dlgId);
       if (!dlg) return;
@@ -2975,10 +2992,13 @@ function ensureCandleFields(required){
         header.parentNode.insertBefore(bar, header.nextSibling);
       }
 
+      var labels = Array.isArray(labelsOverride) && labelsOverride.length === 3
+        ? labelsOverride
+        : ['確認訂單','選擇門市','填寫匯款資料'];
       var steps = [
-        { idx:1, label:'確認訂單' },
-        { idx:2, label:'選擇門市' },
-        { idx:3, label:'填寫匯款資料' }
+        { idx:1, label:labels[0] },
+        { idx:2, label:labels[1] },
+        { idx:3, label:labels[2] }
       ];
 
       var html = '<div style="display:flex;gap:8px;font-size:12px;color:#6b7280;">';
@@ -3173,7 +3193,8 @@ function ensureCandleFields(required){
       return;
     }
     renderOrderDialog();
-    renderStepBar('dlgOrderConfirm', 1);
+    var labels = (checkoutChannel === 'cc') ? ['確認訂單','選擇門市','填寫付款資料'] : undefined;
+    renderStepBar('dlgOrderConfirm', 1, labels);
     try{ dlg.showModal(); }catch(e){}
   }
 
@@ -3199,16 +3220,44 @@ function ensureCandleFields(required){
     }catch(err){}
   }
 
+  function openCreditStep(){
+    try{
+      // 確保門市同步到信用卡欄位
+      try{ if (typeof window.syncStoreToCCForm === 'function') window.syncStoreToCCForm(); }catch(_){}
+      if (typeof openCreditDialog === 'function'){
+        openCreditDialog('detail');
+        var cdlg = document.getElementById('dlgCC');
+        if (cdlg) renderStepBar('dlgCC', 3, ['確認訂單','選擇門市','填寫付款資料']);
+      } else {
+        var dlg = document.getElementById('dlgCC');
+        if (dlg && typeof dlg.showModal === 'function'){
+          renderStepBar('dlgCC', 3, ['確認訂單','選擇門市','填寫付款資料']);
+          dlg.showModal();
+        } else {
+          alert('信用卡付款模組尚未載入，請重新整理頁面後再試。');
+        }
+      }
+    }catch(err){
+      console.error(err);
+      alert('顯示信用卡付款視窗時發生錯誤，請稍後再試。');
+    }
+  }
+
   function openStoreDialog(){
     var dlg = document.getElementById('dlgStore');
     if (!dlg){
       // 若尚未建立門市 Dialog，直接進匯款步驟
-      openBankStep();
+      if (checkoutChannel === 'cc') {
+        openCreditStep();
+      } else {
+        openBankStep();
+      }
       return;
     }
     try{
       try{ syncStorePreviewFromBank(); }catch(e){}
-      renderStepBar('dlgStore', 2);
+      var labels = (checkoutChannel === 'cc') ? ['確認訂單','選擇門市','填寫付款資料'] : undefined;
+      renderStepBar('dlgStore', 2, labels);
       dlg.showModal();
     }catch(e){}
   }
@@ -3246,6 +3295,18 @@ function ensureCandleFields(required){
   }
   try{ window.syncStoreToBankForm = syncStoreToBankForm; }catch(e){}
 
+  // 將門市同步到信用卡表單
+  function syncStoreToCCForm(){
+    try {
+      var previewInput = document.getElementById('bfStorePreview') || document.getElementById('dlgStoreInput');
+      var ccInput = document.getElementById('ccStore');
+      if (previewInput && ccInput) {
+        ccInput.value = previewInput.value || '';
+      }
+    } catch(e) {}
+  }
+  try{ window.syncStoreToCCForm = syncStoreToCCForm; }catch(e){}
+
 
   // --- 7-11 門市選擇：postMessage 監聽器 ---
   // 監聽來自 7-11 callback 彈出視窗的訊息
@@ -3261,14 +3322,19 @@ function ensureCandleFields(required){
       }
     } catch(e) {}
   });
-  // pay711 / cartGo711 進入第一步：訂單確認
+  // pay711 / cartGo711 / payCC 進入第一步：訂單確認
   document.addEventListener('click', function(e){
     var t = e.target;
-    var btn = t && t.closest && t.closest('#pay711,#cartGo711');
+    var btn = t && t.closest && t.closest('#pay711,#cartGo711,#payCC,#cartPayCC');
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    if (btn.id === 'payCC' || btn.id === 'cartPayCC') {
+      checkoutChannel = 'cc';
+    } else {
+      checkoutChannel = 'bank';
+    }
     openOrderDialog();
   }, true);
 
@@ -3293,13 +3359,20 @@ function ensureCandleFields(required){
       return;
     }
     if (btn.id === 'storeNextBtn'){
-      // 允許服務性商品直接略過門市，或在已選門市後進入匯款頁
+      // 允許服務性商品直接略過門市，或在已選門市後進入匯款/信用卡頁
       closeStoreDialog();
-      // 確保在開啟匯款視窗前，將門市選擇的結果同步過去
+      // 確保在開啟下一步前，同步門市選擇
       try{
         if (typeof window.syncStoreToBankForm === 'function') window.syncStoreToBankForm();
       }catch(e){}
-      openBankStep();
+      try{
+        if (typeof window.syncStoreToCCForm === 'function') window.syncStoreToCCForm();
+      }catch(e){}
+      if (checkoutChannel === 'cc') {
+        openCreditStep();
+      } else {
+        openBankStep();
+      }
       return;
     }
   });
@@ -4130,7 +4203,12 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.__ccBound = true;
       btn.addEventListener('click', function(ev){
         ev.preventDefault();
-        if (typeof window.openCreditDialog === 'function'){
+        if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
+          window.__checkoutChannelRef.set('cc');
+        }
+        if (typeof window.__openOrderConfirmDialogUnified === 'function'){
+          window.__openOrderConfirmDialogUnified();
+        } else if (typeof window.openCreditDialog === 'function'){
           window.openCreditDialog('detail');
         } else {
           alert('信用卡付款模組尚未載入，請重新整理頁面後再試。');
@@ -4142,7 +4220,12 @@ document.addEventListener('DOMContentLoaded', function() {
       cbtn.__ccBound = true;
       cbtn.addEventListener('click', function(ev){
         ev.preventDefault();
-        if (typeof window.openCreditDialog === 'function'){
+        if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
+          window.__checkoutChannelRef.set('cc');
+        }
+        if (typeof window.__openOrderConfirmDialogUnified === 'function'){
+          window.__openOrderConfirmDialogUnified();
+        } else if (typeof window.openCreditDialog === 'function'){
           window.openCreditDialog('cart');
         } else {
           alert('信用卡付款模組尚未載入，請重新整理頁面後再試。');
