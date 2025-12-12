@@ -13,6 +13,9 @@ function renderCart(){
   const total = document.getElementById('cartTotal');
   if (!list || !total) return;
   const arr = cartLoad();
+  const couponBox = document.querySelector('.cartCoupon');
+  const isCandleOnly = arr.length>0 && arr.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
+  if (couponBox){ couponBox.style.display = isCandleOnly ? 'none' : 'grid'; }
   list.innerHTML = '';
   if (!arr.length){
     list.innerHTML = '<div class="empty">購物車目前是空的</div>';

@@ -100,6 +100,14 @@ function openDetail(p){
   const btnAdd = document.getElementById('btnAddCart');
   const btnCheckout = document.getElementById('btnCheckout');
 
+  function isCandleItem(obj){
+    try{
+      var cat = String(obj && obj.category || '');
+      var nm  = String((obj && obj.name) || '');
+      return /蠟燭/.test(cat) || /蠟燭/.test(nm);
+    }catch(e){ return false; }
+  }
+
   // 加入購物車：用 localStorage 簡易存放
   btnAdd.onclick = ()=>{
     const sel = document.getElementById('dlgVariant');
@@ -136,6 +144,18 @@ function openDetail(p){
     };
     try{
       const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+      const incomingIsCandle = isCandleItem(item);
+      const cartHasCandle = cart.some(isCandleItem);
+      const cartHasNormal  = cart.some(it=> !isCandleItem(it));
+      // 禁止混放：如果 cart 已有蠟燭就只能放蠟燭；若 cart 有一般商品就不能放蠟燭
+      if (incomingIsCandle && cartHasNormal){
+        alert('蠟燭祈福商品需單獨結帳，請先清空購物車或完成當前訂單。');
+        return;
+      }
+      if (!incomingIsCandle && cartHasCandle){
+        alert('購物車目前是蠟燭祈福商品，需單獨結帳，請先完成或清空後再加入其他商品。');
+        return;
+      }
       cart.push(item);
       localStorage.setItem('cart', JSON.stringify(cart));
       showToast('已加入購物車');
@@ -151,6 +171,7 @@ function openDetail(p){
     const a711 = document.getElementById('pay711');
     const btnCC = document.getElementById('payCC');
     const btnClose = document.getElementById('payClose');
+    const isCandle = isCandleItem(p);
     if (a711){ a711.href = '#'; a711.onclick = (ev)=>{ ev.preventDefault(); openBankDialog('detail'); }; }
     if (btnCC) btnCC.onclick = ()=> {
       if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
@@ -164,11 +185,16 @@ function openDetail(p){
       }
     };
     if (btnClose) btnClose.onclick = ()=> dlgPay.close();
-    if (dlgPay && typeof dlgPay.showModal === 'function'){
-      try{ var need = (typeof needCandleExtras==='function') ? needCandleExtras() : false; if (typeof ensureCandleFields==='function') ensureCandleFields(need); }catch(_){}
-      dlgPay.showModal();
-    } else {
+    if (isCandle){
+      // 蠟燭：直接匯款，不開信用卡/確認步驟
       openBankDialog('detail');
+    } else {
+      if (dlgPay && typeof dlgPay.showModal === 'function'){
+        try{ var need = (typeof needCandleExtras==='function') ? needCandleExtras() : false; if (typeof ensureCandleFields==='function') ensureCandleFields(need); }catch(_){}
+        dlgPay.showModal();
+      } else {
+        openBankDialog('detail');
+      }
     }
   };
 

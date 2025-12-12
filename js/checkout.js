@@ -780,7 +780,8 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       }catch(_){}
     }
     const subtotal = items.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
-    const coupon = activeCoupon();
+    const hasCandle = items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
+    const coupon = hasCandle ? null : activeCoupon();
     let off = 0;
     if (coupon && coupon.code){
       const want = toDeityCode(coupon.deity || coupon.code || '');

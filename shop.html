@@ -3351,11 +3351,30 @@ function ensureCandleFields(required){
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    // 判斷購物車內容是否全為蠟燭
+    var cartItems = (function(){
+      try{ var c = JSON.parse(localStorage.getItem('cart')||'[]'); return Array.isArray(c)?c:[]; }catch(_){ return []; }
+    })();
+    var candleOnly = cartItems.length>0 && cartItems.every(function(it){ return /蠟燭/.test(String(it.category||'') + String(it.name||'')); });
+
     if (btn.id === 'payCC' || btn.id === 'cartPayCC') {
+      if (candleOnly){
+        alert('蠟燭祈福需單獨匯款結帳，已為你切換至匯款流程。');
+        checkoutChannel = 'bank';
+        openBankDialog('detail');
+        return;
+      }
       checkoutChannel = 'cc';
     } else {
       checkoutChannel = 'bank';
     }
+
+    // 蠟燭流程：直接匯款，不進入多步驟
+    if (candleOnly){
+      try{ openBankDialog('detail'); }catch(_){}
+      return;
+    }
+
     openOrderDialog();
   }, true);
 
