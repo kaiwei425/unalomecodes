@@ -220,7 +220,7 @@
       </div>
       <div class="cartActions">
         <button id="cartClear" class="btn">清空</button>
-        <a id="cartPayCC" class="btn" target="_blank" rel="noopener">信用卡付款</a>
+        <a id="cartPayCC" class="btn" target="_blank" rel="noopener" style="text-decoration:none;">信用卡付款</a>
         <a id="cartGo711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
       </div>
     </div>
@@ -2960,7 +2960,10 @@ function ensureCandleFields(required){
 (function(){
   if (window.__orderConfirmUnified__) return;
   window.__orderConfirmUnified__ = true;
-  var checkoutChannel = 'bank'; // 'bank' | 'cc'
+  var checkoutChannel = (function(){
+    try{ var v = sessionStorage.getItem('__checkout_channel'); if (v) return v; }catch(_){}
+    return 'bank';
+  })(); // 'bank' | 'cc'
   try{
     window.__checkoutChannelRef = {
       set:function(v){ checkoutChannel = (v==='cc') ? 'cc' : 'bank'; },
@@ -3187,6 +3190,7 @@ function ensureCandleFields(required){
   function openOrderDialog(){
     var dlg = document.getElementById('dlgOrderConfirm');
     if (!dlg) return;
+    try{ dlg.setAttribute('data-channel', checkoutChannel); }catch(_){}
     var totals = getTotals();
     if (!totals.items || !totals.items.length){
       alert('目前購物車沒有商品，無法進行結帳');
@@ -3258,6 +3262,7 @@ function ensureCandleFields(required){
       try{ syncStorePreviewFromBank(); }catch(e){}
       var labels = (checkoutChannel === 'cc') ? ['確認訂單','選擇門市','填寫付款資料'] : undefined;
       renderStepBar('dlgStore', 2, labels);
+      try{ dlg.setAttribute('data-channel', checkoutChannel); }catch(_){}
       dlg.showModal();
     }catch(e){}
   }
@@ -3368,7 +3373,20 @@ function ensureCandleFields(required){
       try{
         if (typeof window.syncStoreToCCForm === 'function') window.syncStoreToCCForm();
       }catch(e){}
-      if (checkoutChannel === 'cc') {
+      var ch = checkoutChannel;
+      try{
+        var ds = document.getElementById('dlgStore');
+        if (ds){
+          var attr = ds.getAttribute('data-channel');
+          if (attr) ch = attr;
+        }
+        // 若 sessionStorage 記錄了最近一次選擇的付款通道，優先使用
+        if (!attr){
+          var last = sessionStorage.getItem('__checkout_channel');
+          if (last) ch = last;
+        }
+      }catch(_){}
+      if (ch === 'cc') {
         openCreditStep();
       } else {
         openBankStep();
@@ -4206,6 +4224,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
           window.__checkoutChannelRef.set('cc');
         }
+        try{ sessionStorage.setItem('__checkout_channel','cc'); }catch(_){}
         if (typeof window.__openOrderConfirmDialogUnified === 'function'){
           window.__openOrderConfirmDialogUnified();
         } else if (typeof window.openCreditDialog === 'function'){
@@ -4223,6 +4242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
           window.__checkoutChannelRef.set('cc');
         }
+        try{ sessionStorage.setItem('__checkout_channel','cc'); }catch(_){}
         if (typeof window.__openOrderConfirmDialogUnified === 'function'){
           window.__openOrderConfirmDialogUnified();
         } else if (typeof window.openCreditDialog === 'function'){
