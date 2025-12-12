@@ -3053,6 +3053,16 @@ function ensureCandleFields(required){
       }
     }catch(e){}
     var items = readCartLS();
+    // 若購物車為空，嘗試使用 pendingDetail（直接結帳）
+    if (!items.length){
+      try{
+        var pendRaw = sessionStorage.getItem('__pendingDetail__');
+        var pend = pendRaw ? JSON.parse(pendRaw) : null;
+        if (pend){
+          items = [pend];
+        }
+      }catch(_){}
+    }
     var sub = 0;
     items.forEach(function(it){
       var unit = Number(it && (it.price!=null?it.price:it.unit)) || 0;
@@ -3202,8 +3212,19 @@ function ensureCandleFields(required){
       return;
     }
     renderOrderDialog();
-    var labels = (checkoutChannel === 'cc') ? ['確認訂單','選擇門市','填寫付款資料'] : undefined;
-    renderStepBar('dlgOrderConfirm', 1, labels);
+    // 判斷是否為蠟燭流程（全品項皆含「蠟燭」）
+    var candleFlow = (function(){
+      try{
+        var totals = getTotals();
+        var it = totals.items || [];
+        return it.length>0 && it.every(function(x){ return /蠟燭/.test(String(x.category||'') + String(x.name||'')); });
+      }catch(_){ return false; }
+    })();
+    try{
+      dlg.setAttribute('data-candle', candleFlow ? '1':'0');
+      sessionStorage.setItem('__candle_flow', candleFlow ? '1' : '');
+    }catch(_){}
+    renderStepBar('dlgOrderConfirm', 1, candleFlow ? ['確認訂單','跳過門市','收件人資料'] : (checkoutChannel === 'cc' ? ['確認訂單','選擇門市','填寫付款資料'] : undefined));
     try{ dlg.showModal(); }catch(e){}
   }
 
@@ -3213,16 +3234,33 @@ function ensureCandleFields(required){
     try{ dlg.close(); }catch(e){}
   }
 
-  function openBankStep(){
+  function openBankStep(skipStore){
     try{
+      var candleFlow = !!skipStore;
+      if (!candleFlow){
+        try{
+          var memo = sessionStorage.getItem('__candle_flow');
+          if (memo === '1') candleFlow = true;
+        }catch(_){}
+      }
+      // 控制門市欄位顯示/隱藏
+      try{
+        var storeRow = document.getElementById('bfStore') && document.getElementById('bfStore').closest('.bank-field');
+        var backBtn  = document.getElementById('bfBackToStoreBtn');
+        if (storeRow) storeRow.style.display = candleFlow ? 'none' : 'grid';
+        if (backBtn) {
+          backBtn.style.display = candleFlow ? 'none' : 'inline-flex';
+        }
+      }catch(_){}
+
       if (typeof openBankDialog === 'function'){
         openBankDialog('detail');
         var b = document.getElementById('dlgBank');
-        if (b) renderStepBar('dlgBank', 3);
+        if (b) renderStepBar('dlgBank', 3, candleFlow ? ['確認訂單','跳過門市','收件人資料'] : undefined);
       }else{
         var dlg = document.getElementById('dlgBank');
         if (dlg && typeof dlg.showModal === 'function'){
-          renderStepBar('dlgBank', 3);
+          renderStepBar('dlgBank', 3, candleFlow ? ['確認訂單','跳過門市','收件人資料'] : undefined);
           dlg.showModal();
         }
       }
@@ -3389,6 +3427,20 @@ function ensureCandleFields(required){
       return;
     }
     if (btn.id === 'orderNextBtn'){
+      var candleFlow = false;
+      try{
+        var dlg = document.getElementById('dlgOrderConfirm');
+        candleFlow = dlg && dlg.getAttribute('data-candle') === '1';
+        if (!candleFlow){
+          var memo = sessionStorage.getItem('__candle_flow');
+          candleFlow = memo === '1';
+        }
+      }catch(_){}
+      if (candleFlow){
+        closeOrderDialog();
+        openBankStep(true); // 直接進入匯款資料，跳過門市
+        return;
+      }
       try{ sessionStorage.setItem('__checkout_channel', checkoutChannel); }catch(_){}
       closeOrderDialog();
       openStoreDialog();

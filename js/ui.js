@@ -167,8 +167,42 @@ function openDetail(p){
     }catch(e){ alert('加入購物車失敗'); }
   };
 
+  function stashPendingDetail(){
+    try{
+      var sel = document.getElementById('dlgVariant');
+      var qtyEl = document.getElementById('dlgQty');
+      var variants = Array.isArray(p.variants)?p.variants:[];
+      var idx = Number(sel.value);
+      var diff = (idx>=0 && variants[idx]) ? Number(variants[idx].priceDiff||0) : 0;
+      var unit = basePrice(p) + diff;
+      var qty = qtyEl ? Math.max(1, Number(qtyEl.value||1)) : 1;
+      var variantName = '';
+      try{
+        if (idx>=0 && variants[idx] && variants[idx].name) { variantName = String(variants[idx].name); }
+        else {
+          var opt = sel && sel.options ? sel.options[sel.selectedIndex] : null;
+          variantName = opt ? (opt.textContent||'').replace(/（\+[^）]*）/g,'').trim() : '';
+        }
+      }catch(_){}
+      var looks = /蠟燭/.test(((p&&p.name)||'') + ' ' + ((p&&p.deity)||''));
+      var pending = {
+        id: p.id || '',
+        productId: p.id || '',
+        name: p.name || '',
+        productName: p.name || '',
+        variantName: variantName,
+        qty: qty,
+        price: unit,
+        image: (Array.isArray(p.images) && p.images[0]) || '',
+        category: looks ? '蠟燭加持祈福' : (p.category || '')
+      };
+      try{ sessionStorage.setItem('__pendingDetail__', JSON.stringify(pending)); }catch(_){}
+    }catch(_){}
+  }
+
   // 直接結帳：彈出兩種方式
   btnCheckout.onclick = ()=>{
+    stashPendingDetail();
     const dlgPay = document.getElementById('dlgCheckout');
     const a711 = payBtn711;
     const btnCC = payBtnCC;
@@ -195,7 +229,11 @@ function openDetail(p){
     };
     if (btnClose) btnClose.onclick = ()=> dlgPay.close();
     if (isCandle){
-      // 蠟燭：直接匯款，不開信用卡/確認步驟
+      // 蠟燭：仍顯示訂單確認步驟（在 order dialog 會直接跳到匯款資料，跳過門市）
+      if (typeof window.__openOrderConfirmDialogUnified === 'function'){
+        window.__openOrderConfirmDialogUnified();
+        return;
+      }
       openBankDialog('detail');
     } else {
       if (dlgPay && typeof dlgPay.showModal === 'function'){
