@@ -817,6 +817,19 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
       const dlg = document.getElementById('dlgCC');
       if (!dlg) return alert('無法顯示信用卡付款視窗');
       const ctx = computeAmount();
+      // 禁用蠟燭祈福等特殊品項的信用卡付款
+      const hasCandle = ctx.items.some(it=>{
+        const cat = (it.category || '').toString();
+        const nm  = ((it.name || it.productName || '') + (it.deity || '')).toString();
+        return /蠟燭/.test(cat) || /蠟燭/.test(nm);
+      });
+      if (hasCandle){
+        alert('此類商品僅提供轉帳匯款，請改用「轉帳匯款」完成訂單。');
+        if (typeof openBankDialog === 'function'){
+          openBankDialog('detail');
+        }
+        return;
+      }
       dlg.__ctx = ctx;
       // 填入商品/金額摘要
       try{
