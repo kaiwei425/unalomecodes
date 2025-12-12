@@ -809,6 +809,11 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
 
   window.openCreditDialog = function(source){
     try{
+      if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
+        window.__checkoutChannelRef.set('cc');
+      }
+    }catch(_){}
+    try{
       const dlg = document.getElementById('dlgCC');
       if (!dlg) return alert('無法顯示信用卡付款視窗');
       const ctx = computeAmount();
