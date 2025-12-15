@@ -903,6 +903,11 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
         store: (ccForm.querySelector('[name="store"]')?.value || '').trim(),
         note: (ccForm.querySelector('[name="note"]')?.value || '').trim()
       };
+      if (!payload.store){
+        alert('請先在上一步選擇 7-11 門市，再進行刷卡。');
+        try{ ccForm.querySelector('[name="store"]').focus(); }catch(_){}
+        return;
+      }
       if (cart.length){
         payload.cart = cart;
         payload.mode = 'cart';
