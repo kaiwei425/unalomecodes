@@ -39,6 +39,22 @@ if (typeof window.__clearCouponState !== 'function'){
 }
 var clearCouponState = window.__clearCouponState;
 
+if (typeof window.__scheduleOrderRefresh !== 'function'){
+  window.__scheduleOrderRefresh = function(delay){
+    try{
+      if (window.__orderRefreshTimer){
+        clearTimeout(window.__orderRefreshTimer);
+      }
+      window.__orderRefreshTimer = setTimeout(function(){
+        try{
+          window.location.reload();
+        }catch(_){}
+      }, delay || 1200);
+    }catch(_){}
+  };
+}
+var scheduleOrderRefresh = window.__scheduleOrderRefresh;
+
 (function(){
   const BANK = { bank: '中國信託 (822)', no: '148540417073' };
 
@@ -424,6 +440,10 @@ var clearCouponState = window.__clearCouponState;
         try{
           if (typeof clearCouponState === 'function') clearCouponState();
           else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
+        }catch(_){}
+        try{
+          if (typeof scheduleOrderRefresh === 'function') scheduleOrderRefresh();
+          else if (typeof window.__scheduleOrderRefresh === 'function') window.__scheduleOrderRefresh();
         }catch(_){}
         alert(data && data.ok ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
         if (dlg) dlg.close();

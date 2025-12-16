@@ -893,6 +893,19 @@ function ensureCandleFields(required){
     };
   }
   var clearCouponState = window.__clearCouponState;
+  if (typeof window.__scheduleOrderRefresh !== 'function'){
+    window.__scheduleOrderRefresh = function(delay){
+      try{
+        if (window.__orderRefreshTimer){
+          clearTimeout(window.__orderRefreshTimer);
+        }
+        window.__orderRefreshTimer = setTimeout(function(){
+          try{ window.location.reload(); }catch(_){}
+        }, delay || 1200);
+      }catch(_){}
+    };
+  }
+  var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 
   const form = document.getElementById('bankForm');
   if (form && !form.__bankSubmitBound){
@@ -1029,6 +1042,10 @@ function ensureCandleFields(required){
         try{
           if (typeof clearCouponState === 'function') clearCouponState();
           else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
+        }catch(_){}
+        try{
+          if (typeof scheduleOrderRefresh === 'function') scheduleOrderRefresh();
+          else if (typeof window.__scheduleOrderRefresh === 'function') window.__scheduleOrderRefresh();
         }catch(_){}
         alert(data && data.ok ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
         if (dlg) dlg.close();
