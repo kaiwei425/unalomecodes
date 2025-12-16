@@ -2019,6 +2019,16 @@ function ensureCandleFields(required){
     };
     return m[ normDeity(code) ] || '';
   }
+  function couponEscapeHtml(s){
+    try{
+      if (typeof escapeHtml === 'function'){
+        return escapeHtml(s);
+      }
+    }catch(_){}
+    return String(s||'').replace(/[&<>"']/g, function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m;
+    });
+  }
   function describeCouponUsage(cpn, line, items){
     var amtSource = (line && line.amount != null ? line.amount : null);
     if (amtSource == null){
@@ -2122,7 +2132,7 @@ function ensureCandleFields(required){
         + (deity ? deity + (dName ? '｜'+dName : '') : '不限')
         + '</div>'
         + '<div style="color:'+ (usage.color || '#6b7280') +';font-size:12px">'
-        + escapeHtml(usage.message || '')
+        + couponEscapeHtml(usage.message || '')
         + '</div>';
 
       var btn = document.createElement('button');
