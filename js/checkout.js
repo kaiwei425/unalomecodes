@@ -781,9 +781,21 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     }
     const subtotal = items.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
     const hasCandle = items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
-    const coupon = hasCandle ? null : activeCoupon();
+    let couponFromState = null;
     let off = 0;
-    if (coupon && coupon.code){
+    if (!hasCandle){
+      try{
+        const state = window.__cartCouponState;
+        if (state && state.assignment){
+          off = Number(state.assignment.total || 0) || 0;
+          if (Array.isArray(state.coupons) && state.coupons.length){
+            couponFromState = state.coupons[0];
+          }
+        }
+      }catch(_){}
+    }
+    const coupon = hasCandle ? null : (couponFromState || activeCoupon());
+    if (!off && coupon && coupon.code){
       const want = toDeityCode(coupon.deity || coupon.code || '');
       if (want){
         const elig = items.some(it => toDeityCode(it.deity || it.name || it.productName) === want);
@@ -797,9 +809,10 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
   function setCouponHint(ctx){
     const hint = document.getElementById('ccCouponHint');
     if (!hint) return;
-    if (ctx.coupon && ctx.coupon.code && ctx.off > 0){
+    if (ctx.off > 0){
       hint.style.display = 'block';
-      hint.textContent = `已套用優惠碼 ${ctx.coupon.code}，折抵 NT$ ${formatPrice(ctx.off)}。`;
+      const codeText = ctx.coupon && ctx.coupon.code ? `優惠碼 ${ctx.coupon.code}` : '優惠折扣';
+      hint.textContent = `${codeText}，折抵 NT$ ${formatPrice(ctx.off)}。`;
     } else if (ctx.coupon && ctx.coupon.code){
       hint.style.display = 'block';
       hint.textContent = `優惠碼 ${ctx.coupon.code} 尚未符合折抵條件，請確認商品守護神是否相符。`;
