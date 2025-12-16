@@ -101,6 +101,45 @@
 <script>
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
+const ADMIN_KEY_STORAGE = 'ADMIN_KEY';
+function promptAdminKey(){
+  var key = prompt('請輸入管理員金鑰');
+  if (key){
+    key = key.trim();
+    if (key) sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+  }
+  return key ? key.trim() : '';
+}
+function getAdminKey(){
+  var key = sessionStorage.getItem(ADMIN_KEY_STORAGE) || '';
+  if (!key){
+    key = promptAdminKey();
+  }
+  return key ? key.trim() : '';
+}
+function clearAdminKey(){
+  try{ sessionStorage.removeItem(ADMIN_KEY_STORAGE); }catch(_){}
+}
+function authHeaders(extra){
+  const headers = Object.assign({}, extra || {});
+  const key = getAdminKey();
+  if (!key) throw new Error('尚未輸入管理員金鑰');
+  headers['x-admin-key'] = key;
+  return headers;
+}
+async function authedFetch(url, options, retried){
+  const opts = Object.assign({}, options || {});
+  opts.headers = authHeaders(opts.headers || {});
+  const res = await fetch(url, opts);
+  if (res.status === 401 && retried !== true){
+    clearAdminKey();
+    alert('管理員金鑰錯誤或已過期，請重新輸入');
+    const key = getAdminKey();
+    if (!key) throw new Error('沒有管理員金鑰');
+    return authedFetch(url, options, true);
+  }
+  return res;
+}
 const fmt = ts => ts ? new Date(ts).toLocaleString() : '';
 
 let ORDERS = [];
@@ -129,7 +168,7 @@ function normalizeProof(u){
 
 async function loadOrders(){
   try{
-    const res = await fetch('/api/orders?limit=500', { cache:'no-store' });
+    const res = await authedFetch('/api/orders?limit=500', { cache:'no-store' });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
     ORDERS = Array.isArray(data.orders) ? data.orders : [];
@@ -437,10 +476,9 @@ $('#checkAll').addEventListener('change', e=>{
 
 // --- PATCH 2/2: resilient admin call + remember ADMIN_KEY ---
 function ensureAdminKey(){
-  let k = sessionStorage.getItem('ADMIN_KEY') || localStorage.getItem('ADMIN_KEY') || '';
+  let k = getAdminKey();
   if (!k){
-    k = prompt('請輸入後端 ADMIN_KEY（只需輸入一次，之後會記住）') || '';
-    if (k) { sessionStorage.setItem('ADMIN_KEY', k); localStorage.setItem('ADMIN_KEY', k); }
+    k = getAdminKey();
   }
   return k;
 }
@@ -475,8 +513,7 @@ async function postRitualResults(id, items){
       return await tryOnce(url);
     }catch(e){
       if (e && e.status === 401){
-        sessionStorage.removeItem('ADMIN_KEY');
-        localStorage.removeItem('ADMIN_KEY');
+        clearAdminKey();
         const key1 = ensureAdminKey();
         if (!key1) throw new Error('未提供 ADMIN_KEY');
         const url2 = url.replace(/admin_key=[^&]*/,'admin_key='+encodeURIComponent(key1));
@@ -503,7 +540,7 @@ document.addEventListener('click', async e=>{
     const status = sel.value;
     if (!status){ toast('請先選擇狀態'); return; }
     try{
-      const res = await fetch('/api/order/status', {
+      const res = await authedFetch('/api/order/status', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'set', id, status })
@@ -528,7 +565,7 @@ document.addEventListener('click', async e=>{
     const ok = confirm(`確定要刪除訂單「${id}」嗎？\n${orderHint ? '商品：' + orderHint + '\n' : ''}此動作無法復原。`);
     if (!ok) return;
     try{
-      const res = await fetch('/api/order/status', {
+      const res = await authedFetch('/api/order/status', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ id, action:'delete' })
@@ -574,7 +611,7 @@ $('#markPaid').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
   for (const id of selected){
-    const res = await fetch('/api/order/status', {
+    const res = await authedFetch('/api/order/status', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ id, action:'set', status:'已付款待出貨' })
@@ -590,7 +627,7 @@ $('#markShipped').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
   for (const id of selected){
-    const res = await fetch('/api/order/status', {
+    const res = await authedFetch('/api/order/status', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ id, action:'set', status:'已寄件' })
@@ -606,7 +643,7 @@ $('#markDone').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
   for (const id of selected){
-    const res = await fetch('/api/order/status', {
+    const res = await authedFetch('/api/order/status', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ id, action:'set', status:'已完成訂單' })
@@ -622,7 +659,7 @@ $('#batchDelete').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
   for (const id of selected){
-    const res = await fetch('/api/order/status', {
+    const res = await authedFetch('/api/order/status', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ id, action:'delete' })
@@ -638,7 +675,9 @@ $('#batchDelete').addEventListener('click', async ()=>{
 $('#exportCsv').addEventListener('click', ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   const ids = Array.from(selected).join(',');
-  const url = `/api/orders/export?ids=${encodeURIComponent(ids)}`;
+  const key = getAdminKey();
+  if (!key){ toast('尚未輸入管理員金鑰'); return; }
+  const url = `/api/orders/export?ids=${encodeURIComponent(ids)}&admin_key=${encodeURIComponent(key)}`;
   // 直接開啟下載
   window.open(url, '_blank');
 });
