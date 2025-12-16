@@ -814,7 +814,7 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
     const ct = (request.headers.get('content-type') || '').toLowerCase();
     const body = ct.includes('application/json') ? (await request.json()) : {};
 
-    const draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', lockCoupon:false });
+    const draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', lockCoupon:true });
     const order = draft.order;
     const totalAmount = Math.max(1, Math.round(order.amount || 0));
 
