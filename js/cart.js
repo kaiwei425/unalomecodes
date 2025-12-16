@@ -86,6 +86,23 @@ document.addEventListener('click', (e)=>{
   }
 });
 
+document.addEventListener('change', (e)=>{
+  const input = e.target;
+  if (!(input && input.getAttribute && input.getAttribute('data-act') === 'qty')) return;
+  const ctl = input.closest && input.closest('.cartCtl');
+  if (!ctl) return;
+  const idx = Number(ctl.getAttribute('data-idx'));
+  const arr = cartLoad();
+  if (!arr[idx]) return;
+  let qty = Number(input.value);
+  if (!Number.isFinite(qty) || qty < 1){ qty = 1; }
+  arr[idx].qty = qty;
+  cartSave(arr);
+  renderCart();
+  updateCartBadge();
+  try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(e){}
+});
+
 document.addEventListener('DOMContentLoaded', ()=>{
   updateCartBadge();
 });

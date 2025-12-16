@@ -34,6 +34,10 @@ async function loadProducts(){
 
 function populateDeityFilter(items){
   const f = document.getElementById('fDeity');
+  if (!f) return;
+  while (f.options && f.options.length > 1){
+    f.remove(1);
+  }
   const set = new Set();
   items.forEach(p => { if (p.deity) set.add(p.deity); });
   [...set].sort().forEach(name=>{
