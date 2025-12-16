@@ -263,7 +263,8 @@ function isCandleItemLike(obj){
   });
 
   const form = document.getElementById('bankForm');
-  if (form){
+  if (form && !form.__bankSubmitBound){
+    form.__bankSubmitBound = true;
     // 匯款憑證大小限制
     try{
       var rec = document.getElementById('bfFile');
