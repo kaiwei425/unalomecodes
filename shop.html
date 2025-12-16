@@ -700,12 +700,48 @@ function ensureCandleFields(required){
           }
         }
       }catch(e){}
+      function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
+      function combinedItems(){
+        var items = readCart().slice();
+        try{
+          var pendRaw = sessionStorage.getItem('__pendingDetail__');
+          var pend = pendRaw ? JSON.parse(pendRaw) : null;
+          if (pend) items.push(pend);
+        }catch(_){}
+        return items;
+      }
+      function itemsNeedShipping(arr){
+        if (!arr.length) return false;
+        return arr.some(function(it){
+          if (typeof window.isCandleItemLike === 'function') return !window.isCandleItemLike(it);
+          var text = '';
+          try{
+            text += String((it && it.category) || '');
+            text += ' ' + String((it && (it.name || it.title || it.productName)) || '');
+          }catch(_){}
+          return !/蠟燭/.test(text);
+        });
+      }
+      function allCandle(arr){
+        return arr.length>0 && arr.every(function(it){
+          return typeof window.isCandleItemLike === 'function'
+            ? window.isCandleItemLike(it)
+            : /蠟燭/.test(String((it && it.category)||'') + String((it && (it.name||it.title||''))||''));
+        });
+      }
+      var allItems = combinedItems();
+      var candleFlow = allCandle(allItems);
+      try{ sessionStorage.setItem('__candle_flow', candleFlow ? '1' : ''); }catch(_){}
+      if (candleFlow){
+        try{ resetStoreSelection(); }catch(_){}
+      }
+      applyStoreFieldVisibility(!candleFlow);
+
       // 自動帶入金額：購物車合計優先，否則詳情價
       let amount = 0;
       try{
-        const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-        if (Array.isArray(cart) && cart.length){
-          amount = cart.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
+        if (allItems.length){
+          amount = allItems.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
         }
       }catch{}
       if (!amount){
@@ -716,7 +752,6 @@ function ensureCandleFields(required){
         }catch{}
       }
       // apply active coupon (fixed NT$200) only if deity matches any item
-      function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
       function getActiveCoupon(){
         try{ if (window.__coupon && typeof window.__coupon.getActiveCoupon==='function') return window.__coupon.getActiveCoupon(); }catch(e){}
         try{ var raw = localStorage.getItem('__activeCoupon__'); if (raw) return JSON.parse(raw); }catch(e){}
@@ -763,28 +798,26 @@ function ensureCandleFields(required){
       }
       var coupon = getActiveCoupon();
       var off = 0;
-      if (coupon && coupon.code){
-        // build a combined items list = cart + pending detail
-        var items = readCart().slice();
-        try{
-          var _pend = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
-          if (_pend) items.push(_pend);
-        }catch(_){}
-        var elig = sumEligible(items, coupon.deity);
+      if (!candleFlow && coupon && coupon.code){
+        var elig = sumEligible(allItems, coupon.deity);
         if (elig > 0){ off = Number(coupon.amount||200) || 200; }
       }
-      var grand = Math.max(0, Math.round(amount - off));
+      var shippingFee = (!candleFlow && itemsNeedShipping(allItems)) ? (window.__shippingFee || 60) : 0;
+      var grand = Math.max(0, Math.round(amount - off + shippingFee));
       const amtEl = document.getElementById('bfAmount');
       if (amtEl) amtEl.value = grand;
       // show small line under amount to indicate coupon state
       (function(){
         var hint = document.getElementById('bfAmtHint');
         if (!hint) return;
+        var baseText = shippingFee > 0
+          ? '含 7-11 店到店運費 NT$' + (window.__shippingFee || 60) + '，請確認金額後再送出'
+          : '系統自動帶入金額，無需修改';
         if (off > 0){
-          hint.textContent = '已套用優惠碼 '+ (coupon && coupon.code || '') +' 折抵 NT$' + (Number(coupon.amount||200)||200);
+          hint.textContent = '已套用優惠碼 '+ (coupon && coupon.code || '') +' 折抵 NT$' + (Number(coupon.amount||200)||200) + (shippingFee>0 ? '；' + baseText : '');
           hint.style.color = '#059669';
         }else{
-          hint.textContent = '系統自動帶入金額，無需修改';
+          hint.textContent = baseText;
           hint.style.color = '#6b7280';
         }
       })();
@@ -2501,6 +2534,17 @@ function ensureCandleFields(required){
   function refreshBankFromUnified(){
     // --- renderBankOrderItems helper, nested inside refreshBankFromUnified ---
     function renderBankOrderItems(totals){
+      var candleFlowActive = false;
+      try{
+        candleFlowActive = (sessionStorage.getItem('__candle_flow') === '1');
+        if (!candleFlowActive && totals && Array.isArray(totals.items) && totals.items.length){
+          candleFlowActive = totals.items.every(function(it){
+            return typeof window.isCandleItemLike === 'function'
+              ? window.isCandleItemLike(it)
+              : /蠟燭/.test(String((it && it.category)||'') + String((it && (it.name||it.title||''))||''));
+          });
+        }
+      }catch(_){}
       var dlg = document.getElementById('dlgBank');
       if (!dlg) return;
 
@@ -2571,6 +2615,11 @@ function ensureCandleFields(required){
         }else{
           dlg.insertBefore(box, dlg.firstChild);
         }
+      }
+
+      if (candleFlowActive){
+        box.innerHTML = '';
+        return;
       }
 
       box.innerHTML = html;
@@ -3329,16 +3378,7 @@ function ensureCandleFields(required){
       if (candleFlow && typeof resetStoreSelection === 'function'){
         resetStoreSelection();
       }
-      // 控制門市欄位顯示/隱藏
-      try{
-        var storeRow = document.getElementById('bfStore') && document.getElementById('bfStore').closest('.bank-field');
-        var backBtn  = document.getElementById('bfBackToStoreBtn');
-        if (storeRow) storeRow.style.display = candleFlow ? 'none' : 'grid';
-        if (backBtn) {
-          backBtn.style.display = candleFlow ? 'none' : 'inline-flex';
-        }
-      }catch(_){}
-
+      applyStoreFieldVisibility(!candleFlow);
       if (typeof openBankDialog === 'function'){
         openBankDialog('detail');
         var b = document.getElementById('dlgBank');
@@ -3431,24 +3471,36 @@ function ensureCandleFields(required){
     ['dlgStoreInput','bfStore','ccStore'].forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
-      if (id === 'ccStore'){
-        if (storeSelectionRequired()){
-          el.value = '';
-        }else{
-          el.value = '';
-          el.removeAttribute('data-storeid');
-          el.removeAttribute('data-storename');
-          el.removeAttribute('data-storeaddress');
-          el.removeAttribute('data-storetel');
-        }
-      }else{
-        el.value = '';
-      }
+      el.value = '';
       el.removeAttribute('data-storeid');
       el.removeAttribute('data-storename');
       el.removeAttribute('data-storeaddress');
       el.removeAttribute('data-storetel');
     });
+    applyStoreFieldVisibility(storeSelectionRequired());
+  }
+  function applyStoreFieldVisibility(required){
+    try{
+      var storeInput = document.getElementById('bfStore');
+      var storeRow = storeInput && storeInput.closest('.bank-field');
+      if (storeRow){ storeRow.style.display = required ? 'grid' : 'none'; }
+      if (storeInput){ storeInput.required = !!required; }
+      var backBtn = document.getElementById('bfBackToStoreBtn');
+      if (backBtn){ backBtn.style.display = required ? 'inline-flex' : 'none'; }
+      var preview = document.getElementById('bfStorePreview');
+      if (preview && !required){ preview.value = '尚未選擇門市'; }
+      var ccInput = document.getElementById('ccStore');
+      if (ccInput){
+        ccInput.required = !!required;
+        if (!required){
+          ccInput.value = '';
+          ccInput.removeAttribute('data-storeid');
+          ccInput.removeAttribute('data-storename');
+          ccInput.removeAttribute('data-storeaddress');
+          ccInput.removeAttribute('data-storetel');
+        }
+      }
+    }catch(_){}
   }
   try{ window.resetStoreSelection = resetStoreSelection; }catch(_){}
 
