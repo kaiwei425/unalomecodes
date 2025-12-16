@@ -337,15 +337,13 @@
       <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #16a34a;color:#16a34a;">2 選擇門市</div>
       <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">3 匯款資料</div>
     </div>
-    <div style="padding:18px 18px 10px;">
-      <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
-      <div style="color:#6b7280;font-size:14px;margin-top:4px">
-        請先選擇 7-11 取貨門市，再進入匯款資訊頁面
-      </div>
-      <div style="color:#ef4444;font-size:12px;margin-top:2px">
-        若是購買服務性商品（例如蠟燭祈福等），可跳過此步驟，不需填寫門市資訊
-      </div>
+  <div style="padding:18px 18px 10px;">
+    <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
+    <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;">
+      請先選擇 7-11 取貨門市，再進入匯款或信用卡資料頁面。<br>
+      僅有蠟燭祈福等服務性商品可跳過此步驟，其餘結帳流程皆須提供門市資訊。
     </div>
+  </div>
     <div style="padding:0 18px 16px;display:grid;gap:10px">
       <div style="display:grid;gap:6px">
         <label style="font-size:12px;color:#6b7280">取貨門市</label>
@@ -2919,11 +2917,10 @@ function ensureCandleFields(required){
   <dialog id="dlgStore" style="border:none;border-radius:16px;padding:0;max-width:680px;width:96%;max-height:90vh;overflow:auto;">
     <div style="padding:18px 18px 10px;">
       <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
-      <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;">
-        請先選擇 7-11 取貨門市，再進入匯款資訊頁面
-        <br>
-        若是購買服務性商品（如蠟燭祈福等），可跳過此步驟直接按下一步
-      </div>
+    <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;">
+      請先選擇 7-11 取貨門市，再進入匯款或信用卡資料頁面。<br>
+      僅有蠟燭祈福等服務性商品可跳過此步驟，其餘結帳流程皆須提供門市資訊。
+    </div>
     </div>
 
     <form id="storeForm" style="padding:0 18px 16px;display:grid;gap:10px;">
@@ -3452,6 +3449,40 @@ function ensureCandleFields(required){
     }
     if (btn.id === 'storeNextBtn'){
       if (!e.isTrusted){ return; } // 僅接受使用者真實點擊，避免外部程式觸發
+      var ch = checkoutChannel;
+      try{
+        var ds = document.getElementById('dlgStore');
+        if (ds){
+          var attr = ds.getAttribute('data-channel');
+          if (attr) ch = attr;
+        }
+        if (!attr){
+          var last = sessionStorage.getItem('__checkout_channel');
+          if (last) ch = last;
+        }
+      }catch(_){}
+      var candleFlow = false;
+      try{
+        candleFlow = sessionStorage.getItem('__candle_flow') === '1';
+      }catch(_){}
+      var requireStore = (ch === 'cc') || !candleFlow;
+      if (requireStore){
+        var storeVal = '';
+        try{
+          var previewField = document.getElementById('bfStorePreview') || document.getElementById('dlgStoreInput') || document.getElementById('bfStore');
+          if (previewField){
+            storeVal = (previewField.value || '').trim();
+          }
+        }catch(_){}
+        if (!storeVal || /尚未選擇/.test(storeVal)){
+          alert('請先完成 7-11 門市選擇，再進行下一步');
+          try{
+            var focusField = document.getElementById('storeOpenCvsBtn');
+            if (focusField) focusField.focus();
+          }catch(_){}
+          return;
+        }
+      }
       // 允許服務性商品直接略過門市，或在已選門市後進入匯款/信用卡頁
       closeStoreDialog();
       // 確保在開啟下一步前，同步門市選擇
@@ -3461,19 +3492,6 @@ function ensureCandleFields(required){
       try{
         if (typeof window.syncStoreToCCForm === 'function') window.syncStoreToCCForm();
       }catch(e){}
-      var ch = checkoutChannel;
-      try{
-        var ds = document.getElementById('dlgStore');
-        if (ds){
-          var attr = ds.getAttribute('data-channel');
-          if (attr) ch = attr;
-        }
-        // 若 sessionStorage 記錄了最近一次選擇的付款通道，優先使用
-        if (!attr){
-          var last = sessionStorage.getItem('__checkout_channel');
-          if (last) ch = last;
-        }
-      }catch(_){}
       if (ch === 'cc') {
         openCreditStep();
       } else {
