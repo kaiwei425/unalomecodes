@@ -669,6 +669,20 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     }
 
     // Optional candle ritual metadata
+    const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
+    const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
+    const shippingNeeded = needShippingFee(items, fallbackText);
+    const baseShipping = resolveShippingFee(env);
+    let shippingFee = 0;
+    if (shippingHint > 0){
+      shippingFee = shippingHint;
+    } else if (shippingNeeded){
+      shippingFee = baseShipping;
+    } else {
+      shippingFee = 0;
+    }
+    amount = Math.max(0, Number(amount || 0)) + shippingFee;
+
     const ritualNameEn   = String(body.ritual_name_en || body.ritualNameEn || body.candle_name_en || '').trim();
     const ritualBirthday = String(body.ritual_birthday || body.ritualBirthday || body.candle_birthday || '').trim();
     const ritualPhotoUrl = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
@@ -691,6 +705,8 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       buyer, transferLast5, receiptUrl,
       note: noteVal,
       amount,
+      shippingFee: shippingFee || 0,
+      shipping: shippingFee || 0,
       status: 'pending',
       createdAt: now, updatedAt: now,
       ritual_photo_url: ritualPhotoUrl || undefined,
@@ -1337,9 +1353,10 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   const shippingNeeded = needShippingFee(items, fallbackText);
   const baseShipping = resolveShippingFee(env);
   let shippingFee = 0;
-  if (shippingNeeded){
-    shippingFee = shippingHint > 0 ? shippingHint : baseShipping;
-    if (shippingFee < baseShipping) shippingFee = baseShipping;
+  if (shippingHint > 0){
+    shippingFee = shippingHint;
+  } else if (shippingNeeded){
+    shippingFee = baseShipping;
   } else {
     shippingFee = 0;
   }

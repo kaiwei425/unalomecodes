@@ -30,7 +30,11 @@ if (typeof window.__clearCouponState !== 'function'){
       window.__cartCouponState.shipping = 0;
       window.__cartCouponState.hasShipping = false;
     }catch(_){}
-    try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+    try{
+      window.__coupon = window.__coupon || {};
+      window.__coupon.getActiveCoupon = function(){ return null; };
+      window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay();
+    }catch(_){}
   };
 }
 var clearCouponState = window.__clearCouponState;
