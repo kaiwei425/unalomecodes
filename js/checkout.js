@@ -802,6 +802,7 @@ function isCandleItemLike(obj){
     const subtotal = items.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
     const hasCandle = items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
     let couponFromState = null;
+    let assignmentFromState = null;
     let off = 0;
     let shipping = 0;
     if (!hasCandle){
@@ -810,6 +811,7 @@ function isCandleItemLike(obj){
         if (state){
           if (state.assignment){
             off = Number(state.assignment.total || 0) || 0;
+            assignmentFromState = state.assignment;
             if (Array.isArray(state.coupons) && state.coupons.length){
               couponFromState = state.coupons[0];
             }
@@ -833,7 +835,7 @@ function isCandleItemLike(obj){
       if (hasPhysical) shipping = SHIPPING_FEE;
     }
     const grand = Math.max(0, Math.round(subtotal - off + shipping));
-    return { cart, pending, items, subtotal, off, grand, coupon, shipping };
+    return { cart, pending, items, subtotal, off, grand, coupon, shipping, assignment: assignmentFromState };
   }
 
   function setCouponHint(ctx){
@@ -886,12 +888,26 @@ function isCandleItemLike(obj){
           if (!ctx.items.length){
             box.textContent = '目前沒有商品，請返回重新選購。';
           } else {
-            ctx.items.forEach(it=>{
+            const assignLines = ctx.assignment && Array.isArray(ctx.assignment.lines) ? ctx.assignment.lines : [];
+            function discountForIndex(idx){
+              if (assignLines.length){
+                const line = assignLines.find(l => Number(l.itemIndex) === idx);
+                if (line) return Number(line.amount || 0);
+              }
+              if ((!assignLines.length) && ctx.items.length === 1 && ctx.off > 0){
+                return ctx.off;
+              }
+              return 0;
+            }
+            ctx.items.forEach((it, idx)=>{
               const name = (it.name || it.productName || '商品');
               const spec = it.variantName ? `（${it.variantName}）` : '';
               const qty  = Math.max(1, Number(it.qty||1));
               const unit = Number(it.price||0);
               const img  = it.image || '';
+              const total = unit * qty;
+              const discount = Math.min(total, Math.max(0, discountForIndex(idx)));
+              const finalTotal = Math.max(0, total - discount);
               const row  = document.createElement('div');
               row.style.display = 'grid';
               row.style.gridTemplateColumns = '60px 1fr';
@@ -906,8 +922,14 @@ function isCandleItemLike(obj){
                 `</div>`+
                 `<div style="font-size:13px;line-height:1.5;">`+
                   `<div style="font-weight:700;color:#111827;">${escapeHtml(name)}${spec}</div>`+
-                `<div style="color:#6b7280;">數量：${qty}｜單價 NT$${unit}</div>`+
-              `</div>`;
+                  `<div style="color:#6b7280;">數量：${qty}</div>`+
+                  (discount>0
+                    ? `<div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
+                         <span style="text-decoration:line-through;color:#9ca3af;">NT$ ${formatPrice(total)}</span>
+                         <span style="color:#dc2626;font-weight:700;">NT$ ${formatPrice(finalTotal)}</span>
+                       </div>`
+                    : `<div style="color:#6b7280;">合計：NT$ ${formatPrice(total)}</div>`)+
+                `</div>`;
               box.appendChild(row);
             });
           }

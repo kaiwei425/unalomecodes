@@ -2549,6 +2549,15 @@ function ensureCandleFields(required){
       if (!dlg) return;
 
       var items = totals && Array.isArray(totals.items) ? totals.items : [];
+      var discountMap = {};
+      if (totals && totals.assignment && Array.isArray(totals.assignment.lines)){
+        totals.assignment.lines.forEach(function(line){
+          var idx = Number(line.itemIndex);
+          if (!isNaN(idx)){
+            discountMap[idx] = (discountMap[idx] || 0) + Number(line.amount||0);
+          }
+        });
+      }
       var html = '';
 
       // 標題 + 表格 HTML
@@ -2594,7 +2603,16 @@ function ensureCandleFields(required){
 
           html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">' + tw(unit) + '</td>';
           html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">' + qty + '</td>';
-          html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">' + tw(subtotal) + '</td>';
+          html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">';
+          var discount = Number(discountMap[i] || 0);
+          var finalSubtotal = Math.max(0, subtotal - discount);
+          if (discount > 0){
+            html += '<div style="text-decoration:line-through;color:#9ca3af;">' + tw(subtotal) + '</div>';
+            html += '<div style="color:#dc2626;font-weight:700;">' + tw(finalSubtotal) + '</div>';
+          } else {
+            html += tw(subtotal);
+          }
+          html += '</td>';
           html += '</tr>';
         }
 
