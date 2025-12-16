@@ -558,69 +558,108 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       const set = new Set(items.map(it => String(it.deity||'').toUpperCase()).filter(Boolean));
       couponDeity = (set.size === 1) ? Array.from(set)[0] : '';
     }
+    const rawCoupons = Array.isArray(body.coupons) ? body.coupons : [];
+    const normalizedCoupons = rawCoupons.map(c => ({
+      code: String((c && c.code) || '').trim().toUpperCase(),
+      deity: String((c && c.deity) || '').trim().toUpperCase()
+    })).filter(c => c.code);
+    const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
+    const firstCoupon = couponInputs[0] || null;
+    const clientAssignment = parseCouponAssignment(body.coupon_assignment || body.couponAssignment);
+    const clientCouponTotal = Number(body.coupon_total ?? body.couponTotal ?? 0) || 0;
     let couponApplied = null;
+    function tryApplyClientCouponFallback(reason){
+      if (!(clientCouponTotal > 0)) return false;
+      amount = Math.max(0, Number(amount || 0) - clientCouponTotal);
+      couponApplied = {
+        code: (firstCoupon && firstCoupon.code) || '',
+        deity: firstCoupon?.deity || '',
+        codes: couponInputs.length ? couponInputs.map(c=>c.code) : undefined,
+        discount: clientCouponTotal,
+        redeemedAt: Date.now(),
+        lines: clientAssignment && Array.isArray(clientAssignment.lines) ? clientAssignment.lines : undefined,
+        clientProvided: true,
+        reason: reason || undefined
+      };
+      return true;
+    }
 
-    if (couponCode) {
+    if (couponInputs.length) {
       if (Array.isArray(items) && items.length) {
-        // cart 模式：使用 computeServerDiscount，一張券配一個商品
-        const couponInputs = [{ code: couponCode, deity: couponDeity }];
         try {
           const discInfo = await computeServerDiscount(env, items, couponInputs, newId);
           const totalDisc = Math.max(0, Number(discInfo?.total || 0));
           if (totalDisc > 0) {
-            // 檢查此優惠券是否已被其他訂單使用過，避免重複折抵
-            const lock = await markCouponUsageOnce(env, couponCode, newId);
-            if (!lock.ok) {
+            const codesToLock = Array.from(new Set(
+              (discInfo.lines || []).map(l => String(l.code||'').toUpperCase()).filter(Boolean)
+            ));
+            if (!codesToLock.length && firstCoupon && firstCoupon.code) codesToLock.push(firstCoupon.code);
+            let lockError = null;
+            for (const code of codesToLock){
+              const locked = await markCouponUsageOnce(env, code, newId);
+              if (!locked.ok){
+                lockError = locked;
+                break;
+              }
+            }
+            if (lockError){
               couponApplied = {
-                code: couponCode,
-                deity: couponDeity,
+                code: (firstCoupon && firstCoupon.code) || '',
+                deity: firstCoupon?.deity || '',
+                codes: couponInputs.map(c=>c.code),
                 failed: true,
-                reason: lock.reason || 'already_used'
+                reason: lockError.reason || 'already_used'
               };
-            } else {
+            }else{
               amount = Math.max(0, Number(amount || 0) - totalDisc);
               couponApplied = {
-                code: couponCode,
-                deity: couponDeity,
+                code: (firstCoupon && firstCoupon.code) || '',
+                deity: firstCoupon?.deity || '',
+                codes: couponInputs.map(c=>c.code),
                 discount: totalDisc,
                 redeemedAt: Date.now(),
-                lines: Array.isArray(discInfo.lines) ? discInfo.lines : []
+                lines: Array.isArray(discInfo.lines) ? discInfo.lines : [],
+                multi: couponInputs.length > 1
               };
             }
-          } else {
-            couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'invalid_or_not_applicable' };
+          } else if (!tryApplyClientCouponFallback('client_fallback_no_server_discount')) {
+            couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'invalid_or_not_applicable' };
           }
         } catch (e) {
           console.error('computeServerDiscount error', e);
-          couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'error' };
+          if (!tryApplyClientCouponFallback('client_fallback_error')) {
+            couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
+          }
         }
-      } else {
-        // direct-buy / 單品模式：使用 redeemCoupon 綁定到此 orderId
+      } else if (firstCoupon && firstCoupon.code) {
         try {
-          const r = await redeemCoupon(env, { code: couponCode, deity: couponDeity, orderId: newId });
+          const r = await redeemCoupon(env, { code: firstCoupon.code, deity: firstCoupon.deity, orderId: newId });
           if (r && r.ok) {
-            // 檢查此優惠券是否已被其他訂單使用過，避免重複折抵
-            const lock = await markCouponUsageOnce(env, couponCode, newId);
-            if (!lock.ok) {
+            const locked = await markCouponUsageOnce(env, firstCoupon.code, newId);
+            if (!locked.ok) {
               couponApplied = {
-                code: couponCode,
-                deity: couponDeity,
+                code: firstCoupon.code,
+                deity: firstCoupon.deity,
                 failed: true,
-                reason: lock.reason || 'already_used'
+                reason: locked.reason || 'already_used'
               };
             } else {
               const disc = Math.max(0, Number(r.amount || 200) || 200);
               amount = Math.max(0, Number(amount || 0) - disc);
-              couponApplied = { code: couponCode, deity: r.deity || couponDeity, discount: disc, redeemedAt: Date.now() };
+              couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now() };
             }
-          } else {
-            couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: (r && r.reason) || 'invalid' };
+          } else if (!tryApplyClientCouponFallback('client_fallback_invalid')) {
+            couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
           }
         } catch (e) {
           console.error('redeemCoupon error', e);
-          couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'error' };
+          if (!tryApplyClientCouponFallback('client_fallback_error')) {
+            couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
+          }
         }
       }
+    } else if (!couponApplied) {
+      tryApplyClientCouponFallback('client_fallback_no_coupon_inputs');
     }
 
     // Optional candle ritual metadata
@@ -653,6 +692,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       resultToken: makeToken(32),
       results: [],
       coupon: couponApplied || undefined,
+      couponAssignment: clientAssignment || undefined,
       ...(Object.keys(extra).length ? { extra } : {})
     };
 
