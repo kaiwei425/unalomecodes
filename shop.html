@@ -2019,6 +2019,35 @@ function ensureCandleFields(required){
     };
     return m[ normDeity(code) ] || '';
   }
+  function describeCouponUsage(cpn, line, items){
+    var amt = Number(
+      (line && line.amount != null ? line.amount : null) ??
+      (cpn && cpn.amount != null ? cpn.amount : cpn && cpn.off != null ? cpn.off : cpn && cpn.discount)
+    ) || 0;
+    var info = {
+      status: 'pending',
+      color: '#ea580c',
+      itemName: '',
+      amount: amt,
+      message: '目前購物車未找到可套用的商品，此優惠尚未生效'
+    };
+    var idx = line && typeof line.itemIndex === 'number' ? line.itemIndex : -1;
+    if (idx >= 0 && items && items[idx]){
+      var it = items[idx] || {};
+      var nm = it.name || it.title || it.productName || '商品';
+      info.status = 'applied';
+      info.itemName = nm;
+      info.color = '#059669';
+      info.message = '已套用於：「' + nm + '」，折抵 ' + tw(amt).replace(/^NT\$\s*/, 'NT$ ');
+      return info;
+    }
+    var deity = normDeity((line && line.deity) || (cpn && cpn.deity) || '');
+    var deityLabel = deityNameOf(deity);
+    if (deityLabel){
+      info.message = '目前商品未包含「' + deityLabel + '」系列品項，此優惠尚未生效';
+    }
+    return info;
+  }
 
   function ensureCouponListBox(){
     var box = document.getElementById('cartCouponList');
@@ -2075,14 +2104,7 @@ function ensureCandleFields(required){
       var line  = assignedLines.find(function(l){ 
         return String(l.code||'').toUpperCase() === String(cpn.code||'').toUpperCase();
       });
-      var appliedText = '';
-      if (line && typeof line.itemIndex === 'number'){
-        var it = items[line.itemIndex] || {};
-        var nm = it.name || it.title || it.productName || '商品';
-        appliedText = '已套用於：「' + nm + '」 折抵 ' + tw(line.amount).replace(/^NT\$\s*/, 'NT$ ');
-      }else{
-        appliedText = '目前尚未找到可套用的商品（或全部商品已使用其他優惠）';
-      }
+      var usage = describeCouponUsage(cpn, line, items);
 
       var left = document.createElement('div');
       left.innerHTML = ''
@@ -2090,7 +2112,9 @@ function ensureCandleFields(required){
         + '<div style="color:#6b7280">守護神：'
         + (deity ? deity + (dName ? '｜'+dName : '') : '不限')
         + '</div>'
-        + '<div style="color:#6b7280;font-size:12px">'+ appliedText +'</div>';
+        + '<div style="color:'+ (usage.color || '#6b7280') +';font-size:12px">'
+        + escapeHtml(usage.message || '')
+        + '</div>';
 
       var btn = document.createElement('button');
       btn.type = 'button';
@@ -2764,9 +2788,7 @@ function ensureCandleFields(required){
           var line = (assign.lines || []).find(function(l){
             return String(l.code||'').toUpperCase() === code.toUpperCase();
           });
-          var it   = line && typeof line.itemIndex === 'number' ? (items[line.itemIndex] || {}) : null;
-          var name = it ? (it.name || it.title || it.productName || '商品') : '商品';
-          var amount = line && line.amount ? line.amount : (cpn.amount || 0);
+          var usage = describeCouponUsage(cpn, line, items);
 
           var row = document.createElement('div');
           row.style.display = 'flex';
@@ -2783,8 +2805,8 @@ function ensureCandleFields(required){
           left.style.lineHeight = '1.5';
           left.innerHTML =
             '<div style="font-weight:700">優惠碼：' + code + '</div>' +
-            '<div style="color:#6b7280">已套用於：「' + name +
-            '」，折抵 ' + formatTW(amount).replace(/^NT\$\s*/, 'NT$ ') + '</div>';
+            '<div style="color:'+ (usage.color || '#6b7280') +'">' +
+            escapeHtml(usage.message || '') + '</div>';
 
           var btn = document.createElement('button');
           btn.type = 'button';
@@ -3302,9 +3324,7 @@ function ensureCandleFields(required){
           var line = (assign.lines||[]).find(function(l){
             return String(l.code||'').toUpperCase() === code.toUpperCase();
           });
-          var it = line && typeof line.itemIndex === 'number' ? (items[line.itemIndex]||{}) : null;
-          var nm = it ? (it.name||it.title||it.productName||'商品') : '商品';
-          var amt = line && line.amount ? line.amount : (cpn.amount||0);
+          var usage = describeCouponUsage(cpn, line, items);
           var row = document.createElement('div');
           row.style.display = 'flex';
           row.style.justifyContent = 'space-between';
@@ -3317,7 +3337,7 @@ function ensureCandleFields(required){
           row.innerHTML =
             '<div style="font-size:13px;line-height:1.5;">'
             +'<div style="font-weight:700;">優惠碼：'+ escapeHtml(code) +'</div>'
-            +'<div style="color:#6b7280;">已套用於：「'+ escapeHtml(nm) +'」，折抵 '+ tw(amt).replace(/^NT\\$\\s*/, "NT$ ") +'</div>'
+            +'<div style="color:'+ (usage.color || '#6b7280') +';">'+ escapeHtml(usage.message || '') +'</div>'
             +'</div>'
             +'<button type="button" class="order-remove-coupon" data-coupon-code="'+ escapeHtml(code) +'"'
             +' style="font-size:12px;padding:4px 8px;border-radius:8px;border:1px solid #ef4444;background:#fff;color:#ef4444;cursor:pointer;">移除</button>';
