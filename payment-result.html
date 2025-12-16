@@ -38,7 +38,6 @@
   const btnLookup = document.getElementById('btnLookup');
   if (orderId && btnLookup){
     btnLookup.href = `/shop#lookup=${encodeURIComponent(orderId)}`;
-    btnLookup.onclick = (e)=>{ e.preventDefault(); window.location.href = '/shop'; };
   }
   async function fetchOrder(){
     if (!orderId){

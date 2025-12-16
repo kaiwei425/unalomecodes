@@ -532,8 +532,32 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     var tA = A.slice(-9), tB = B.slice(-9);
     return (tA && B.endsWith(tA)) || (tB && A.endsWith(tB));
   }
-  function matchesOrder(o, phone, last5){
+  function matchesOrder(o, phone, last5, orderDigits){
     try{
+      var ordUser = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+      if (ordUser){
+        var ordCandidates = [
+          o && o.id,
+          o && o.orderId,
+          o && o.order_id,
+          o && o.orderNo,
+          o && o.order_no,
+          o && o.ecpayOrderId,
+          o && o.ecpayMerchantTradeNo,
+          o && o.ecpay && (o.ecpay.MerchantTradeNo || o.ecpay.orderId),
+          o && o.MerchantTradeNo,
+          o && o.order && (o.order.id || o.order.orderId),
+          o && o.meta && (o.meta.orderId || o.meta.id),
+          o && o.payment && (o.payment.orderId || o.payment.order_id || o.payment.MerchantTradeNo || o.payment.merchantTradeNo)
+        ].filter(Boolean);
+        var ordMatch = ordCandidates.some(function(val){
+          var digits = String(val||'').replace(/\D+/g,'');
+          if (!digits) return false;
+          return digits.slice(-5) === ordUser;
+        });
+        if (ordMatch) return true;
+      }
+
       var pUser = normalizeTWPhone(phone);
       var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
       var wantPhone = !!pUser;
@@ -594,13 +618,13 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         l5Ok = !!(m && m[1] === l5User);
       }
 
-      return !!((wantPhone ? phoneOk : true) && (wantL5 ? l5Ok : true));
+      return phoneOk && l5Ok && wantPhone && wantL5;
     }catch(e){ return false; }
   }
-  function filterOrdersByQuery(list, phone, last5){
+  function filterOrdersByQuery(list, phone, last5, orderDigits){
     try{
       var arr = Array.isArray(list) ? list : [];
-      return arr.filter(function(o){ return matchesOrder(o, phone, last5); });
+      return arr.filter(function(o){ return matchesOrder(o, phone, last5, orderDigits); });
     }catch(e){ return []; }
   }
   function getAmount(o){
@@ -678,23 +702,20 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     if (Array.isArray(obj)) return obj;
     return obj.orders || obj.items || obj.list || obj.data || [];
   }
-  async function tryAllLookups(phone, last5){
+  async function tryAllLookups(phone, last5, orderDigits){
     // Normalize inputs
     var pNorm = normalizeTWPhone(phone);
     var l5 = String(last5||'').replace(/\D+/g,'').slice(-5);
+    var ord = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+    var usingOrder = !!ord;
+    var usingBank = !!(pNorm && l5.length === 5);
+    if (!usingOrder && !usingBank) return [];
 
-    // Compose common query variants (read-only)
-    var usp1 = new URLSearchParams();
-    usp1.set('phone', phone);
-    usp1.set('last5', l5);
-    usp1.set('lookupOnly','1');
-
-    var usp2 = new URLSearchParams();
-    usp2.set('lookup','1');
-    usp2.set('phone', phone);
-    usp2.set('last5', l5);
-
-    var headersRO = {'X-Lookup':'phone+last5','X-Read-Only':'1','Cache-Control':'no-cache'};
+    var headersRO = {
+      'X-Lookup': usingOrder ? 'order-last5' : 'phone+last5',
+      'X-Read-Only':'1',
+      'Cache-Control':'no-cache'
+    };
 
     var all = [];
 
@@ -706,21 +727,44 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       }catch(_){}
     }
 
-    // --- Tier 1: filtered GET endpoints (preferred, zero side effects) ---
-    pushArr(await fetchJsonSafe('/api/orders/lookup?'+usp1.toString(), {headers:headersRO}));
-    pushArr(await fetchJsonSafe('/api/orders?'+usp1.toString(), {headers:headersRO}));
-    pushArr(await fetchJsonSafe('/api/payment/bank?'+usp2.toString(), {headers:headersRO}));
+    if (usingOrder){
+      var uspOrder = new URLSearchParams();
+      uspOrder.set('order', ord);
+      uspOrder.set('lookupOnly','1');
+      pushArr(await fetchJsonSafe('/api/orders/lookup?'+uspOrder.toString(), {headers:headersRO}));
+      pushArr(await fetchJsonSafe('/api/orders?'+uspOrder.toString(), {headers:headersRO}));
+    }else{
+      // Compose common query variants (read-only)
+      var usp1 = new URLSearchParams();
+      usp1.set('phone', phone);
+      usp1.set('last5', l5);
+      usp1.set('lookupOnly','1');
+
+      var usp2 = new URLSearchParams();
+      usp2.set('lookup','1');
+      usp2.set('phone', phone);
+      usp2.set('last5', l5);
+
+      // --- Tier 1: filtered GET endpoints (preferred, zero side effects) ---
+      pushArr(await fetchJsonSafe('/api/orders/lookup?'+usp1.toString(), {headers:headersRO}));
+      pushArr(await fetchJsonSafe('/api/orders?'+usp1.toString(), {headers:headersRO}));
+      pushArr(await fetchJsonSafe('/api/payment/bank?'+usp2.toString(), {headers:headersRO}));
+    }
 
     // --- Tier 2: plain reads (backend may ignore filters), capped by limit param if supported ---
     if (all.length === 0){
       pushArr(await fetchJsonSafe('/api/orders?limit=200', {headers:headersRO}));
-      pushArr(await fetchJsonSafe('/api/payment/bank?limit=200', {headers:headersRO}));
+      if (!usingOrder){
+        pushArr(await fetchJsonSafe('/api/payment/bank?limit=200', {headers:headersRO}));
+      }
     }
 
     // --- Tier 3: ultimate fallback to bare endpoints (no params) ---
     if (all.length === 0){
       pushArr(await fetchJsonSafe('/api/orders', {headers:headersRO}));
-      pushArr(await fetchJsonSafe('/api/payment/bank', {headers:headersRO}));
+      if (!usingOrder){
+        pushArr(await fetchJsonSafe('/api/payment/bank', {headers:headersRO}));
+      }
     }
 
     // De-dup (by id + amount)
@@ -750,7 +794,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       if (wrap) wrap.style.display = 'none';
       d.showModal();
       // small delay to ensure focus lands after dialog opens
-      setTimeout(function(){ try{ document.getElementById('qPhone').focus(); }catch(e){} }, 50);
+      setTimeout(function(){
+        try{
+          var orderField = document.getElementById('qOrder');
+          var phoneField = document.getElementById('qPhone');
+          if (orderField) orderField.focus();
+          else if (phoneField) phoneField.focus();
+        }catch(e){}
+      }, 50);
     }catch(e){
       alert('請使用支援對話框的瀏覽器');
     }
@@ -767,22 +818,28 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       e.preventDefault();
       e.stopPropagation();
       var phone = (document.getElementById('qPhone').value||'').trim();
-      var last5 = (document.getElementById('qLast5').value||'').trim();
-      var hasPhone = !!phone.trim();
-      var hasLast5 = !!last5.trim();
-      if (!hasPhone && !hasLast5){
-        alert('請至少填寫手機號碼或匯款末五碼');
+      var last5Raw = (document.getElementById('qLast5').value||'').trim();
+      var orderRaw = (document.getElementById('qOrder').value||'').trim();
+      var orderDigits = String(orderRaw).replace(/\D+/g,'').slice(-5);
+      var last5 = String(last5Raw).replace(/\D+/g,'').slice(-5);
+      var usingOrder = orderDigits.length === 5;
+      var usingBank = (!!phone && !!last5);
+      if (!usingOrder && !usingBank){
+        alert('請輸入手機＋匯款末五碼，或訂單編號末五碼');
         return;
       }
-      last5 = String(last5).replace(/\D+/g,'').slice(-5);
+      if (!usingOrder && last5.length !== 5){
+        alert('匯款末五碼需為 5 位數字');
+        return;
+      }
       var box = document.getElementById('lookupList');
       var wrap = document.getElementById('lookupResult');
       if (box){ box.innerHTML = '<div class="ok-muted">查詢中…</div>'; }
       if (wrap){ wrap.style.display = ''; }
 
       try{
-        var raw = await tryAllLookups(phone, last5);
-        var list = filterOrdersByQuery(raw, phone, last5);
+        var raw = await tryAllLookups(phone, last5, orderDigits);
+        var list = filterOrdersByQuery(raw, phone, last5, orderDigits);
         renderOrders(list);
       }catch(err){
         console.error('lookup error', err);
@@ -791,22 +848,73 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     });
   }
   // Expose a helper so other modules can open the lookup dialog with prefilled fields
-  window.openOrderLookup = function(phone, last5){
+  window.openOrderLookup = function(phone, last5, orderDigits, opts){
     try{
       openLookup();
       setTimeout(function(){
         try{
           var p = document.getElementById('qPhone');
           var l = document.getElementById('qLast5');
-          if (p && typeof phone === 'string') p.value = phone;
-          if (l && typeof last5 === 'string') l.value = String(last5).replace(/\D+/g,'').slice(-5);
+          var o = document.getElementById('qOrder');
+          if (p && typeof phone === 'string' && phone) p.value = phone;
+          if (l && typeof last5 === 'string' && last5) l.value = String(last5).replace(/\D+/g,'').slice(-5);
+          if (o && typeof orderDigits === 'string' && orderDigits){
+            o.value = String(orderDigits).replace(/\D+/g,'').slice(-5);
+          }
           // focus on the next empty field
-          if (p && !p.value) p.focus();
-          else if (l && !l.value) l.focus();
+          var focusTarget = null;
+          var phoneFilled = !!(p && p.value);
+          var last5Filled = !!(l && l.value);
+          if (o && !o.value && !phoneFilled && !last5Filled) focusTarget = o;
+          else if (p && !p.value) focusTarget = p;
+          else if (l && !l.value) focusTarget = l;
+          else if (orderDigits && o) focusTarget = o;
+          if (focusTarget) focusTarget.focus();
+
+          var wantsAuto = !!(opts && opts.autoSubmit);
+          var ordVal = (o && o.value) ? String(o.value).replace(/\D+/g,'').slice(-5) : '';
+          if (wantsAuto && ordVal.length === 5){
+            var form = document.getElementById('lookupForm');
+            setTimeout(function(){
+              try{
+                if (!form) return;
+                if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                else form.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true }));
+              }catch(e){}
+            }, 30);
+          }
         }catch(e){}
       }, 50);
     }catch(e){}
   };
+
+  function openLookupFromHash(){
+    var hash = String(window.location.hash || '');
+    var m = hash.match(/lookup=([^&]+)/i);
+    if (!m) return;
+    try{
+      var raw = '';
+      try{ raw = decodeURIComponent(m[1]); }catch(_){ raw = m[1]; }
+      var digits = String(raw||'').replace(/\D+/g,'');
+      if (digits){
+        window.openOrderLookup('', '', digits.slice(-5), { autoSubmit:true });
+      }else{
+        openLookup();
+      }
+    }finally{
+      try{
+        if (history && typeof history.replaceState === 'function'){
+          history.replaceState(null, document.title || '', location.pathname + location.search);
+        }else{
+          window.location.hash = '';
+        }
+      }catch(_){}
+    }
+  }
+  if (!window.__lookupHashInit){
+    window.__lookupHashInit = true;
+    document.addEventListener('DOMContentLoaded', openLookupFromHash);
+  }
 })();
 
 /* ==== ECPay credit card ==== */

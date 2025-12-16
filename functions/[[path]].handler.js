@@ -1593,13 +1593,14 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
   }
   const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
+  const qOrdRaw  = getAny(url.searchParams, ['order','orderId','order_id','oid','qOrder']);
   const qPhone = normalizePhone(qPhoneRaw);
   const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
-  const needFilter = !!(qPhone && qLast5);
-  const isPartialLookup = !!(qPhone || qLast5) && !needFilter;
+  const qOrd   = (String(qOrdRaw||'').replace(/\D/g, '') || '').slice(-5);
+  const needFilter = !!((qPhone && qLast5) || qOrd);
+  const isPartialLookup = (!qOrd) && (!!(qPhone || qLast5) && !(qPhone && qLast5));
 
   if (isPartialLookup) {
-    // If only one of the two is provided, return empty list, as per user request to require both.
     return new Response(JSON.stringify({ ok:true, orders: [] }), { status:200, headers: jsonHeaders });
   }
   try {
@@ -1619,11 +1620,14 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
         const last5Candidates = [
           obj?.transferLast5, obj?.last5, obj?.payment?.last5, obj?.bank?.last5
         ].filter(Boolean);
-
         if (needFilter) {
-          const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
-          const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
-          if (!pOK || !lOK) continue;
+          if (qOrd){
+            if (!String(oid||'').endsWith(qOrd)) continue;
+          }else{
+            const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
+            const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
+            if (!pOK || !lOK) continue;
+          }
         }
         (()=>{
           const rec = normalizeReceiptUrl(obj, origin);
@@ -1665,13 +1669,17 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
             ].filter(Boolean);
 
             if (needFilter) {
-              if (qPhone) {
-                const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
-                if (!pOK) continue;
-              }
-              if (qLast5) {
-                const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
-                if (!lOK) continue;
+              if (qOrd){
+                if (!String(oid||'').endsWith(qOrd)) continue;
+              }else{
+                if (qPhone) {
+                  const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
+                  if (!pOK) continue;
+                }
+                if (qLast5) {
+                  const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
+                  if (!lOK) continue;
+                }
               }
             }
             (()=>{
