@@ -882,10 +882,18 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     order.status = rtnCode === 1 ? '已付款待出貨' : '付款失敗';
     order.updatedAt = new Date().toISOString();
 
-    if (rtnCode === 1 && order.coupon && order.coupon.code && !order.coupon.locked && !order.coupon.failed) {
+    if (rtnCode === 1 && order.coupon && !order.coupon.locked && !order.coupon.failed) {
       try {
-        const lock = await markCouponUsageOnce(env, order.coupon.code, order.id);
-        if (lock?.ok) order.coupon.locked = true;
+        const codes = Array.isArray(order.coupon.codes) && order.coupon.codes.length
+          ? order.coupon.codes
+          : (order.coupon.code ? [order.coupon.code] : []);
+        for (const code of codes){
+          if (!code) continue;
+          try{
+            await markCouponUsageOnce(env, code, order.id);
+          }catch(_){}
+        }
+        order.coupon.locked = true;
       } catch(_){}
     }
 
@@ -1173,56 +1181,76 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     const set = new Set(items.map(it => String(it.deity||'').toUpperCase()).filter(Boolean));
     couponDeity = (set.size === 1) ? Array.from(set)[0] : '';
   }
+  const rawCoupons = Array.isArray(body.coupons) ? body.coupons : [];
+  const normalizedCoupons = rawCoupons.map(c => ({
+    code: String((c && c.code) || '').trim().toUpperCase(),
+    deity: String((c && c.deity) || '').trim().toUpperCase()
+  })).filter(c => c.code);
+  const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
+  const firstCoupon = couponInputs[0] || null;
   let couponApplied = null;
 
-  if (couponCode) {
+  if (couponInputs.length) {
     if (Array.isArray(items) && items.length) {
-      const couponInputs = [{ code: couponCode, deity: couponDeity }];
       try {
         const discInfo = await computeServerDiscount(env, items, couponInputs, newId);
         const totalDisc = Math.max(0, Number(discInfo?.total || 0));
         if (totalDisc > 0) {
-          let locked = { ok:true };
-          if (opts.lockCoupon) locked = await markCouponUsageOnce(env, couponCode, newId);
-          if (!locked.ok) {
-            couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: locked.reason || 'already_used' };
+          let lockError = null;
+          if (opts.lockCoupon) {
+            const codesToLock = Array.from(new Set(
+              (discInfo.lines || []).map(l => String(l.code||'').toUpperCase()).filter(Boolean)
+            ));
+            if (!codesToLock.length && firstCoupon && firstCoupon.code) codesToLock.push(firstCoupon.code);
+            for (const code of codesToLock){
+              const locked = await markCouponUsageOnce(env, code, newId);
+              if (!locked.ok){
+                lockError = locked;
+                break;
+              }
+            }
+          }
+          if (lockError) {
+            couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: lockError.reason || 'already_used' };
           } else {
             amount = Math.max(0, Number(amount || 0) - totalDisc);
             couponApplied = {
-              code: couponCode,
-              deity: couponDeity,
+              code: (firstCoupon && firstCoupon.code) || '',
+              deity: firstCoupon?.deity || '',
+              codes: couponInputs.map(c=>c.code),
               discount: totalDisc,
               redeemedAt: Date.now(),
               lines: Array.isArray(discInfo.lines) ? discInfo.lines : [],
+              multi: couponInputs.length > 1,
               locked: !!opts.lockCoupon
             };
           }
         } else {
-          couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'invalid_or_not_applicable' };
+          couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'invalid_or_not_applicable' };
         }
       } catch (e) {
         console.error('computeServerDiscount error', e);
-        couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'error' };
+        couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
       }
-    } else {
+    } else if (firstCoupon && firstCoupon.code) {
       try {
-        const r = await redeemCoupon(env, { code: couponCode, deity: couponDeity, orderId: newId });
+        const r = await redeemCoupon(env, { code: firstCoupon.code, deity: firstCoupon.deity, orderId: newId });
         if (r && r.ok) {
           let locked = { ok:true };
-          if (opts.lockCoupon) locked = await markCouponUsageOnce(env, couponCode, newId);
+          if (opts.lockCoupon) locked = await markCouponUsageOnce(env, firstCoupon.code, newId);
           if (!locked.ok) {
-            couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: locked.reason || 'already_used' };
+            couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: locked.reason || 'already_used' };
           } else {
             const disc = Math.max(0, Number(r.amount || 200) || 200);
             amount = Math.max(0, Number(amount || 0) - disc);
-            couponApplied = { code: couponCode, deity: r.deity || couponDeity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon };
+            couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon };
           }
         } else {
-          couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: (r && r.reason) || 'invalid' };
+          couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
         }
       } catch (e) {
         console.error('redeemCoupon error', e);
-        couponApplied = { code: couponCode, deity: couponDeity, failed: true, reason: 'error' };
+        couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
       }
     }
   }

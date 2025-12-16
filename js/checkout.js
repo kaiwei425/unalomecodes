@@ -803,18 +803,22 @@ function isCandleItemLike(obj){
     const hasCandle = items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
     let couponFromState = null;
     let assignmentFromState = null;
+    let couponsFromState = [];
     let off = 0;
     let shipping = 0;
     if (!hasCandle){
       try{
         const state = window.__cartCouponState;
         if (state){
+          if (Array.isArray(state.coupons)){
+            couponsFromState = state.coupons.slice();
+            if (!couponFromState && couponsFromState.length){
+              couponFromState = couponsFromState[0];
+            }
+          }
           if (state.assignment){
             off = Number(state.assignment.total || 0) || 0;
             assignmentFromState = state.assignment;
-            if (Array.isArray(state.coupons) && state.coupons.length){
-              couponFromState = state.coupons[0];
-            }
           }
           if (typeof state.shipping === 'number'){
             shipping = Number(state.shipping)||0;
@@ -835,7 +839,18 @@ function isCandleItemLike(obj){
       if (hasPhysical) shipping = SHIPPING_FEE;
     }
     const grand = Math.max(0, Math.round(subtotal - off + shipping));
-    return { cart, pending, items, subtotal, off, grand, coupon, shipping, assignment: assignmentFromState };
+    return {
+      cart,
+      pending,
+      items,
+      subtotal,
+      off,
+      grand,
+      coupon,
+      coupons: couponsFromState,
+      shipping,
+      assignment: assignmentFromState
+    };
   }
 
   function setCouponHint(ctx){
@@ -843,7 +858,16 @@ function isCandleItemLike(obj){
     if (!hint) return;
     if (ctx.off > 0){
       hint.style.display = 'block';
-      const codeText = ctx.coupon && ctx.coupon.code ? `優惠碼 ${ctx.coupon.code}` : '優惠折扣';
+      let codeText = '優惠折扣';
+      if (ctx.coupon && ctx.coupon.code){
+        codeText = `優惠碼 ${ctx.coupon.code}`;
+      }else if (ctx.coupons && ctx.coupons.length){
+        if (ctx.coupons.length === 1 && ctx.coupons[0].code){
+          codeText = `優惠碼 ${ctx.coupons[0].code}`;
+        }else{
+          codeText = `優惠券折抵（${ctx.coupons.length} 張）`;
+        }
+      }
       hint.textContent = `${codeText}，折抵 NT$ ${formatPrice(ctx.off)}。` + (ctx.shipping>0 ? `含 7-11 店到店運費 NT$ ${formatPrice(ctx.shipping)}。` : '');
     } else if (ctx.coupon && ctx.coupon.code){
       hint.style.display = 'block';
@@ -999,6 +1023,26 @@ function isCandleItemLike(obj){
         payload.deity       = ctx.pending.deity || ctx.pending.deityCode || '';
         payload.variantName = ctx.pending.variantName || '';
         payload.directBuy   = '1';
+      }
+      const couponState = window.__cartCouponState || {};
+      const multiCoupons = Array.isArray(couponState?.coupons) ? couponState.coupons : (Array.isArray(ctx.coupons) ? ctx.coupons : []);
+      if (Array.isArray(multiCoupons) && multiCoupons.length){
+        payload.coupons = multiCoupons
+          .map(c => ({
+            code: String(c.code || '').trim().toUpperCase(),
+            deity: String(c.deity || '').trim().toUpperCase() || '',
+            amount: Number(c.amount ?? c.off ?? c.discount ?? c.value) || undefined
+          }))
+          .filter(c => c.code);
+      }
+      if (couponState && couponState.assignment){
+        payload.coupon_assignment = couponState.assignment;
+        if (couponState.assignment && typeof couponState.assignment.total !== 'undefined'){
+          const totalOff = Number(couponState.assignment.total || 0);
+          if (totalOff > 0) payload.coupon_total = totalOff;
+        }
+      } else if (ctx.off > 0){
+        payload.coupon_total = ctx.off;
       }
       const c = ctx.coupon;
       if (c && c.code){
