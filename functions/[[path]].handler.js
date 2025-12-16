@@ -202,10 +202,10 @@ export async function onRequest(context) {
   const { request, env, next } = context;
 
   const url = new URL(request.url);
-    /*__CVS_CALLBACK_MERGE_FINAL__*/
-    try{
-      const _u = new URL(request.url);
-      if (_u.pathname === "/cvs_callback" && (request.method === "GET" || request.method === "POST")) {
+  /*__CVS_CALLBACK_MERGE_FINAL__*/
+  try{
+    const _u = new URL(request.url);
+    if (_u.pathname === "/cvs_callback" && (request.method === "GET" || request.method === "POST")) {
         let source;
         if (request.method === "POST") {
           source = await request.formData();
@@ -253,9 +253,24 @@ export async function onRequest(context) {
           headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
         });
       }
-    }catch(e){ /* ignore and continue */ }
-    
-    
+  }catch(e){ /* ignore and continue */ }
+  
+  
+  if (url.pathname === '/payment-result' && request.method === 'POST') {
+    try {
+      const form = await request.formData();
+      const oid =
+        form.get('CustomField1') ||
+        form.get('customfield1') ||
+        form.get('orderId') ||
+        form.get('order_id') || '';
+      const target = new URL(url.origin + '/payment-result' + (oid ? ('?orderId=' + encodeURIComponent(oid)) : ''));
+      return Response.redirect(target.toString(), 302);
+    } catch (e) {
+      return Response.redirect(url.origin + '/payment-result', 302);
+    }
+  }
+
 const { pathname, origin } = url;
 
     // =================================================================
