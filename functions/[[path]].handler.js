@@ -123,6 +123,34 @@ async function ecpayCheckMac(params, hashKey, hashIV){
   return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
 }
 
+function looksLikeCandleItem(it){
+  if (!it) return false;
+  try{
+    const parts = [
+      it.category, it.cat, it.type,
+      it.name, it.title, it.productName,
+      it.deity, it.variantName, it.spec
+    ].filter(Boolean).join(" ").toLowerCase();
+    return /蠟燭|candle/.test(parts);
+  }catch(_){
+    return false;
+  }
+}
+function needShippingFee(items, fallbackText){
+  if (Array.isArray(items) && items.length){
+    return items.some(it => !looksLikeCandleItem(it));
+  }
+  if (fallbackText){
+    return !/蠟燭|candle/i.test(String(fallbackText));
+  }
+  return false;
+}
+function resolveShippingFee(env){
+  const val = Number(env?.SHIPPING_FEE || env?.DEFAULT_SHIPPING_FEE || 0);
+  if (Number.isFinite(val) && val > 0) return val;
+  return 60;
+}
+
 // === Helper: unified proof retriever (R2 first, then KV) ===
 async function getProofFromStore(env, rawKey) {
   const k = String(rawKey || '');
@@ -1080,6 +1108,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     items = cartArr.map(it => ({
       productId:   String(it.id || it.productId || ''),
       productName: String(it.name || it.title || it.productName || '商品'),
+      category:    String(it.category || it.cat || ''),
       deity:       String(it.deity || ''),
       variantName: String(it.variantName || it.variant || ''),
       price:       Number(it.price ?? it.unitPrice ?? 0),
@@ -1198,6 +1227,19 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     }
   }
 
+  const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
+  const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
+  const shippingNeeded = needShippingFee(items, fallbackText);
+  const baseShipping = resolveShippingFee(env);
+  let shippingFee = 0;
+  if (shippingNeeded){
+    shippingFee = shippingHint > 0 ? shippingHint : baseShipping;
+    if (shippingFee < baseShipping) shippingFee = baseShipping;
+  } else {
+    shippingFee = 0;
+  }
+  amount = Math.max(0, Number(amount || 0)) + shippingFee;
+
   const ritualNameEn   = String(body.ritual_name_en || body.ritualNameEn || body.candle_name_en || '').trim();
   const ritualBirthday = String(body.ritual_birthday || body.ritualBirthday || body.candle_birthday || '').trim();
   const ritualPhotoUrl = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
@@ -1220,6 +1262,8 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     buyer,
     note: noteVal,
     amount: Math.max(0, Math.round(amount)),
+    shippingFee: shippingFee || 0,
+    shipping: shippingFee || 0,
     status: opts.status || '待付款',
     createdAt: now, updatedAt: now,
     ritual_photo_url: ritualPhotoUrl || undefined,
