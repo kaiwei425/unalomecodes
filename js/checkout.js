@@ -1,4 +1,16 @@
 const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
+const SHIPPING_FEE = (typeof window !== 'undefined' && Number(window.__shippingFee)) ? Number(window.__shippingFee) : 60;
+try{ if (typeof window !== 'undefined') window.__shippingFee = SHIPPING_FEE; }catch(_){}
+
+function isCandleItemLike(obj){
+  try{
+    var text = '';
+    if (obj && obj.category) text += String(obj.category);
+    var nm = (obj && (obj.name || obj.title || obj.productName || obj.deity)) || '';
+    text += ' ' + String(nm);
+    return /蠟燭/.test(text);
+  }catch(_){ return false; }
+}
 
 (function(){
   const BANK = { bank: '中國信託 (822)', no: '148540417073' };
@@ -182,30 +194,38 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
           }, 0);
         }catch(e){ return 0; }
       }
+      function collectItems(){
+        var list = readCart().slice();
+        try{
+          var _pend = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
+          if (_pend) list.push(_pend);
+        }catch(_){}
+        return list;
+      }
+      var items = collectItems();
       var coupon = getActiveCoupon();
       var off = 0;
       if (coupon && coupon.code){
-        // build a combined items list = cart + pending detail
-        var items = readCart().slice();
-        try{
-          var _pend = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
-          if (_pend) items.push(_pend);
-        }catch(_){}
         var elig = sumEligible(items, coupon.deity);
         if (elig > 0){ off = Number(coupon.amount||200) || 200; }
       }
-      var grand = Math.max(0, Math.round(amount - off));
+      var shippingFee = (items.length && items.some(function(it){ return !isCandleItemLike(it); })) ? SHIPPING_FEE : 0;
+      var grand = Math.max(0, Math.round(amount - off + shippingFee));
       const amtEl = document.getElementById('bfAmount');
       if (amtEl) amtEl.value = grand;
       // show small line under amount to indicate coupon state
       (function(){
         var hint = document.getElementById('bfAmtHint');
         if (!hint) return;
+        var baseText = '系統自動帶入金額，無需修改';
+        if (shippingFee > 0){
+          baseText = '含 7-11 店到店運費 NT$' + SHIPPING_FEE + '，請確認金額後再送出';
+        }
         if (off > 0){
-          hint.textContent = '已套用優惠碼 '+ (coupon && coupon.code || '') +' 折抵 NT$' + (Number(coupon.amount||200)||200);
+          hint.textContent = '已套用優惠碼 '+ (coupon && coupon.code || '') +' 折抵 NT$' + (Number(coupon.amount||200)||200) + (shippingFee>0 ? '；' + baseText : '');
           hint.style.color = '#059669';
         }else{
-          hint.textContent = '系統自動帶入金額，無需修改';
+          hint.textContent = baseText;
           hint.style.color = '#6b7280';
         }
       })();
@@ -783,13 +803,19 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     const hasCandle = items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
     let couponFromState = null;
     let off = 0;
+    let shipping = 0;
     if (!hasCandle){
       try{
         const state = window.__cartCouponState;
-        if (state && state.assignment){
-          off = Number(state.assignment.total || 0) || 0;
-          if (Array.isArray(state.coupons) && state.coupons.length){
-            couponFromState = state.coupons[0];
+        if (state){
+          if (state.assignment){
+            off = Number(state.assignment.total || 0) || 0;
+            if (Array.isArray(state.coupons) && state.coupons.length){
+              couponFromState = state.coupons[0];
+            }
+          }
+          if (typeof state.shipping === 'number'){
+            shipping = Number(state.shipping)||0;
           }
         }
       }catch(_){}
@@ -802,8 +828,12 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
         if (elig) off = Number(coupon.amount || 200) || 200;
       }
     }
-    const grand = Math.max(0, Math.round(subtotal - off));
-    return { cart, pending, items, subtotal, off, grand, coupon };
+    if (!shipping && !hasCandle){
+      const hasPhysical = items.some(it => !isCandleItemLike(it));
+      if (hasPhysical) shipping = SHIPPING_FEE;
+    }
+    const grand = Math.max(0, Math.round(subtotal - off + shipping));
+    return { cart, pending, items, subtotal, off, grand, coupon, shipping };
   }
 
   function setCouponHint(ctx){
@@ -812,10 +842,13 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
     if (ctx.off > 0){
       hint.style.display = 'block';
       const codeText = ctx.coupon && ctx.coupon.code ? `優惠碼 ${ctx.coupon.code}` : '優惠折扣';
-      hint.textContent = `${codeText}，折抵 NT$ ${formatPrice(ctx.off)}。`;
+      hint.textContent = `${codeText}，折抵 NT$ ${formatPrice(ctx.off)}。` + (ctx.shipping>0 ? `含 7-11 店到店運費 NT$ ${formatPrice(ctx.shipping)}。` : '');
     } else if (ctx.coupon && ctx.coupon.code){
       hint.style.display = 'block';
       hint.textContent = `優惠碼 ${ctx.coupon.code} 尚未符合折抵條件，請確認商品守護神是否相符。`;
+    } else if (ctx.shipping > 0){
+      hint.style.display = 'block';
+      hint.textContent = `含 7-11 店到店運費 NT$ ${formatPrice(ctx.shipping)}。`;
     } else {
       hint.style.display = 'none';
     }
@@ -873,10 +906,23 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
                 `</div>`+
                 `<div style="font-size:13px;line-height:1.5;">`+
                   `<div style="font-weight:700;color:#111827;">${escapeHtml(name)}${spec}</div>`+
-                  `<div style="color:#6b7280;">數量：${qty}｜單價 NT$${unit}</div>`+
-                `</div>`;
+                `<div style="color:#6b7280;">數量：${qty}｜單價 NT$${unit}</div>`+
+              `</div>`;
               box.appendChild(row);
             });
+          }
+          if (ctx.shipping > 0){
+            const shipRow = document.createElement('div');
+            shipRow.style.display = 'flex';
+            shipRow.style.alignItems = 'center';
+            shipRow.style.justifyContent = 'space-between';
+            shipRow.style.padding = '10px';
+            shipRow.style.border = '1px solid #e5e7eb';
+            shipRow.style.borderRadius = '10px';
+            shipRow.style.background = '#f9fafb';
+            shipRow.style.marginTop = '10px';
+            shipRow.innerHTML = '<div style="font-weight:700;">運費（7-11 店到店）</div><div style="font-weight:700;">NT$ '+ formatPrice(ctx.shipping) +'</div>';
+            box.appendChild(shipRow);
           }
         }
       }catch(_){}
@@ -914,7 +960,8 @@ const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
           email: (ccForm.querySelector('[name="email"]')?.value || '').trim()
         },
         store: (ccForm.querySelector('[name="store"]')?.value || '').trim(),
-        note: (ccForm.querySelector('[name="note"]')?.value || '').trim()
+        note: (ccForm.querySelector('[name="note"]')?.value || '').trim(),
+        shipping: ctx.shipping || 0
       };
       if (!payload.store){
         alert('請先在上一步選擇 7-11 門市，再進行刷卡。');

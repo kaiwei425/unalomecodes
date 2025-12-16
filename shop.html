@@ -14,6 +14,18 @@
 <meta name="theme-color" content="#ffffff">
 </head>
 <body>
+<script>
+  window.__shippingFee = window.__shippingFee || 60;
+  window.isCandleItemLike = window.isCandleItemLike || function(obj){
+    try{
+      var text = '';
+      if (obj && obj.category) text += String(obj.category);
+      var nm = (obj && (obj.name || obj.title || obj.productName || obj.deity)) || '';
+      text += ' ' + String(nm);
+      return /蠟燭/.test(text);
+    }catch(_){ return false; }
+  };
+</script>
 <div class="wrap">
   <div class="top">
     <div class="brand">
@@ -40,7 +52,11 @@
   </div>
 
   <div class="store">
-    <aside id="sideDeities"><h3>連結</h3>
+    <aside id="sideDeities">
+    <div class="side-cart">
+      <button id="cartFab" title="查看購物車"><span class="lbl">購物車</span><span id="cartBadge">0</span></button>
+    </div>
+    <h3>連結</h3>
     <div class="list">
       <a href="#" id="linkOrderLookup">查詢訂單狀態</a>
       <a href="https://unalomecodes.pages.dev/share?view=deity-menu&amp;api=https%3A%2F%2Fproud-boat-794c.kaiwei425.workers.dev" target="_blank" rel="noopener">神祇介紹</a>
@@ -186,9 +202,6 @@
     </div>
   </dialog>
 
-  <!-- Cart floating preview -->
-  <button id="cartFab" title="查看購物車"><span class="lbl">購物車</span><span id="cartBadge">0</span></button>
-
   <!-- Cart dialog -->
   <dialog id="dlgCart">
     <div class="cartWrap">
@@ -216,6 +229,12 @@
       <div class="cartSum cartDiscount" style="display:none;margin-top:6px">
         <div>折扣</div>
         <div id="cartOff">-NT$ 0</div>
+      </div>
+
+      <!-- Shipping row -->
+      <div class="cartSum cartShip" style="display:none;margin-top:6px">
+        <div>運費</div>
+        <div id="cartShipping">+NT$ 0</div>
       </div>
 
       <!-- Grand total -->
@@ -1053,6 +1072,8 @@ function ensureCandleFields(required){
         }, 0);
       }catch(_){ amount = 0; }
 
+      var shippingFee = (items.length && items.some(function(it){ return !isCandleItemLike(it); })) ? (window.__shippingFee || 60) : 0;
+
       // 3) Coupon discount (fixed -200 if eligible deity is present in items)
       var cpnRaw = localStorage.getItem('__activeCoupon__');
       var cpn = cpnRaw ? JSON.parse(cpnRaw) : null;
@@ -1071,15 +1092,18 @@ function ensureCandleFields(required){
         if (elig > 0) off = Number(cpn.amount||200) || 200;
       }
 
-      var grand = Math.max(0, Math.round(amount - off));
+      var grand = Math.max(0, Math.round(amount - off + shippingFee));
 
       if (amtEl) amtEl.value = grand;
       if (aHint){
+        var baseText = shippingFee > 0
+          ? '含 7-11 店到店運費 NT$' + (window.__shippingFee || 60) + '，系統自動帶入金額，無需修改'
+          : '系統自動帶入金額，無需修改';
         if (off>0){
-          aHint.textContent = '已套用優惠碼 ' + (cpn && cpn.code || '') + ' 折抵 NT$' + (Number(cpn && cpn.amount || 200) || 200);
+          aHint.textContent = '已套用優惠碼 ' + (cpn && cpn.code || '') + ' 折抵 NT$' + (Number(cpn && cpn.amount || 200) || 200) + (shippingFee>0 ? '；' + baseText : '');
           aHint.style.color = '#059669';
         }else{
-          aHint.textContent = '系統自動帶入金額，無需修改';
+          aHint.textContent = baseText;
           aHint.style.color = '#6b7280';
         }
       }
@@ -2097,12 +2121,27 @@ function ensureCandleFields(required){
     var coupons = getCartCoupons();
     var assign = assignCouponsToItems(items, coupons);
     var off   = assign.total || 0;
-    var grand = Math.max(0, sub - off);
+    function needsShippingForItems(arr){
+      return arr.length && arr.some(function(it){
+        if (typeof window.isCandleItemLike === 'function') return !window.isCandleItemLike(it);
+        var text = '';
+        try{
+          text += String((it && it.category) || '');
+          text += ' ' + String((it && (it.name || it.title || it.productName)) || '');
+        }catch(_){}
+        return !/蠟燭/.test(text);
+      });
+    }
+    var needsShipping = needsShippingForItems(items);
+    var shippingFee = needsShipping ? (window.__shippingFee || 60) : 0;
+    var grand = Math.max(0, sub - off + shippingFee);
 
 
     // 對外輸出目前分配結果，給上方 bar / 其他模組使用
     window.__cartCouponState = window.__cartCouponState || {};
     window.__cartCouponState.assignment = assign;
+    window.__cartCouponState.shipping = shippingFee;
+    window.__cartCouponState.hasShipping = needsShipping;
 
     function setText(selList, val){
       selList.forEach(function(sel){
@@ -2139,6 +2178,17 @@ function ensureCandleFields(required){
       var offRow = document.querySelector('.cartSum.cartDiscount');
       if (offRow){ offRow.style.display = off ? '' : 'none'; }
     }catch(_){ }
+
+    try{
+      var shipRow = document.querySelector('.cartSum.cartShip');
+      if (shipRow){
+        shipRow.style.display = needsShipping ? '' : 'none';
+        var shipVal = document.getElementById('cartShipping');
+        if (shipVal){
+          shipVal.textContent = '+' + tw(shippingFee).replace(/^NT\$\s*/, 'NT$ ');
+        }
+      }
+    }catch(_){}
 
     // 應付金額 / 總金額
     setText([
@@ -2393,14 +2443,19 @@ function ensureCandleFields(required){
       var assign = assignCouponsToItems(items, coupons);
       var sub    = subTotal(items);
       var off    = assign && assign.total ? assign.total : 0;
-      var grand  = Math.max(0, sub - off);
+      var needsShipping = items.length && items.some(function(it){
+        return typeof window.isCandleItemLike === 'function' ? !window.isCandleItemLike(it) : !/蠟燭/.test(String((it&&it.category)||'') + String((it&&(it.name||it.title||''))||''));
+      });
+      var shipping = needsShipping ? (window.__shippingFee || 60) : 0;
+      var grand  = Math.max(0, sub - off + shipping);
       return {
         items:      items,
         coupons:    coupons,
         assignment: assign,
         sub:        sub,
         off:        off,
-        grand:      grand
+        grand:      grand,
+        shipping:   shipping
       };
     };
 
@@ -2508,6 +2563,11 @@ function ensureCandleFields(required){
         }else{
           dlg.insertBefore(box, dlg.firstChild);
         }
+      }
+
+      if (totals && Number(totals.shipping||0) > 0){
+        html += '<div style="margin-top:8px;font-weight:600;display:flex;justify-content:space-between;">' +
+                '<span>運費（7-11 店到店）</span><span>'+ tw(totals.shipping).replace(/^NT\$\s*/, 'NT$ ') +'</span></div>';
       }
 
       box.innerHTML = html;
