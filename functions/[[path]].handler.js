@@ -150,6 +150,14 @@ function resolveShippingFee(env){
   if (Number.isFinite(val) && val > 0) return val;
   return 60;
 }
+function parseCouponAssignment(raw){
+  if (!raw) return null;
+  try{
+    if (typeof raw === 'string') return JSON.parse(raw);
+    if (typeof raw === 'object') return raw;
+  }catch(_){}
+  return null;
+}
 
 // === Helper: unified proof retriever (R2 first, then KV) ===
 async function getProofFromStore(env, rawKey) {
@@ -1188,7 +1196,24 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   })).filter(c => c.code);
   const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
   const firstCoupon = couponInputs[0] || null;
+  const clientAssignment = parseCouponAssignment(body.coupon_assignment || body.couponAssignment);
+  const clientCouponTotal = Number(body.coupon_total ?? body.couponTotal ?? 0) || 0;
   let couponApplied = null;
+  function tryApplyClientCouponFallback(reason){
+    if (!(clientCouponTotal > 0)) return false;
+    amount = Math.max(0, Number(amount || 0) - clientCouponTotal);
+    couponApplied = {
+      code: (firstCoupon && firstCoupon.code) || '',
+      deity: firstCoupon?.deity || '',
+      codes: couponInputs.length ? couponInputs.map(c=>c.code) : undefined,
+      discount: clientCouponTotal,
+      redeemedAt: Date.now(),
+      lines: clientAssignment && Array.isArray(clientAssignment.lines) ? clientAssignment.lines : undefined,
+      clientProvided: true,
+      reason: reason || undefined
+    };
+    return true;
+  }
 
   if (couponInputs.length) {
     if (Array.isArray(items) && items.length) {
@@ -1225,12 +1250,14 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
               locked: !!opts.lockCoupon
             };
           }
-        } else {
+        } else if (!tryApplyClientCouponFallback('client_fallback_no_server_discount')) {
           couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'invalid_or_not_applicable' };
         }
       } catch (e) {
         console.error('computeServerDiscount error', e);
-        couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
+        if (!tryApplyClientCouponFallback('client_fallback_error')) {
+          couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
+        }
       }
     } else if (firstCoupon && firstCoupon.code) {
       try {
@@ -1245,14 +1272,18 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
             amount = Math.max(0, Number(amount || 0) - disc);
             couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon };
           }
-        } else {
+        } else if (!tryApplyClientCouponFallback('client_fallback_invalid')) {
           couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
         }
       } catch (e) {
         console.error('redeemCoupon error', e);
-        couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
+        if (!tryApplyClientCouponFallback('client_fallback_error')) {
+          couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
+        }
       }
     }
+  } else if (!couponApplied) {
+    tryApplyClientCouponFallback('client_fallback_no_coupon_inputs');
   }
 
   const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
@@ -1299,6 +1330,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     resultToken: makeToken(32),
     results: [],
     coupon: couponApplied || undefined,
+    couponAssignment: clientAssignment || undefined,
     ...(Object.keys(extra).length ? { extra } : {})
   };
 
