@@ -2119,6 +2119,8 @@ function ensureCandleFields(required){
     var items = readCart();
     var sub   = subTotal(items);
     var coupons = getCartCoupons();
+    window.__cartCouponState = window.__cartCouponState || {};
+    window.__cartCouponState.coupons = coupons.slice();
     var assign = assignCouponsToItems(items, coupons);
     var off   = assign.total || 0;
     function needsShippingForItems(arr){
@@ -2207,13 +2209,19 @@ function ensureCandleFields(required){
       var state = hint.getAttribute('data-state') || '';
       if (coupons && coupons.length){
         hint.style.display = '';
-        hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(off).replace(/^NT\$\s*/, 'NT$ ');
-        hint.style.color = '#059669';
+        if (off > 0){
+          hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(off).replace(/^NT\$\s*/, 'NT$ ');
+          hint.style.color = '#059669';
+          hint.setAttribute('data-state', 'ok');
+        }else{
+          hint.textContent = '已輸入 ' + coupons.length + ' 張優惠券，目前尚未符合折扣條件';
+          hint.style.color = '#d97706';
+          hint.setAttribute('data-state', 'pending');
+        }
         hint.style.background = 'transparent';
         hint.style.padding = '0';
         hint.style.borderRadius = '0';
         hint.style.marginTop = '0';
-        hint.setAttribute('data-state', 'ok');
       }else{
         // 若目前是錯誤狀態，就保留錯誤提示，不要清空
         if (state !== 'error'){
@@ -3279,6 +3287,9 @@ function ensureCandleFields(required){
     try{
       dlg.setAttribute('data-candle', candleFlow ? '1':'0');
       sessionStorage.setItem('__candle_flow', candleFlow ? '1' : '');
+      if (candleFlow && typeof resetStoreSelection === 'function'){
+        resetStoreSelection();
+      }
     }catch(_){}
     renderStepBar('dlgOrderConfirm', 1, candleFlow ? ['確認訂單','跳過門市','收件人資料'] : (checkoutChannel === 'cc' ? ['確認訂單','選擇門市','填寫付款資料'] : undefined));
     try{ dlg.showModal(); }catch(e){}
@@ -3298,6 +3309,9 @@ function ensureCandleFields(required){
           var memo = sessionStorage.getItem('__candle_flow');
           if (memo === '1') candleFlow = true;
         }catch(_){}
+      }
+      if (candleFlow && typeof resetStoreSelection === 'function'){
+        resetStoreSelection();
       }
       // 控制門市欄位顯示/隱藏
       try{
@@ -3387,8 +3401,44 @@ function ensureCandleFields(required){
   }
   try{ window.__syncStorePreviewFromBank = syncStorePreviewFromBank; }catch(_){}
 
+  function storeSelectionRequired(){
+    try{
+      return sessionStorage.getItem('__candle_flow') !== '1';
+    }catch(_){ return true; }
+  }
+
+  function resetStoreSelection(){
+    try{
+      var preview = document.getElementById('bfStorePreview');
+      if (preview) preview.value = '尚未選擇門市';
+    }catch(_){}
+    ['dlgStoreInput','bfStore','ccStore'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (id === 'ccStore'){
+        if (storeSelectionRequired()){
+          el.value = '';
+        }else{
+          el.value = '';
+          el.removeAttribute('data-storeid');
+          el.removeAttribute('data-storename');
+          el.removeAttribute('data-storeaddress');
+          el.removeAttribute('data-storetel');
+        }
+      }else{
+        el.value = '';
+      }
+      el.removeAttribute('data-storeid');
+      el.removeAttribute('data-storename');
+      el.removeAttribute('data-storeaddress');
+      el.removeAttribute('data-storetel');
+    });
+  }
+  try{ window.resetStoreSelection = resetStoreSelection; }catch(_){}
+
   // 新增：將門市預覽欄位的資料，同步到最終的匯款表單欄位
   function syncStoreToBankForm(){
+    if (!storeSelectionRequired()) return;
     try {
       var previewInput = document.getElementById('bfStorePreview');
       var bankInput = document.getElementById('bfStore');
@@ -3401,6 +3451,7 @@ function ensureCandleFields(required){
 
   // 將門市同步到信用卡表單
   function syncStoreToCCForm(){
+    if (!storeSelectionRequired()) return;
     try {
       var previewInput = document.getElementById('bfStorePreview') || document.getElementById('dlgStoreInput');
       var ccInput = document.getElementById('ccStore');

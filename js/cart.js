@@ -1,6 +1,15 @@
 // ===== Cart helpers & preview =====
 function cartLoad(){ try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch{return []} }
-function cartSave(a){ localStorage.setItem('cart', JSON.stringify(a)); }
+function cartSave(a){
+  localStorage.setItem('cart', JSON.stringify(a));
+  if (!a || !a.length){
+    try{
+      if (typeof resetStoreSelection === 'function'){
+        resetStoreSelection();
+      }
+    }catch(_){}
+  }
+}
 function cartCount(){ return cartLoad().reduce((n,it)=> n + Math.max(1, Number(it.qty||1)), 0); }
 function cartSum(){ return cartLoad().reduce((sum,it)=> sum + Number(it.price||0) * Math.max(1, Number(it.qty||1)), 0); }
 function updateCartBadge(){
