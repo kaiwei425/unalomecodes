@@ -937,6 +937,15 @@ function isCandleItemLike(obj){
       }catch(_){}
       const amtEl = document.getElementById('ccAmount');
       if (amtEl) amtEl.textContent = 'NT$ ' + formatPrice(ctx.grand);
+      const shipNote = document.getElementById('ccShippingNote');
+      if (shipNote){
+        if (ctx.shipping > 0){
+          shipNote.style.display = 'block';
+          shipNote.textContent = `此金額包含 7-11 店到店運費 NT$ ${formatPrice(ctx.shipping)}。`;
+        }else{
+          shipNote.style.display = 'none';
+        }
+      }
       setCouponHint(ctx);
       const storeFromDlg = document.getElementById('dlgStoreInput');
       const storeField   = document.getElementById('ccStore');
