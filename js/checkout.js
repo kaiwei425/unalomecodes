@@ -441,11 +441,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           if (typeof clearCouponState === 'function') clearCouponState();
           else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
         }catch(_){}
-        try{
-          if (typeof scheduleOrderRefresh === 'function') scheduleOrderRefresh();
-          else if (typeof window.__scheduleOrderRefresh === 'function') window.__scheduleOrderRefresh();
-        }catch(_){}
-        alert(data && data.ok ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
+        var success = !!(data && data.ok);
+        alert(success ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
+        if (success){
+          try{
+            if (typeof scheduleOrderRefresh === 'function') scheduleOrderRefresh(600);
+            else if (typeof window.__scheduleOrderRefresh === 'function') window.__scheduleOrderRefresh(600);
+            else setTimeout(function(){ try{ window.location.reload(); }catch(_){ } }, 600);
+          }catch(_){}
+        }
         if (dlg) dlg.close();
         // Show a rich success panel with an action button to open the lookup dialog (prefilled)
         try{
