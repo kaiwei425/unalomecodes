@@ -701,12 +701,22 @@ function ensureCandleFields(required){
         }
       }catch(e){}
       function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
+      var checkoutSource = (typeof window !== 'undefined' && window.__checkoutSource === 'cart') ? 'cart' : 'direct';
       function combinedItems(){
-        var items = readCart().slice();
+        var items = [];
+        if (checkoutSource === 'cart'){
+          items = readCart().slice();
+        }
         try{
           var pendRaw = sessionStorage.getItem('__pendingDetail__');
           var pend = pendRaw ? JSON.parse(pendRaw) : null;
-          if (pend) items.push(pend);
+          if (pend){
+            if (checkoutSource === 'cart'){
+              items.push(pend);
+            }else{
+              items = [pend];
+            }
+          }
         }catch(_){}
         return items;
       }
@@ -1656,38 +1666,7 @@ function ensureCandleFields(required){
             }
           }
 
-          // Build HTML for all cart items
-          var html = '';
-          html += '<div style="font-weight:700;margin-bottom:4px">本次匯款金額包含以下購物車商品：</div>';
-          for (var j = 0; j < items.length; j++){
-            var it = items[j] || {};
-            var name = it.name || it.title || it.productName || '商品';
-            var spec = it.variantName || it.spec || it.deity || '';
-            var qty  = Number(it.qty != null ? it.qty : (it.quantity != null ? it.quantity : 1)) || 1;
-            var unit = Number(it.price != null ? it.price : (it.unit != null ? it.unit : 0)) || 0;
-            var line = '<div>'
-                     + name
-                     + (spec ? '｜規格：' + spec : '')
-                     + '｜數量：' + qty
-                     + '｜單價：' + twLocal(unit)
-                     + '</div>';
-            html += line;
-          }
-
-          // Show discount info if any coupon is applied
-          if (off > 0){
-            html += '<div style="margin-top:6px;color:#059669">已套用優惠折抵 '
-                 + twLocal(off).replace(/^NT\$\s*/, 'NT$ ')
-                 + '，實際應付金額為 '
-                 + twLocal(grand).replace(/^NT\$\s*/, 'NT$ ')
-                 + '</div>';
-          }else{
-            html += '<div style="margin-top:6px;color:#6b7280">本次匯款金額：'
-                 + twLocal(grand).replace(/^NT\$\s*/, 'NT$ ')
-                 + '</div>';
-          }
-
-          summaryBox.innerHTML = html;
+          summaryBox.innerHTML = "";
         }
       }catch(_){}
     }catch(e){}
@@ -3506,7 +3485,11 @@ function ensureCandleFields(required){
       var backBtn = document.getElementById('bfBackToStoreBtn');
       if (backBtn){ backBtn.style.display = required ? 'inline-flex' : 'none'; }
       var preview = document.getElementById('bfStorePreview');
-      if (preview && !required){ preview.value = '尚未選擇門市'; }
+      if (preview){
+        var wrap = preview.parentElement;
+        if (wrap && wrap.style){ wrap.style.display = required ? 'grid' : 'none'; }
+        if (!required) preview.value = '尚未選擇門市';
+      }
       var ccInput = document.getElementById('ccStore');
       if (ccInput){
         ccInput.required = !!required;
@@ -3517,6 +3500,18 @@ function ensureCandleFields(required){
           ccInput.removeAttribute('data-storeaddress');
           ccInput.removeAttribute('data-storetel');
         }
+      }
+      var couponHint = document.getElementById('bfCouponHint');
+      var couponList = document.getElementById('bfCouponList');
+      var couponBack = document.getElementById('bfCouponBackHint');
+      if (!required){
+        if (couponHint){ couponHint.style.display = 'none'; }
+        if (couponList){ couponList.style.display = 'none'; }
+        if (couponBack){ couponBack.style.display = 'none'; }
+      }else{
+        if (couponBack){ couponBack.style.display = ''; }
+        if (couponHint){ couponHint.style.display = ''; }
+        if (couponList){ couponList.style.display = couponList.childElementCount ? '' : 'none'; }
       }
     }catch(_){}
   }
