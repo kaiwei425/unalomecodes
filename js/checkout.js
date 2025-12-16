@@ -12,6 +12,29 @@ function isCandleItemLike(obj){
   }catch(_){ return false; }
 }
 
+if (typeof window.__clearCouponState !== 'function'){
+  window.__clearCouponState = function(){
+    try{
+      if (typeof setCartCoupons === 'function'){
+        setCartCoupons([]);
+      }else{
+        localStorage.removeItem('__cartCoupons__');
+        localStorage.removeItem('__cartCouponsCartSig__');
+      }
+    }catch(_){}
+    try{ localStorage.removeItem('__activeCoupon__'); }catch(_){}
+    try{
+      window.__cartCouponState = window.__cartCouponState || {};
+      window.__cartCouponState.coupons = [];
+      window.__cartCouponState.assignment = null;
+      window.__cartCouponState.shipping = 0;
+      window.__cartCouponState.hasShipping = false;
+    }catch(_){}
+    try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+  };
+}
+var clearCouponState = window.__clearCouponState;
+
 (function(){
   const BANK = { bank: '中國信託 (822)', no: '148540417073' };
 
@@ -369,11 +392,35 @@ function isCandleItemLike(obj){
           var c = (window.__coupon && window.__coupon.getActiveCoupon && window.__coupon.getActiveCoupon()) || null;
           if (c){ fd.set('coupon', String(c.code||'')); fd.set('coupon_deity', String(c.deity||'')); }
         }catch(e){}
+        try{
+          var couponState = window.__cartCouponState || {};
+          var multiCoupons = Array.isArray(couponState.coupons) ? couponState.coupons : [];
+          if (multiCoupons.length){
+            fd.set('coupons', JSON.stringify(multiCoupons.map(function(item){
+              return {
+                code: String(item.code||'').trim().toUpperCase(),
+                deity: String(item.deity||'').trim().toUpperCase(),
+                amount: (item.amount != null ? Number(item.amount) : undefined)
+              };
+            })));
+          }
+          if (couponState.assignment){
+            fd.set('coupon_assignment', JSON.stringify(couponState.assignment));
+            fd.set('coupon_total', String(Number(couponState.assignment.total||0)));
+          }else if (off > 0){
+            fd.set('coupon_total', String(off));
+          }
+          fd.set('shipping', String(shippingFee || 0));
+        }catch(_){}
 
         const res = await fetch('/api/payment/bank',  { method:'POST', body: fd });
         if (!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json().catch(()=>({}));
         try{ sessionStorage.removeItem('__pendingDetail__'); }catch(e){}
+        try{
+          if (typeof clearCouponState === 'function') clearCouponState();
+          else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
+        }catch(_){}
         alert(data && data.ok ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
         if (dlg) dlg.close();
         // Show a rich success panel with an action button to open the lookup dialog (prefilled)
@@ -1061,6 +1108,11 @@ function isCandleItemLike(obj){
         });
         const data = await res.json().catch(()=>({}));
         if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        try{
+          if (typeof clearCouponState === 'function') clearCouponState();
+          else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
+        }catch(_){}
+        try{ localStorage.removeItem('cart'); }catch(_){}
         submitECPayForm(data.action, data.params);
         if (dlg) dlg.close();
       }catch(err){

@@ -440,6 +440,12 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       if (typeof body.cart === 'string') {
         try { body.cart = JSON.parse(body.cart); } catch {}
       }
+      if (typeof body.coupons === 'string') {
+        try { body.coupons = JSON.parse(body.coupons); } catch {}
+      }
+      if (typeof body.coupon_assignment === 'string') {
+        try { body.coupon_assignment = JSON.parse(body.coupon_assignment); } catch {}
+      }
       // Flat fields -> buyer
       const b = body.buyer && typeof body.buyer === 'object' ? body.buyer : {};
       body.buyer = {
