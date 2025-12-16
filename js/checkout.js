@@ -911,19 +911,6 @@ function isCandleItemLike(obj){
               box.appendChild(row);
             });
           }
-          if (ctx.shipping > 0){
-            const shipRow = document.createElement('div');
-            shipRow.style.display = 'flex';
-            shipRow.style.alignItems = 'center';
-            shipRow.style.justifyContent = 'space-between';
-            shipRow.style.padding = '10px';
-            shipRow.style.border = '1px solid #e5e7eb';
-            shipRow.style.borderRadius = '10px';
-            shipRow.style.background = '#f9fafb';
-            shipRow.style.marginTop = '10px';
-            shipRow.innerHTML = '<div style="font-weight:700;">運費（7-11 店到店）</div><div style="font-weight:700;">NT$ '+ formatPrice(ctx.shipping) +'</div>';
-            box.appendChild(shipRow);
-          }
         }
       }catch(_){}
       const amtEl = document.getElementById('ccAmount');

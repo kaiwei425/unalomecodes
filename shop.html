@@ -54,7 +54,7 @@
   <div class="store">
     <aside id="sideDeities">
     <div class="side-cart">
-      <button id="cartFab" title="查看購物車"><span class="lbl">購物車</span><span id="cartBadge">0</span></button>
+      <button id="cartFab" type="button" title="查看購物車"><span class="lbl">購物車</span><span id="cartBadge">0</span></button>
     </div>
     <h3>連結</h3>
     <div class="list">
@@ -2573,11 +2573,6 @@ function ensureCandleFields(required){
         }
       }
 
-      if (totals && Number(totals.shipping||0) > 0){
-        html += '<div style="margin-top:8px;font-weight:600;display:flex;justify-content:space-between;">' +
-                '<span>運費（7-11 店到店）</span><span>'+ tw(totals.shipping).replace(/^NT\$\s*/, 'NT$ ') +'</span></div>';
-      }
-
       box.innerHTML = html;
     }
     // --- end renderBankOrderItems ---
@@ -2957,6 +2952,10 @@ function ensureCandleFields(required){
             <span>折扣</span>
             <span id="orderDiscountText">-NT$ 0</span>
           </div>
+          <div id="orderShippingRow" style="display:none;justify-content:space-between;">
+            <span>運費</span>
+            <span id="orderShippingText">+NT$ 0</span>
+          </div>
           <div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;margin-top:4px;">
             <span>應付金額</span>
             <span id="orderGrandText">NT$ 0</span>
@@ -3128,19 +3127,32 @@ function ensureCandleFields(required){
       }catch(_){}
     }
     var sub = 0;
+    var needsShipping = false;
     items.forEach(function(it){
       var unit = Number(it && (it.price!=null?it.price:it.unit)) || 0;
       var qty  = Number(it && (it.qty!=null?it.qty:it.quantity)) || 1;
       if (qty<1) qty = 1;
       sub += unit * qty;
+      if (typeof window.isCandleItemLike === 'function'){
+        if (!window.isCandleItemLike(it)) needsShipping = true;
+      }else{
+        var text = '';
+        try{
+          text += String((it && it.category) || '');
+          text += ' ' + String((it && (it.name || it.title || it.productName)) || '');
+        }catch(_){}
+        if (!/蠟燭/.test(text)) needsShipping = true;
+      }
     });
+    var shipping = needsShipping ? (window.__shippingFee || 60) : 0;
     return {
       items: items,
       coupons: [],
       assignment:{ total:0, lines:[] },
       sub: sub,
       off: 0,
-      grand: sub
+      grand: sub + shipping,
+      shipping: shipping
     };
   }
 
@@ -3159,6 +3171,8 @@ function ensureCandleFields(required){
     var hint = document.getElementById('orderCouponHint');
     var subtotalEl = document.getElementById('orderSubtotalText');
     var discountEl = document.getElementById('orderDiscountText');
+    var shippingEl = document.getElementById('orderShippingText');
+    var shippingRow= document.getElementById('orderShippingRow');
     var grandEl    = document.getElementById('orderGrandText');
 
     var totals = getTotals();
@@ -3214,6 +3228,8 @@ function ensureCandleFields(required){
 
     if (subtotalEl) subtotalEl.textContent = tw(totals.sub || 0);
     if (discountEl) discountEl.textContent = '-' + tw(totals.off || 0).replace(/^NT\$\s*/, 'NT$ ');
+    if (shippingEl) shippingEl.textContent = '+' + tw(totals.shipping || 0).replace(/^NT\$\s*/, 'NT$ ');
+    if (shippingRow) shippingRow.style.display = (totals.shipping && totals.shipping>0) ? 'flex' : 'none';
     if (grandEl)    grandEl.textContent    = tw(totals.grand || 0);
 
     if (hint){

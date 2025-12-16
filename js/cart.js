@@ -78,7 +78,10 @@ function openCart(){
 // events
 document.addEventListener('click', (e)=>{
   const t = e.target;
-  if (t && t.id === 'cartFab'){ openCart(); }
+  if (t){
+    const trigger = (t.id === 'cartFab') ? t : (t.closest && t.closest('#cartFab'));
+    if (trigger){ openCart(); }
+  }
   // cart control delegation
   const ctl = t && t.closest && t.closest('.cartCtl');
   if (ctl){
