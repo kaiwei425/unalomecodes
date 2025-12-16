@@ -2067,6 +2067,12 @@ function ensureCandleFields(required){
     }
     return info;
   }
+  try{
+    window.describeCouponUsage = describeCouponUsage;
+  }catch(_){}
+  try{
+    window.couponEscapeHtml = couponEscapeHtml;
+  }catch(_){}
 
   function ensureCouponListBox(){
     var box = document.getElementById('cartCouponList');
