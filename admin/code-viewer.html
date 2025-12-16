@@ -31,6 +31,16 @@ html,body{
   -moz-osx-font-smoothing:grayscale;
 }
 .wrap{max-width:1200px;margin:0 auto;padding:28px;}
+.backLink{margin-bottom:14px;}
+.backBtn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.2);
+  color:var(--fg);text-decoration:none;font-weight:700;font-size:13px;
+  transition:all .18s ease;
+}
+.backBtn:hover{border-color:var(--primary);background:rgba(124,124,255,0.18);}
 .hero{
   display:flex;gap:18px;align-items:flex-start;justify-content:space-between;
   background:linear-gradient(135deg, rgba(124,124,255,0.16), rgba(88,225,193,0.12));
@@ -135,6 +145,7 @@ textarea.raw{width:100%;min-height:140px;background:#0a1020;color:var(--fg);bord
 
 <body>
 <div class="wrap">
+  <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
   <div class="hero">
     <div>
       <p class="eyebrow">留言管理</p>

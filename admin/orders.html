@@ -9,6 +9,15 @@
   :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--brand:#eab308;}
   html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1022,#0f172a);color:#e5e7eb;font-family:ui-sans-serif,system-ui,-apple-system;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
   .wrap{max-width:1100px;margin:0 auto;padding:20px;}
+  .backLink{margin-bottom:10px;}
+  .backBtn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:999px;
+    background:#111827;border:1px solid #263046;color:#e5e7eb;
+    text-decoration:none;font-weight:700;font-size:13px;
+    transition:all .18s ease;
+  }
+  .backBtn:hover{border-color:#3b82f6;color:#3b82f6;}
   h1{font-size:22px;margin:12px 0 16px 0;letter-spacing:.5px}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
   .bar input,.bar select{background:#0f172a;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:8px 10px}
@@ -47,6 +56,7 @@
 </head>
 <body>
   <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
     <h1>訂單管理（批次）</h1>
 <div class="bar">
       <input id="q" placeholder="搜尋 訂單編號 / 商品 / email / 門市 ...">

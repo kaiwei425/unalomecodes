@@ -25,6 +25,16 @@ html,body{
   -webkit-font-smoothing:antialiased;
 }
 .wrap{max-width:1200px;margin:0 auto;padding:28px 18px 36px;}
+.backLink{margin-bottom:14px;}
+.backBtn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:999px;
+  background:#fff;border:1px solid var(--line);color:var(--fg);
+  text-decoration:none;font-weight:700;font-size:13px;
+  box-shadow:0 6px 16px rgba(15,23,42,.08);
+  transition:all .18s ease;
+}
+.backBtn:hover{border-color:#93c5fd;color:#2563eb;}
 .topbar{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   background:var(--panel);border:1px solid var(--line);border-radius:16px;
@@ -96,6 +106,7 @@ html,body{
 </head>
 <body>
 <div class="wrap">
+  <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
   <div class="topbar">
     <div class="brand">
       <div class="brand-badge">UA</div>
