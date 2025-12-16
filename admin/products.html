@@ -224,11 +224,44 @@
 <script>
 (function(){
   const apiBase = location.origin;
-  const ADMIN_KEY = sessionStorage.getItem('ADMIN_KEY') || (function(){ const k = prompt('請輸入管理員金鑰'); if (k) sessionStorage.setItem('ADMIN_KEY', k); return k || ''; })();
+  const ADMIN_KEY_STORAGE = 'ADMIN_KEY';
+  function promptAdminKey(){
+    var key = prompt('請輸入管理員金鑰');
+    if (key){
+      key = key.trim();
+      if (key) sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+    }
+    return key ? key.trim() : '';
+  }
+  function getAdminKey(){
+    var key = sessionStorage.getItem(ADMIN_KEY_STORAGE) || '';
+    if (!key){
+      key = promptAdminKey();
+    }
+    return key ? key.trim() : '';
+  }
+  function clearAdminKey(){
+    try{ sessionStorage.removeItem(ADMIN_KEY_STORAGE); }catch(_){}
+  }
   function authHeaders(extra){
-    const base = { 'x-admin-key': ADMIN_KEY };
-    if (extra) return Object.assign(base, extra);
-    return base;
+    const headers = Object.assign({}, extra || {});
+    const key = getAdminKey();
+    if (!key) throw new Error('尚未輸入管理員金鑰，無法執行操作。');
+    headers['x-admin-key'] = key;
+    return headers;
+  }
+  async function authedFetch(url, options, retried){
+    const opts = Object.assign({}, options || {});
+    opts.headers = authHeaders(opts.headers || {});
+    const res = await fetch(url, opts);
+    if (res.status === 401 && retried !== true){
+      clearAdminKey();
+      alert('管理員金鑰錯誤或已過期，請重新輸入。');
+      const key = getAdminKey();
+      if (!key) throw new Error('沒有輸入管理員金鑰');
+      return authedFetch(url, options, true);
+    }
+    return res;
   }
   // ==== 神祇代碼驗證 ====
   const VALID_DEITY_CODES = ["WE","XZ","KP","CD","RH","HM","FM","GA","JL","ZD","ZF","HP"];
@@ -296,7 +329,7 @@
     files.forEach(f=> fd.append("files[]", f));
     setBusy(true);
     try{
-      const res = await fetch(apiBase + "/api/upload", { method:"POST", body:fd, headers: authHeaders() });
+      const res = await authedFetch(apiBase + "/api/upload", { method:"POST", body:fd });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error||"上傳失敗");
       for (const it of data.files) addThumb(newImgsBox, it.url);
@@ -312,9 +345,9 @@
     x.addEventListener("click", async ()=>{
       if (!confirm("確定刪除此圖片？（會刪除儲存檔案）")) return;
       try{
-        await fetch(apiBase + "/api/deleteFile", {
+        await authedFetch(apiBase + "/api/deleteFile", {
           method:"POST",
-          headers: authHeaders({ "Content-Type":"application/json" }),
+          headers: { "Content-Type":"application/json" },
           body: JSON.stringify({ url })
         });
       }catch(e){}
@@ -355,9 +388,9 @@
     setBusy(true);
     $("createMsg").textContent = "建立中…";
     try{
-      const res = await fetch(apiBase + "/api/products", {
+      const res = await authedFetch(apiBase + "/api/products", {
         method:"POST",
-        headers: authHeaders({ "Content-Type":"application/json" }),
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({ name, deity, deityCode, category, basePrice, sold, description, images, variants, active:true })
       });
       const data = await res.json();
@@ -392,7 +425,7 @@
     setBusy(true);
     try{
       const onlyActive = $("onlyActive").checked ? "?active=true" : "";
-      const res = await fetch(apiBase + "/api/products" + onlyActive, { headers: authHeaders() });
+      const res = await authedFetch(apiBase + "/api/products" + onlyActive);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error||"讀取失敗");
       allItems = data.items || [];
@@ -479,9 +512,9 @@
     if (!confirm(`確定要${p.active? "下架":"上架"}「${p.name}」？`)) return;
     setBusy(true);
     try{
-      await fetch(`${apiBase}/api/products/${encodeURIComponent(p.id)}`, {
+      await authedFetch(`${apiBase}/api/products/${encodeURIComponent(p.id)}`, {
         method:"PATCH",
-        headers: authHeaders({ "Content-Type":"application/json" }),
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({ active: !p.active })
       });
       await reloadList();
@@ -493,7 +526,7 @@
     if (!confirm("刪除後無法復原，確定刪除？")) return;
     setBusy(true);
     try{
-      await fetch(`${apiBase}/api/products/${encodeURIComponent(id)}`, { method:"DELETE", headers: authHeaders() });
+      await authedFetch(`${apiBase}/api/products/${encodeURIComponent(id)}`, { method:"DELETE" });
       await reloadList();
     }catch(e){ alert(e.message||e); }
     setBusy(false);
@@ -506,7 +539,7 @@
   async function openEdit(id){
     setBusy(true);
     try{
-      const res = await fetch(`${apiBase}/api/products/${encodeURIComponent(id)}`, { headers: authHeaders() });
+      const res = await authedFetch(`${apiBase}/api/products/${encodeURIComponent(id)}`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error||"讀取失敗");
       const p = data.product;
@@ -571,7 +604,7 @@
       files.forEach(f=> fd.append("files[]", f));
       setBusy(true);
       try{
-        const r = await fetch(apiBase + "/api/upload", { method:"POST", body:fd, headers: authHeaders() });
+        const r = await authedFetch(apiBase + "/api/upload", { method:"POST", body:fd });
         const d = await r.json();
         if (!d.ok) throw new Error(d.error||"上傳失敗");
         for (const it of d.files){
@@ -669,9 +702,9 @@
     x.addEventListener("click", async ()=>{
       if (!confirm("刪除此圖片？（會刪除檔案並自商品移除）")) return;
       try{
-        await fetch(apiBase + "/api/deleteFile", {
+        await authedFetch(apiBase + "/api/deleteFile", {
           method:"POST",
-          headers: authHeaders({ "Content-Type":"application/json" }),
+          headers: { "Content-Type":"application/json" },
           body: JSON.stringify({ url })
         });
       }catch(e){}
@@ -752,9 +785,9 @@
   }
   async function savePatch(id, payload, force=false){
     try{
-      const res = await fetch(`${apiBase}/api/products/${encodeURIComponent(id)}`, {
+      const res = await authedFetch(`${apiBase}/api/products/${encodeURIComponent(id)}`, {
         method:"PATCH",
-        headers: authHeaders({ "Content-Type":"application/json" }),
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
