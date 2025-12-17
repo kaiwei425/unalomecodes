@@ -32,6 +32,11 @@
     .svc-dialog .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;}
     .svc-dialog .gallery img{width:100%;height:120px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.08);}
     .svc-dialog footer{padding:20px 28px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:flex-end;gap:12px;}
+    .svc-form{display:grid;gap:14px;padding:0;margin:0;}
+    .svc-form label{display:grid;gap:6px;font-size:13px;color:#cbd5f5;}
+    .svc-form input,.svc-form textarea{padding:10px;border-radius:12px;border:1px solid #1f2937;background:#0f172a;color:#e5e7eb;}
+    .svc-form textarea{min-height:120px;resize:vertical;}
+    dialog::backdrop{background:rgba(15,23,42,.75);}
   </style>
 </head>
 <body>
@@ -101,6 +106,81 @@
     </section>
     <footer>
       <button id="svcDetailAction" class="btn primary" style="font-weight:700;">加入祈福清單</button>
+    </footer>
+  </dialog>
+
+  <dialog id="svcCart" class="svc-dialog">
+    <form id="svcCartForm" class="svc-form">
+      <header>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
+          <div>
+            <div style="font-size:22px;font-weight:800;">填寫祈福資料</div>
+            <div id="svcCartSubtitle" style="margin-top:6px;color:#94a3b8;font-size:13px;">請確認聯絡方式與願望內容</div>
+          </div>
+          <button type="button" id="svcCartClose" class="btn">關閉</button>
+        </div>
+      </header>
+      <section style="padding:20px 28px;display:grid;gap:16px;">
+        <div style="padding:14px;border-radius:16px;background:rgba(255,255,255,.04);display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <div>
+            <div id="svcCartServiceName" style="font-weight:700;font-size:16px;">服務名稱</div>
+            <div id="svcCartDuration" style="font-size:13px;color:#94a3b8;margin-top:4px;">時間依老師安排</div>
+          </div>
+          <div id="svcCartServicePrice" style="font-weight:700;font-size:18px;">NT$ 0</div>
+        </div>
+        <input type="hidden" id="svcCartServiceId">
+        <label>
+          聯絡人姓名（必填）
+          <input type="text" name="name" required placeholder="請輸入姓名">
+        </label>
+        <label>
+          手機號碼（必填）
+          <input type="tel" name="phone" required placeholder="例：0969123456">
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" placeholder="若需 Email 通知可填寫">
+        </label>
+        <label>
+          LINE ID
+          <input type="text" name="line" placeholder="若需 LINE 通知可填寫">
+        </label>
+        <label>
+          指定祈福日期（可留白）
+          <input type="date" name="requestDate">
+        </label>
+        <label>
+          願望／備註
+          <textarea name="note" placeholder="可輸入願望、祈福對象、特殊需求…"></textarea>
+        </label>
+      </section>
+      <footer>
+        <button type="submit" id="svcCartSubmit" class="btn primary" style="font-weight:700;">送出祈福訂單</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="svcSuccess" class="svc-dialog">
+    <header>
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+        <div>
+          <div style="font-size:22px;font-weight:800;">祈福訂單已送出</div>
+          <div style="color:#a5b4fc;margin-top:6px;font-size:14px;">請妥善保存訂單編號以便查詢進度</div>
+        </div>
+        <button id="svcSuccessClose" class="btn">關閉</button>
+      </div>
+    </header>
+    <section>
+      <div style="padding:16px;border-radius:16px;background:rgba(255,255,255,.04);">
+        <div style="color:#94a3b8;font-size:13px;">訂單編號</div>
+        <div id="svcSuccessId" style="font-size:20px;font-weight:800;margin-top:4px;">SV000000</div>
+      </div>
+      <div id="svcSuccessHint" style="font-size:14px;color:#e2e8f0;line-height:1.8;">
+        我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。
+      </div>
+    </section>
+    <footer>
+      <button id="svcSuccessLookup" class="btn primary">立即查詢進度</button>
     </footer>
   </dialog>
 

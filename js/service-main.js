@@ -14,6 +14,18 @@
   const detailGallery = document.getElementById('svcDetailGallery');
   const detailAction = document.getElementById('svcDetailAction');
   let detailDataset = null;
+  const cartDialog = document.getElementById('svcCart');
+  const cartForm = document.getElementById('svcCartForm');
+  const cartClose = document.getElementById('svcCartClose');
+  const cartNameEl = document.getElementById('svcCartServiceName');
+  const cartPriceEl = document.getElementById('svcCartServicePrice');
+  const cartDurationEl = document.getElementById('svcCartDuration');
+  const cartServiceIdInput = document.getElementById('svcCartServiceId');
+  const cartSubmitBtn = document.getElementById('svcCartSubmit');
+  const successDialog = document.getElementById('svcSuccess');
+  const successIdEl = document.getElementById('svcSuccessId');
+  const successCloseBtn = document.getElementById('svcSuccessClose');
+  const successLookupBtn = document.getElementById('svcSuccessLookup');
 
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
@@ -117,7 +129,80 @@
   }
   if (detailAction){
     detailAction.addEventListener('click', ()=>{
-      alert('服務購物車尚在建置，將於後續步驟完成。');
+      if (detailDialog) detailDialog.close();
+      if (detailDataset) openCart(detailDataset);
+    });
+  }
+  if (cartClose && cartDialog){
+    cartClose.addEventListener('click', ()=> cartDialog.close());
+  }
+  if (successCloseBtn && successDialog){
+    successCloseBtn.addEventListener('click', ()=> successDialog.close());
+  }
+  if (successLookupBtn){
+    successLookupBtn.addEventListener('click', ()=>{
+      if (successDialog) successDialog.close();
+      if (lookupDialog) lookupDialog.showModal();
+    });
+  }
+
+  function openCart(service){
+    if (!cartDialog || !cartForm) return;
+    cartForm.reset();
+    cartForm.dataset.serviceId = service.id || '';
+    if (cartNameEl) cartNameEl.textContent = service.name || '服務';
+    if (cartPriceEl) cartPriceEl.textContent = formatTWD(service.price || 0);
+    if (cartDurationEl) cartDurationEl.textContent = service.duration || '時間依老師安排';
+    if (cartServiceIdInput) cartServiceIdInput.value = service.id || '';
+    cartDialog.showModal();
+  }
+
+  async function submitServiceOrder(payload){
+    const res = await fetch('/api/service/order', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || !data.ok){
+      throw new Error((data && data.error) || '提交失敗');
+    }
+    return data;
+  }
+
+  if (cartForm){
+    cartForm.addEventListener('submit', async ev=>{
+      ev.preventDefault();
+      if (!cartSubmitBtn) return;
+      const serviceId = cartServiceIdInput ? cartServiceIdInput.value : '';
+      if (!serviceId){
+        alert('缺少服務資訊，請重新選擇。');
+        return;
+      }
+      cartSubmitBtn.disabled = true;
+      cartSubmitBtn.textContent = '送出中…';
+      try{
+        const formData = new FormData(cartForm);
+        const payload = {
+          serviceId,
+          name: formData.get('name')||'',
+          phone: formData.get('phone')||'',
+          email: formData.get('email')||'',
+          line: formData.get('line')||'',
+          requestDate: formData.get('requestDate')||'',
+          note: formData.get('note')||'',
+        };
+        const result = await submitServiceOrder(payload);
+        cartDialog.close();
+        cartForm.reset();
+        if (successIdEl) successIdEl.textContent = result.orderId || result.id || '';
+        if (successDialog) successDialog.showModal();
+      }catch(err){
+        alert(err && err.message ? err.message : '送出失敗，請稍後再試');
+      }finally{
+        cartSubmitBtn.disabled = false;
+        cartSubmitBtn.textContent = '送出祈福訂單';
+      }
     });
   }
 

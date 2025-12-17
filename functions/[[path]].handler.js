@@ -80,6 +80,27 @@ async function generateOrderId(env){
   return prefix + tail; // e.g. 2025103000001
 }
 
+async function generateServiceOrderId(env){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const d = String(now.getDate()).padStart(2,'0');
+  const prefix = `${y}${m}${d}`;
+  const seqKey = `SERVICE_ORDER_SEQ_${prefix}`;
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  let seq = 0;
+  if (store){
+    const raw = await store.get(seqKey);
+    seq = Number(raw||0) || 0;
+    seq += 1;
+    await store.put(seqKey, String(seq));
+  } else {
+    seq = Math.floor(Math.random()*99999);
+  }
+  const tail = String(seq).padStart(4,'0');
+  return `SV${prefix}${tail}`;
+}
+
 // Generate a public-share token for ritual results
 function makeToken(len=32){
   const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -2714,6 +2735,72 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
 
 if (pathname === '/api/service/products' && request.method === 'GET') {
   return new Response(JSON.stringify({ ok:true, items: MOCK_SERVICE_PRODUCTS }), { status:200, headers: jsonHeaders });
+}
+
+if (pathname === '/api/service/order' && request.method === 'POST') {
+  try{
+    const body = await request.json();
+    const serviceId = String(body.serviceId||'').trim();
+    const name = String(body.name||'').trim();
+    const phone = String(body.phone||'').trim();
+    if (!serviceId || !name || !phone){
+      return new Response(JSON.stringify({ ok:false, error:'缺少必要欄位' }), { status:400, headers: jsonHeaders });
+    }
+    const svc = MOCK_SERVICE_PRODUCTS.find(p=> String(p.id) === serviceId);
+    if (!svc){
+      return new Response(JSON.stringify({ ok:false, error:'找不到服務項目' }), { status:404, headers: jsonHeaders });
+    }
+    const orderId = await generateServiceOrderId(env);
+    const buyer = {
+      name,
+      phone,
+      email: String(body.email||'').trim(),
+      line: String(body.line||'').trim()
+    };
+    const order = {
+      id: orderId,
+      type: 'service',
+      serviceId,
+      serviceName: svc.name,
+      items: [{
+        name: svc.name,
+        qty: 1,
+        total: Number(svc.price||0),
+        image: svc.cover||''
+      }],
+      amount: Number(svc.price||0),
+      status: '待處理',
+      buyer,
+      note: String(body.note||'').trim(),
+      requestDate: String(body.requestDate||'').trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      resultToken: makeToken(24),
+      method: '服務型商品',
+      channel: '服務型商品'
+    };
+    const store = env.SERVICE_ORDERS || env.ORDERS;
+    if (!store){
+      return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
+    }
+    await store.put(order.id, JSON.stringify(order));
+    const idxKey = 'SERVICE_ORDER_INDEX';
+    let idxRaw = await store.get(idxKey);
+    let list = [];
+    if (idxRaw){
+      try{ list = JSON.parse(idxRaw) || []; }catch(_){}
+    }
+    list = [order.id].concat(list.filter(id => id !== order.id)).slice(0,500);
+    await store.put(idxKey, JSON.stringify(list));
+    try{
+      await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created' });
+    }catch(err){
+      console.error('service order email error', err);
+    }
+    return new Response(JSON.stringify({ ok:true, orderId }), { status:200, headers: jsonHeaders });
+  }catch(e){
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
 }
 
     // 圖片上傳
