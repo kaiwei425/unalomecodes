@@ -1459,8 +1459,10 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const adminSubject = emailContext === 'status_update'
       ? `[${siteName}] 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
       : `[${siteName}] 新訂單通知 #${order.id}`;
-    const { html: customerHtml, text: customerText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:false, context: emailContext });
-    const { html: adminHtml, text: adminText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:true, context: emailContext });
+    const imageHost = ctx.imageHost || env.EMAIL_IMAGE_HOST || origin;
+    const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext };
+    const { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
+    const { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
     const tasks = [];
     if (notifyCustomer && customerEmail) {
       tasks.push(sendEmailMessage(env, {
@@ -1519,26 +1521,22 @@ function composeOrderEmail(order, opts = {}) {
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const itemsHtml = items.length
-    ? `<table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <thead>
-          <tr style="text-align:left;border-bottom:1px solid #e2e8f0;">
-            <th style="padding:6px 0;">商品</th>
-            <th style="padding:6px 0;">規格</th>
-            <th style="padding:6px 0;">數量</th>
-            <th style="padding:6px 0;">總額</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items.map(it => `
-            <tr>
-              <td style="padding:6px 0;">${esc(it.name)}</td>
-              <td style="padding:6px 0;color:#475569;">${esc(it.spec || '')}</td>
-              <td style="padding:6px 0;">${it.qty}</td>
-              <td style="padding:6px 0;">${fmt(it.total)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`
+    ? items.map((it, idx) => {
+        const imgUrl = rewriteEmailImageUrl(it.image, opts.imageHost);
+        const img = imgUrl
+          ? `<img src="${esc(imgUrl)}" alt="${esc(it.name)}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-right:16px;">`
+          : `<div style="width:64px;height:64px;border-radius:12px;background:#e2e8f0;margin-right:16px;"></div>`;
+        const dividerStyle = idx === items.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
+        return `<div style="display:flex;align-items:center;${dividerStyle}">
+          ${img}
+          <div style="flex:1;">
+            <div style="font-weight:600;color:#0f172a;">${esc(it.name)}</div>
+            ${it.spec ? `<div style="color:#475569;font-size:14px;margin:4px 0;">${esc(it.spec)}</div>` : ''}
+            <div style="color:#0f172a;font-size:14px;">數量：${it.qty}</div>
+          </div>
+          <div style="font-weight:600;color:#0f172a;">${fmt(it.total)}</div>
+        </div>`;
+      }).join('')
     : '<p style="margin:0;color:#475569;">本次訂單明細將由客服另行確認。</p>';
   const itemsText = items.length
     ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
@@ -1633,6 +1631,26 @@ function composeOrderEmail(order, opts = {}) {
   if (opts.lookupUrl) textParts.push(`查詢訂單：${opts.lookupUrl}`);
   if (!opts.admin) textParts.push('感謝您的訂購！');
   return { html, text: textParts.join('\n') };
+}
+
+function rewriteEmailImageUrl(url, host) {
+  if (!url || !host) return url;
+  try {
+    const base = host.startsWith('http') ? host : `https://${host.replace(/\/+$/, '')}`;
+    const hostUrl = new URL(base);
+    const imgUrl = new URL(url, base);
+    imgUrl.protocol = hostUrl.protocol;
+    imgUrl.hostname = hostUrl.hostname;
+    imgUrl.port = hostUrl.port;
+    return imgUrl.toString();
+  } catch (_) {
+    try {
+      const base = host.startsWith('http') ? host : `https://${host}`;
+      return new URL(url, base).toString();
+    } catch {
+      return url;
+    }
+  }
 }
 
 function buildOrderItems(order) {
