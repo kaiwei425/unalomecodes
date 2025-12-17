@@ -167,17 +167,15 @@
     const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
     if (!options.length){
       detailOptionsWrap.style.display = 'none';
-      detailVariant.innerHTML = '<option value="">標準服務</option>';
+      detailVariant.innerHTML = '';
       detailVariant.disabled = true;
+      detailVariant.value = '';
       return;
     }
     detailOptionsWrap.style.display = '';
     detailVariant.disabled = false;
-    const rows = ['<option value="" disabled selected>請選擇服務項目</option>'];
-    options.forEach(opt=>{
-      rows.push(`<option value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</option>`);
-    });
-    detailVariant.innerHTML = rows.join('');
+    detailVariant.innerHTML = options.map(opt => `<option value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</option>`).join('');
+    detailVariant.value = options[0].name;
   }
 
   function getVariantSelection(service){
@@ -185,9 +183,7 @@
     const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
     if (!options.length) return null;
     const val = detailVariant.value;
-    if (!val){
-      return null;
-    }
+    if (!val) return null;
     const match = options.find(opt => String(opt.name) === val);
     if (!match) return null;
     return { name: match.name, price: Number(match.price||0) };
@@ -198,7 +194,7 @@
     const base = Number(detailDataset.price || 0);
     const variant = getVariantSelection(detailDataset);
     const diff = variant ? Number(variant.price||0) : 0;
-    detailPriceEl.textContent = formatTWD(base + diff).replace('NT$ ', '');
+    detailPriceEl.textContent = (base + diff).toLocaleString('zh-TW');
   }
 
   function openServiceDetail(service){
@@ -279,6 +275,7 @@
     checkoutForm.dataset.selectedOptions = JSON.stringify(cart.filter(it => it.optionName).map(it => ({ name: it.optionName, price: it.optionPrice })));
     checkoutForm.dataset.baseCount = cart.filter(it => !it.optionName).length || 0;
     checkoutForm.dataset.serviceId = cart[0].serviceId || '';
+    if (checkoutServiceIdInput) checkoutServiceIdInput.value = cart[0].serviceId || '';
   }
 
   function openCheckoutDialog(){
