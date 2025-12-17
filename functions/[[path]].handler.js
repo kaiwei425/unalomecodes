@@ -1476,6 +1476,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
 function composeOrderEmail(order, opts = {}) {
   const esc = escapeHtmlEmail;
   const fmt = formatCurrencyTWD;
+  const brand = opts.siteName || 'Unalomecodes';
   const buyerName = (order?.buyer?.name || '').trim() || '貴賓';
   const phone = (order?.buyer?.phone || order?.buyer?.contact || order?.contact || '').trim();
   const email = (order?.buyer?.email || '').trim();
@@ -1484,9 +1485,40 @@ function composeOrderEmail(order, opts = {}) {
   const note = (order.note || '').trim();
   const method = opts.channelLabel || order.method || '訂單';
   const items = buildOrderItems(order);
+  const shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
+  const discountAmount = Math.max(0, Number(order?.coupon?.discount || 0));
+  let subtotal = 0;
+  if (items.length) {
+    subtotal = items.reduce((s, it) => s + Number(it.total || 0), 0);
+  } else if (order.price) {
+    subtotal = Number(order.price || 0) * Math.max(1, Number(order.qty || 1) || 1);
+  }
+  if (!subtotal) subtotal = Math.max(0, Number(order.amount || 0) - shippingFee + discountAmount);
+  const totalAmount = Math.max(0, Number(order.amount || 0));
+  const supportEmail = 'bkkaiwei@gmail.com';
+  const supportEmailLink = `<a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a>`;
+  const lineLink = 'https://line.me/R/ti/p/@427oaemj';
+  const lineLabel = '@427oaemj';
+  const lineLinkHtml = `<a href="${esc(lineLink)}">${esc(lineLabel)}</a>`;
+  const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
+  const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const itemsHtml = items.length
-    ? '<ul>' + items.map(it => `<li><strong>${esc(it.name)}</strong>${it.spec ? `（${esc(it.spec)}）` : ''} × ${it.qty} ─ ${fmt(it.total)}</li>`).join('') + '</ul>'
-    : '<p>本次訂單明細將由客服另行確認。</p>';
+    ? items.map((it, idx) => {
+        const img = it.image
+          ? `<img src="${esc(it.image)}" alt="${esc(it.name)}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-right:16px;">`
+          : `<div style="width:64px;height:64px;border-radius:12px;background:#e2e8f0;margin-right:16px;"></div>`;
+        const dividerStyle = idx === items.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
+        return `<div style="display:flex;align-items:center;${dividerStyle}">
+          ${img}
+          <div style="flex:1;">
+            <div style="font-weight:600;color:#0f172a;">${esc(it.name)}</div>
+            ${it.spec ? `<div style="color:#475569;font-size:14px;margin:4px 0;">${esc(it.spec)}</div>` : ''}
+            <div style="color:#0f172a;font-size:14px;">數量：${it.qty}</div>
+          </div>
+          <div style="font-weight:600;color:#0f172a;">${fmt(it.total)}</div>
+        </div>`;
+      }).join('')
+    : '<p style="margin:0;color:#475569;">本次訂單明細將由客服另行確認。</p>';
   const itemsText = items.length
     ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
     : '（本次訂單明細將由客服另行確認）';
@@ -1497,43 +1529,78 @@ function composeOrderEmail(order, opts = {}) {
     `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}</p>`,
     order.shippingFee ? `<p><strong>運費：</strong>${fmt(order.shippingFee)}</p>` : ''
   ].filter(Boolean).join('');
-  const lookupHtml = opts.lookupUrl ? `<p>可隨時透過 <a href="${esc(opts.lookupUrl)}">${esc(opts.lookupUrl)}</a> 查詢訂單處理進度。</p>` : '';
-  const customerIntro = `<p>親愛的 ${esc(buyerName)} 您好：</p><p>我們已收到您的訂單，以下為確認資訊，請再次檢查若有任何疑問可回覆此信或透過 LINE 與我們聯繫。</p>`;
+  const lookupHtml = opts.lookupUrl
+    ? `<div style="margin-top:32px;padding:16px;border-radius:12px;background:#eef2ff;">
+        <p style="margin:0 0 6px;font-weight:600;color:#312e81;">查詢訂單進度</p>
+        <a href="${esc(opts.lookupUrl)}" style="color:#1d4ed8;text-decoration:none;">${esc(opts.lookupUrl)}</a>
+      </div>`
+    : '';
+  const customerIntro = `<p>親愛的 ${esc(buyerName)} 您好：</p>
+    <p>我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，若有任何疑問可透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`;
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
-  const contactHtml = [
-    phone ? `<p><strong>聯絡電話：</strong>${esc(phone)}</p>` : '',
-    email ? `<p><strong>Email：</strong>${esc(email)}</p>` : '',
-    store ? `<p><strong>7-11 門市：</strong>${esc(store)}</p>` : '',
-    note ? `<p><strong>備註：</strong>${esc(note)}</p>` : ''
-  ].filter(Boolean).join('');
+  const contactRows = [
+    phone ? `<p style="margin:0 0 8px;"><strong>聯絡電話：</strong>${esc(phone)}</p>` : '',
+    email ? `<p style="margin:0 0 8px;"><strong>Email：</strong>${esc(email)}</p>` : '',
+    store ? `<p style="margin:0 0 8px;"><strong>7-11 門市：</strong>${esc(store)}</p>` : '',
+    note ? `<p style="margin:0;"><strong>備註：</strong>${esc(note)}</p>` : ''
+  ].filter(Boolean);
+  const contactHtml = contactRows.length
+    ? `<div style="padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">${contactRows.join('')}</div>`
+    : '';
+  const amountHtml = `
+    <div style="margin-top:24px;padding:20px;border-radius:12px;background:#0f172a;color:#f8fafc;">
+      <h3 style="margin:0 0 12px;font-size:18px;">付款明細</h3>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>商品金額</span><span>${fmt(subtotal)}</span></div>
+      ${discountAmount ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#fbbf24;"><span>優惠折抵${couponLabelHtml}</span><span>- ${fmt(discountAmount)}</span></div>` : ''}
+      ${shippingFee ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>運費</span><span>${fmt(shippingFee)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-top:12px;"><span>合計應付</span><span>${fmt(totalAmount)}</span></div>
+    </div>
+  `;
   const customerFooter = opts.admin ? '' : `
-      <p style="font-size:14px;color:#6b7280;margin-top:12px;">
-        本信件為系統自動發送，請勿直接回覆本信件。<br/>
-        若有相關問題請來信 <a href="mailto:bkkaiwei@gmail.com">bkkaiwei@gmail.com</a> 將由客服協助您。
-      </p>`;
+    <div style="margin-top:24px;padding:16px;border-radius:12px;background:#f1f5f9;color:#475569;font-size:13px;line-height:1.6;">
+      本信件為系統自動發送，請勿直接回覆。<br>
+      如需協助請來信 <a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a> 或加入官方 LINE：<a href="${esc(lineLink)}">${esc(lineLabel)}</a>。
+    </div>
+  `;
   const html = `
-    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:#0f172a;line-height:1.7">
-      ${opts.admin ? adminIntro : customerIntro}
-      ${baseInfoHtml}
-      <p><strong>商品明細：</strong></p>
-      ${itemsHtml}
-      ${contactHtml || ''}
-      ${lookupHtml}
-      ${opts.admin ? '' : '<p>感謝您的支持，祝福一切順心圓滿！</p>'}
-      ${customerFooter}
+    <div style="background:#f5f7fb;padding:24px;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:#0f172a;line-height:1.7;box-shadow:0 20px 40px rgba(15,23,42,0.08);">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:13px;letter-spacing:0.3em;color:#94a3b8;text-transform:uppercase;">${esc(brand)}</div>
+          <div style="font-size:24px;font-weight:700;margin-top:8px;color:#0f172a;">${opts.admin ? '新訂單通知' : '訂單確認'}</div>
+        </div>
+        ${opts.admin ? adminIntro : customerIntro}
+        <div style="margin:24px 0;padding:20px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+          ${baseInfoHtml}
+        </div>
+        ${amountHtml}
+        <div style="margin-top:32px;">
+          <h3 style="font-size:18px;color:#0f172a;margin-bottom:12px;">商品明細</h3>
+          ${itemsHtml}
+        </div>
+        ${contactHtml ? `<div style="margin-top:32px;">
+          <h3 style="font-size:18px;color:#0f172a;margin-bottom:12px;">聯絡資訊</h3>
+          ${contactHtml}
+        </div>` : ''}
+        ${lookupHtml}
+        ${opts.admin ? '' : '<p style="margin-top:24px;color:#0f172a;">感謝您的支持，祝福一切順心圓滿！</p>'}
+        ${customerFooter}
+      </div>
     </div>
   `;
   const textParts = [];
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else {
-    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊：`);
+    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，可透過 ${supportEmail} 或官方 LINE：${lineLabel} 聯繫。`);
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);
   textParts.push(`付款方式：${method}`);
-  textParts.push(`應付金額：${fmt(order.amount || 0)}`);
-  if (order.shippingFee) textParts.push(`運費：${fmt(order.shippingFee)}`);
+  textParts.push(`商品金額：${fmt(subtotal)}`);
+  if (discountAmount) textParts.push(`優惠折抵${couponLabelText}：-${fmt(discountAmount)}`);
+  if (shippingFee) textParts.push(`運費：${fmt(shippingFee)}`);
+  textParts.push(`合計應付：${fmt(totalAmount)}`);
   textParts.push('商品明細：');
   textParts.push(itemsText);
   if (phone) textParts.push(`聯絡電話：${phone}`);
@@ -1541,10 +1608,7 @@ function composeOrderEmail(order, opts = {}) {
   if (store) textParts.push(`7-11 門市：${store}`);
   if (note) textParts.push(`備註：${note}`);
   if (opts.lookupUrl) textParts.push(`查詢訂單：${opts.lookupUrl}`);
-  if (!opts.admin) {
-    textParts.push('感謝您的訂購！');
-    textParts.push('本信件為系統自動發送，請勿直接回覆。若有疑問請來信 bkkaiwei@gmail.com。');
-  }
+  if (!opts.admin) textParts.push('感謝您的訂購！');
   return { html, text: textParts.join('\n') };
 }
 
@@ -1554,7 +1618,8 @@ function buildOrderItems(order) {
       name: String(it.productName || it.name || it.title || '商品'),
       spec: String(it.variantName || it.spec || it.deity || '').trim(),
       qty: Math.max(1, Number(it.qty || it.quantity || 1) || 1),
-      total: Number(it.total || (Number(it.price || it.unitPrice || 0) * Math.max(1, Number(it.qty || it.quantity || 1) || 1)) || 0)
+      total: Number(it.total || (Number(it.price || it.unitPrice || 0) * Math.max(1, Number(it.qty || it.quantity || 1) || 1)) || 0),
+      image: String(it.image || it.picture || it.img || '')
     }));
   }
   if (order.productName) {
@@ -1564,7 +1629,8 @@ function buildOrderItems(order) {
       name: String(order.productName),
       spec: String(order.variantName || '').trim(),
       qty,
-      total: unit * qty
+      total: unit * qty,
+      image: String(order.productImage || order.image || order.cover || '')
     }];
   }
   return [];
