@@ -995,7 +995,7 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     await env.ORDERS.put(orderId, JSON.stringify(order));
     if (rtnCode === 1 && shouldNotifyStatus(order.status)) {
       try {
-        await maybeSendOrderStatusEmail(env, order, { origin, channel: order.method || '信用卡/綠界' });
+        await maybeSendOrderEmails(env, order, { origin, channel: order.method || '信用卡/綠界', notifyAdmin:false, emailContext:'status_update' });
       } catch (err) {
         console.error('status email (credit) error', err);
       }
@@ -1450,10 +1450,12 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
     const channelLabel = channel ? channel : (order.method || '訂單');
     const emailContext = ctx.emailContext || 'order_created';
+    const notifyCustomer = ctx.notifyCustomer === false ? false : !!customerEmail;
+    const notifyAdmin = ctx.notifyAdmin === false ? false : adminRaw.length > 0;
     const { html: customerHtml, text: customerText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:false, context: emailContext });
     const { html: adminHtml, text: adminText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:true, context: emailContext });
     const tasks = [];
-    if (customerEmail) {
+    if (notifyCustomer && customerEmail) {
       tasks.push(sendEmailMessage(env, {
         from: fromDefault,
         to: [customerEmail],
@@ -1462,7 +1464,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
         text: customerText
       }));
     }
-    if (adminRaw.length) {
+    if (notifyAdmin && adminRaw.length) {
       tasks.push(sendEmailMessage(env, {
         from: fromDefault,
         to: adminRaw,
@@ -1478,46 +1480,6 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     await Promise.allSettled(tasks);
   } catch (err) {
     console.error('sendOrderEmails error', err);
-  }
-}
-
-async function maybeSendOrderStatusEmail(env, order, ctx = {}) {
-  try {
-    if (!order || !env) return;
-    const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
-    const fromDefault = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
-    const hasTransport = apiKey && fromDefault;
-    if (!hasTransport) {
-      console.log('[mail] skip status email — missing config', { hasApiKey: !!apiKey, fromDefault });
-      return;
-    }
-    const customerEmail = (order?.buyer?.email || '').trim();
-    if (!customerEmail) {
-      console.log('[mail] skip status email — missing customer email');
-      return;
-    }
-    const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
-    const origin = (ctx.origin || '').replace(/\/$/, '');
-    const lookupUrl = (origin && order.id) ? `${origin}/shop#lookup=${encodeURIComponent(order.id)}` : '';
-    const channelLabel = ctx.channel || order.method || '';
-    const statusLabel = (order.status || '').trim();
-    const { html, text } = composeOrderEmail(order, {
-      siteName,
-      lookupUrl,
-      channelLabel,
-      admin: false,
-      context: 'status_update'
-    });
-    const subject = `${siteName} 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`;
-    await sendEmailMessage(env, {
-      from: fromDefault,
-      to: [customerEmail],
-      subject,
-      html,
-      text
-    });
-  } catch (err) {
-    console.error('sendOrderStatusEmail error', err);
   }
 }
 
@@ -2664,7 +2626,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       await env.ORDERS.put(id, JSON.stringify(obj));
       if (statusChanged && shouldNotifyStatus(obj.status)) {
         try {
-          await maybeSendOrderStatusEmail(env, obj, { origin, channel: obj.method || '轉帳匯款' });
+          await maybeSendOrderEmails(env, obj, { origin, channel: obj.method || '轉帳匯款', notifyAdmin:false, emailContext:'status_update' });
         } catch (err) {
           console.error('status update email error', err);
         }
