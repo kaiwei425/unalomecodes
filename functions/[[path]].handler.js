@@ -1539,6 +1539,7 @@ function composeOrderEmail(order, opts = {}) {
     <p>我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，若有任何疑問可透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`;
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
   const contactRows = [
+    buyerName ? `<p style="margin:0 0 8px;"><strong>收件人：</strong>${esc(buyerName)}</p>` : '',
     phone ? `<p style="margin:0 0 8px;"><strong>聯絡電話：</strong>${esc(phone)}</p>` : '',
     email ? `<p style="margin:0 0 8px;"><strong>Email：</strong>${esc(email)}</p>` : '',
     store ? `<p style="margin:0 0 8px;"><strong>7-11 門市：</strong>${esc(store)}</p>` : '',
