@@ -42,14 +42,35 @@ var clearCouponState = window.__clearCouponState;
 if (typeof window.__scheduleOrderRefresh !== 'function'){
   window.__scheduleOrderRefresh = function(delay){
     try{
-      if (window.__orderRefreshTimer){
-        clearTimeout(window.__orderRefreshTimer);
+      var wait = delay || 1200;
+      var trigger = function(){
+        if (window.__orderRefreshTimer){
+          clearTimeout(window.__orderRefreshTimer);
+        }
+        window.__orderRefreshTimer = setTimeout(function(){
+          try{
+            window.location.reload();
+          }catch(_){}
+        }, wait);
+      };
+      if (window.__orderSuccessDialogOpen || window.__orderSuccessWillOpen){
+        window.__pendingOrderReload = true;
+        window.__orderReloadTrigger = trigger;
+        return;
       }
-      window.__orderRefreshTimer = setTimeout(function(){
-        try{
-          window.location.reload();
-        }catch(_){}
-      }, delay || 1200);
+      trigger();
+    }catch(_){}
+  };
+}
+if (typeof window.__runPendingOrderReload !== 'function'){
+  window.__runPendingOrderReload = function(){
+    try{
+      if (window.__pendingOrderReload && typeof window.__orderReloadTrigger === 'function'){
+        var fn = window.__orderReloadTrigger;
+        window.__pendingOrderReload = false;
+        window.__orderReloadTrigger = null;
+        fn();
+      }
     }catch(_){}
   };
 }
@@ -65,6 +86,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         if (dlg.getAttribute('data-lock') === '1'){
           ev.preventDefault();
         }
+      });
+      dlg.addEventListener('close', function(){
+        closeSuccessDialog();
       });
     }
   })();
@@ -95,6 +119,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var dlg = document.getElementById('dlgOrderSuccess');
       if (dlg && dlg.open) dlg.close();
     }catch(_){}
+    try{
+      window.__orderSuccessDialogOpen = false;
+      window.__orderSuccessWillOpen = false;
+    }catch(_){}
+    try{
+      if (typeof window.__runPendingOrderReload === 'function'){
+        window.__runPendingOrderReload();
+      }
+    }catch(_){}
   }
   window.showOrderSuccessPanel = function(payload, legacyLast5){
     var opts = (payload && typeof payload === 'object' && !Array.isArray(payload))
@@ -104,9 +137,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{
       var dlg = document.getElementById('dlgOrderSuccess');
       if (!dlg){
+        try{ window.__orderSuccessWillOpen = false; }catch(_){}
         alert('訂單已送出，請截圖保存。訂單編號：' + (opts.orderId || opts.id || ''));
         return;
       }
+      try{
+        window.__orderSuccessDialogOpen = true;
+        window.__orderSuccessWillOpen = false;
+      }catch(_){}
       var order = (opts.order && typeof opts.order === 'object') ? opts.order : {};
       var id = opts.orderId || order.id || opts.id || '';
       var digitsId = id ? String(id).replace(/\D+/g,'') : '';
@@ -272,10 +310,22 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       if (typeof dlg.showModal === 'function'){
         dlg.showModal();
       }else{
+        try{ window.__orderSuccessDialogOpen = false; }catch(_){}
+        try{
+          if (typeof window.__runPendingOrderReload === 'function'){
+            window.__runPendingOrderReload();
+          }
+        }catch(_){}
         alert('訂單已送出，請截圖保存。訂單編號：'+ (id || ''));
       }
     }catch(err){
       console.error(err);
+      try{ window.__orderSuccessDialogOpen = false; }catch(_){}
+      try{
+        if (typeof window.__runPendingOrderReload === 'function'){
+          window.__runPendingOrderReload();
+        }
+      }catch(_){}
       try{ alert('訂單已送出，請截圖保存。'); }catch(_){}
     }
   };
@@ -628,6 +678,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
         }catch(_){}
         var success = !!(data && data.ok);
+        var willShowDialog = typeof window.showOrderSuccessPanel === 'function';
+        if (willShowDialog){
+          try{ window.__orderSuccessWillOpen = true; }catch(_){}
+        }
         alert(success ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
         if (success){
           try{
@@ -641,7 +695,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         try{
           var phoneVal = (document.getElementById('bfContact') && document.getElementById('bfContact').value) || '';
           var last5Val = (document.getElementById('bfLast5') && document.getElementById('bfLast5').value) || '';
-          if (typeof window.showOrderSuccessPanel === 'function'){
+          if (willShowDialog){
             window.showOrderSuccessPanel({
               channel:'bank',
               phone: phoneVal,
@@ -655,7 +709,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
               store: data && data.order && data.order.buyer && data.order.buyer.store
             });
           }
-        }catch(e){}
+        }catch(e){
+          console.error(e);
+          try{ window.__orderSuccessWillOpen = false; }catch(_){}
+          try{
+            if (typeof window.__runPendingOrderReload === 'function'){
+              window.__runPendingOrderReload();
+            }
+          }catch(_){}
+        }
 
         // After success: clear cart and refresh product list to reflect updated "已售出"
         try{ localStorage.removeItem('cart'); }catch(_){}
@@ -1467,6 +1529,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         var usedDialog = false;
         if (typeof window.showOrderSuccessPanel === 'function'){
           usedDialog = true;
+          try{ window.__orderSuccessWillOpen = true; }catch(_){}
           window.showOrderSuccessPanel({
             channel:'credit',
             phone: payload.buyer.phone,
