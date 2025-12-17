@@ -993,6 +993,13 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     }
 
     await env.ORDERS.put(orderId, JSON.stringify(order));
+    if (rtnCode === 1 && shouldNotifyStatus(order.status)) {
+      try {
+        await maybeSendOrderStatusEmail(env, order, { origin, channel: order.method || '信用卡/綠界' });
+      } catch (err) {
+        console.error('status email (credit) error', err);
+      }
+    }
     return new Response('1|OK', { status:200, headers:{'Content-Type':'text/plain'} });
   } catch (e) {
     return new Response('0|ERROR', { status:500, headers:{'Content-Type':'text/plain'} });
@@ -1442,8 +1449,9 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const customerEmail = (order?.buyer?.email || '').trim();
     const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
     const channelLabel = channel ? channel : (order.method || '訂單');
-    const { html: customerHtml, text: customerText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:false });
-    const { html: adminHtml, text: adminText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:true });
+    const emailContext = ctx.emailContext || 'order_created';
+    const { html: customerHtml, text: customerText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:false, context: emailContext });
+    const { html: adminHtml, text: adminText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:true, context: emailContext });
     const tasks = [];
     if (customerEmail) {
       tasks.push(sendEmailMessage(env, {
@@ -1473,6 +1481,46 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
   }
 }
 
+async function maybeSendOrderStatusEmail(env, order, ctx = {}) {
+  try {
+    if (!order || !env) return;
+    const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
+    const fromDefault = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
+    const hasTransport = apiKey && fromDefault;
+    if (!hasTransport) {
+      console.log('[mail] skip status email — missing config', { hasApiKey: !!apiKey, fromDefault });
+      return;
+    }
+    const customerEmail = (order?.buyer?.email || '').trim();
+    if (!customerEmail) {
+      console.log('[mail] skip status email — missing customer email');
+      return;
+    }
+    const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+    const origin = (ctx.origin || '').replace(/\/$/, '');
+    const lookupUrl = (origin && order.id) ? `${origin}/shop#lookup=${encodeURIComponent(order.id)}` : '';
+    const channelLabel = ctx.channel || order.method || '';
+    const statusLabel = (order.status || '').trim();
+    const { html, text } = composeOrderEmail(order, {
+      siteName,
+      lookupUrl,
+      channelLabel,
+      admin: false,
+      context: 'status_update'
+    });
+    const subject = `${siteName} 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`;
+    await sendEmailMessage(env, {
+      from: fromDefault,
+      to: [customerEmail],
+      subject,
+      html,
+      text
+    });
+  } catch (err) {
+    console.error('sendOrderStatusEmail error', err);
+  }
+}
+
 function composeOrderEmail(order, opts = {}) {
   const esc = escapeHtmlEmail;
   const fmt = formatCurrencyTWD;
@@ -1484,6 +1532,7 @@ function composeOrderEmail(order, opts = {}) {
   const status = order.status || '處理中';
   const note = (order.note || '').trim();
   const method = opts.channelLabel || order.method || '訂單';
+  const context = opts.context || 'order_created';
   const items = buildOrderItems(order);
   const shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
   const discountAmount = Math.max(0, Number(order?.coupon?.discount || 0));
@@ -1522,12 +1571,12 @@ function composeOrderEmail(order, opts = {}) {
   const itemsText = items.length
     ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
     : '（本次訂單明細將由客服另行確認）';
+  const shippingNote = shippingFee ? `（含運費${fmt(shippingFee).replace('NT$ ', '')}）` : '';
   const baseInfoHtml = [
     `<p><strong>訂單編號：</strong>${esc(order.id || '')}</p>`,
     `<p><strong>訂單狀態：</strong>${esc(status)}</p>`,
     `<p><strong>付款方式：</strong>${esc(method)}</p>`,
-    `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}</p>`,
-    order.shippingFee ? `<p><strong>運費：</strong>${fmt(order.shippingFee)}</p>` : ''
+    `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}${shippingNote}</p>`
   ].filter(Boolean).join('');
   const lookupHtml = opts.lookupUrl
     ? `<div style="margin-top:32px;padding:16px;border-radius:12px;background:#eef2ff;">
@@ -1535,8 +1584,11 @@ function composeOrderEmail(order, opts = {}) {
         <a href="${esc(opts.lookupUrl)}" style="color:#1d4ed8;text-decoration:none;">${esc(opts.lookupUrl)}</a>
       </div>`
     : '';
-  const customerIntro = `<p>親愛的 ${esc(buyerName)} 您好：</p>
-    <p>我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，若有任何疑問可透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`;
+  const customerIntro = (context === 'status_update')
+    ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
+      <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>，以下為最新資訊。請勿直接回覆此信，如需協助請透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`
+    : `<p>親愛的 ${esc(buyerName)} 您好：</p>
+      <p>我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，若有任何疑問可透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`;
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
   const contactRows = [
     buyerName ? `<p style="margin:0 0 8px;"><strong>收件人：</strong>${esc(buyerName)}</p>` : '',
@@ -1552,7 +1604,7 @@ function composeOrderEmail(order, opts = {}) {
     <div style="margin-top:24px;padding:20px;border-radius:12px;background:#0f172a;color:#f8fafc;">
       <h3 style="margin:0 0 12px;font-size:18px;">付款明細</h3>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>商品金額</span><span>${fmt(subtotal)}</span></div>
-      ${discountAmount ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#fbbf24;"><span>優惠折抵${couponLabelHtml}</span><span>- ${fmt(discountAmount)}</span></div>` : ''}
+      ${discountAmount ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#fbbf24;"><span>優惠折抵</span><span>- ${fmt(discountAmount)}</span></div>` : ''}
       ${shippingFee ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>運費</span><span>${fmt(shippingFee)}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-top:12px;"><span>合計應付</span><span>${fmt(totalAmount)}</span></div>
     </div>
@@ -1592,6 +1644,8 @@ function composeOrderEmail(order, opts = {}) {
   const textParts = [];
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
+  } else if (context === 'status_update') {
+    textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或官方 LINE：${lineLabel} 聯繫。`);
   } else {
     textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，可透過 ${supportEmail} 或官方 LINE：${lineLabel} 聯繫。`);
   }
@@ -1599,9 +1653,9 @@ function composeOrderEmail(order, opts = {}) {
   textParts.push(`訂單狀態：${status}`);
   textParts.push(`付款方式：${method}`);
   textParts.push(`商品金額：${fmt(subtotal)}`);
-  if (discountAmount) textParts.push(`優惠折抵${couponLabelText}：-${fmt(discountAmount)}`);
+  if (discountAmount) textParts.push(`優惠折抵：-${fmt(discountAmount)}`);
   if (shippingFee) textParts.push(`運費：${fmt(shippingFee)}`);
-  textParts.push(`合計應付：${fmt(totalAmount)}`);
+  textParts.push(`合計應付：${fmt(totalAmount)}${shippingNote}`);
   textParts.push('商品明細：');
   textParts.push(itemsText);
   if (phone) textParts.push(`聯絡電話：${phone}`);
@@ -1672,6 +1726,12 @@ async function sendEmailMessage(env, message) {
   let data = {};
   try { data = await res.json(); } catch(_){}
   return data;
+}
+
+function shouldNotifyStatus(status) {
+  const txt = String(status || '').trim();
+  if (!txt) return false;
+  return txt === '已付款待出貨';
 }
 
 function escapeHtmlEmail(str) {
@@ -2594,9 +2654,21 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       const raw = await env.ORDERS.get(id);
       if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
       const obj = JSON.parse(raw);
-      if (status) obj.status = status;
+      const prevStatus = obj.status || '';
+      let statusChanged = false;
+      if (status && status !== prevStatus) {
+        obj.status = status;
+        statusChanged = true;
+      }
       obj.updatedAt = new Date().toISOString();
       await env.ORDERS.put(id, JSON.stringify(obj));
+      if (statusChanged && shouldNotifyStatus(obj.status)) {
+        try {
+          await maybeSendOrderStatusEmail(env, obj, { origin, channel: obj.method || '轉帳匯款' });
+        } catch (err) {
+          console.error('status update email error', err);
+        }
+      }
       return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
     }
 
