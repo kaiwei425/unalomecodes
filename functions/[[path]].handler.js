@@ -1452,6 +1452,13 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const emailContext = ctx.emailContext || 'order_created';
     const notifyCustomer = ctx.notifyCustomer === false ? false : !!customerEmail;
     const notifyAdmin = ctx.notifyAdmin === false ? false : adminRaw.length > 0;
+    const statusLabel = (order.status || '').trim();
+    const customerSubject = emailContext === 'status_update'
+      ? `${siteName} 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
+      : `${siteName} 訂單確認 #${order.id}`;
+    const adminSubject = emailContext === 'status_update'
+      ? `[${siteName}] 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
+      : `[${siteName}] 新訂單通知 #${order.id}`;
     const { html: customerHtml, text: customerText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:false, context: emailContext });
     const { html: adminHtml, text: adminText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:true, context: emailContext });
     const tasks = [];
@@ -1459,7 +1466,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       tasks.push(sendEmailMessage(env, {
         from: fromDefault,
         to: [customerEmail],
-        subject: `${siteName} 訂單確認 #${order.id}`,
+        subject: customerSubject,
         html: customerHtml,
         text: customerText
       }));
@@ -1468,7 +1475,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       tasks.push(sendEmailMessage(env, {
         from: fromDefault,
         to: adminRaw,
-        subject: `[${siteName}] 新訂單通知 #${order.id}`,
+        subject: adminSubject,
         html: adminHtml,
         text: adminText
       }));
@@ -2636,6 +2643,36 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
 
     return new Response(JSON.stringify({ ok:false, error:'Missing action/status' }), { status:400, headers: jsonHeaders });
     } catch (e) {
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
+}
+
+if (pathname === '/api/order/notify' && request.method === 'POST') {
+  if (!env.ORDERS) {
+    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
+  if (!isAdmin(request, env)) {
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  }
+  try {
+    const body = await request.json().catch(()=>({}));
+    const id = String(body.id || '').trim();
+    if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
+    const raw = await env.ORDERS.get(id);
+    if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+    const order = JSON.parse(raw);
+    const customerEmail = (order?.buyer?.email || '').trim();
+    if (!customerEmail) {
+      return new Response(JSON.stringify({ ok:false, error:'訂單缺少顧客 Email，無法寄送' }), { status:400, headers: jsonHeaders });
+    }
+    await maybeSendOrderEmails(env, order, {
+      origin,
+      channel: order.method || '訂單',
+      notifyAdmin: false,
+      emailContext: body.context || 'status_update'
+    });
+    return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
+  } catch (e) {
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
 }
