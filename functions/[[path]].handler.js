@@ -1506,6 +1506,11 @@ function composeOrderEmail(order, opts = {}) {
     store ? `<p><strong>7-11 門市：</strong>${esc(store)}</p>` : '',
     note ? `<p><strong>備註：</strong>${esc(note)}</p>` : ''
   ].filter(Boolean).join('');
+  const customerFooter = opts.admin ? '' : `
+      <p style="font-size:14px;color:#6b7280;margin-top:12px;">
+        本信件為系統自動發送，請勿直接回覆本信件。<br/>
+        若有相關問題請來信 <a href="mailto:bkkaiwei@gmail.com">bkkaiwei@gmail.com</a> 將由客服協助您。
+      </p>`;
   const html = `
     <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:#0f172a;line-height:1.7">
       ${opts.admin ? adminIntro : customerIntro}
@@ -1515,6 +1520,7 @@ function composeOrderEmail(order, opts = {}) {
       ${contactHtml || ''}
       ${lookupHtml}
       ${opts.admin ? '' : '<p>感謝您的支持，祝福一切順心圓滿！</p>'}
+      ${customerFooter}
     </div>
   `;
   const textParts = [];
@@ -1535,7 +1541,10 @@ function composeOrderEmail(order, opts = {}) {
   if (store) textParts.push(`7-11 門市：${store}`);
   if (note) textParts.push(`備註：${note}`);
   if (opts.lookupUrl) textParts.push(`查詢訂單：${opts.lookupUrl}`);
-  if (!opts.admin) textParts.push('感謝您的訂購！');
+  if (!opts.admin) {
+    textParts.push('感謝您的訂購！');
+    textParts.push('本信件為系統自動發送，請勿直接回覆。若有疑問請來信 bkkaiwei@gmail.com。');
+  }
   return { html, text: textParts.join('\n') };
 }
 
