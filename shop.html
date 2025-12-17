@@ -400,17 +400,22 @@
       const b = document.createElement('button');
       b.textContent = cat; b.dataset.cat = cat;
       if(cat===selectedCat) b.classList.add('active');
-      b.addEventListener('click', ()=>{
-        if (selectedCat === cat) {
-          selectedCat = null;
-        } else {
-          selectedCat = cat;
-        }
-        [...list.children].forEach(x=> x.classList.toggle('active', x===b));
-        // 將選擇的分類存到全域變數，然後呼叫 main.js 的 applyFilter
-        window.__currentCategoryFilter = selectedCat;
-        if(typeof applyFilter === 'function') applyFilter();
-      });
+      if (cat === '蠟燭加持祈福') {
+        b.addEventListener('click', function(){
+          window.location.href = 'https://shop.unalomecodes.com/service';
+        });
+      } else {
+        b.addEventListener('click', ()=>{
+          if (selectedCat === cat) {
+            selectedCat = null;
+          } else {
+            selectedCat = cat;
+          }
+          [...list.children].forEach(x=> x.classList.toggle('active', x===b));
+          window.__currentCategoryFilter = selectedCat;
+          if(typeof applyFilter === 'function') applyFilter();
+        });
+      }
       list.appendChild(b);
     });
     side.appendChild(box);
