@@ -180,29 +180,6 @@ function parseCouponAssignment(raw){
   return null;
 }
 
-const MOCK_SERVICE_PRODUCTS = [
-  {
-    id: 'svc-candle-basic',
-    name: '蠟燭祈福｜基本祈請',
-    category: '服務型',
-    description: '老師於指定吉日時為您點燃蠟燭祈願，並以泰文逐一祝禱所託願望。',
-    duration: '約 7 天',
-    includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
-    price: 799,
-    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-basic.png'
-  },
-  {
-    id: 'svc-candle-plus',
-    name: '蠟燭祈福｜進階供品組',
-    category: '服務型',
-    description: '加上供品與祈福儀式照片回傳，適合需要長期加持的願望。',
-    duration: '約 14 天',
-    includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
-    price: 1299,
-    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-plus.png'
-  }
-];
-
 // === Helper: unified proof retriever (R2 first, then KV) ===
 async function getProofFromStore(env, rawKey) {
   const k = String(rawKey || '');
@@ -300,7 +277,7 @@ export async function onRequest(context) {
   }catch(e){ /* ignore and continue */ }
   
   
-  if (url.pathname === '/payment-result' && request.method === 'POST') {
+if (url.pathname === '/payment-result' && request.method === 'POST') {
     try {
       const form = await request.formData();
       const oid =
@@ -2734,7 +2711,109 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'GET') {
-  return new Response(JSON.stringify({ ok:true, items: MOCK_SERVICE_PRODUCTS }), { status:200, headers: jsonHeaders });
+  const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
+  }
+  if (url.searchParams.get('id')){
+    const id = String(url.searchParams.get('id'));
+    const raw = await store.get(id);
+    if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:true, item: JSON.parse(raw) }), { status:200, headers: jsonHeaders });
+  }
+  let list = [];
+  try{
+    const idxRaw = await store.get('SERVICE_PRODUCT_INDEX');
+    if (idxRaw){
+      list = JSON.parse(idxRaw) || [];
+    }
+  }catch(_){}
+  if (!Array.isArray(list) || !list.length){
+    // fallback: list by prefix
+    if (store.list){
+      const iter = await store.list({ prefix:'svc:' });
+      list = iter.keys.map(k => k.name);
+    }
+  }
+  const items = [];
+  for (const key of list){
+    const raw = await store.get(key);
+    if (!raw) continue;
+    try{
+      items.push(JSON.parse(raw));
+    }catch(_){}
+  }
+  return new Response(JSON.stringify({ ok:true, items }), { status:200, headers: jsonHeaders });
+}
+
+if (pathname === '/api/service/products' && request.method === 'POST') {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
+  }
+  const body = await request.json();
+  const name = String(body.name||'').trim();
+  const price = Number(body.price||0);
+  const id = body.id ? String(body.id).trim() : ('svc-' + crypto.randomUUID().slice(0,8));
+  if (!name || !price){
+    return new Response(JSON.stringify({ ok:false, error:'缺少名稱或價格' }), { status:400, headers: jsonHeaders });
+  }
+  const payload = Object.assign({
+    id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }, body);
+  await store.put(id, JSON.stringify(payload));
+  const idxKey = 'SERVICE_PRODUCT_INDEX';
+  let list = [];
+  try{
+    const idxRaw = await store.get(idxKey);
+    if (idxRaw){
+      list = JSON.parse(idxRaw) || [];
+    }
+  }catch(_){}
+  list = [id].concat(list.filter(x=> x !== id)).slice(0,200);
+  await store.put(idxKey, JSON.stringify(list));
+  return new Response(JSON.stringify({ ok:true, item: payload }), { status:200, headers: jsonHeaders });
+}
+
+if (pathname === '/api/service/products' && request.method === 'PUT') {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+  if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
+  const body = await request.json();
+  const id = String(body.id||'').trim();
+  if (!id){
+    return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
+  }
+  const raw = await store.get(id);
+  if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+  const prev = JSON.parse(raw);
+  const next = Object.assign({}, prev, body, { id, updatedAt: new Date().toISOString() });
+  await store.put(id, JSON.stringify(next));
+  return new Response(JSON.stringify({ ok:true, item: next }), { status:200, headers: jsonHeaders });
+}
+
+if (pathname === '/api/service/products' && request.method === 'DELETE') {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+  if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
+  const id = String(url.searchParams.get('id')||'').trim();
+  if (!id){
+    return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
+  }
+  await store.delete(id);
+  const idxKey = 'SERVICE_PRODUCT_INDEX';
+  try{
+    const idxRaw = await store.get(idxKey);
+    if (idxRaw){
+      let list = JSON.parse(idxRaw) || [];
+      list = list.filter(x=> x !== id);
+      await store.put(idxKey, JSON.stringify(list));
+    }
+  }catch(_){}
+  return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
 }
 
 if (pathname === '/api/service/order' && request.method === 'POST') {
@@ -2746,10 +2825,15 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     if (!serviceId || !name || !phone){
       return new Response(JSON.stringify({ ok:false, error:'缺少必要欄位' }), { status:400, headers: jsonHeaders });
     }
-    const svc = MOCK_SERVICE_PRODUCTS.find(p=> String(p.id) === serviceId);
-    if (!svc){
-      return new Response(JSON.stringify({ ok:false, error:'找不到服務項目' }), { status:404, headers: jsonHeaders });
+    const svcStore = env.SERVICE_PRODUCTS || env.PRODUCTS;
+    let svc = null;
+    if (svcStore){
+      const rawSvc = await svcStore.get(serviceId);
+      if (rawSvc){
+        try{ svc = JSON.parse(rawSvc); }catch(_){}
+      }
     }
+    if (!svc) return new Response(JSON.stringify({ ok:false, error:'找不到服務項目' }), { status:404, headers: jsonHeaders });
     const orderId = await generateServiceOrderId(env);
     const buyer = {
       name,
