@@ -1444,7 +1444,8 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     const origin = (ctx.origin || '').replace(/\/$/, '');
-    const lookupUrl = (origin && order.id) ? `${origin}/shop#lookup=${encodeURIComponent(order.id)}` : '';
+    const lookupBase = (env.ORDER_LOOKUP_URL || env.SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const lookupUrl = order.id ? `${lookupBase}/shop#lookup=${encodeURIComponent(order.id)}` : '';
     const channel = ctx.channel || order.method || '';
     const customerEmail = (order?.buyer?.email || '').trim();
     const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
