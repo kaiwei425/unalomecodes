@@ -6,69 +6,85 @@
 <title>服務商品管理｜unalomecodes</title>
 <style>
   :root{
-    --bg:#f7f8fb;--card:#fff;--fg:#0f172a;--line:#e5e7eb;--accent:#2563eb;
+    --bg:#f5f7fb;--card:#fff;--fg:#0f172a;--line:#e5e7eb;--accent:#2563eb;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
-  .wrap{max-width:1100px;margin:0 auto;padding:20px;}
-  .backLink{margin-bottom:12px;}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px;}
+  .backLink{margin-bottom:14px;}
   .backBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;text-decoration:none;color:var(--fg);font-weight:700;}
-  h1{margin:0 0 16px;font-size:26px;font-weight:800;}
-  .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;}
-  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 36px rgba(15,23,42,.1);}
-  label{display:block;font-size:12px;color:#6b7280;margin-top:10px;margin-bottom:4px;font-weight:700;}
-  input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
-  textarea{min-height:100px;line-height:1.6;resize:vertical;}
-  .row{display:flex;gap:10px;}
+  h1{margin:0 0 12px;font-size:30px;font-weight:800;}
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .toolbar input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--line);font-size:14px;}
+  .grid{display:grid;grid-template-columns:460px 1fr;gap:20px;}
+  @media(max-width:1100px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 20px 40px rgba(15,23,42,.08);}
+  label{display:block;font-size:12px;color:#6b7280;margin-top:12px;margin-bottom:4px;font-weight:700;}
+  input,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:14px;transition:border-color .2s;}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+  textarea{min-height:110px;line-height:1.6;resize:vertical;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;}
   .btn{border:1px solid var(--line);background:#fff;color:var(--fg);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;}
   .btn.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;}
   .btn.danger{background:#fee2e2;border:none;color:#b91c1c;}
-  table{width:100%;border-collapse:collapse;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px;}
-  th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
+  table{width:100%;border-collapse:collapse;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px;}
+  th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
   th{background:#f1f5f9;color:#64748b;font-weight:700;}
   tbody tr:hover{background:#f8fafc;}
   .muted{color:#94a3b8;font-size:12px;}
-  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#1d4ed8;margin-right:6px;font-size:12px;}
+  .imgPreview{width:100%;height:220px;border:1px dashed var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden;}
+  .imgPreview img{width:100%;height:100%;object-fit:cover;}
+  .imgList{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .imgList .thumb{position:relative;width:86px;height:86px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff;}
+  .imgList .thumb img{width:100%;height:100%;object-fit:cover;}
+  .imgList .thumb button{position:absolute;top:4px;right:4px;border:none;background:rgba(15,23,42,.7);color:#fff;border-radius:999px;width:20px;height:20px;cursor:pointer;}
+  .optionsGrid{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .svc-option-row{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center;}
+  @media(max-width:520px){.svc-option-row{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
     <h1>服務型商品管理</h1>
+    <div class="toolbar">
+      <input id="filter" placeholder="搜尋服務名稱…">
+      <button class="btn" id="btnReload">重新整理</button>
+    </div>
     <div class="grid">
-      <div class="card">
+      <div class="card form-card">
         <h3 style="margin:0 0 6px;">新增 / 編輯服務</h3>
         <p class="muted">輸入資料後按「儲存服務」。若選取表格中的項目會帶入資料供編輯。</p>
         <input type="hidden" id="svc_id">
+        <input type="hidden" id="svc_duration">
         <label>服務名稱</label>
         <input id="svc_name" placeholder="例：蠟燭祈福｜基本祈請">
         <label>費用（NT$）</label>
         <input id="svc_price" type="number" min="0" value="0">
-        <label>建議天數</label>
-        <input id="svc_duration" placeholder="例：約 7 天">
         <label>詳細說明</label>
         <textarea id="svc_description" placeholder="完整介紹、祈福流程、注意事項…"></textarea>
         <label>包含內容（每行一項）</label>
         <textarea id="svc_includes" placeholder="蠟燭祈請一次&#10;祈福祝禱錄音節錄"></textarea>
-        <label style="display:flex;justify-content:space-between;align-items:center;">
-          <span>主圖（封面）</span>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;">
+          <label style="margin:0">主圖（封面）</label>
           <button class="btn" type="button" id="btnCoverUpload">上傳主圖</button>
-        </label>
-        <input id="svc_cover" placeholder="https://..." />
+        </div>
+        <div class="imgPreview" id="svcCoverPreview"><span class="muted">尚未上傳</span></div>
+        <input type="hidden" id="svc_cover">
         <input type="file" id="fileCover" accept="image/*" style="display:none;">
-        <label style="display:flex;justify-content:space-between;align-items:center;">
-          <span>圖集（每行一個網址，可留空）</span>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;">
+          <label style="margin:0">圖集（多張照片）</label>
           <button class="btn" type="button" id="btnGalleryUpload">上傳照片</button>
-        </label>
-        <textarea id="svc_gallery" placeholder="https://..."></textarea>
+        </div>
+        <div class="imgList" id="svcGalleryPreview"><span class="muted">尚未上傳</span></div>
+        <textarea id="svc_gallery" style="display:none;"></textarea>
         <input type="file" id="fileGallery" accept="image/*" multiple style="display:none;">
         <label style="display:flex;justify-content:space-between;align-items:center;">
           <span>服務項目（可供顧客選擇）</span>
           <button class="btn" type="button" id="btnAddOption">＋新增項目</button>
         </label>
-        <div class="muted">例如不同蠟燭或供品組合，輸入名稱與加價金額（0 代表不加價）。</div>
-        <div id="svc_options" style="display:grid;gap:8px;"></div>
+        <div class="muted">例如不同蠟燭或供品組合，輸入名稱與加價（0 代表不加價）。</div>
+        <div id="svc_options" class="optionsGrid"></div>
         <div class="row" style="margin-top:14px;gap:8px;">
           <button class="btn primary" id="btnSave">儲存服務</button>
           <button class="btn" id="btnReset">清空</button>
@@ -76,12 +92,8 @@
         </div>
         <div class="muted" id="formMsg" style="margin-top:10px;"></div>
       </div>
-      </div>
-      <div class="card" style="overflow:auto;">
-        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <input id="filter" placeholder="搜尋服務名稱…" style="flex:1;">
-          <button class="btn" id="btnReload">重新整理</button>
-        </div>
+      <div class="card list-card" style="overflow:auto;">
+        <h3 style="margin:0 0 10px;">服務清單</h3>
         <table>
           <thead>
             <tr><th style="width:60px">封面</th><th>服務資訊</th><th style="width:120px">費用</th><th style="width:80px">操作</th></tr>
@@ -114,6 +126,7 @@
     }
     return data;
   }
+
   const listBody = document.getElementById('svcListBody');
   const filterInput = document.getElementById('filter');
   const formMsg = document.getElementById('formMsg');
@@ -121,9 +134,59 @@
   const btnReset = document.getElementById('btnReset');
   const btnDelete = document.getElementById('btnDelete');
   const btnReload = document.getElementById('btnReload');
-  const fields = ['id','name','price','duration','description','includes','cover','gallery'];
+  const coverInput = document.getElementById('svc_cover');
+  const galleryInput = document.getElementById('svc_gallery');
+  const coverPreview = document.getElementById('svcCoverPreview');
+  const galleryPreview = document.getElementById('svcGalleryPreview');
+  const optionsWrap = document.getElementById('svc_options');
   let items = [];
 
+  function renderCoverPreview(url){
+    coverPreview.innerHTML = url ? `<img src="${url}" alt="">` : '<span class="muted">尚未上傳</span>';
+  }
+  function getGalleryUrls(){
+    const raw = galleryInput.value.trim();
+    if (!raw) return [];
+    return raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  }
+  function setGalleryUrls(urls){
+    galleryInput.value = urls.join('\n');
+    if (!urls.length){
+      galleryPreview.innerHTML = '<span class="muted">尚未上傳</span>';
+      return;
+    }
+    galleryPreview.innerHTML = urls.map(url => `
+      <div class="thumb">
+        <img src="${url}" alt="">
+        <button type="button" data-url="${url}">×</button>
+      </div>
+    `).join('');
+  }
+  function addOptionRow(name='', price=0){
+    const row = document.createElement('div');
+    row.className = 'svc-option-row';
+    const nameInput = document.createElement('input');
+    nameInput.name = 'opt_name';
+    nameInput.placeholder = '項目名稱';
+    nameInput.value = name || '';
+    const priceInput = document.createElement('input');
+    priceInput.name = 'opt_price';
+    priceInput.type = 'number';
+    priceInput.placeholder = '加價';
+    priceInput.value = Number(price||0);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn danger';
+    btn.textContent = '刪除';
+    btn.addEventListener('click', ()=>{
+      row.remove();
+      if (!optionsWrap.querySelector('.svc-option-row')){
+        addOptionRow();
+      }
+    });
+    row.append(nameInput, priceInput, btn);
+    optionsWrap.appendChild(row);
+  }
   function readForm(){
     return {
       id: document.getElementById('svc_id').value.trim(),
@@ -132,13 +195,13 @@
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
       includes: document.getElementById('svc_includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
-      cover: document.getElementById('svc_cover').value.trim(),
-      gallery: document.getElementById('svc_gallery').value.split('\n').map(s=>s.trim()).filter(Boolean),
-      options: Array.from(document.querySelectorAll('.svc-option-row')).map(row=>{
+      cover: coverInput.value.trim(),
+      gallery: getGalleryUrls(),
+      options: Array.from(optionsWrap.querySelectorAll('.svc-option-row')).map(row=>{
         const name = row.querySelector('input[name="opt_name"]').value.trim();
         const price = Number(row.querySelector('input[name="opt_price"]').value||0);
         return { name, price };
-      }).filter(opt=> opt.name)
+      }).filter(opt => opt.name)
     };
   }
   function fillForm(data){
@@ -148,45 +211,23 @@
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
     document.getElementById('svc_includes').value = Array.isArray(data.includes) ? data.includes.join('\n') : '';
-    document.getElementById('svc_cover').value = data.cover || '';
-    document.getElementById('svc_gallery').value = Array.isArray(data.gallery) ? data.gallery.join('\n') : '';
-    const opts = Array.isArray(data.options) ? data.options : [];
-    const container = document.getElementById('svc_options');
-    container.innerHTML = '';
+    coverInput.value = data.cover || '';
+    renderCoverPreview(coverInput.value);
+    setGalleryUrls(Array.isArray(data.gallery) ? data.gallery : []);
+    optionsWrap.innerHTML = '';
+    const opts = Array.isArray(data.options) && data.options.length ? data.options : [{name:'',price:0}];
     opts.forEach(opt => addOptionRow(opt.name, opt.price));
-    if (!opts.length) addOptionRow();
     btnDelete.style.display = data.id ? 'inline-flex' : 'none';
   }
-
-  function addOptionRow(name='', price=0){
-    const container = document.getElementById('svc_options');
-    const row = document.createElement('div');
-    row.className = 'row svc-option-row';
-    row.innerHTML = `
-      <input name="opt_name" placeholder="項目名稱" value="${name||''}">
-      <input name="opt_price" type="number" placeholder="加價" value="${Number(price||0)}">
-      <button type="button" class="btn danger xOpt">刪除</button>
-    `;
-    row.querySelector('.xOpt').addEventListener('click', ()=>{
-      row.remove();
-      if (!container.querySelector('.svc-option-row')){
-        addOptionRow();
-      }
-    });
-    container.appendChild(row);
-  }
   function resetForm(){
-    fillForm({ id:'', price:0, options:[{name:'',price:0}] });
+    fillForm({ id:'', price:0, gallery:[], options:[{name:'',price:0}] });
     formMsg.textContent = '';
   }
   async function uploadFiles(fileList){
     if (!fileList || !fileList.length) return [];
     const form = new FormData();
     Array.from(fileList).forEach(f => form.append('files[]', f));
-    const res = await fetch('/api/upload', {
-      method:'POST',
-      body: form
-    });
+    const res = await fetch('/api/upload', { method:'POST', body: form });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       throw new Error((data && data.error) || '上傳失敗');
@@ -205,7 +246,7 @@
         <td>${it.cover ? `<img src="${it.cover}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px;">` : ''}</td>
         <td>
           <div style="font-weight:700;">${it.name||''}</div>
-          <div class="muted">${it.duration || ''}</div>
+          <div class="muted">${it.includes && it.includes.length ? it.includes[0] : '—'}</div>
         </td>
         <td>${Number(it.price||0).toLocaleString('zh-TW')}</td>
         <td><button class="btn" data-act="edit" data-id="${it.id}">編輯</button></td>
@@ -222,6 +263,7 @@
       listBody.innerHTML = `<tr><td colspan="4" class="muted">載入失敗：${err.message}</td></tr>`;
     }
   }
+
   btnReload.addEventListener('click', loadServices);
   filterInput.addEventListener('input', renderList);
   btnReset.addEventListener('click', resetForm);
@@ -257,8 +299,8 @@
       formMsg.textContent = '已儲存';
       await loadServices();
       if (data.id){
-        const newItem = items.find(x=> x.id === data.id);
-        if (newItem) fillForm(newItem);
+        const target = items.find(x=> x.id === data.id);
+        if (target) fillForm(target);
       }else{
         resetForm();
       }
@@ -266,7 +308,6 @@
       formMsg.textContent = '儲存失敗：' + err.message;
     }
   });
-  document.getElementById('btnAddOption').addEventListener('click', ()=> addOptionRow());
   btnDelete.addEventListener('click', async ()=>{
     const id = document.getElementById('svc_id').value.trim();
     if (!id) return;
@@ -279,12 +320,8 @@
       alert('刪除失敗：' + err.message);
     }
   });
-  document.getElementById('btnCoverUpload').addEventListener('click',()=>{
-    document.getElementById('fileCover').click();
-  });
-  document.getElementById('btnGalleryUpload').addEventListener('click',()=>{
-    document.getElementById('fileGallery').click();
-  });
+  document.getElementById('btnCoverUpload').addEventListener('click',()=> document.getElementById('fileCover').click());
+  document.getElementById('btnGalleryUpload').addEventListener('click',()=> document.getElementById('fileGallery').click());
   document.getElementById('fileCover').addEventListener('change', async e=>{
     const files = e.target.files;
     if (!files || !files.length) return;
@@ -292,7 +329,8 @@
     try{
       const uploaded = await uploadFiles(files);
       if (uploaded.length){
-        document.getElementById('svc_cover').value = uploaded[0].url || '';
+        coverInput.value = uploaded[0].url || '';
+        renderCoverPreview(coverInput.value);
         formMsg.textContent = '主圖已更新';
       }
     }catch(err){
@@ -307,10 +345,9 @@
     formMsg.textContent = '上傳圖片中…';
     try{
       const uploaded = await uploadFiles(files);
-      const existing = document.getElementById('svc_gallery').value.trim();
-      const urls = existing ? existing.split('\n').filter(Boolean) : [];
+      const urls = getGalleryUrls();
       uploaded.forEach(f => urls.push(f.url || ''));
-      document.getElementById('svc_gallery').value = urls.join('\n');
+      setGalleryUrls(urls);
       formMsg.textContent = '圖集已更新';
     }catch(err){
       formMsg.textContent = '上傳失敗：' + err.message;
@@ -318,15 +355,18 @@
       e.target.value = '';
     }
   });
+  galleryPreview.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-url]');
+    if (!btn) return;
+    const url = btn.getAttribute('data-url');
+    const urls = getGalleryUrls().filter(item => item !== url);
+    setGalleryUrls(urls);
+  });
+  document.getElementById('btnAddOption').addEventListener('click', ()=> addOptionRow());
+
   resetForm();
   loadServices();
 })();
 </script>
 </body>
 </html>
-        <div class="row" style="margin-top:14px;gap:8px;">
-          <button class="btn primary" id="btnSave">儲存服務</button>
-          <button class="btn" id="btnReset">清空</button>
-          <button class="btn danger" id="btnDelete" style="margin-left:auto;display:none;">刪除此服務</button>
-        </div>
-        <div class="muted" id="formMsg" style="margin-top:10px;"></div>
