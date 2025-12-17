@@ -1519,21 +1519,26 @@ function composeOrderEmail(order, opts = {}) {
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const itemsHtml = items.length
-    ? items.map((it, idx) => {
-        const img = it.image
-          ? `<img src="${esc(it.image)}" alt="${esc(it.name)}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-right:16px;">`
-          : `<div style="width:64px;height:64px;border-radius:12px;background:#e2e8f0;margin-right:16px;"></div>`;
-        const dividerStyle = idx === items.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
-        return `<div style="display:flex;align-items:center;${dividerStyle}">
-          ${img}
-          <div style="flex:1;">
-            <div style="font-weight:600;color:#0f172a;">${esc(it.name)}</div>
-            ${it.spec ? `<div style="color:#475569;font-size:14px;margin:4px 0;">${esc(it.spec)}</div>` : ''}
-            <div style="color:#0f172a;font-size:14px;">數量：${it.qty}</div>
-          </div>
-          <div style="font-weight:600;color:#0f172a;">${fmt(it.total)}</div>
-        </div>`;
-      }).join('')
+    ? `<table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead>
+          <tr style="text-align:left;border-bottom:1px solid #e2e8f0;">
+            <th style="padding:6px 0;">商品</th>
+            <th style="padding:6px 0;">規格</th>
+            <th style="padding:6px 0;">數量</th>
+            <th style="padding:6px 0;">總額</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(it => `
+            <tr>
+              <td style="padding:6px 0;">${esc(it.name)}</td>
+              <td style="padding:6px 0;color:#475569;">${esc(it.spec || '')}</td>
+              <td style="padding:6px 0;">${it.qty}</td>
+              <td style="padding:6px 0;">${fmt(it.total)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`
     : '<p style="margin:0;color:#475569;">本次訂單明細將由客服另行確認。</p>';
   const itemsText = items.length
     ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
