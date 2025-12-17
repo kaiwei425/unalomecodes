@@ -1,7 +1,7 @@
 (() => {
   const listEl = document.getElementById('svcList');
   const emptyEl = document.getElementById('svcListEmpty');
-  const lookupBtn = document.getElementById('svcLookupBtn');
+  const lookupTriggers = Array.from(document.querySelectorAll('#svcLookupBtn, #svcLookupBtn2, #linkServiceLookup'));
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
   const lookupForm = document.getElementById('svcLookupForm');
@@ -82,9 +82,13 @@
   }
 
   function initLookupDialog(){
-    if (lookupBtn && lookupDialog){
-      lookupBtn.addEventListener('click', () => {
-        lookupDialog.showModal();
+    if (lookupTriggers.length && lookupDialog){
+      lookupTriggers.forEach(btn=>{
+        if (!btn) return;
+        btn.addEventListener('click', (ev)=>{
+          ev.preventDefault();
+          lookupDialog.showModal();
+        });
       });
     }
     if (lookupClose && lookupDialog){

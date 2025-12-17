@@ -7,25 +7,40 @@
   <link rel="stylesheet" href="/css/style.css">
   <style>
     body{
-      background:linear-gradient(180deg,#090f1c,#0f172a);
-      color:#e5e7eb;
+      background:linear-gradient(180deg,#f8fafc,#e2e8f0);
+      color:#0f172a;
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
-    .svc-wrap{max-width:1200px;margin:0 auto;padding:24px 18px 60px;}
-    .svc-hero{border-radius:24px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(99,102,241,.12));padding:32px 28px;margin-bottom:32px;box-shadow:0 25px 60px rgba(15,23,42,.45);}
-    .svc-hero h1{margin:0;font-size:30px;letter-spacing:1px;}
-    .svc-hero p{margin:12px 0 0;color:rgba(226,232,240,.9);line-height:1.6;}
+    .service-page .top{
+      background:var(--card,#fff);
+    }
+    .service-actions{display:flex;gap:10px;align-items:center;}
+    .service-actions .btn{border-radius:12px;padding:8px 14px;}
+    .service-actions .btn.primary{background:linear-gradient(120deg,#34d399,#60a5fa);color:#fff;border:none;}
+    .service-layout{margin-top:20px;}
+    .service-main .svc-hero{
+      background:linear-gradient(135deg,#eef2ff,#dbeafe);
+      border-radius:20px;
+      padding:28px;
+      border:1px solid rgba(99,102,241,.25);
+      box-shadow:0 20px 60px rgba(15,23,42,.08);
+    }
+    .service-main .svc-hero h1{margin:0;font-size:30px;}
+    .service-main .svc-hero p{margin:12px 0 0;color:#4c1d95;line-height:1.6;}
+    .svc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 0 16px;}
+    .svc-head .title{font-size:18px;font-weight:700;}
+    .svc-head .sub{color:#6b7280;font-size:14px;}
     .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;}
-    .svc-card{background:var(--card,#111827);border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 40px rgba(8,8,15,.35);min-height:360px;position:relative;transition:transform .18s ease, box-shadow .18s ease;}
-    .svc-card:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(8,8,15,.45);}
+    .svc-card{background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 40px rgba(15,23,42,.12);min-height:360px;position:relative;transition:transform .18s ease, box-shadow .18s ease;}
+    .svc-card:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(15,23,42,.15);}
     .svc-card .svc-pic{position:relative;background:#0b1022;overflow:hidden;}
     .svc-card .svc-pic::before{content:"";display:block;padding-top:70%;}
     .svc-card .svc-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:contrast(1.08);}
     .svc-card .body{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;}
-    .svc-card .meta{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:#94a3b8;}
-    .svc-card .meta span{padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.18);border:1px solid rgba(148,163,184,.3);}
-    .svc-card button{margin-top:auto;border:none;border-radius:12px;padding:12px;font-weight:700;color:#0f172a;background:linear-gradient(120deg,#a7f3d0,#fdf2f8);cursor:pointer;box-shadow:0 8px 20px rgba(255,255,255,.2);}
-    #svcListEmpty{grid-column:1/-1;padding:40px 24px;text-align:center;color:#94a3b8;border:1px dashed rgba(255,255,255,.12);border-radius:20px;}
+    .svc-card .meta{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:#6b7280;}
+    .svc-card .meta span{padding:2px 8px;border-radius:999px;background:rgba(15,118,110,.08);border:1px solid rgba(15,118,110,.2);color:#0f766e;}
+    .svc-card button{margin-top:auto;border:none;border-radius:12px;padding:12px;font-weight:700;color:#fff;background:linear-gradient(120deg,#34d399,#60a5fa);cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.2);}
+    #svcListEmpty{grid-column:1/-1;padding:40px 24px;text-align:center;color:#6b7280;border:1px dashed rgba(148,163,184,.6);border-radius:20px;background:#fff;}
     .svc-dialog{border:none;border-radius:24px;padding:0;background:#0b1022;color:#e5e7eb;width:92%;max-width:720px;box-shadow:0 30px 90px rgba(0,0,0,.6);}
     .svc-dialog header{padding:26px 28px 18px;border-bottom:1px solid rgba(255,255,255,.06);}
     .svc-dialog section{padding:24px 28px;display:grid;gap:18px;}
@@ -40,23 +55,66 @@
   </style>
 </head>
 <body>
-  <div class="svc-wrap">
-    <div class="svc-hero">
-      <h1>服務型商品專區</h1>
-      <p>蠟燭祈福、遠距加持、客製儀式等服務全部在這裡完成。每項服務將有獨立的流程、購物車與祈福成果查詢，避免與實體商品混用。</p>
-    </div>
-    <section>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;">
+  <div class="wrap service-page">
+    <div class="top service-top">
+      <div class="brand">
+        <img src="https://i.ibb.co/7mtppQQ/logo.jpg" alt="">
         <div>
-          <div style="font-size:18px;font-weight:700">可選服務</div>
-          <div style="color:#94a3b8;font-size:14px;">未來的蠟燭祈福／儀式服務會透過這裡上架</div>
+          <div class="t1">泰國寺廟map ©️ unalomecodes</div>
+          <div class="t2">服務型商品專區（蠟燭祈福／遠距加持等）</div>
         </div>
-        <button id="svcLookupBtn" class="btn primary" style="margin-left:auto;">查祈福進度</button>
       </div>
-      <div id="svcList" class="svc-grid">
-        <div id="svcListEmpty">載入中…</div>
+      <div class="service-actions">
+        <a href="/shop.html" class="btn">返回實體商品</a>
+        <button id="svcLookupBtn" class="btn primary">查祈福進度</button>
       </div>
-    </section>
+    </div>
+
+    <div class="store service-layout">
+      <aside id="sideDeities">
+        <div class="side-cart">
+          <button id="cartFab" type="button" title="查看購物車" disabled style="opacity:.4;cursor:not-allowed;"><span class="lbl">實體購物車</span><span id="cartBadge">0</span></button>
+        </div>
+        <h3>服務流程說明</h3>
+        <div class="list">
+          <span class="muted" style="display:block;line-height:1.6;">本專區的服務與實體商品完全分開，請透過此頁面提交資料並等待通知。</span>
+        </div>
+        <div class="tools-box">
+          <h4>常用連結</h4>
+          <div class="list">
+            <a href="/shop.html">返回商品館</a>
+            <a href="#" id="linkServiceLookup">祈福進度查詢</a>
+            <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">官方 LINE 客服</a>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main service-main">
+        <div class="svc-hero">
+          <h1>服務型商品專區</h1>
+          <p>蠟燭祈福、遠距加持、客製儀式等服務全部在這裡完成。每項服務擁有獨立流程、購物車與祈福進度查詢，確保體驗清楚不混淆。</p>
+        </div>
+        <section>
+          <div class="svc-head">
+            <div>
+              <div class="title">可選服務</div>
+              <div class="sub">未來的蠟燭祈福／儀式服務都會透過此處上架</div>
+            </div>
+            <button id="svcLookupBtn2" class="btn primary ghost">查祈福進度</button>
+          </div>
+          <div id="svcList" class="svc-grid">
+            <div id="svcListEmpty">載入中…</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>聯絡我們</strong><br>
+      bkkaiwei@gmail.com<br>
+      客服LINE official @427oaemj<br>
+      2025©unalomecodes
+    </div>
   </div>
 
   <dialog id="svcLookup" style="border:none;border-radius:18px;padding:0;width:92%;max-width:520px;">
