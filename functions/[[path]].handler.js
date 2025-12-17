@@ -1647,6 +1647,8 @@ async function sendEmailMessage(env, message) {
     return { ok:false, skipped:'missing_config' };
   }
   const endpoint = (env.RESEND_ENDPOINT || 'https://api.resend.com/emails').trim() || 'https://api.resend.com/emails';
+  const defaultReplyTo = 'bkkaiwei@gmail.com';
+  const replyTo = message.replyTo || defaultReplyTo;
   const payload = {
     from,
     to: toList,
@@ -1654,7 +1656,7 @@ async function sendEmailMessage(env, message) {
     html: message.html || undefined,
     text: message.text || undefined
   };
-  if (message.replyTo) payload.reply_to = message.replyTo;
+  if (replyTo) payload.reply_to = replyTo;
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
