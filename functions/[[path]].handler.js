@@ -1731,7 +1731,7 @@ async function sendEmailMessage(env, message) {
 function shouldNotifyStatus(status) {
   const txt = String(status || '').trim();
   if (!txt) return false;
-  return /已付款|付款完成|匯款已確認/.test(txt);
+  return txt === '已付款待出貨' || txt === '已寄件';
 }
 
 function escapeHtmlEmail(str) {
