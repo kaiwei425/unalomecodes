@@ -66,19 +66,12 @@
         <label>包含內容（每行一項）</label>
         <textarea id="svc_includes" placeholder="蠟燭祈請一次&#10;祈福祝禱錄音節錄"></textarea>
         <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;">
-          <label style="margin:0">主圖（封面）</label>
-          <button class="btn" type="button" id="btnCoverUpload">上傳主圖</button>
+          <label style="margin:0">服務圖片（可多張，首張為封面）</label>
+          <button class="btn" type="button" id="btnImagesUpload">上傳圖片</button>
         </div>
-        <div class="imgPreview" id="svcCoverPreview"><span class="muted">尚未上傳</span></div>
-        <input type="hidden" id="svc_cover">
-        <input type="file" id="fileCover" accept="image/*" style="display:none;">
-        <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;">
-          <label style="margin:0">圖集（多張照片）</label>
-          <button class="btn" type="button" id="btnGalleryUpload">上傳照片</button>
-        </div>
-        <div class="imgList" id="svcGalleryPreview"><span class="muted">尚未上傳</span></div>
-        <textarea id="svc_gallery" style="display:none;"></textarea>
-        <input type="file" id="fileGallery" accept="image/*" multiple style="display:none;">
+        <div class="imgList" id="svcImagePreview"><span class="muted">尚未上傳</span></div>
+        <textarea id="svc_images" style="display:none;"></textarea>
+        <input type="file" id="fileImages" accept="image/*" multiple style="display:none;">
         <label style="display:flex;justify-content:space-between;align-items:center;">
           <span>服務項目（可供顧客選擇）</span>
           <button class="btn" type="button" id="btnAddOption">＋新增項目</button>
@@ -134,31 +127,28 @@
   const btnReset = document.getElementById('btnReset');
   const btnDelete = document.getElementById('btnDelete');
   const btnReload = document.getElementById('btnReload');
-  const coverInput = document.getElementById('svc_cover');
-  const galleryInput = document.getElementById('svc_gallery');
-  const coverPreview = document.getElementById('svcCoverPreview');
-  const galleryPreview = document.getElementById('svcGalleryPreview');
+  const imagesInput = document.getElementById('svc_images');
+  const imagePreview = document.getElementById('svcImagePreview');
   const optionsWrap = document.getElementById('svc_options');
   let items = [];
 
-  function renderCoverPreview(url){
-    coverPreview.innerHTML = url ? `<img src="${url}" alt="">` : '<span class="muted">尚未上傳</span>';
-  }
-  function getGalleryUrls(){
-    const raw = galleryInput.value.trim();
+  function getImages(){
+    const raw = (imagesInput.value || '').trim();
     if (!raw) return [];
     return raw.split('\n').map(s=>s.trim()).filter(Boolean);
   }
-  function setGalleryUrls(urls){
-    galleryInput.value = urls.join('\n');
+  function setImages(list){
+    const urls = Array.from(new Set((list||[]).filter(Boolean)));
+    imagesInput.value = urls.join('\n');
     if (!urls.length){
-      galleryPreview.innerHTML = '<span class="muted">尚未上傳</span>';
+      imagePreview.innerHTML = '<span class="muted">尚未上傳</span>';
       return;
     }
-    galleryPreview.innerHTML = urls.map(url => `
+    imagePreview.innerHTML = urls.map((url, idx) => `
       <div class="thumb">
         <img src="${url}" alt="">
-        <button type="button" data-url="${url}">×</button>
+        <button type="button" class="x" data-url="${url}">×</button>
+        ${idx === 0 ? '<div style="position:absolute;left:6px;bottom:6px;font-size:11px;background:rgba(15,23,42,.7);color:#fff;padding:2px 6px;border-radius:999px;">封面</div>' : ''}
       </div>
     `).join('');
   }
@@ -188,6 +178,7 @@
     optionsWrap.appendChild(row);
   }
   function readForm(){
+    const images = getImages();
     return {
       id: document.getElementById('svc_id').value.trim(),
       name: document.getElementById('svc_name').value.trim(),
@@ -195,8 +186,8 @@
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
       includes: document.getElementById('svc_includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
-      cover: coverInput.value.trim(),
-      gallery: getGalleryUrls(),
+      cover: images[0] || '',
+      gallery: images.slice(1),
       options: Array.from(optionsWrap.querySelectorAll('.svc-option-row')).map(row=>{
         const name = row.querySelector('input[name="opt_name"]').value.trim();
         const price = Number(row.querySelector('input[name="opt_price"]').value||0);
@@ -211,9 +202,13 @@
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
     document.getElementById('svc_includes').value = Array.isArray(data.includes) ? data.includes.join('\n') : '';
-    coverInput.value = data.cover || '';
-    renderCoverPreview(coverInput.value);
-    setGalleryUrls(Array.isArray(data.gallery) ? data.gallery : []);
+    const gallery = Array.isArray(data.gallery) ? data.gallery : [];
+    const imgs = [];
+    if (data.cover) imgs.push(data.cover);
+    gallery.forEach(url=>{
+      if (url && !imgs.includes(url)) imgs.push(url);
+    });
+    setImages(imgs);
     optionsWrap.innerHTML = '';
     const opts = Array.isArray(data.options) && data.options.length ? data.options : [{name:'',price:0}];
     opts.forEach(opt => addOptionRow(opt.name, opt.price));
@@ -320,47 +315,31 @@
       alert('刪除失敗：' + err.message);
     }
   });
-  document.getElementById('btnCoverUpload').addEventListener('click',()=> document.getElementById('fileCover').click());
-  document.getElementById('btnGalleryUpload').addEventListener('click',()=> document.getElementById('fileGallery').click());
-  document.getElementById('fileCover').addEventListener('change', async e=>{
-    const files = e.target.files;
-    if (!files || !files.length) return;
-    formMsg.textContent = '上傳主圖中…';
-    try{
-      const uploaded = await uploadFiles(files);
-      if (uploaded.length){
-        coverInput.value = uploaded[0].url || '';
-        renderCoverPreview(coverInput.value);
-        formMsg.textContent = '主圖已更新';
-      }
-    }catch(err){
-      formMsg.textContent = '上傳失敗：' + err.message;
-    }finally{
-      e.target.value = '';
-    }
-  });
-  document.getElementById('fileGallery').addEventListener('change', async e=>{
+  document.getElementById('btnImagesUpload').addEventListener('click',()=> document.getElementById('fileImages').click());
+  document.getElementById('fileImages').addEventListener('change', async e=>{
     const files = e.target.files;
     if (!files || !files.length) return;
     formMsg.textContent = '上傳圖片中…';
     try{
       const uploaded = await uploadFiles(files);
-      const urls = getGalleryUrls();
-      uploaded.forEach(f => urls.push(f.url || ''));
-      setGalleryUrls(urls);
-      formMsg.textContent = '圖集已更新';
+      const urls = getImages();
+      uploaded.forEach(f => {
+        if (f && f.url) urls.push(f.url);
+      });
+      setImages(urls);
+      formMsg.textContent = '圖片已更新（首張為封面）';
     }catch(err){
       formMsg.textContent = '上傳失敗：' + err.message;
     }finally{
       e.target.value = '';
     }
   });
-  galleryPreview.addEventListener('click', e=>{
+  imagePreview.addEventListener('click', e=>{
     const btn = e.target.closest('button[data-url]');
     if (!btn) return;
     const url = btn.getAttribute('data-url');
-    const urls = getGalleryUrls().filter(item => item !== url);
-    setGalleryUrls(urls);
+    const urls = getImages().filter(item => item !== url);
+    setImages(urls);
   });
   document.getElementById('btnAddOption').addEventListener('click', ()=> addOptionRow());
 

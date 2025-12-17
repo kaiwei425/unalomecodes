@@ -6,55 +6,54 @@
   <title>服務型商品｜unalomecodes</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    body{
-      background:linear-gradient(180deg,#f8fafc,#e2e8f0);
-      color:#0f172a;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    }
-    .service-page .top{
-      background:var(--card,#fff);
-    }
-    .service-actions{display:flex;gap:10px;align-items:center;}
-    .service-actions .btn{border-radius:12px;padding:8px 14px;}
-    .service-actions .btn.primary{background:linear-gradient(120deg,#34d399,#60a5fa);color:#fff;border:none;}
-    .service-layout{margin-top:20px;}
-    .service-main .svc-hero{
-      background:linear-gradient(135deg,#eef2ff,#dbeafe);
-      border-radius:20px;
-      padding:28px;
-      border:1px solid rgba(99,102,241,.25);
-      box-shadow:0 20px 60px rgba(15,23,42,.08);
-    }
-    .service-main .svc-hero h1{margin:0;font-size:30px;}
-    .service-main .svc-hero p{margin:12px 0 0;color:#4c1d95;line-height:1.6;}
-    .svc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 0 16px;}
-    .svc-head .title{font-size:18px;font-weight:700;}
-    .svc-head .sub{color:#6b7280;font-size:14px;}
-    .svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;}
-    .svc-card{background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 40px rgba(15,23,42,.12);min-height:360px;position:relative;transition:transform .18s ease, box-shadow .18s ease;}
-    .svc-card:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(15,23,42,.15);}
-    .svc-card .svc-pic{position:relative;background:#0b1022;overflow:hidden;}
-    .svc-card .svc-pic::before{content:"";display:block;padding-top:70%;}
-    .svc-card .svc-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:contrast(1.08);}
-    .svc-card .body{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;}
-    .svc-card .meta{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:#6b7280;}
-    .svc-card .meta span{padding:2px 8px;border-radius:999px;background:rgba(15,118,110,.08);border:1px solid rgba(15,118,110,.2);color:#0f766e;}
-    .svc-card button{margin-top:auto;border:none;border-radius:12px;padding:12px;font-weight:700;color:#fff;background:linear-gradient(120deg,#34d399,#60a5fa);cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.2);}
-    #svcListEmpty{grid-column:1/-1;padding:40px 24px;text-align:center;color:#6b7280;border:1px dashed rgba(148,163,184,.6);border-radius:20px;background:#fff;}
-    .svc-dialog{border:none;border-radius:24px;padding:0;background:#0b1022;color:#e5e7eb;width:92%;max-width:720px;box-shadow:0 30px 90px rgba(0,0,0,.6);}
-    .svc-dialog header{padding:26px 28px 18px;border-bottom:1px solid rgba(255,255,255,.06);}
-    .svc-dialog section{padding:24px 28px;display:grid;gap:18px;}
-    .svc-dialog .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;}
-    .svc-dialog .gallery img{width:100%;height:120px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.08);}
-    .svc-dialog footer{padding:20px 28px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:flex-end;gap:12px;}
-    .svc-form{display:grid;gap:14px;padding:0;margin:0;}
-    .svc-form label{display:grid;gap:6px;font-size:13px;color:#cbd5f5;}
-    .svc-form input,.svc-form textarea{padding:10px;border-radius:12px;border:1px solid #1f2937;background:#0f172a;color:#e5e7eb;}
-    .svc-form textarea{min-height:120px;resize:vertical;}
-    dialog::backdrop{background:rgba(15,23,42,.75);}
+body.service-view{background:var(--bg);color:var(--fg);}
+.service-top .service-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.service-top .service-actions .btn{border-radius:999px;padding:8px 14px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:pointer;}
+.service-top .service-actions .btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border-color:#1095d6;box-shadow:0 8px 18px rgba(16,149,214,.2);}
+.service-hero{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);}
+.service-hero h1{margin:0 0 6px;font-size:26px;font-weight:800;}
+.service-hero p{margin:0;color:var(--muted);line-height:1.6;}
+.svc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 12px;}
+.svc-head .title{font-weight:800;font-size:18px;}
+.svc-head .sub{font-size:13px;color:var(--muted);}
+.service-grid{margin-top:16px;}
+.service-grid .card .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0;}
+.service-grid .card .meta span{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;color:#1d4ed8;font-weight:600;}
+.service-grid .card .price{font-size:18px;margin-top:6px;}
+.service-grid .card .cta .btn{font-size:14px;}
+.svc-dialog{border:none;border-radius:18px;padding:0;background:var(--card);color:var(--fg);box-shadow:0 30px 60px rgba(15,23,42,.3);border:1px solid var(--line);}
+.svc-dialog .closeBar{border-bottom:1px solid var(--line);}
+.svc-dialog .dlgBody{display:grid;grid-template-columns:1fr;gap:18px;padding:18px;}
+@media(min-width:820px){.svc-dialog .dlgBody{grid-template-columns:1fr 1fr;}}
+.svc-dialog .svc-includes{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;list-style:disc;padding-left:22px;background:#f9fafb;}
+.svc-dialog .svc-includes li{margin-bottom:6px;color:#374151;}
+.svc-dialog .svc-options{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.svc-dialog .svc-options label{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;gap:10px;}
+.svc-dialog .svc-options input{margin:0;}
+.svc-stepper{display:flex;gap:8px;justify-content:center;padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(24,161,104,.08),rgba(16,149,214,.08));}
+.svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:700;}
+.svc-stepper span.active{background:#16a34a;color:#fff;border-color:#16a34a;}
+#svcCartForm{padding:0;}
+#svcCartForm section{padding:18px;display:grid;gap:12px;}
+#svcCartForm label{display:grid;gap:4px;font-size:13px;color:#374151;font-weight:700;}
+#svcCartForm input,#svcCartForm textarea,#svcCartForm select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
+#svcCartForm textarea{min-height:110px;resize:vertical;}
+.svc-summary{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:18px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.svc-summary strong{font-size:18px;}
+#svcLookup{border:none;border-radius:16px;padding:0;background:var(--card);border:1px solid var(--line);box-shadow:0 20px 50px rgba(15,23,42,.35);}
+#svcLookup header{padding:18px;border-bottom:1px solid var(--line);}
+#svcLookup form{padding:18px;display:grid;gap:12px;}
+#svcLookup label{display:grid;gap:6px;font-size:13px;color:#374151;font-weight:600;}
+#svcLookup input{padding:10px 12px;border:1px solid var(--line);border-radius:12px;}
+#svcLookup .actions{padding:0 18px 18px;display:flex;justify-content:flex-end;gap:10px;}
+#svcLookupResult{padding:0 18px 18px;}
+#svcLookupCards .lookup-card{border:1px solid var(--line);border-radius:12px;padding:12px;background:#f8fafc;}
+#svcSuccess .svc-success-body{padding:20px;display:grid;gap:12px;}
+#svcSuccess .svc-success-body .order-id{font-size:22px;font-weight:800;}
+#svcSuccess footer{padding:0 20px 20px;display:flex;justify-content:flex-end;gap:10px;}
   </style>
 </head>
-<body>
+<body class="service-view">
   <div class="wrap service-page">
     <div class="top service-top">
       <div class="brand">
@@ -102,7 +101,7 @@
             </div>
             <button id="svcLookupBtn2" class="btn primary ghost">查祈福進度</button>
           </div>
-          <div id="svcList" class="svc-grid">
+          <div id="svcList" class="grid service-grid">
             <div id="svcListEmpty">載入中…</div>
           </div>
         </section>
@@ -117,83 +116,86 @@
     </div>
   </div>
 
-  <dialog id="svcLookup" style="border:none;border-radius:18px;padding:0;width:92%;max-width:520px;">
-    <div style="padding:20px;border-bottom:1px solid rgba(148,163,184,.2);">
-      <h2 style="margin:0;font-size:20px;">祈福進度查詢</h2>
-      <p style="margin:8px 0 0;color:#6b7280;font-size:13px;">此區將接上獨立的服務訂單查詢 API。</p>
-    </div>
-    <form id="svcLookupForm" style="padding:18px;display:grid;gap:12px;">
-      <label style="display:grid;gap:6px;font-size:13px;color:#cbd5f5;">
+  <dialog id="svcLookup">
+    <header>
+      <div style="font-weight:800;font-size:18px;">祈福進度查詢</div>
+      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">輸入手機與訂單編號末五碼，即可查看服務最新狀態。</p>
+    </header>
+    <form id="svcLookupForm">
+      <label>
         手機號碼
-        <input type="tel" name="phone" required placeholder="請輸入下單時的電話" style="padding:10px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#e5e7eb;">
+        <input type="tel" name="phone" required placeholder="請輸入下單時的電話">
       </label>
-      <label style="display:grid;gap:6px;font-size:13px;color:#cbd5f5;">
+      <label>
         訂單編號末五碼
-        <input type="text" name="orderDigits" required inputmode="numeric" pattern="\\d{5}" placeholder="12345" style="padding:10px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#e5e7eb;">
+        <input type="text" name="orderDigits" required inputmode="numeric" pattern="\\d{5}" placeholder="12345">
       </label>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <div class="actions">
         <button type="button" class="btn" id="svcLookupClose">關閉</button>
         <button type="submit" class="btn primary">查詢</button>
       </div>
-      <p id="svcLookupHint" style="margin:0;font-size:12px;color:#94a3b8;">查詢功能將在後續步驟接上服務訂單 API。</p>
+      <p id="svcLookupHint" style="margin:0;font-size:12px;color:#94a3b8;">查詢結果載入後會顯示於下方。</p>
     </form>
-    <div id="svcLookupResult" style="padding:0 18px 18px;display:none;">
+    <div id="svcLookupResult" style="display:none;">
       <div style="font-weight:700;margin-bottom:6px;">查詢結果</div>
       <div id="svcLookupCards" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
   </dialog>
 
   <dialog id="svcDetail" class="svc-dialog">
-    <header>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
-        <div>
-          <div id="svcDetailTitle" style="font-size:24px;font-weight:800;">服務名稱</div>
-          <div id="svcDetailPrice" style="margin-top:6px;color:#a5b4fc;font-weight:600;">NT$ 0</div>
-        </div>
-        <button id="svcDetailClose" class="btn" style="border-radius:999px;">關閉</button>
-      </div>
-    </header>
-    <section>
-      <div id="svcDetailDesc" style="line-height:1.8;color:#e2e8f0;">服務說明</div>
+    <div class="closeBar">
+      <strong id="svcDetailTitle">服務名稱</strong>
+      <button id="svcDetailClose" class="xbtn" type="button">✕</button>
+    </div>
+    <div class="dlgBody">
       <div>
-        <div style="font-weight:700;margin-bottom:8px;">包含內容</div>
-        <ul id="svcDetailIncludes" style="margin:0;padding-left:20px;color:#cbd5f5;line-height:1.7;">
+        <div class="bigBox">
+          <img id="svcDetailHero" class="big" alt="">
+        </div>
+        <div class="thumbs" id="svcDetailGallery"></div>
+      </div>
+      <div>
+        <div style="font-weight:700;color:#6b7280;margin-bottom:4px;">服務內容</div>
+        <div id="svcDetailDesc" style="font-size:14px;line-height:1.7;border:1px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap;max-height:220px;overflow:auto;">服務說明</div>
+        <ul id="svcDetailIncludes" class="svc-includes">
           <li>蠟燭祈請</li>
         </ul>
+        <div id="svcDetailOptionsWrap" style="display:none;">
+          <div style="font-weight:700;margin-top:12px;">服務項目</div>
+          <div id="svcDetailOptions" class="svc-options"></div>
+        </div>
+        <div style="margin-top:12px;font-weight:800;font-size:20px;color:#0f172a;">
+          <span id="svcDetailPrice">NT$ 0</span>
+        </div>
+        <div class="cta" style="margin-top:12px;">
+          <button id="svcDetailAction" class="btn primary" style="flex:1;">填寫祈福資料</button>
+        </div>
       </div>
-      <div id="svcDetailOptionsWrap" style="display:none;">
-        <div style="font-weight:700;margin-bottom:8px;">服務項目</div>
-        <div id="svcDetailOptions" style="display:flex;flex-direction:column;gap:6px;"></div>
-      </div>
-      <div>
-        <div style="font-weight:700;margin-bottom:8px;">示意圖</div>
-        <div id="svcDetailGallery" class="gallery"></div>
-      </div>
-    </section>
-    <footer>
-      <button id="svcDetailAction" class="btn primary" style="font-weight:700;">加入祈福清單</button>
-    </footer>
+    </div>
   </dialog>
 
   <dialog id="svcCart" class="svc-dialog">
+    <div class="svc-stepper">
+      <span class="active">1. 確認服務</span>
+      <span>2. 填寫資料</span>
+      <span>3. 完成</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid var(--line);">
+      <div>
+        <div style="font-weight:800;font-size:18px;">填寫祈福資料</div>
+        <div id="svcCartSubtitle" style="margin-top:4px;color:#6b7280;font-size:13px;">請確認聯絡方式與願望內容</div>
+      </div>
+      <button type="button" id="svcCartClose" class="xbtn">✕</button>
+    </div>
     <form id="svcCartForm" class="svc-form">
-      <header>
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
-          <div>
-            <div style="font-size:22px;font-weight:800;">填寫祈福資料</div>
-            <div id="svcCartSubtitle" style="margin-top:6px;color:#94a3b8;font-size:13px;">請確認聯絡方式與願望內容</div>
-          </div>
-          <button type="button" id="svcCartClose" class="btn">關閉</button>
+      <div class="svc-summary">
+        <div>
+          <div id="svcCartServiceName" style="font-weight:700;font-size:16px;">服務名稱</div>
+          <div id="svcCartDuration" style="font-size:13px;color:#6b7280;margin-top:4px;">時間依老師安排</div>
         </div>
-      </header>
-      <section style="padding:20px 28px;display:grid;gap:16px;">
-        <div style="padding:14px;border-radius:16px;background:rgba(255,255,255,.04);display:flex;justify-content:space-between;align-items:center;gap:12px;">
-          <div>
-            <div id="svcCartServiceName" style="font-weight:700;font-size:16px;">服務名稱</div>
-            <div id="svcCartDuration" style="font-size:13px;color:#94a3b8;margin-top:4px;">時間依老師安排</div>
-          </div>
-          <div id="svcCartServicePrice" style="font-weight:700;font-size:18px;">NT$ 0</div>
-        </div>
+        <strong id="svcCartServicePrice">NT$ 0</strong>
+      </div>
+      <section>
         <input type="hidden" id="svcCartServiceId">
         <label>
           聯絡人姓名（必填）
@@ -224,33 +226,29 @@
           <textarea name="note" placeholder="可輸入願望、祈福對象、特殊需求…"></textarea>
         </label>
       </section>
-      <footer>
-        <button type="submit" id="svcCartSubmit" class="btn primary" style="font-weight:700;">送出祈福訂單</button>
-      </footer>
+      <div style="padding:0 18px 18px;display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" class="btn" id="svcCartBack">返回</button>
+        <button type="submit" id="svcCartSubmit" class="btn primary">送出祈福訂單</button>
+      </div>
     </form>
   </dialog>
 
   <dialog id="svcSuccess" class="svc-dialog">
-    <header>
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-        <div>
-          <div style="font-size:22px;font-weight:800;">祈福訂單已送出</div>
-          <div style="color:#a5b4fc;margin-top:6px;font-size:14px;">請妥善保存訂單編號以便查詢進度</div>
-        </div>
-        <button id="svcSuccessClose" class="btn">關閉</button>
+    <div class="closeBar">
+      <strong>祈福訂單已送出</strong>
+      <button id="svcSuccessClose" class="xbtn" type="button">✕</button>
+    </div>
+    <div class="svc-success-body">
+      <div>
+        <div style="color:#6b7280;font-size:13px;">訂單編號</div>
+        <div id="svcSuccessId" class="order-id">SV000000</div>
       </div>
-    </header>
-    <section>
-      <div style="padding:16px;border-radius:16px;background:rgba(255,255,255,.04);">
-        <div style="color:#94a3b8;font-size:13px;">訂單編號</div>
-        <div id="svcSuccessId" style="font-size:20px;font-weight:800;margin-top:4px;">SV000000</div>
-      </div>
-      <div id="svcSuccessHint" style="font-size:14px;color:#e2e8f0;line-height:1.8;">
+      <div id="svcSuccessHint" style="font-size:14px;color:#374151;line-height:1.7;">
         我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。
       </div>
-    </section>
+    </div>
     <footer>
-      <button id="svcSuccessLookup" class="btn primary">立即查詢進度</button>
+      <button class="btn" id="svcSuccessLookup">查詢進度</button>
     </footer>
   </dialog>
 

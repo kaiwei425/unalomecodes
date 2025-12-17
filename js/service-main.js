@@ -17,6 +17,7 @@
   const detailAction = document.getElementById('svcDetailAction');
   const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
   const detailOptions = document.getElementById('svcDetailOptions');
+  const detailHero = document.getElementById('svcDetailHero');
   let detailDataset = null;
   const cartDialog = document.getElementById('svcCart');
   const cartForm = document.getElementById('svcCartForm');
@@ -26,6 +27,9 @@
   const cartDurationEl = document.getElementById('svcCartDuration');
   const cartServiceIdInput = document.getElementById('svcCartServiceId');
   const cartSubmitBtn = document.getElementById('svcCartSubmit');
+  const cartBackBtn = document.getElementById('svcCartBack');
+  const cartOptionWrap = document.getElementById('svcCartOptionWrap');
+  const cartOptionSelect = document.getElementById('svcCartOption');
   const successDialog = document.getElementById('svcSuccess');
   const successIdEl = document.getElementById('svcSuccessId');
   const successCloseBtn = document.getElementById('svcSuccessClose');
@@ -52,12 +56,13 @@
     catch(_){ return 'NT$ ' + (num||0); }
   }
 
-function renderList(items){
+  function renderList(items){
     if (!listEl) return;
     listEl.innerHTML = '';
     if (!items.length){
       const placeholder = document.createElement('div');
       placeholder.id = 'svcListEmpty';
+      placeholder.className = 'empty';
       placeholder.textContent = '目前尚未上架服務，請稍後再試。';
       listEl.appendChild(placeholder);
       return;
@@ -65,22 +70,25 @@ function renderList(items){
     items.forEach(service => {
       const cover = service.cover || service.image || service.banner || '';
       const card = document.createElement('div');
-      card.className = 'svc-card';
+      card.className = 'card service-card';
       card.innerHTML = `
-        <div class="svc-pic">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(service.name||'')}">` : ''}</div>
+        <div class="pic">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
         <div class="body">
-          <div style="font-size:18px;font-weight:700;">${escapeHtml(service.name||'服務')}</div>
+          <div class="name">${escapeHtml(service.name||'服務')}</div>
           <div class="meta">
-            <span>${escapeHtml(service.duration || '時間依照老師安排')}</span>
+            <span>${escapeHtml(service.duration || '約 7 天')}</span>
             <span>${formatTWD(service.price)}</span>
           </div>
-          <p style="margin:0;color:#cbd5f5;line-height:1.6;">${escapeHtml(service.summary || service.description || service.desc || '')}</p>
-          <button data-service="${service.id}">查看服務</button>
+          <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.5;">${escapeHtml(service.summary || service.description || service.desc || '')}</p>
+          <div class="cta">
+            <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
+          </div>
         </div>
       `;
-      card.querySelector('button').addEventListener('click', () => {
-        openServiceDetail(service);
-      });
+      const btn = card.querySelector('button[data-service]');
+      if (btn){
+        btn.addEventListener('click', () => openServiceDetail(service));
+      }
       listEl.appendChild(card);
     });
   }
@@ -133,15 +141,12 @@ function renderList(items){
     }else{
       list.forEach(order=>{
         const card = document.createElement('div');
-        card.style.border = '1px solid rgba(255,255,255,.1)';
-        card.style.borderRadius = '14px';
-        card.style.padding = '12px';
-        card.style.background = 'rgba(255,255,255,.04)';
+        card.className = 'lookup-card';
         card.innerHTML = `
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
-          <div style="font-size:13px;color:#94a3b8;">狀態：${escapeHtml(order.status || '處理中')}</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(order.status || '處理中')}</div>
           <div style="margin-top:8px;font-weight:600;">服務：${escapeHtml(order.serviceName || '')}${order.selectedOption && order.selectedOption.name ? '｜' + escapeHtml(order.selectedOption.name) : ''}</div>
-          <div style="font-size:13px;color:#cbd5f5;margin-top:6px;">願望／備註：${escapeHtml(order.note || '—')}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">願望／備註：${escapeHtml(order.note || '—')}</div>
         `;
         lookupCards.appendChild(card);
       });
@@ -163,21 +168,34 @@ function renderList(items){
         detailIncludes.innerHTML = '<li>老師依實際情況安排內容</li>';
       }
     }
+    const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
+    if (detailHero){
+      detailHero.src = gallery[0] || service.cover || '';
+      detailHero.alt = service.name || '';
+    }
     if (detailGallery){
-      const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
-      detailGallery.innerHTML = gallery.length
-        ? gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}">`).join('')
-        : '<div style="color:#94a3b8;">目前尚未提供示意圖</div>';
+      if (gallery.length){
+        detailGallery.innerHTML = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
+        Array.from(detailGallery.querySelectorAll('img')).forEach(img=>{
+          img.addEventListener('click', ()=>{
+            if (detailHero){
+              detailHero.src = img.getAttribute('src') || '';
+            }
+          });
+        });
+      }else{
+        detailGallery.innerHTML = '<div class="muted">目前尚未提供示意圖</div>';
+      }
     }
     if (detailOptions){
       const options = Array.isArray(service.options) ? service.options.filter(opt=> opt && opt.name) : [];
       if (options.length){
         detailOptionsWrap.style.display = '';
         detailOptions.innerHTML = options.map((opt, idx)=>`
-          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 12px;">
+          <label>
             <span>
               <span style="font-weight:600;">${escapeHtml(opt.name)}</span>
-              <span style="color:#cbd5f5;font-size:12px;margin-left:4px;">${opt.price ? '+'+formatTWD(opt.price) : '不加價'}</span>
+              <span style="color:#6b7280;font-size:12px;margin-left:4px;">${opt.price ? '+'+formatTWD(opt.price) : '不加價'}</span>
             </span>
             <input type="radio" name="svcOptRadio" value="${escapeHtml(opt.name)}" ${idx===0 ? 'checked':''}>
           </label>
@@ -208,6 +226,9 @@ function renderList(items){
   }
   if (cartClose && cartDialog){
     cartClose.addEventListener('click', ()=> cartDialog.close());
+  }
+  if (cartBackBtn && cartDialog){
+    cartBackBtn.addEventListener('click', ()=> cartDialog.close());
   }
   if (successCloseBtn && successDialog){
     successCloseBtn.addEventListener('click', ()=> successDialog.close());
@@ -256,6 +277,14 @@ function renderList(items){
       optPrice = Number(opt ? opt.getAttribute('data-price') : 0) || 0;
     }
     return base + optPrice;
+  }
+
+  if (cartOptionSelect){
+    cartOptionSelect.addEventListener('change', ()=>{
+      if (cartPriceEl){
+        cartPriceEl.textContent = formatTWD(computeCartAmount());
+      }
+    });
   }
 
   async function submitServiceOrder(payload){
@@ -321,15 +350,3 @@ function renderList(items){
     })();
   });
 })();
-  const cartOptionWrap = document.getElementById('svcCartOptionWrap');
-  const cartOptionSelect = document.getElementById('svcCartOption');
-  if (cartOptionSelect){
-    cartOptionSelect.addEventListener('change', ()=>{
-      if (cartPriceEl){
-        cartPriceEl.textContent = formatTWD(computeCartAmount());
-      }
-    });
-  }
-    if (cartPriceEl){
-      cartPriceEl.textContent = formatTWD(computeCartAmount());
-    }
