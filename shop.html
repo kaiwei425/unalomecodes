@@ -5355,52 +5355,21 @@ function escapeHtml(s) {
     sessionStorage.setItem('line-warning-shown', '1');
     const overlay = document.createElement('div');
     overlay.id = 'lineWarning';
-    const isIOS = /iP(hone|od|ad)/i.test(ua);
-    const isAndroid = /Android/i.test(ua);
     overlay.innerHTML = `
       <div class="line-card">
         <div class="line-icon">⚠️</div>
         <div class="line-title">建議於瀏覽器中開啟</div>
         <p>偵測到您正透過 LINE 內建瀏覽器瀏覽。為確保結帳功能與通知正常運作，請改用 Safari 或 Google Chrome 開啟此頁。</p>
-        <div class="line-actions">
-          <button type="button" class="btn" data-act="open-chrome">以 Chrome 開啟</button>
-          <button type="button" class="btn" data-act="open-safari">以 Safari 開啟</button>
-        </div>
+        <p class="line-tip">請點選右下角「⋮」後選擇「Open in browser」(或中文「於瀏覽器開啟」)，以外部瀏覽器開啟本頁。</p>
         <div class="line-actions">
           <button type="button" class="btn ghost" data-act="dismiss">我知道了</button>
         </div>
       </div>
     `;
     document.body.appendChild(overlay);
-    function openWithScheme(url){
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = url;
-      document.body.appendChild(iframe);
-      setTimeout(()=> iframe.remove(), 1500);
-    }
     overlay.addEventListener('click', (ev)=>{
       if (ev.target.matches('[data-act="dismiss"]')) {
         overlay.remove();
-      } else if (ev.target.matches('[data-act="open-chrome"]')) {
-        if (isIOS) {
-          const chromeUrl = `googlechrome://${location.href.replace(/^https?:\/\//i, '')}`;
-          openWithScheme(chromeUrl);
-        } else if (isAndroid) {
-          const intentUrl = `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=${location.protocol.replace(':','')};package=com.android.chrome;end`;
-          window.location.href = intentUrl;
-        } else {
-          alert('請手動複製連結並於 Chrome 開啟。');
-        }
-        setTimeout(()=>{ overlay.remove(); }, 500);
-      } else if (ev.target.matches('[data-act="open-safari"]')) {
-        if (isIOS) {
-          const safariUrl = location.href.replace(/^https?:\/\//i, 'http://');
-          window.location.href = safariUrl;
-          setTimeout(()=>{ overlay.remove(); }, 800);
-        } else {
-          alert('Safari 僅適用於 iOS，請改用 Chrome。');
-        }
       }
     }, false);
   } catch (_) {}
@@ -5466,6 +5435,7 @@ function escapeHtml(s) {
 #lineWarning .line-icon{font-size:32px;margin-bottom:8px;}
 #lineWarning .line-title{font-size:18px;font-weight:800;margin-bottom:10px;}
 #lineWarning p{font-size:14px;color:#475569;margin:0 0 18px;line-height:1.6;}
+#lineWarning .line-tip{font-size:13px;color:#1d4ed8;background:#eef2ff;border-radius:12px;padding:10px 14px;margin-bottom:16px;}
 #lineWarning .line-actions{display:flex;gap:10px;margin-top:10px;}
 #lineWarning .line-actions .btn{flex:1;}
 </style>
