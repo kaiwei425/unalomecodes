@@ -246,7 +246,7 @@
         <div id="cartGrandTotal" style="font-weight:800">NT$ 0</div>
       </div>
       <div class="cartActions">
-        <button id="cartClear" class="btn">清空</button>
+        <button id="cartClear" class="btn">清空購物車</button>
         <a id="cartPayCC" class="btn" target="_blank" rel="noopener" style="text-decoration:none;">信用卡付款</a>
         <a id="cartGo711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
       </div>
@@ -5345,6 +5345,44 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 </script>
+<script>
+(function(){
+  try {
+    const ua = navigator.userAgent || '';
+    const isLine = /Line\//i.test(ua);
+    if (!isLine) return;
+    if (sessionStorage.getItem('line-warning-shown')) return;
+    sessionStorage.setItem('line-warning-shown', '1');
+    const overlay = document.createElement('div');
+    overlay.id = 'lineWarning';
+    overlay.innerHTML = `
+      <div class="line-card">
+        <div class="line-icon">⚠️</div>
+        <div class="line-title">建議於瀏覽器中開啟</div>
+        <p>偵測到您正透過 LINE 內建瀏覽器瀏覽。為確保結帳功能與通知正常運作，請改用 Safari 或 Google Chrome 開啟此頁。</p>
+        <div class="line-actions">
+          <button type="button" class="btn" data-act="copy">複製連結</button>
+          <button type="button" class="btn primary" data-act="dismiss">我知道了</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', async (ev)=>{
+      if (ev.target.matches('[data-act="dismiss"]')) {
+        overlay.remove();
+      } else if (ev.target.matches('[data-act="copy"]')) {
+        try {
+          await navigator.clipboard.writeText(location.href);
+          ev.target.textContent = '已複製';
+          setTimeout(()=>{ ev.target.textContent = '複製連結'; }, 1600);
+        } catch (_) {
+          alert('請長按網址列複製連結，並於瀏覽器貼上開啟。');
+        }
+      }
+    }, false);
+  } catch (_) {}
+})();
+</script>
 <style>
 @media (max-width: 820px) {
   .grid {
@@ -5379,6 +5417,34 @@ function escapeHtml(s) {
     flex: 1 1 auto !important;
   }
 }
+
+#lineWarning{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,0.75);
+  backdrop-filter:blur(4px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+  padding:24px;
+}
+#lineWarning .line-card{
+  max-width:360px;
+  width:100%;
+  background:#fff;
+  border-radius:20px;
+  padding:24px;
+  text-align:center;
+  box-shadow:0 20px 50px rgba(15,23,42,0.3);
+  font-family:inherit;
+  color:#0f172a;
+}
+#lineWarning .line-icon{font-size:32px;margin-bottom:8px;}
+#lineWarning .line-title{font-size:18px;font-weight:800;margin-bottom:10px;}
+#lineWarning p{font-size:14px;color:#475569;margin:0 0 18px;line-height:1.6;}
+#lineWarning .line-actions{display:flex;gap:10px;}
+#lineWarning .line-actions .btn{flex:1;}
 </style>
 </body>
 </html>

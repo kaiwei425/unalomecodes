@@ -160,7 +160,11 @@ html,body{
 .cartCtl input{width:56px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:transparent; color:inherit;}
 .cartSum{display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding:10px; background:var(--card); border:1px solid var(--line); border-radius:12px;}
   .cartActions{display:flex; gap:8px; justify-content:flex-end; margin-top:10px; flex-wrap:wrap;}
-  .cartActions .btn{min-width:140px;}
+  .cartActions .btn{
+    min-width:140px;
+    font-size:16px;
+    font-weight:700;
+  }
   @media(max-width:640px){
     .cartActions{flex-direction:column;}
     .cartActions .btn{min-width:0;width:100%;}
