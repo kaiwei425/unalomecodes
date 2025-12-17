@@ -4557,14 +4557,29 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       }else if (o.productName){
         lines.push('<div>'+ escapeHtml(o.productName) +'</div>');
       }
+      var buyer = o && o.buyer || {};
+      var contactLines = [];
+      var nameLine = buyer && (buyer.name || buyer.fullName || buyer.recipient);
+      var phoneLine = buyer && (buyer.phone || buyer.contact || buyer.mobile || o.phone);
+      var emailLine = buyer && (buyer.email || o.email);
+      var storeLine = buyer && (buyer.store || o.store);
+      var noteLine  = buyer && (buyer.note  || o.note);
+      if (nameLine) contactLines.push('<div>收件人：'+ escapeHtml(nameLine) +'</div>');
+      if (phoneLine) contactLines.push('<div>電話：'+ escapeHtml(phoneLine) +'</div>');
+      if (emailLine) contactLines.push('<div>Email：'+ escapeHtml(emailLine) +'</div>');
+      if (storeLine) contactLines.push('<div>7-11 門市：'+ escapeHtml(storeLine) +'</div>');
+      if (noteLine)  contactLines.push('<div>備註：'+ escapeHtml(noteLine) +'</div>');
+      var contactHtml = contactLines.length
+        ? '<div class="ok-contact">'+ contactLines.join('') +'</div>'
+        : '';
+
       var div = document.createElement('div');
       div.className = 'ok-card';
       div.innerHTML = ''
         + '<div style="font-weight:800">訂單編號：'+ escapeHtml(String(id||'')) +'</div>'
         + '<div class="ok-muted">金額：'+ amt + (lines.length? '（以下為明細）' : '') +'</div>'
         + (lines.join('')||'')
-        + (o.store ? '<div class="ok-muted">門市：'+ escapeHtml(o.store) +'</div>' : '')
-        + (o.contact ? '<div class="ok-muted">聯絡方式：'+ escapeHtml(o.contact) +'</div>' : '')
+        + contactHtml
         + '<div class="ok-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;margin-top:8px">'
         +   '<div class="ok-status">'+ statusBadge(o.status) +'</div>'
         +   ( (o && o.resultToken)

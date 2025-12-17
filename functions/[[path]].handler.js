@@ -1514,10 +1514,8 @@ function composeOrderEmail(order, opts = {}) {
   if (!subtotal) subtotal = Math.max(0, Number(order.amount || 0) - shippingFee + discountAmount);
   const totalAmount = Math.max(0, Number(order.amount || 0));
   const supportEmail = 'bkkaiwei@gmail.com';
-  const supportEmailLink = `<a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a>`;
-  const lineLink = 'https://line.me/R/ti/p/@427oaemj';
   const lineLabel = '@427oaemj';
-  const lineLinkHtml = `<a href="${esc(lineLink)}">${esc(lineLabel)}</a>`;
+  const lineInstruction = 'LINE ID：@427oaemj（請於官方 LINE 搜尋加入）';
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const itemsHtml = items.length
@@ -1548,16 +1546,15 @@ function composeOrderEmail(order, opts = {}) {
     `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}${shippingNote}</p>`
   ].filter(Boolean).join('');
   const lookupHtml = opts.lookupUrl
-    ? `<div style="margin-top:32px;padding:16px;border-radius:12px;background:#eef2ff;">
-        <p style="margin:0 0 6px;font-weight:600;color:#312e81;">查詢訂單進度</p>
-        <a href="${esc(opts.lookupUrl)}" style="color:#1d4ed8;text-decoration:none;">${esc(opts.lookupUrl)}</a>
+    ? `<div style="margin-top:16px;padding:12px;border-radius:8px;background:#eef2ff;color:#312e81;font-size:13px;">
+        查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）
       </div>`
     : '';
   const customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>，以下為最新資訊。請勿直接回覆此信，如需協助請透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`
+      <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助請寫信至 ${esc(supportEmail)} 或 ${lineInstruction}。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，若有任何疑問可透過客服信箱 ${supportEmailLink} 或官方 LINE：${lineLinkHtml} 與我們聯繫。</p>`;
+      <p>我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或 ${lineInstruction}。</p>`;
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
   const contactRows = [
     buyerName ? `<p style="margin:0 0 8px;"><strong>收件人：</strong>${esc(buyerName)}</p>` : '',
@@ -1567,7 +1564,7 @@ function composeOrderEmail(order, opts = {}) {
     note ? `<p style="margin:0;"><strong>備註：</strong>${esc(note)}</p>` : ''
   ].filter(Boolean);
   const contactHtml = contactRows.length
-    ? `<div style="padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">${contactRows.join('')}</div>`
+    ? `<div style="padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:14px;">${contactRows.join('')}</div>`
     : '';
   const amountHtml = `
     <div style="margin-top:24px;padding:20px;border-radius:12px;background:#0f172a;color:#f8fafc;">
@@ -1581,31 +1578,28 @@ function composeOrderEmail(order, opts = {}) {
   const customerFooter = opts.admin ? '' : `
     <div style="margin-top:24px;padding:16px;border-radius:12px;background:#f1f5f9;color:#475569;font-size:13px;line-height:1.6;">
       本信件為系統自動發送，請勿直接回覆。<br>
-      如需協助請來信 <a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a> 或加入官方 LINE：<a href="${esc(lineLink)}">${esc(lineLabel)}</a>。
+      客服信箱：${esc(supportEmail)}<br>
+      官方 LINE：${lineInstruction}
     </div>
   `;
   const html = `
-    <div style="background:#f5f7fb;padding:24px;">
-      <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:#0f172a;line-height:1.7;box-shadow:0 20px 40px rgba(15,23,42,0.08);">
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="font-size:13px;letter-spacing:0.3em;color:#94a3b8;text-transform:uppercase;">${esc(brand)}</div>
-          <div style="font-size:24px;font-weight:700;margin-top:8px;color:#0f172a;">${opts.admin ? '新訂單通知' : '訂單確認'}</div>
-        </div>
+    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px 10px;background:#f5f7fb;">
+      <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
+        <p style="margin:0 0 12px;font-weight:700;font-size:18px;">${esc(brand)}</p>
         ${opts.admin ? adminIntro : customerIntro}
-        <div style="margin:24px 0;padding:20px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-          ${baseInfoHtml}
-        </div>
+        <h3 style="font-size:16px;margin:18px 0 8px;">基本資訊</h3>
+        <table style="border-collapse:collapse;width:100%;font-size:14px;">
+          <tr><td style="padding:6px 0;width:110px;color:#475569;">訂單編號</td><td style="padding:6px 0;">${esc(order.id || '')}</td></tr>
+          <tr><td style="padding:6px 0;color:#475569;">訂單狀態</td><td style="padding:6px 0;">${esc(status)}</td></tr>
+          <tr><td style="padding:6px 0;color:#475569;">付款方式</td><td style="padding:6px 0;">${esc(method)}</td></tr>
+          <tr><td style="padding:6px 0;color:#475569;">應付金額</td><td style="padding:6px 0;">${fmt(order.amount || 0)}${shippingNote}</td></tr>
+        </table>
         ${amountHtml}
-        <div style="margin-top:32px;">
-          <h3 style="font-size:18px;color:#0f172a;margin-bottom:12px;">商品明細</h3>
-          ${itemsHtml}
-        </div>
-        ${contactHtml ? `<div style="margin-top:32px;">
-          <h3 style="font-size:18px;color:#0f172a;margin-bottom:12px;">聯絡資訊</h3>
-          ${contactHtml}
-        </div>` : ''}
-        ${lookupHtml}
-        ${opts.admin ? '' : '<p style="margin-top:24px;color:#0f172a;">感謝您的支持，祝福一切順心圓滿！</p>'}
+        <h3 style="font-size:16px;margin:24px 0 10px;">商品明細</h3>
+        ${itemsHtml}
+        ${contactHtml ? `<h3 style="font-size:16px;margin:20px 0 10px;">聯絡資訊</h3>${contactHtml}` : ''}
+        ${lookupHtml ? `<div style="margin-top:18px;font-size:13px;">${lookupHtml}</div>` : ''}
+        ${opts.admin ? '' : '<p style="margin:18px 0 0;">感謝您的支持，祝福一切順心圓滿！</p>'}
         ${customerFooter}
       </div>
     </div>
@@ -1614,9 +1608,9 @@ function composeOrderEmail(order, opts = {}) {
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
-    textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或官方 LINE：${lineLabel} 聯繫。`);
+    textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或 ${lineLabel} 聯繫。`);
   } else {
-    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，可透過 ${supportEmail} 或官方 LINE：${lineLabel} 聯繫。`);
+    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，可透過 ${supportEmail} 或 ${lineLabel} 聯繫。`);
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);
