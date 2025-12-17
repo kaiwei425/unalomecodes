@@ -10,47 +10,121 @@
   const detailDialog = document.getElementById('svcDetail');
   const detailClose = document.getElementById('svcDetailClose');
   const detailTitle = document.getElementById('svcDetailTitle');
-  const detailPrice = document.getElementById('svcDetailPrice');
+  const detailPriceEl = document.getElementById('svcDetailPrice');
   const detailDesc = document.getElementById('svcDetailDesc');
   const detailIncludes = document.getElementById('svcDetailIncludes');
   const detailGallery = document.getElementById('svcDetailGallery');
-  const detailAction = document.getElementById('svcDetailAction');
-  const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
-  const detailOptions = document.getElementById('svcDetailOptions');
+  const detailVariant = document.getElementById('svcDetailVariant');
+  const detailAddBtn = document.getElementById('svcDetailAddCart');
+  const detailCheckoutBtn = document.getElementById('svcDetailCheckout');
   const detailHero = document.getElementById('svcDetailHero');
-  let detailDataset = null;
-  const cartDialog = document.getElementById('svcCart');
-  const cartForm = document.getElementById('svcCartForm');
-  const cartNameEl = document.getElementById('svcCartServiceName');
-  const cartPriceEl = document.getElementById('svcCartServicePrice');
-  const cartServiceIdInput = document.getElementById('svcCartServiceId');
-  const cartSubmitBtn = document.getElementById('svcCartSubmit');
-  const cartBackBtn = document.getElementById('svcCartBack');
-  const cartSelectionsEl = document.getElementById('svcCartSelections');
+  const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
+  const checkoutDialog = document.getElementById('svcCart');
+  const checkoutForm = document.getElementById('svcCartForm');
+  const checkoutServiceName = document.getElementById('svcCartServiceName');
+  const checkoutSummary = document.getElementById('svcCartSummary');
+  const checkoutTotal = document.getElementById('svcCartTotal');
+  const checkoutBackBtn = document.getElementById('svcCartBack');
+  const checkoutSubmitBtn = document.getElementById('svcCartSubmit');
+  const checkoutServiceIdInput = document.getElementById('svcCartServiceId');
   const successDialog = document.getElementById('svcSuccess');
   const successIdEl = document.getElementById('svcSuccessId');
   const successCloseBtn = document.getElementById('svcSuccessClose');
   const successLookupBtn = document.getElementById('svcSuccessLookup');
+  const cartFab = document.getElementById('cartFab');
+  const cartBadge = document.getElementById('cartBadge');
+  const cartPanel = document.getElementById('svcCartPanel');
+  const cartListEl = document.getElementById('svcCartList');
+  const cartAmountEl = document.getElementById('svcCartAmount');
+  const cartPanelClose = document.getElementById('svcCartPanelClose');
+  const cartClearBtn = document.getElementById('svcCartClear');
+  const cartCheckoutBtn = document.getElementById('svcCartCheckout');
+  const CART_KEY = 'svcCartItems';
+  let detailDataset = null;
 
   function escapeHtml(str){
-    return String(str||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
+    return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
+  }
+
+  function formatTWD(num){
+    const n = Number(num || 0);
+    return 'NT$ ' + n.toLocaleString('zh-TW');
+  }
+
+  function loadCart(){
+    try{
+      const raw = localStorage.getItem(CART_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    }catch(_){
+      return [];
+    }
+  }
+
+  function saveCart(list){
+    try{
+      localStorage.setItem(CART_KEY, JSON.stringify(list));
+    }catch(_){}
+    updateCartBadge(list);
+  }
+
+  function updateCartBadge(list){
+    const cart = Array.isArray(list) ? list : loadCart();
+    const count = cart.length;
+    if (cartBadge) cartBadge.textContent = count;
+    if (cartFab){
+      if (count){
+        cartFab.disabled = false;
+        cartFab.style.opacity = '1';
+        cartFab.style.cursor = 'pointer';
+      }else{
+        cartFab.disabled = false;
+        cartFab.style.opacity = '.6';
+        cartFab.style.cursor = 'pointer';
+      }
+    }
+  }
+
+  function cartTotal(list){
+    return list.reduce((sum,item)=> sum + Number(item.basePrice||0) + Number(item.optionPrice||0), 0);
+  }
+
+  function renderCartPanel(){
+    if (!cartListEl) return;
+    const cart = loadCart();
+    if (!cart.length){
+      cartListEl.innerHTML = '<div style="color:#6b7280;">購物車尚無服務。</div>';
+    }else{
+      cartListEl.innerHTML = cart.map(item => `
+        <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:10px;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:center;flex:1;">
+            ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:10px;">` : ''}
+            <div>
+              <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
+              <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(item.optionName||'標準服務')}</div>
+            </div>
+          </div>
+          <div style="font-weight:700;margin-right:10px;">${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</div>
+          <button type="button" class="btn" data-remove="${escapeHtml(item.uid||'')}">移除</button>
+        </div>
+      `).join('');
+    }
+    if (cartAmountEl){
+      cartAmountEl.textContent = formatTWD(cartTotal(cart));
+    }
   }
 
   async function fetchServices(){
     try{
       const res = await fetch('/api/service/products', { cache:'no-store' });
-      const j = await res.json().catch(()=>({}));
-      if (!res.ok || !j || !j.ok) throw new Error(j && j.error || 'error');
-      return Array.isArray(j.items) ? j.items : [];
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'error');
+      return Array.isArray(data.items) ? data.items : [];
     }catch(err){
       console.error('[service] fetch error', err);
       return [];
     }
-  }
-
-  function formatTWD(num){
-    try{ return 'NT$ ' + Number(num||0).toLocaleString('zh-TW'); }
-    catch(_){ return 'NT$ ' + (num||0); }
   }
 
   function renderList(items){
@@ -65,13 +139,15 @@
       return;
     }
     items.forEach(service => {
-      const cover = service.cover || service.image || service.banner || '';
+      const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
+      const sold = Number(service.sold || 0);
       const card = document.createElement('div');
       card.className = 'card service-card';
       card.innerHTML = `
         <div class="pic">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
         <div class="body">
           <div class="name">${escapeHtml(service.name||'服務')}</div>
+          <div class="meta"><span class="badge">已售出：${sold}</span></div>
           <div class="price">${formatTWD(service.price)}</div>
           <div class="cta">
             <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
@@ -86,25 +162,186 @@
     });
   }
 
+  function populateVariantSelect(service){
+    if (!detailVariant) return;
+    const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
+    if (!options.length){
+      detailOptionsWrap.style.display = 'none';
+      detailVariant.innerHTML = '<option value="">標準服務</option>';
+      detailVariant.disabled = true;
+      return;
+    }
+    detailOptionsWrap.style.display = '';
+    detailVariant.disabled = false;
+    const rows = ['<option value="" disabled selected>請選擇服務項目</option>'];
+    options.forEach(opt=>{
+      rows.push(`<option value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</option>`);
+    });
+    detailVariant.innerHTML = rows.join('');
+  }
+
+  function getVariantSelection(service){
+    if (!detailVariant) return null;
+    const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
+    if (!options.length) return null;
+    const val = detailVariant.value;
+    if (!val){
+      return null;
+    }
+    const match = options.find(opt => String(opt.name) === val);
+    if (!match) return null;
+    return { name: match.name, price: Number(match.price||0) };
+  }
+
+  function updateDetailPrice(){
+    if (!detailDataset || !detailPriceEl) return;
+    const base = Number(detailDataset.price || 0);
+    const variant = getVariantSelection(detailDataset);
+    const diff = variant ? Number(variant.price||0) : 0;
+    detailPriceEl.textContent = formatTWD(base + diff).replace('NT$ ', '');
+  }
+
+  function openServiceDetail(service){
+    detailDataset = service;
+    if (detailTitle) detailTitle.textContent = service.name || '服務';
+    if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
+    if (detailIncludes){
+      const includes = Array.isArray(service.includes) ? service.includes : [];
+      detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : '<li>老師依實際情況安排內容</li>';
+    }
+    const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
+    if (detailHero){
+      detailHero.src = gallery[0] || service.cover || '';
+      detailHero.alt = service.name || '';
+    }
+    if (detailGallery){
+      if (gallery.length){
+        detailGallery.innerHTML = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
+        Array.from(detailGallery.querySelectorAll('img')).forEach(img=>{
+          img.addEventListener('click', ()=>{
+            if (detailHero) detailHero.src = img.getAttribute('src') || '';
+          });
+        });
+      }else{
+        detailGallery.innerHTML = '<div class="muted">目前尚未提供示意圖</div>';
+      }
+    }
+    populateVariantSelect(service);
+    updateDetailPrice();
+    detailDialog.showModal();
+  }
+
+  function ensureSingleService(cart, serviceId){
+    if (!cart.length) return cart;
+    if (cart[0].serviceId === serviceId) return cart;
+    const ok = confirm('購物車內已有其他服務，加入新服務會清空原本的內容，是否繼續？');
+    if (!ok) return null;
+    return [];
+  }
+
+  function addCurrentSelection(goCheckout){
+    if (!detailDataset) return;
+    let cart = loadCart();
+    cart = ensureSingleService(cart, detailDataset.id || '');
+    if (cart === null) return;
+    const options = Array.isArray(detailDataset.options) ? detailDataset.options.filter(opt=>opt && opt.name) : [];
+    const variant = options.length ? getVariantSelection(detailDataset) : null;
+    if (options.length && !variant){
+      alert('請先選擇服務項目');
+      return;
+    }
+    const item = {
+      uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
+      serviceId: detailDataset.id || '',
+      serviceName: detailDataset.name || '服務',
+      basePrice: Number(detailDataset.price||0),
+      optionName: variant ? variant.name : '',
+      optionPrice: variant ? Number(variant.price||0) : 0,
+      image: (Array.isArray(detailDataset.gallery) && detailDataset.gallery[0]) || detailDataset.cover || ''
+    };
+    cart.push(item);
+    saveCart(cart);
+    renderCartPanel();
+    updateCartBadge(cart);
+    detailDialog.close();
+    if (goCheckout){
+      openCheckoutDialog();
+    }else{
+      alert('已加入購物車，可透過左側按鈕查看。');
+    }
+  }
+
+  function renderCheckoutSummary(cart){
+    if (!checkoutSummary || !checkoutTotal || !checkoutServiceName) return;
+    checkoutServiceName.textContent = cart[0].serviceName || '服務';
+    checkoutSummary.innerHTML = cart.map(item => `<li>${escapeHtml(item.optionName || '標準服務')}｜${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</li>`).join('');
+    checkoutTotal.textContent = formatTWD(cartTotal(cart));
+    checkoutForm.dataset.selectedOptions = JSON.stringify(cart.filter(it => it.optionName).map(it => ({ name: it.optionName, price: it.optionPrice })));
+    checkoutForm.dataset.baseCount = cart.filter(it => !it.optionName).length || 0;
+    checkoutForm.dataset.serviceId = cart[0].serviceId || '';
+  }
+
+  function openCheckoutDialog(){
+    const cart = loadCart();
+    if (!cart.length){
+      alert('購物車是空的');
+      return;
+    }
+    if (!cart.every(it => it.serviceId === cart[0].serviceId)){
+      alert('購物車內包含不同服務，請清空後重新選擇。');
+      return;
+    }
+    renderCheckoutSummary(cart);
+    checkoutDialog.showModal();
+  }
+
+  function getCheckoutOptions(){
+    try{
+      const raw = checkoutForm.dataset.selectedOptions || '[]';
+      const list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    }catch(_){
+      return [];
+    }
+  }
+
+  function getCheckoutBaseCount(){
+    const val = Number(checkoutForm.dataset.baseCount || 0);
+    return val > 0 ? val : 0;
+  }
+
+  async function submitServiceOrder(payload){
+    const res = await fetch('/api/service/order', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || '提交失敗');
+    }
+    return data;
+  }
+
   function initLookupDialog(){
     if (lookupTriggers.length && lookupDialog){
       lookupTriggers.forEach(btn=>{
         if (!btn) return;
-        btn.addEventListener('click', (ev)=>{
+        btn.addEventListener('click', ev=>{
           ev.preventDefault();
           lookupDialog.showModal();
         });
       });
     }
-    if (lookupClose && lookupDialog){
-      lookupClose.addEventListener('click', () => lookupDialog.close());
+    if (lookupClose){
+      lookupClose.addEventListener('click', ()=> lookupDialog.close());
     }
     if (lookupForm){
-      lookupForm.addEventListener('submit', async (ev) => {
+      lookupForm.addEventListener('submit', async ev=>{
         ev.preventDefault();
         const formData = new FormData(lookupForm);
         const phone = String(formData.get('phone')||'').trim();
-        const orderDigits = String(formData.get('orderDigits')||formData.get('order')||'').trim();
+        const orderDigits = String(formData.get('orderDigits')||'').trim();
         if (!phone || !orderDigits){
           alert('請輸入手機與訂單末五碼');
           return;
@@ -113,7 +350,7 @@
           const usp = new URLSearchParams({ phone, order: orderDigits });
           const res = await fetch('/api/service/orders/lookup?'+usp.toString(), { cache:'no-store' });
           const data = await res.json().catch(()=>({}));
-          if (!res.ok || !data || !data.ok){
+          if (!res.ok || !data || data.ok === false){
             throw new Error((data && data.error) || '查詢失敗');
           }
           renderLookupResult(Array.isArray(data.orders) ? data.orders : []);
@@ -125,9 +362,7 @@
   }
 
   function renderLookupResult(list){
-    if (!lookupResultWrap || !lookupCards){
-      return;
-    }
+    if (!lookupResultWrap || !lookupCards) return;
     lookupCards.innerHTML = '';
     if (!list.length){
       lookupCards.innerHTML = '<div style="color:#94a3b8;">查無資料，請確認輸入是否正確。</div>';
@@ -145,7 +380,7 @@
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
           <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(order.status || '處理中')}</div>
           <div style="margin-top:8px;font-weight:600;">服務：${serviceLine}</div>
-          <div style="font-size:13px;color:#475569;margin-top:6px;">願望／備註：${escapeHtml(order.note || '—')}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">備註：${escapeHtml(order.note || '—')}</div>
         `;
         lookupCards.appendChild(card);
       });
@@ -153,175 +388,74 @@
     lookupResultWrap.style.display = '';
   }
 
-  function openServiceDetail(service){
-    if (!detailDialog) return;
-    detailDataset = service;
-    if (detailTitle) detailTitle.textContent = service.name || '服務';
-    if (detailPrice) detailPrice.textContent = formatTWD(service.price || 0);
-    if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
-    if (detailIncludes){
-      const list = Array.isArray(service.includes) ? service.includes : [];
-      if (list.length){
-        detailIncludes.innerHTML = list.map(item => `<li>${escapeHtml(item)}</li>`).join('');
-      }else{
-        detailIncludes.innerHTML = '<li>老師依實際情況安排內容</li>';
-      }
-    }
-    const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
-    if (detailHero){
-      detailHero.src = gallery[0] || service.cover || '';
-      detailHero.alt = service.name || '';
-    }
-    if (detailGallery){
-      if (gallery.length){
-        detailGallery.innerHTML = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
-        Array.from(detailGallery.querySelectorAll('img')).forEach(img=>{
-          img.addEventListener('click', ()=>{
-            if (detailHero){
-              detailHero.src = img.getAttribute('src') || '';
-            }
-          });
-        });
-      }else{
-        detailGallery.innerHTML = '<div class="muted">目前尚未提供示意圖</div>';
-      }
-    }
-    if (detailOptions){
-      const options = Array.isArray(service.options) ? service.options.filter(opt=> opt && opt.name) : [];
-      if (options.length){
-        detailOptionsWrap.style.display = '';
-        detailOptions.innerHTML = options.map(opt=>`
-          <label>
-            <input type="checkbox" name="svcOptCheck" value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">
-            <span>
-              <span style="font-weight:600;">${escapeHtml(opt.name)}</span>
-              ${opt.price ? `<span style="color:#6b7280;font-size:12px;margin-left:4px;">+${formatTWD(opt.price)}</span>` : ''}
-            </span>
-          </label>
-        `).join('');
-      }else{
-        detailOptionsWrap.style.display = 'none';
-        detailOptions.innerHTML = '';
-      }
-    }
-    if (detailAction){
-      detailAction.dataset.serviceId = service.id || '';
-    }
-    detailDialog.showModal();
+  if (detailClose){
+    detailClose.addEventListener('click', ()=> detailDialog.close());
   }
-
-  if (detailClose && detailDialog){
-    detailClose.addEventListener('click', () => detailDialog.close());
+  if (detailVariant){
+    detailVariant.addEventListener('change', updateDetailPrice);
   }
-  if (detailAction){
-    detailAction.addEventListener('click', ()=>{
-      if (detailDialog) detailDialog.close();
-      if (detailDataset){
-        let selectedList = [];
-        if (detailOptions){
-          selectedList = Array.from(detailOptions.querySelectorAll('input[name="svcOptCheck"]:checked')).map(inp=>({
-            name: inp.value,
-            price: Number(inp.getAttribute('data-price')||0)
-          }));
-          const hasOptions = Array.isArray(detailDataset.options) && detailDataset.options.length;
-          if (hasOptions && !selectedList.length){
-            alert('請至少選擇一個服務項目');
-            return;
-          }
-        }else{
-          selectedList = [];
-        }
-        detailDataset.__selectedOptions = selectedList;
-        openCart(detailDataset);
+  if (detailAddBtn){
+    detailAddBtn.addEventListener('click', ()=> addCurrentSelection(false));
+  }
+  if (detailCheckoutBtn){
+    detailCheckoutBtn.addEventListener('click', ()=> addCurrentSelection(true));
+  }
+  if (cartFab){
+    cartFab.addEventListener('click', ()=>{
+      renderCartPanel();
+      if (cartPanel) cartPanel.showModal();
+    });
+  }
+  if (cartPanelClose){
+    cartPanelClose.addEventListener('click', ()=> cartPanel.close());
+  }
+  if (cartClearBtn){
+    cartClearBtn.addEventListener('click', ()=>{
+      if (!loadCart().length) return;
+      if (confirm('確定清空購物車？')){
+        saveCart([]);
+        renderCartPanel();
       }
     });
   }
-  if (cartBackBtn && cartDialog){
-    cartBackBtn.addEventListener('click', ()=> cartDialog.close());
-  }
-  if (successCloseBtn && successDialog){
-    successCloseBtn.addEventListener('click', ()=> successDialog.close());
-  }
-  if (successLookupBtn){
-    successLookupBtn.addEventListener('click', ()=>{
-      if (successDialog) successDialog.close();
-      if (lookupDialog) lookupDialog.showModal();
+  if (cartCheckoutBtn){
+    cartCheckoutBtn.addEventListener('click', ()=>{
+      cartPanel.close();
+      openCheckoutDialog();
     });
   }
-
-  function openCart(service){
-    if (!cartDialog || !cartForm) return;
-    cartForm.reset();
-    cartForm.dataset.serviceId = service.id || '';
-    cartForm.dataset.basePrice = Number(service.price || 0);
-    const selected = Array.isArray(service.__selectedOptions) ? service.__selectedOptions : [];
-    const hasOptions = Array.isArray(service.options) && service.options.length;
-    cartForm.dataset.defaultCount = hasOptions ? 0 : 1;
-    cartForm.dataset.selectedOptions = JSON.stringify(selected);
-    if (cartNameEl) cartNameEl.textContent = service.name || '服務';
-    renderCartSelections(selected);
-    if (cartPriceEl) cartPriceEl.textContent = formatTWD(computeCartAmount());
-    if (cartServiceIdInput) cartServiceIdInput.value = service.id || '';
-    delete service.__selectedOptions;
-    cartDialog.showModal();
-  }
-
-  function getSelectedOptions(){
-    if (!cartForm) return [];
-    try{
-      const raw = cartForm.dataset.selectedOptions || '[]';
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    }catch(_){
-      return [];
-    }
-  }
-
-  function renderCartSelections(list){
-    if (!cartSelectionsEl) return;
-    if (!list.length){
-      cartSelectionsEl.innerHTML = '<li>標準服務</li>';
-      return;
-    }
-    cartSelectionsEl.innerHTML = list.map(opt => `<li>${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</li>`).join('');
-  }
-
-  function computeCartAmount(){
-    if (!cartForm) return 0;
-    const base = Number(cartForm.dataset.basePrice || 0);
-    const opts = getSelectedOptions();
-    let count = opts.length || Number(cartForm.dataset.defaultCount || 1);
-    if (!count || count < 1) count = 1;
-    const optPrice = opts.reduce((sum,opt)=> sum + Number(opt.price||0), 0);
-    return base * count + optPrice;
-  }
-
-  async function submitServiceOrder(payload){
-    const res = await fetch('/api/service/order', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+  if (cartListEl){
+    cartListEl.addEventListener('click', e=>{
+      const btn = e.target.closest('button[data-remove]');
+      if (!btn) return;
+      const uid = btn.getAttribute('data-remove');
+      let cart = loadCart();
+      cart = cart.filter(item => item.uid !== uid);
+      saveCart(cart);
+      renderCartPanel();
     });
-    const data = await res.json().catch(()=>({}));
-    if (!res.ok || !data || !data.ok){
-      throw new Error((data && data.error) || '提交失敗');
-    }
-    return data;
   }
-
-  if (cartForm){
-    cartForm.addEventListener('submit', async ev=>{
+  if (checkoutBackBtn){
+    checkoutBackBtn.addEventListener('click', ()=> checkoutDialog.close());
+  }
+  if (checkoutForm){
+    checkoutForm.addEventListener('submit', async ev=>{
       ev.preventDefault();
-      if (!cartSubmitBtn) return;
-      const serviceId = cartServiceIdInput ? cartServiceIdInput.value : '';
+      if (!checkoutSubmitBtn) return;
+      const serviceId = checkoutServiceIdInput ? checkoutServiceIdInput.value : '';
       if (!serviceId){
         alert('缺少服務資訊，請重新選擇。');
         return;
       }
-      cartSubmitBtn.disabled = true;
-      cartSubmitBtn.textContent = '送出中…';
+      const cart = loadCart();
+      if (!cart.length){
+        alert('購物車為空，請重新選擇服務。');
+        return;
+      }
+      checkoutSubmitBtn.disabled = true;
+      checkoutSubmitBtn.textContent = '送出中…';
       try{
-        const formData = new FormData(cartForm);
+        const formData = new FormData(checkoutForm);
         const payload = {
           serviceId,
           name: formData.get('name')||'',
@@ -330,32 +464,41 @@
           birth: formData.get('birth')||'',
           requestDate: formData.get('requestDate')||'',
           note: formData.get('note')||'',
-          optionNames: getSelectedOptions().map(opt => opt.name)
+          optionNames: getCheckoutOptions().map(opt => opt.name),
+          baseCount: getCheckoutBaseCount()
         };
         const result = await submitServiceOrder(payload);
-        cartDialog.close();
-        cartForm.reset();
+        checkoutDialog.close();
+        checkoutForm.reset();
+        saveCart([]);
+        renderCartPanel();
+        updateCartBadge([]);
         if (successIdEl) successIdEl.textContent = result.orderId || result.id || '';
-        if (successDialog) successDialog.showModal();
+        successDialog.showModal();
       }catch(err){
         alert(err && err.message ? err.message : '送出失敗，請稍後再試');
       }finally{
-        cartSubmitBtn.disabled = false;
-        cartSubmitBtn.textContent = '送出祈福訂單';
+        checkoutSubmitBtn.disabled = false;
+        checkoutSubmitBtn.textContent = '送出祈福訂單';
       }
     });
   }
+  if (successCloseBtn){
+    successCloseBtn.addEventListener('click', ()=> successDialog.close());
+  }
+  if (successLookupBtn){
+    successLookupBtn.addEventListener('click', ()=>{
+      successDialog.close();
+      if (lookupDialog) lookupDialog.showModal();
+    });
+  }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    (async ()=>{
-      try{
-        const data = await fetchServices();
-        renderList(data);
-        initLookupDialog();
-        if (emptyEl) emptyEl.remove();
-      }catch(err){
-        console.error('[service] init error', err);
-      }
-    })();
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    const services = await fetchServices();
+    renderList(services);
+    if (emptyEl) emptyEl.remove();
+    initLookupDialog();
+    updateCartBadge();
+    renderCartPanel();
   });
 })();

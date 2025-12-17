@@ -61,6 +61,8 @@
         <input id="svc_name" placeholder="例：蠟燭祈福｜基本祈請">
         <label>費用（NT$）</label>
         <input id="svc_price" type="number" min="0" value="0">
+        <label>已售出（顯示用）</label>
+        <input id="svc_sold" type="number" min="0" value="0">
         <label>詳細說明</label>
         <textarea id="svc_description" placeholder="完整介紹、祈福流程、注意事項…"></textarea>
         <label>包含內容（每行一項）</label>
@@ -128,6 +130,7 @@
   const btnDelete = document.getElementById('btnDelete');
   const btnReload = document.getElementById('btnReload');
   const imagesInput = document.getElementById('svc_images');
+  const soldInput = document.getElementById('svc_sold');
   const imagePreview = document.getElementById('svcImagePreview');
   const optionsWrap = document.getElementById('svc_options');
   let items = [];
@@ -183,6 +186,7 @@
       id: document.getElementById('svc_id').value.trim(),
       name: document.getElementById('svc_name').value.trim(),
       price: Number(document.getElementById('svc_price').value || 0),
+      sold: Number(soldInput.value || 0),
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
       includes: document.getElementById('svc_includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
@@ -199,6 +203,7 @@
     document.getElementById('svc_id').value = data.id || '';
     document.getElementById('svc_name').value = data.name || '';
     document.getElementById('svc_price').value = Number(data.price||0);
+    soldInput.value = Number(data.sold||0);
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
     document.getElementById('svc_includes').value = Array.isArray(data.includes) ? data.includes.join('\n') : '';
@@ -242,6 +247,7 @@
         <td>
           <div style="font-weight:700;">${it.name||''}</div>
           <div class="muted">${it.includes && it.includes.length ? it.includes[0] : '—'}</div>
+          <div class="muted">已售出：${Number(it.sold||0)}</div>
         </td>
         <td>${Number(it.price||0).toLocaleString('zh-TW')}</td>
         <td><button class="btn" data-act="edit" data-id="${it.id}">編輯</button></td>

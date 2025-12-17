@@ -2892,6 +2892,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       line: String(body.line||'').trim()
     };
     const options = Array.isArray(svc.options) ? svc.options : [];
+    let baseCount = Number(body.baseCount || 0);
+    if (!Number.isFinite(baseCount) || baseCount < 0) baseCount = 0;
     let requestedNames = [];
     if (Array.isArray(body.optionNames) && body.optionNames.length){
       requestedNames = body.optionNames.map(name => String(name||'').trim()).filter(Boolean);
@@ -2920,13 +2922,19 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
         total: basePrice + Number(opt.price||0),
         image: svc.cover||''
       }));
-    }else{
-      items = [{
-        name: svc.name,
-        qty: 1,
-        total: basePrice,
-        image: svc.cover||''
-      }];
+    }
+    if (!selectionList.length && !options.length && baseCount < 1){
+      baseCount = 1;
+    }
+    if (baseCount > 0){
+      for (let i=0;i<baseCount;i++){
+        items.push({
+          name: svc.name,
+          qty: 1,
+          total: basePrice,
+          image: svc.cover||''
+        });
+      }
     }
     const finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
     const order = {
