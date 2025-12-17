@@ -2888,6 +2888,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       name,
       phone,
       email: String(body.email||'').trim(),
+      birth: String(body.birth||'').trim(),
       line: String(body.line||'').trim()
     };
     const options = Array.isArray(svc.options) ? svc.options : [];
@@ -2907,8 +2908,27 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
         selectionList.push({ name: info.name, price: Number(info.price||0) });
       }
     }
-    const optionPrice = selectionList.reduce((sum,opt)=> sum + Number(opt.price||0), 0);
-    const finalPrice = Number(svc.price||0) + optionPrice;
+    if (options.length && !selectionList.length){
+      return new Response(JSON.stringify({ ok:false, error:'請至少選擇一個服務項目' }), { status:400, headers: jsonHeaders });
+    }
+    const basePrice = Number(svc.price||0);
+    let items = [];
+    if (selectionList.length){
+      items = selectionList.map(opt => ({
+        name: `${svc.name}｜${opt.name}`,
+        qty: 1,
+        total: basePrice + Number(opt.price||0),
+        image: svc.cover||''
+      }));
+    }else{
+      items = [{
+        name: svc.name,
+        qty: 1,
+        total: basePrice,
+        image: svc.cover||''
+      }];
+    }
+    const finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
     const order = {
       id: orderId,
       type: 'service',
@@ -2916,12 +2936,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       serviceName: svc.name,
       selectedOption: selectionList.length === 1 ? selectionList[0] : undefined,
       selectedOptions: selectionList.length > 1 ? selectionList : (selectionList.length ? selectionList : undefined),
-      items: [{
-        name: selectionList.length ? `${svc.name}｜${selectionList.map(item=>item.name).join('、')}` : svc.name,
-        qty: 1,
-        total: finalPrice,
-        image: svc.cover||''
-      }],
+      items,
       amount: finalPrice,
       status: '待處理',
       buyer,

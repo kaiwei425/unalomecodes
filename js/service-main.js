@@ -190,9 +190,9 @@
       const options = Array.isArray(service.options) ? service.options.filter(opt=> opt && opt.name) : [];
       if (options.length){
         detailOptionsWrap.style.display = '';
-        detailOptions.innerHTML = options.map((opt, idx)=>`
+        detailOptions.innerHTML = options.map(opt=>`
           <label>
-            <input type="checkbox" name="svcOptCheck" value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}" ${idx===0 ? 'checked':''}>
+            <input type="checkbox" name="svcOptCheck" value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">
             <span>
               <span style="font-weight:600;">${escapeHtml(opt.name)}</span>
               ${opt.price ? `<span style="color:#6b7280;font-size:12px;margin-left:4px;">+${formatTWD(opt.price)}</span>` : ''}
@@ -255,6 +255,8 @@
     cartForm.dataset.serviceId = service.id || '';
     cartForm.dataset.basePrice = Number(service.price || 0);
     const selected = Array.isArray(service.__selectedOptions) ? service.__selectedOptions : [];
+    const hasOptions = Array.isArray(service.options) && service.options.length;
+    cartForm.dataset.defaultCount = hasOptions ? 0 : 1;
     cartForm.dataset.selectedOptions = JSON.stringify(selected);
     if (cartNameEl) cartNameEl.textContent = service.name || '服務';
     renderCartSelections(selected);
@@ -288,8 +290,10 @@
     if (!cartForm) return 0;
     const base = Number(cartForm.dataset.basePrice || 0);
     const opts = getSelectedOptions();
+    let count = opts.length || Number(cartForm.dataset.defaultCount || 1);
+    if (!count || count < 1) count = 1;
     const optPrice = opts.reduce((sum,opt)=> sum + Number(opt.price||0), 0);
-    return base + optPrice;
+    return base * count + optPrice;
   }
 
   async function submitServiceOrder(payload){
@@ -323,6 +327,7 @@
           name: formData.get('name')||'',
           phone: formData.get('phone')||'',
           email: formData.get('email')||'',
+          birth: formData.get('birth')||'',
           requestDate: formData.get('requestDate')||'',
           note: formData.get('note')||'',
           optionNames: getSelectedOptions().map(opt => opt.name)

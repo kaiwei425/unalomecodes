@@ -26,8 +26,25 @@ body.service-view{background:var(--bg);color:var(--fg);}
 .svc-dialog .svc-includes{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;list-style:disc;padding-left:22px;background:#f9fafb;}
 .svc-dialog .svc-includes li{margin-bottom:6px;color:#374151;}
 .svc-dialog .svc-options{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
-.svc-dialog .svc-options label{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;background:#f8fafc;}
-.svc-dialog .svc-options label span{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.svc-dialog .svc-options label{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:6px 10px;
+  font-size:14px;
+  background:#f8fafc;
+  width:100%;
+}
+.svc-dialog .svc-options label span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex:1;
+  white-space:normal;
+}
 .svc-dialog .svc-options input{margin:0;flex-shrink:0;}
 .svc-stepper{display:flex;gap:8px;justify-content:center;padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(24,161,104,.08),rgba(16,149,214,.08));}
 .svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:700;}
@@ -186,6 +203,10 @@ body.service-view{background:var(--bg);color:var(--fg);}
         <label>
           Email（必填）
           <input type="email" name="email" required placeholder="請輸入通知用 Email">
+        </label>
+        <label>
+          生日（西元年/月/日）
+          <input type="date" name="birth">
         </label>
         <label>
           指定祈福日期（可留白）
