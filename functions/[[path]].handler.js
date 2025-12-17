@@ -2891,23 +2891,33 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       line: String(body.line||'').trim()
     };
     const options = Array.isArray(svc.options) ? svc.options : [];
-    let optionInfo = null;
-    if (options.length && body.optionName){
-      optionInfo = options.find(opt => opt && (String(opt.name||'').trim() === String(body.optionName||'').trim()));
-      if (!optionInfo) {
-        return new Response(JSON.stringify({ ok:false, error:'服務項目無效' }), { status:400, headers: jsonHeaders });
+    let requestedNames = [];
+    if (Array.isArray(body.optionNames) && body.optionNames.length){
+      requestedNames = body.optionNames.map(name => String(name||'').trim()).filter(Boolean);
+    } else if (body.optionName) {
+      requestedNames = [String(body.optionName||'').trim()];
+    }
+    const selectionList = [];
+    if (requestedNames.length){
+      for (const nm of requestedNames){
+        const info = options.find(opt => opt && (String(opt.name||'').trim() === nm));
+        if (!info){
+          return new Response(JSON.stringify({ ok:false, error:'服務項目無效' }), { status:400, headers: jsonHeaders });
+        }
+        selectionList.push({ name: info.name, price: Number(info.price||0) });
       }
     }
-    const optionPrice = optionInfo ? Number(optionInfo.price||0) : 0;
+    const optionPrice = selectionList.reduce((sum,opt)=> sum + Number(opt.price||0), 0);
     const finalPrice = Number(svc.price||0) + optionPrice;
     const order = {
       id: orderId,
       type: 'service',
       serviceId,
       serviceName: svc.name,
-      selectedOption: optionInfo ? { name: optionInfo.name, price: optionPrice } : undefined,
+      selectedOption: selectionList.length === 1 ? selectionList[0] : undefined,
+      selectedOptions: selectionList.length > 1 ? selectionList : (selectionList.length ? selectionList : undefined),
       items: [{
-        name: optionInfo ? `${svc.name}｜${optionInfo.name}` : svc.name,
+        name: selectionList.length ? `${svc.name}｜${selectionList.map(item=>item.name).join('、')}` : svc.name,
         qty: 1,
         total: finalPrice,
         image: svc.cover||''

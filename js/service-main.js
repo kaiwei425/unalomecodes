@@ -21,15 +21,12 @@
   let detailDataset = null;
   const cartDialog = document.getElementById('svcCart');
   const cartForm = document.getElementById('svcCartForm');
-  const cartClose = document.getElementById('svcCartClose');
   const cartNameEl = document.getElementById('svcCartServiceName');
   const cartPriceEl = document.getElementById('svcCartServicePrice');
-  const cartDurationEl = document.getElementById('svcCartDuration');
   const cartServiceIdInput = document.getElementById('svcCartServiceId');
   const cartSubmitBtn = document.getElementById('svcCartSubmit');
   const cartBackBtn = document.getElementById('svcCartBack');
-  const cartOptionWrap = document.getElementById('svcCartOptionWrap');
-  const cartOptionSelect = document.getElementById('svcCartOption');
+  const cartSelectionsEl = document.getElementById('svcCartSelections');
   const successDialog = document.getElementById('svcSuccess');
   const successIdEl = document.getElementById('svcSuccessId');
   const successCloseBtn = document.getElementById('svcSuccessClose');
@@ -136,12 +133,18 @@
       lookupCards.innerHTML = '<div style="color:#94a3b8;">查無資料，請確認輸入是否正確。</div>';
     }else{
       list.forEach(order=>{
+        const selectionNames = Array.isArray(order.selectedOptions) && order.selectedOptions.length
+          ? order.selectedOptions.map(opt => opt && opt.name ? opt.name : '').filter(Boolean)
+          : (order.selectedOption && order.selectedOption.name ? [order.selectedOption.name] : []);
+        const serviceLine = selectionNames.length
+          ? `${escapeHtml(order.serviceName || '')}｜${escapeHtml(selectionNames.join('、'))}`
+          : escapeHtml(order.serviceName || '');
         const card = document.createElement('div');
         card.className = 'lookup-card';
         card.innerHTML = `
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
           <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(order.status || '處理中')}</div>
-          <div style="margin-top:8px;font-weight:600;">服務：${escapeHtml(order.serviceName || '')}${order.selectedOption && order.selectedOption.name ? '｜' + escapeHtml(order.selectedOption.name) : ''}</div>
+          <div style="margin-top:8px;font-weight:600;">服務：${serviceLine}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">願望／備註：${escapeHtml(order.note || '—')}</div>
         `;
         lookupCards.appendChild(card);
@@ -189,11 +192,11 @@
         detailOptionsWrap.style.display = '';
         detailOptions.innerHTML = options.map((opt, idx)=>`
           <label>
+            <input type="checkbox" name="svcOptCheck" value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}" ${idx===0 ? 'checked':''}>
             <span>
               <span style="font-weight:600;">${escapeHtml(opt.name)}</span>
               ${opt.price ? `<span style="color:#6b7280;font-size:12px;margin-left:4px;">+${formatTWD(opt.price)}</span>` : ''}
             </span>
-            <input type="radio" name="svcOptRadio" value="${escapeHtml(opt.name)}" ${idx===0 ? 'checked':''}>
           </label>
         `).join('');
       }else{
@@ -214,14 +217,24 @@
     detailAction.addEventListener('click', ()=>{
       if (detailDialog) detailDialog.close();
       if (detailDataset){
-        const selectedOpt = detailOptions ? detailOptions.querySelector('input[name="svcOptRadio"]:checked') : null;
-        detailDataset.__selectedOption = selectedOpt ? selectedOpt.value : '';
+        let selectedList = [];
+        if (detailOptions){
+          selectedList = Array.from(detailOptions.querySelectorAll('input[name="svcOptCheck"]:checked')).map(inp=>({
+            name: inp.value,
+            price: Number(inp.getAttribute('data-price')||0)
+          }));
+          const hasOptions = Array.isArray(detailDataset.options) && detailDataset.options.length;
+          if (hasOptions && !selectedList.length){
+            alert('請至少選擇一個服務項目');
+            return;
+          }
+        }else{
+          selectedList = [];
+        }
+        detailDataset.__selectedOptions = selectedList;
         openCart(detailDataset);
       }
     });
-  }
-  if (cartClose && cartDialog){
-    cartClose.addEventListener('click', ()=> cartDialog.close());
   }
   if (cartBackBtn && cartDialog){
     cartBackBtn.addEventListener('click', ()=> cartDialog.close());
@@ -241,46 +254,42 @@
     cartForm.reset();
     cartForm.dataset.serviceId = service.id || '';
     cartForm.dataset.basePrice = Number(service.price || 0);
+    const selected = Array.isArray(service.__selectedOptions) ? service.__selectedOptions : [];
+    cartForm.dataset.selectedOptions = JSON.stringify(selected);
     if (cartNameEl) cartNameEl.textContent = service.name || '服務';
-    if (cartPriceEl) cartPriceEl.textContent = formatTWD(service.price || 0);
-    if (cartDurationEl) cartDurationEl.textContent = service.duration || '時間依老師安排';
+    renderCartSelections(selected);
+    if (cartPriceEl) cartPriceEl.textContent = formatTWD(computeCartAmount());
     if (cartServiceIdInput) cartServiceIdInput.value = service.id || '';
-    if (cartOptionWrap && cartOptionSelect){
-      const options = Array.isArray(service.options) ? service.options.filter(opt=> opt && opt.name) : [];
-      if (options.length){
-        cartOptionWrap.style.display = '';
-        cartOptionSelect.innerHTML = options.map(opt => `<option value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</option>`).join('');
-        const pref = service.__selectedOption || '';
-        if (pref){
-          const optEl = Array.from(cartOptionSelect.options).find(o=> o.value === pref);
-          if (optEl) cartOptionSelect.value = pref;
-        }
-      }else{
-        cartOptionWrap.style.display = 'none';
-        cartOptionSelect.innerHTML = '';
-      }
-      delete service.__selectedOption;
-      cartOptionSelect.dispatchEvent(new Event('change'));
-    }
+    delete service.__selectedOptions;
     cartDialog.showModal();
   }
 
-  function computeCartAmount(){
-    const base = Number(cartForm.dataset.basePrice || 0);
-    let optPrice = 0;
-    if (cartOptionSelect && cartOptionSelect.value){
-      const opt = cartOptionSelect.selectedOptions[0];
-      optPrice = Number(opt ? opt.getAttribute('data-price') : 0) || 0;
+  function getSelectedOptions(){
+    if (!cartForm) return [];
+    try{
+      const raw = cartForm.dataset.selectedOptions || '[]';
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    }catch(_){
+      return [];
     }
-    return base + optPrice;
   }
 
-  if (cartOptionSelect){
-    cartOptionSelect.addEventListener('change', ()=>{
-      if (cartPriceEl){
-        cartPriceEl.textContent = formatTWD(computeCartAmount());
-      }
-    });
+  function renderCartSelections(list){
+    if (!cartSelectionsEl) return;
+    if (!list.length){
+      cartSelectionsEl.innerHTML = '<li>標準服務</li>';
+      return;
+    }
+    cartSelectionsEl.innerHTML = list.map(opt => `<li>${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</li>`).join('');
+  }
+
+  function computeCartAmount(){
+    if (!cartForm) return 0;
+    const base = Number(cartForm.dataset.basePrice || 0);
+    const opts = getSelectedOptions();
+    const optPrice = opts.reduce((sum,opt)=> sum + Number(opt.price||0), 0);
+    return base + optPrice;
   }
 
   async function submitServiceOrder(payload){
@@ -314,10 +323,9 @@
           name: formData.get('name')||'',
           phone: formData.get('phone')||'',
           email: formData.get('email')||'',
-          line: formData.get('line')||'',
           requestDate: formData.get('requestDate')||'',
           note: formData.get('note')||'',
-          optionName: cartOptionSelect && cartOptionSelect.value ? cartOptionSelect.value : ''
+          optionNames: getSelectedOptions().map(opt => opt.name)
         };
         const result = await submitServiceOrder(payload);
         cartDialog.close();

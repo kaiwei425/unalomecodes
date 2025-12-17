@@ -26,7 +26,7 @@ body.service-view{background:var(--bg);color:var(--fg);}
 .svc-dialog .svc-includes{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;list-style:disc;padding-left:22px;background:#f9fafb;}
 .svc-dialog .svc-includes li{margin-bottom:6px;color:#374151;}
 .svc-dialog .svc-options{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
-.svc-dialog .svc-options label{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;gap:12px;flex-wrap:nowrap;}
+.svc-dialog .svc-options label{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;}
 .svc-dialog .svc-options label span{display:flex;align-items:center;gap:6px;}
 .svc-dialog .svc-options input{margin:0;flex-shrink:0;}
 .svc-stepper{display:flex;gap:8px;justify-content:center;padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(24,161,104,.08),rgba(16,149,214,.08));}
@@ -163,18 +163,15 @@ body.service-view{background:var(--bg);color:var(--fg);}
       <span>2. 填寫資料</span>
       <span>3. 完成</span>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid var(--line);">
-      <div>
-        <div style="font-weight:800;font-size:18px;">填寫祈福資料</div>
-        <div id="svcCartSubtitle" style="margin-top:4px;color:#6b7280;font-size:13px;">請確認聯絡方式與願望內容</div>
-      </div>
-      <button type="button" id="svcCartClose" class="xbtn">✕</button>
+    <div style="padding:18px;border-bottom:1px solid var(--line);">
+      <div style="font-weight:800;font-size:18px;">填寫訂單資料</div>
     </div>
     <form id="svcCartForm" class="svc-form">
       <div class="svc-summary">
         <div>
-          <div id="svcCartServiceName" style="font-weight:700;font-size:16px;">服務名稱</div>
-          <div id="svcCartDuration" style="font-size:13px;color:#6b7280;margin-top:4px;">時間依老師安排</div>
+          <div style="font-size:12px;color:#6b7280;font-weight:700;">服務內容確認</div>
+          <div id="svcCartServiceName" style="font-weight:700;font-size:16px;margin-top:4px;">服務名稱</div>
+          <ul id="svcCartSelections" style="margin:6px 0 0;padding-left:18px;color:#475569;font-size:13px;line-height:1.5;"></ul>
         </div>
         <strong id="svcCartServicePrice">NT$ 0</strong>
       </div>
@@ -189,24 +186,16 @@ body.service-view{background:var(--bg);color:var(--fg);}
           <input type="tel" name="phone" required placeholder="例：0969123456">
         </label>
         <label>
-          Email
-          <input type="email" name="email" placeholder="若需 Email 通知可填寫">
-        </label>
-        <label>
-          LINE ID
-          <input type="text" name="line" placeholder="若需 LINE 通知可填寫">
+          Email（必填）
+          <input type="email" name="email" required placeholder="請輸入通知用 Email">
         </label>
         <label>
           指定祈福日期（可留白）
           <input type="date" name="requestDate">
         </label>
-        <label id="svcCartOptionWrap" style="display:none;">
-          選擇服務項目
-          <select id="svcCartOption"></select>
-        </label>
         <label>
-          願望／備註
-          <textarea name="note" placeholder="可輸入願望、祈福對象、特殊需求…"></textarea>
+          備註
+          <textarea name="note" placeholder="可輸入備註或特殊需求…"></textarea>
         </label>
       </section>
       <div style="padding:0 18px 18px;display:flex;justify-content:flex-end;gap:10px;">
