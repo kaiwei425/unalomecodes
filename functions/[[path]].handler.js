@@ -1556,9 +1556,9 @@ function composeOrderEmail(order, opts = {}) {
     : '';
   const customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助請寫信至 ${esc(supportEmail)} 或 ${lineInstruction}。</p>`
+      <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或 ${lineInstruction}。</p>`;
+      <p>我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
   const contactRows = [
     buyerName ? `<p style="margin:0 0 8px;"><strong>收件人：</strong>${esc(buyerName)}</p>` : '',
@@ -1583,7 +1583,7 @@ function composeOrderEmail(order, opts = {}) {
     <div style="margin-top:24px;padding:16px;border-radius:12px;background:#f1f5f9;color:#475569;font-size:13px;line-height:1.6;">
       本信件為系統自動發送，請勿直接回覆。<br>
       客服信箱：${esc(supportEmail)}<br>
-      官方 LINE：${lineInstruction}
+      官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）
     </div>
   `;
   const html = `
@@ -1612,9 +1612,9 @@ function composeOrderEmail(order, opts = {}) {
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
-    textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或 ${lineLabel} 聯繫。`);
+    textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或 LINE ID：${lineLabel} 聯繫。`);
   } else {
-    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊。請勿直接回覆此信，可透過 ${supportEmail} 或 ${lineLabel} 聯繫。`);
+    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);
