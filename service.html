@@ -161,6 +161,10 @@
           <li>蠟燭祈請</li>
         </ul>
       </div>
+      <div id="svcDetailOptionsWrap" style="display:none;">
+        <div style="font-weight:700;margin-bottom:8px;">服務項目</div>
+        <div id="svcDetailOptions" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
       <div>
         <div style="font-weight:700;margin-bottom:8px;">示意圖</div>
         <div id="svcDetailGallery" class="gallery"></div>
@@ -210,6 +214,10 @@
         <label>
           指定祈福日期（可留白）
           <input type="date" name="requestDate">
+        </label>
+        <label id="svcCartOptionWrap" style="display:none;">
+          選擇服務項目
+          <select id="svcCartOption"></select>
         </label>
         <label>
           願望／備註

@@ -15,6 +15,8 @@
   const detailIncludes = document.getElementById('svcDetailIncludes');
   const detailGallery = document.getElementById('svcDetailGallery');
   const detailAction = document.getElementById('svcDetailAction');
+  const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
+  const detailOptions = document.getElementById('svcDetailOptions');
   let detailDataset = null;
   const cartDialog = document.getElementById('svcCart');
   const cartForm = document.getElementById('svcCartForm');
@@ -50,7 +52,7 @@
     catch(_){ return 'NT$ ' + (num||0); }
   }
 
-  function renderList(items){
+function renderList(items){
     if (!listEl) return;
     listEl.innerHTML = '';
     if (!items.length){
@@ -138,7 +140,7 @@
         card.innerHTML = `
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
           <div style="font-size:13px;color:#94a3b8;">狀態：${escapeHtml(order.status || '處理中')}</div>
-          <div style="margin-top:8px;font-weight:600;">服務：${escapeHtml(order.serviceName || '')}</div>
+          <div style="margin-top:8px;font-weight:600;">服務：${escapeHtml(order.serviceName || '')}${order.selectedOption && order.selectedOption.name ? '｜' + escapeHtml(order.selectedOption.name) : ''}</div>
           <div style="font-size:13px;color:#cbd5f5;margin-top:6px;">願望／備註：${escapeHtml(order.note || '—')}</div>
         `;
         lookupCards.appendChild(card);
@@ -167,6 +169,24 @@
         ? gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}">`).join('')
         : '<div style="color:#94a3b8;">目前尚未提供示意圖</div>';
     }
+    if (detailOptions){
+      const options = Array.isArray(service.options) ? service.options.filter(opt=> opt && opt.name) : [];
+      if (options.length){
+        detailOptionsWrap.style.display = '';
+        detailOptions.innerHTML = options.map((opt, idx)=>`
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 12px;">
+            <span>
+              <span style="font-weight:600;">${escapeHtml(opt.name)}</span>
+              <span style="color:#cbd5f5;font-size:12px;margin-left:4px;">${opt.price ? '+'+formatTWD(opt.price) : '不加價'}</span>
+            </span>
+            <input type="radio" name="svcOptRadio" value="${escapeHtml(opt.name)}" ${idx===0 ? 'checked':''}>
+          </label>
+        `).join('');
+      }else{
+        detailOptionsWrap.style.display = 'none';
+        detailOptions.innerHTML = '';
+      }
+    }
     if (detailAction){
       detailAction.dataset.serviceId = service.id || '';
     }
@@ -179,7 +199,11 @@
   if (detailAction){
     detailAction.addEventListener('click', ()=>{
       if (detailDialog) detailDialog.close();
-      if (detailDataset) openCart(detailDataset);
+      if (detailDataset){
+        const selectedOpt = detailOptions ? detailOptions.querySelector('input[name="svcOptRadio"]:checked') : null;
+        detailDataset.__selectedOption = selectedOpt ? selectedOpt.value : '';
+        openCart(detailDataset);
+      }
     });
   }
   if (cartClose && cartDialog){
@@ -199,11 +223,39 @@
     if (!cartDialog || !cartForm) return;
     cartForm.reset();
     cartForm.dataset.serviceId = service.id || '';
+    cartForm.dataset.basePrice = Number(service.price || 0);
     if (cartNameEl) cartNameEl.textContent = service.name || '服務';
     if (cartPriceEl) cartPriceEl.textContent = formatTWD(service.price || 0);
     if (cartDurationEl) cartDurationEl.textContent = service.duration || '時間依老師安排';
     if (cartServiceIdInput) cartServiceIdInput.value = service.id || '';
+    if (cartOptionWrap && cartOptionSelect){
+      const options = Array.isArray(service.options) ? service.options.filter(opt=> opt && opt.name) : [];
+      if (options.length){
+        cartOptionWrap.style.display = '';
+        cartOptionSelect.innerHTML = options.map(opt => `<option value="${escapeHtml(opt.name)}" data-price="${Number(opt.price||0)}">${escapeHtml(opt.name)}${opt.price ? `（+${formatTWD(opt.price)}）` : ''}</option>`).join('');
+        const pref = service.__selectedOption || '';
+        if (pref){
+          const optEl = Array.from(cartOptionSelect.options).find(o=> o.value === pref);
+          if (optEl) cartOptionSelect.value = pref;
+        }
+      }else{
+        cartOptionWrap.style.display = 'none';
+        cartOptionSelect.innerHTML = '';
+      }
+      delete service.__selectedOption;
+      cartOptionSelect.dispatchEvent(new Event('change'));
+    }
     cartDialog.showModal();
+  }
+
+  function computeCartAmount(){
+    const base = Number(cartForm.dataset.basePrice || 0);
+    let optPrice = 0;
+    if (cartOptionSelect && cartOptionSelect.value){
+      const opt = cartOptionSelect.selectedOptions[0];
+      optPrice = Number(opt ? opt.getAttribute('data-price') : 0) || 0;
+    }
+    return base + optPrice;
   }
 
   async function submitServiceOrder(payload){
@@ -240,6 +292,7 @@
           line: formData.get('line')||'',
           requestDate: formData.get('requestDate')||'',
           note: formData.get('note')||'',
+          optionName: cartOptionSelect && cartOptionSelect.value ? cartOptionSelect.value : ''
         };
         const result = await submitServiceOrder(payload);
         cartDialog.close();
@@ -268,3 +321,15 @@
     })();
   });
 })();
+  const cartOptionWrap = document.getElementById('svcCartOptionWrap');
+  const cartOptionSelect = document.getElementById('svcCartOption');
+  if (cartOptionSelect){
+    cartOptionSelect.addEventListener('change', ()=>{
+      if (cartPriceEl){
+        cartPriceEl.textContent = formatTWD(computeCartAmount());
+      }
+    });
+  }
+    if (cartPriceEl){
+      cartPriceEl.textContent = formatTWD(computeCartAmount());
+    }

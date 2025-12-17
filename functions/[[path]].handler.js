@@ -110,7 +110,11 @@ const DEFAULT_SERVICE_PRODUCTS = [
     duration: '約 7 天',
     includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
     price: 799,
-    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-basic.png'
+    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-basic.png',
+    options: [
+      { name: '基礎蠟燭', price: 0 },
+      { name: '祈願蠟燭 + 供品', price: 300 }
+    ]
   },
   {
     id: 'svc-candle-plus',
@@ -120,7 +124,11 @@ const DEFAULT_SERVICE_PRODUCTS = [
     duration: '約 14 天',
     includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
     price: 1299,
-    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-plus.png'
+    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-plus.png',
+    options: [
+      { name: '進階供品組', price: 0 },
+      { name: '供品＋特別祈禱', price: 500 }
+    ]
   }
 ];
 
@@ -2882,18 +2890,29 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       email: String(body.email||'').trim(),
       line: String(body.line||'').trim()
     };
+    const options = Array.isArray(svc.options) ? svc.options : [];
+    let optionInfo = null;
+    if (options.length && body.optionName){
+      optionInfo = options.find(opt => opt && (String(opt.name||'').trim() === String(body.optionName||'').trim()));
+      if (!optionInfo) {
+        return new Response(JSON.stringify({ ok:false, error:'服務項目無效' }), { status:400, headers: jsonHeaders });
+      }
+    }
+    const optionPrice = optionInfo ? Number(optionInfo.price||0) : 0;
+    const finalPrice = Number(svc.price||0) + optionPrice;
     const order = {
       id: orderId,
       type: 'service',
       serviceId,
       serviceName: svc.name,
+      selectedOption: optionInfo ? { name: optionInfo.name, price: optionPrice } : undefined,
       items: [{
-        name: svc.name,
+        name: optionInfo ? `${svc.name}｜${optionInfo.name}` : svc.name,
         qty: 1,
-        total: Number(svc.price||0),
+        total: finalPrice,
         image: svc.cover||''
       }],
-      amount: Number(svc.price||0),
+      amount: finalPrice,
       status: '待處理',
       buyer,
       note: String(body.note||'').trim(),
