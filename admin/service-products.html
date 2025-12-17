@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>服務商品管理｜unalomecodes</title>
+<style>
+  :root{
+    --bg:#f7f8fb;--card:#fff;--fg:#0f172a;--line:#e5e7eb;--accent:#2563eb;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px;}
+  .backLink{margin-bottom:12px;}
+  .backBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;text-decoration:none;color:var(--fg);font-weight:700;}
+  h1{margin:0 0 16px;font-size:26px;font-weight:800;}
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 36px rgba(15,23,42,.1);}
+  label{display:block;font-size:12px;color:#6b7280;margin-top:10px;margin-bottom:4px;font-weight:700;}
+  input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
+  textarea{min-height:100px;line-height:1.6;resize:vertical;}
+  .row{display:flex;gap:10px;}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--fg);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;}
+  .btn.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;}
+  .btn.danger{background:#fee2e2;border:none;color:#b91c1c;}
+  table{width:100%;border-collapse:collapse;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px;}
+  th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
+  th{background:#f1f5f9;color:#64748b;font-weight:700;}
+  tbody tr:hover{background:#f8fafc;}
+  .muted{color:#94a3b8;font-size:12px;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#1d4ed8;margin-right:6px;font-size:12px;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
+    <h1>服務型商品管理</h1>
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin:0 0 6px;">新增 / 編輯服務</h3>
+        <p class="muted">輸入資料後按「儲存服務」。若選取表格中的項目會帶入資料供編輯。</p>
+        <input type="hidden" id="svc_id">
+        <label>服務名稱</label>
+        <input id="svc_name" placeholder="例：蠟燭祈福｜基本祈請">
+        <label>費用（NT$）</label>
+        <input id="svc_price" type="number" min="0" value="0">
+        <label>建議天數 / 描述（簡短文字）</label>
+        <input id="svc_duration" placeholder="例：約 7 天">
+        <label>服務摘要</label>
+        <input id="svc_summary" placeholder="列表中顯示的一段話">
+        <label>詳細說明</label>
+        <textarea id="svc_description" placeholder="完整介紹、祈福流程、注意事項…"></textarea>
+        <label>包含內容（每行一項）</label>
+        <textarea id="svc_includes" placeholder="蠟燭祈請一次&#10;祈福祝禱錄音節錄"></textarea>
+        <label>主圖網址（封面）</label>
+        <input id="svc_cover" placeholder="https://...">
+        <label>圖集（每行一個網址，可留空）</label>
+        <textarea id="svc_gallery" placeholder="https://..."></textarea>
+        <div class="row" style="margin-top:14px;gap:8px;">
+          <button class="btn primary" id="btnSave">儲存服務</button>
+          <button class="btn" id="btnReset">清空</button>
+          <button class="btn danger" id="btnDelete" style="margin-left:auto;display:none;">刪除此服務</button>
+        </div>
+        <div class="muted" id="formMsg" style="margin-top:10px;"></div>
+      </div>
+      <div class="card" style="overflow:auto;">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <input id="filter" placeholder="搜尋服務名稱…" style="flex:1;">
+          <button class="btn" id="btnReload">重新整理</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th style="width:60px">封面</th><th>服務資訊</th><th style="width:120px">費用</th><th style="width:80px">操作</th></tr>
+          </thead>
+          <tbody id="svcListBody"><tr><td colspan="4" class="muted">尚無資料</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<script>
+(function(){
+  const STORAGE_KEY = 'ADMIN_KEY';
+  function getAdminKey(){
+    let key = sessionStorage.getItem(STORAGE_KEY) || '';
+    if (!key){
+      key = prompt('請輸入管理員金鑰') || '';
+      if (key) sessionStorage.setItem(STORAGE_KEY, key.trim());
+    }
+    return key.trim();
+  }
+  async function authedFetch(url, init){
+    const key = getAdminKey();
+    if (!key) throw new Error('未提供管理員金鑰');
+    const headers = Object.assign({}, init && init.headers ? init.headers : {}, { 'X-Admin-Key': key });
+    const opts = Object.assign({}, init||{}, { headers });
+    const res = await fetch(url, opts);
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    return data;
+  }
+  const listBody = document.getElementById('svcListBody');
+  const filterInput = document.getElementById('filter');
+  const formMsg = document.getElementById('formMsg');
+  const btnSave = document.getElementById('btnSave');
+  const btnReset = document.getElementById('btnReset');
+  const btnDelete = document.getElementById('btnDelete');
+  const btnReload = document.getElementById('btnReload');
+  const fields = ['id','name','price','duration','summary','description','includes','cover','gallery'];
+  let items = [];
+
+  function readForm(){
+    return {
+      id: document.getElementById('svc_id').value.trim(),
+      name: document.getElementById('svc_name').value.trim(),
+      price: Number(document.getElementById('svc_price').value || 0),
+      duration: document.getElementById('svc_duration').value.trim(),
+      summary: document.getElementById('svc_summary').value.trim(),
+      description: document.getElementById('svc_description').value,
+      includes: document.getElementById('svc_includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
+      cover: document.getElementById('svc_cover').value.trim(),
+      gallery: document.getElementById('svc_gallery').value.split('\n').map(s=>s.trim()).filter(Boolean)
+    };
+  }
+  function fillForm(data){
+    document.getElementById('svc_id').value = data.id || '';
+    document.getElementById('svc_name').value = data.name || '';
+    document.getElementById('svc_price').value = Number(data.price||0);
+    document.getElementById('svc_duration').value = data.duration || '';
+    document.getElementById('svc_summary').value = data.summary || '';
+    document.getElementById('svc_description').value = data.description || '';
+    document.getElementById('svc_includes').value = Array.isArray(data.includes) ? data.includes.join('\n') : '';
+    document.getElementById('svc_cover').value = data.cover || '';
+    document.getElementById('svc_gallery').value = Array.isArray(data.gallery) ? data.gallery.join('\n') : '';
+    btnDelete.style.display = data.id ? 'inline-flex' : 'none';
+  }
+  function resetForm(){
+    fillForm({ id:'', price:0 });
+    formMsg.textContent = '';
+  }
+  function renderList(){
+    const q = (filterInput.value||'').trim().toLowerCase();
+    const view = items.filter(it => !q || String(it.name||'').toLowerCase().includes(q));
+    if (!view.length){
+      listBody.innerHTML = '<tr><td colspan="4" class="muted">沒有符合條件的服務。</td></tr>';
+      return;
+    }
+    listBody.innerHTML = view.map(it => `
+      <tr data-id="${it.id}">
+        <td>${it.cover ? `<img src="${it.cover}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px;">` : ''}</td>
+        <td>
+          <div style="font-weight:700;">${it.name||''}</div>
+          <div class="muted">${it.summary || ''}</div>
+        </td>
+        <td>${Number(it.price||0).toLocaleString('zh-TW')}</td>
+        <td><button class="btn" data-act="edit" data-id="${it.id}">編輯</button></td>
+      </tr>
+    `).join('');
+  }
+  async function loadServices(){
+    listBody.innerHTML = '<tr><td colspan="4" class="muted">載入中…</td></tr>';
+    try{
+      const data = await authedFetch('/api/service/products');
+      items = Array.isArray(data.items) ? data.items : [];
+      renderList();
+    }catch(err){
+      listBody.innerHTML = `<tr><td colspan="4" class="muted">載入失敗：${err.message}</td></tr>`;
+    }
+  }
+  btnReload.addEventListener('click', loadServices);
+  filterInput.addEventListener('input', renderList);
+  btnReset.addEventListener('click', resetForm);
+  listBody.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-act="edit"]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    const item = items.find(x => x.id === id);
+    if (item) fillForm(item);
+  });
+  btnSave.addEventListener('click', async ()=>{
+    const data = readForm();
+    if (!data.name || !data.price){
+      formMsg.textContent = '請填寫名稱與價格';
+      return;
+    }
+    formMsg.textContent = '儲存中…';
+    try{
+      if (data.id){
+        await authedFetch('/api/service/products', {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(data)
+        });
+      }else{
+        const res = await authedFetch('/api/service/products', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(data)
+        });
+        data.id = res.item && res.item.id;
+      }
+      formMsg.textContent = '已儲存';
+      await loadServices();
+      if (data.id){
+        const newItem = items.find(x=> x.id === data.id);
+        if (newItem) fillForm(newItem);
+      }else{
+        resetForm();
+      }
+    }catch(err){
+      formMsg.textContent = '儲存失敗：' + err.message;
+    }
+  });
+  btnDelete.addEventListener('click', async ()=>{
+    const id = document.getElementById('svc_id').value.trim();
+    if (!id) return;
+    if (!confirm('確定要刪除服務「'+id+'」嗎？')) return;
+    try{
+      await authedFetch('/api/service/products?id='+encodeURIComponent(id), { method:'DELETE' });
+      resetForm();
+      await loadServices();
+    }catch(err){
+      alert('刪除失敗：' + err.message);
+    }
+  });
+  resetForm();
+  loadServices();
+})();
+</script>
+</body>
+</html>

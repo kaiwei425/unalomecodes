@@ -101,6 +101,46 @@ async function generateServiceOrderId(env){
   return `SV${prefix}${tail}`;
 }
 
+const DEFAULT_SERVICE_PRODUCTS = [
+  {
+    id: 'svc-candle-basic',
+    name: '蠟燭祈福｜基本祈請',
+    category: '服務型',
+    description: '老師於指定吉日時為您點燃蠟燭祈願，並以泰文逐一祝禱所託願望。',
+    duration: '約 7 天',
+    includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
+    price: 799,
+    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-basic.png'
+  },
+  {
+    id: 'svc-candle-plus',
+    name: '蠟燭祈福｜進階供品組',
+    category: '服務型',
+    description: '加上供品與祈福儀式照片回傳，適合需要長期加持的願望。',
+    duration: '約 14 天',
+    includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
+    price: 1299,
+    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-plus.png'
+  }
+];
+
+function normalizeTWPhoneStrict(raw){
+  const digits = String(raw||'').replace(/\D+/g,'');
+  if (!digits) return '';
+  if (digits.startsWith('886') && digits.length >= 11){
+    const rest = digits.slice(3);
+    if (rest.startsWith('9')) return '0' + rest.slice(0,9);
+    return rest;
+  }
+  if (digits.startsWith('09') && digits.length === 10) return digits;
+  if (digits.length === 9 && digits.startsWith('9')) return '0' + digits;
+  return digits.slice(-10);
+}
+
+function lastDigits(str, count=5){
+  return String(str||'').replace(/\D+/g,'').slice(-count);
+}
+
 // Generate a public-share token for ritual results
 function makeToken(len=32){
   const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -1761,7 +1801,7 @@ async function sendEmailMessage(env, message) {
 function shouldNotifyStatus(status) {
   const txt = String(status || '').trim();
   if (!txt) return false;
-  return txt === '已付款待出貨' || txt === '已寄件';
+  return txt === '已付款待出貨' || txt === '已寄件' || txt === '祈福完成' || txt === '祈福成果已通知';
 }
 
 function escapeHtmlEmail(str) {
@@ -2743,7 +2783,8 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
       items.push(JSON.parse(raw));
     }catch(_){}
   }
-  return new Response(JSON.stringify({ ok:true, items }), { status:200, headers: jsonHeaders });
+  const finalItems = items.length ? items : DEFAULT_SERVICE_PRODUCTS;
+  return new Response(JSON.stringify({ ok:true, items: finalItems }), { status:200, headers: jsonHeaders });
 }
 
 if (pathname === '/api/service/products' && request.method === 'POST') {
@@ -2885,6 +2926,94 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
   }catch(e){
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
+}
+
+if (pathname === '/api/service/orders' && request.method === 'GET') {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
+  }
+  const idQuery = url.searchParams.get('id');
+  if (idQuery){
+    const raw = await store.get(idQuery);
+    if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:true, item: JSON.parse(raw) }), { status:200, headers: jsonHeaders });
+  }
+  const limit = Math.min(Number(url.searchParams.get('limit')||50), 300);
+  let list = [];
+  try{
+    const idxRaw = await store.get('SERVICE_ORDER_INDEX');
+    if (idxRaw) list = JSON.parse(idxRaw) || [];
+  }catch(_){}
+  const items = [];
+  for (const id of list.slice(0, limit)){
+    const raw = await store.get(id);
+    if (!raw) continue;
+    try{ items.push(JSON.parse(raw)); }catch(_){}
+  }
+  return new Response(JSON.stringify({ ok:true, items }), { status:200, headers: jsonHeaders });
+}
+
+if (pathname === '/api/service/order/status' && request.method === 'POST') {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
+  }
+  try{
+    const body = await request.json();
+    const id = String(body.id||'').trim();
+    const status = String(body.status||'').trim();
+    if (!id || !status) return new Response(JSON.stringify({ ok:false, error:'Missing id/status' }), { status:400, headers: jsonHeaders });
+    const raw = await store.get(id);
+    if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+    const order = JSON.parse(raw);
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    await store.put(id, JSON.stringify(order));
+    let notified = false;
+    if (shouldNotifyStatus(status)){
+      try{
+        await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:false, emailContext:'status_update' });
+        notified = true;
+      }catch(err){ console.error('service status email err', err); }
+    }
+    return new Response(JSON.stringify({ ok:true, notified }), { status:200, headers: jsonHeaders });
+  }catch(e){
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
+}
+
+if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
+  const phone = normalizeTWPhoneStrict(url.searchParams.get('phone')||'');
+  const orderDigits = lastDigits(url.searchParams.get('order')||'', 5);
+  if (!phone || !orderDigits){
+    return new Response(JSON.stringify({ ok:false, error:'缺少查詢條件' }), { status:400, headers: jsonHeaders });
+  }
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
+  }
+  let list = [];
+  try{
+    const idxRaw = await store.get('SERVICE_ORDER_INDEX');
+    if (idxRaw) list = JSON.parse(idxRaw) || [];
+  }catch(_){}
+  const matches = [];
+  for (const id of list.slice(0, 200)){
+    const raw = await store.get(id);
+    if (!raw) continue;
+    let order = null;
+    try{ order = JSON.parse(raw); }catch(_){}
+    if (!order) continue;
+    const buyerPhone = normalizeTWPhoneStrict(order?.buyer?.phone || '');
+    const orderLast5 = lastDigits(order.id || '', 5);
+    if (buyerPhone && buyerPhone.endsWith(phone.slice(-9)) && orderLast5 === orderDigits){
+      matches.push(order);
+    }
+  }
+  return new Response(JSON.stringify({ ok:true, orders: matches }), { status:200, headers: jsonHeaders });
 }
 
     // 圖片上傳

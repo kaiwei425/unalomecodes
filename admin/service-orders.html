@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>服務訂單管理</title>
+<style>
+  :root{
+    --bg:#0b1022;--card:#111827;--line:#20283c;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:linear-gradient(180deg,#050815,#0f172a);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px;}
+  .backLink{margin-bottom:14px;}
+  .backBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#0f172a;border:1px solid #1f2937;color:#e5e7eb;text-decoration:none;font-weight:700;}
+  h1{margin:0 0 16px;font-size:26px;font-weight:800;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45);}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top;}
+  th{color:var(--muted);font-weight:700;}
+  tbody tr:hover{background:rgba(255,255,255,.02);}
+  .btn{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;padding:6px 10px;border-radius:10px;font-size:13px;cursor:pointer;}
+  .btn.primary{background:linear-gradient(135deg,#34d399,#38bdf8);border:none;color:#0b1120;}
+  select{background:#0f172a;border:1px solid var(--line);color:#e5e7eb;border-radius:10px;padding:6px 10px;}
+  .muted{color:var(--muted);font-size:13px;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#1e293b;}
+  .lookup{margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
+    <h1>服務訂單管理</h1>
+    <div class="lookup">
+      <input id="filter" placeholder="搜尋訂單編號 / 服務 / 電話" style="flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;">
+      <button class="btn" id="btnReload">重新整理</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>訂單</th>
+            <th>服務</th>
+            <th>聯絡資料</th>
+            <th>狀態</th>
+            <th style="width:180px">操作</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"><tr><td colspan="5" class="muted">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+<script>
+(function(){
+  const STORAGE_KEY = 'ADMIN_KEY';
+  function getKey(){
+    let key = sessionStorage.getItem(STORAGE_KEY) || '';
+    if (!key){
+      key = prompt('請輸入管理員金鑰') || '';
+      if (key) sessionStorage.setItem(STORAGE_KEY, key.trim());
+    }
+    return key.trim();
+  }
+  async function authedFetch(url, init){
+    const key = getKey();
+    if (!key) throw new Error('未輸入管理員金鑰');
+    const headers = Object.assign({}, init && init.headers ? init.headers : {}, { 'X-Admin-Key': key });
+    const opts = Object.assign({}, init||{}, { headers });
+    const res = await fetch(url, opts);
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    return data;
+  }
+  const bodyEl = document.getElementById('ordersBody');
+  const filterInput = document.getElementById('filter');
+  const btnReload = document.getElementById('btnReload');
+  let orders = [];
+  const STATUSES = ['待處理','祈福進行中','祈福完成','祈福成果已通知'];
+
+  function render(){
+    const q = (filterInput.value||'').toLowerCase();
+    const view = orders.filter(o=>{
+      if (!q) return true;
+      return [o.id, o.serviceName, o.buyer && o.buyer.phone].join(' ').toLowerCase().includes(q);
+    });
+    if (!view.length){
+      bodyEl.innerHTML = '<tr><td colspan="5" class="muted">沒有符合的訂單。</td></tr>';
+      return;
+    }
+    bodyEl.innerHTML = view.map(o=>`
+      <tr data-id="${o.id}">
+        <td>
+          <div style="font-weight:700;">${o.id}</div>
+          <div class="muted">${(o.createdAt||'').replace('T',' ').replace('Z','')}</div>
+        </td>
+        <td>
+          <div>${o.serviceName||''}</div>
+          <div class="muted">備註：${o.note || '—'}</div>
+        </td>
+        <td>
+          <div>${o.buyer && o.buyer.name ? o.buyer.name : ''}</div>
+          <div class="muted">${o.buyer && o.buyer.phone ? o.buyer.phone : ''}</div>
+          <div class="muted">${o.buyer && o.buyer.email ? o.buyer.email : ''}</div>
+        </td>
+        <td><span class="badge">${o.status || '待處理'}</span></td>
+        <td>
+          <select data-id="${o.id}" class="statusSel">
+            ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
+          </select>
+          <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  async function loadOrders(){
+    bodyEl.innerHTML = '<tr><td colspan="5" class="muted">載入中…</td></tr>';
+    try{
+      const data = await authedFetch('/api/service/orders');
+      orders = Array.isArray(data.items) ? data.items : [];
+      render();
+    }catch(err){
+      bodyEl.innerHTML = `<tr><td colspan="5" class="muted">載入失敗：${err.message}</td></tr>`;
+    }
+  }
+  bodyEl.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('button[data-act="apply"]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    const row = btn.closest('tr');
+    const sel = row ? row.querySelector('select.statusSel') : null;
+    if (!sel) return;
+    const status = sel.value;
+    btn.disabled = true;
+    btn.textContent = '更新中…';
+    try{
+      await authedFetch('/api/service/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, status })
+      });
+      const target = orders.find(o=> o.id === id);
+      if (target) target.status = status;
+      render();
+    }catch(err){
+      alert('更新失敗：' + err.message);
+    }finally{
+      btn.disabled = false;
+      btn.textContent = '套用';
+    }
+  });
+  filterInput.addEventListener('input', render);
+  btnReload.addEventListener('click', loadOrders);
+  loadOrders();
+})();
+</script>
+</body>
+</html>

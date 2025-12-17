@@ -5,6 +5,8 @@
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
   const lookupForm = document.getElementById('svcLookupForm');
+  const lookupResultWrap = document.getElementById('svcLookupResult');
+  const lookupCards = document.getElementById('svcLookupCards');
   const detailDialog = document.getElementById('svcDetail');
   const detailClose = document.getElementById('svcDetailClose');
   const detailTitle = document.getElementById('svcDetailTitle');
@@ -95,11 +97,54 @@
       lookupClose.addEventListener('click', () => lookupDialog.close());
     }
     if (lookupForm){
-      lookupForm.addEventListener('submit', (ev) => {
+      lookupForm.addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        alert('祈福進度查詢 API 尚未接線，後續會實作。');
+        const formData = new FormData(lookupForm);
+        const phone = String(formData.get('phone')||'').trim();
+        const orderDigits = String(formData.get('orderDigits')||formData.get('order')||'').trim();
+        if (!phone || !orderDigits){
+          alert('請輸入手機與訂單末五碼');
+          return;
+        }
+        try{
+          const usp = new URLSearchParams({ phone, order: orderDigits });
+          const res = await fetch('/api/service/orders/lookup?'+usp.toString(), { cache:'no-store' });
+          const data = await res.json().catch(()=>({}));
+          if (!res.ok || !data || !data.ok){
+            throw new Error((data && data.error) || '查詢失敗');
+          }
+          renderLookupResult(Array.isArray(data.orders) ? data.orders : []);
+        }catch(err){
+          alert(err && err.message ? err.message : '查詢失敗，請稍後再試');
+        }
       });
     }
+  }
+
+  function renderLookupResult(list){
+    if (!lookupResultWrap || !lookupCards){
+      return;
+    }
+    lookupCards.innerHTML = '';
+    if (!list.length){
+      lookupCards.innerHTML = '<div style="color:#94a3b8;">查無資料，請確認輸入是否正確。</div>';
+    }else{
+      list.forEach(order=>{
+        const card = document.createElement('div');
+        card.style.border = '1px solid rgba(255,255,255,.1)';
+        card.style.borderRadius = '14px';
+        card.style.padding = '12px';
+        card.style.background = 'rgba(255,255,255,.04)';
+        card.innerHTML = `
+          <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
+          <div style="font-size:13px;color:#94a3b8;">狀態：${escapeHtml(order.status || '處理中')}</div>
+          <div style="margin-top:8px;font-weight:600;">服務：${escapeHtml(order.serviceName || '')}</div>
+          <div style="font-size:13px;color:#cbd5f5;margin-top:6px;">願望／備註：${escapeHtml(order.note || '—')}</div>
+        `;
+        lookupCards.appendChild(card);
+      });
+    }
+    lookupResultWrap.style.display = '';
   }
 
   function openServiceDetail(service){
