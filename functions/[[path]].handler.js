@@ -1623,6 +1623,10 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
         if (needFilter) {
           if (qOrd){
             if (!String(oid||'').endsWith(qOrd)) continue;
+            if (qPhone){
+              const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
+              if (!pOK) continue;
+            }
           }else{
             const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
             const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
@@ -1671,6 +1675,10 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
             if (needFilter) {
               if (qOrd){
                 if (!String(oid||'').endsWith(qOrd)) continue;
+                if (qPhone) {
+                  const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
+                  if (!pOK) continue;
+                }
               }else{
                 if (qPhone) {
                   const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));

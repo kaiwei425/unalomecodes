@@ -58,40 +58,226 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 (function(){
   const BANK = { bank: '中國信託 (822)', no: '148540417073' };
 
-  // Rich success panel (uses #toast) with "查詢訂單狀態" action
-  window.showOrderSuccessPanel = function(phone, last5){
+  (function(){
+    var dlg = document.getElementById('dlgOrderSuccess');
+    if (dlg){
+      dlg.addEventListener('cancel', function(ev){
+        if (dlg.getAttribute('data-lock') === '1'){
+          ev.preventDefault();
+        }
+      });
+    }
+  })();
+  function fmtPrice(n){
+    try{ return Number(n||0).toLocaleString('zh-TW'); }
+    catch(_){ return String(n||0); }
+  }
+  function escHtml(s){
+    return String(s||'').replace(/[&<>\"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+  }
+  function normalizeItems(source){
+    var arr = [];
+    (source||[]).forEach(function(it){
+      if (!it) return;
+      var qty = Math.max(1, Number(it.qty || it.quantity || 1) || 1);
+      var unit = Number(it.unitPrice ?? it.price ?? it.amount ?? 0) || 0;
+      var total = Number(it.total ?? 0);
+      if (!total) total = unit * qty;
+      var spec = it.variantName || it.spec || it.deity || '';
+      var name = it.name || it.productName || it.title || '商品';
+      var img = it.image || it.cover || it.thumb || '';
+      arr.push({ name:name, spec:spec, qty:qty, unit:unit, total:total, image:img });
+    });
+    return arr;
+  }
+  function closeSuccessDialog(){
     try{
-      var host = document.getElementById('toast');
-      if (!host) return;
-      var html = ''
-        + '<div id="toastCard" style="background:#111827;color:#e5e7eb;border:1px solid rgba(255,255,255,.06);'
-        + 'padding:12px 14px;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.25);min-width:260px;max-width:380px">'
-        + '<div style="font-weight:800;margin-bottom:6px;font-size:14px">送出成功</div>'
-        + '<div style="font-size:13px;line-height:1.5;color:#cbd5e1">'
-        + '已收到你的匯款資訊。圖片較大時上傳需數秒，請勿重複點擊。你也可以立即查看訂單處理進度與祈福成果。'
-        + '</div>'
-        + '<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">'
-        +   '<button id="toastClose" class="btn" style="padding:6px 10px;border-radius:8px;font-size:13px;background:#374151;color:#fff;border:1px solid rgba(255,255,255,.08)">稍後</button>'
-        +   '<button id="toastLookup" class="btn" style="padding:6px 10px;border-radius:8px;font-size:13px;background:#10b981;color:#062a1a;border:1px solid rgba(0,0,0,.06)">立即查詢</button>'
-        + '</div>'
-        + '</div>';
-      host.innerHTML = html;
-      host.style.display = '';
-      // wire buttons
-      var closeBtn = document.getElementById('toastClose');
-      var goBtn = document.getElementById('toastLookup');
-      if (closeBtn){ closeBtn.onclick = function(){ host.style.display='none'; }; }
-      if (goBtn){
-        goBtn.onclick = function(){
-          host.style.display = 'none';
-          if (typeof window.openOrderLookup === 'function'){
-            window.openOrderLookup(phone||'', (String(last5||'').replace(/\D+/g,'').slice(-5)));
+      var dlg = document.getElementById('dlgOrderSuccess');
+      if (dlg && dlg.open) dlg.close();
+    }catch(_){}
+  }
+  window.showOrderSuccessPanel = function(payload, legacyLast5){
+    var opts = (payload && typeof payload === 'object' && !Array.isArray(payload))
+      ? payload
+      : { phone: payload, last5: legacyLast5 };
+    opts = opts || {};
+    try{
+      var dlg = document.getElementById('dlgOrderSuccess');
+      if (!dlg){
+        alert('訂單已送出，請截圖保存。訂單編號：' + (opts.orderId || opts.id || ''));
+        return;
+      }
+      var order = (opts.order && typeof opts.order === 'object') ? opts.order : {};
+      var id = opts.orderId || order.id || opts.id || '';
+      var digitsId = id ? String(id).replace(/\D+/g,'') : '';
+      var amount = (typeof opts.amount === 'number') ? opts.amount : Number(order.amount || 0) || 0;
+      var shipping = (typeof opts.shipping === 'number') ? opts.shipping : Number(order.shippingFee || order.shipping || 0) || 0;
+      var discount = (typeof opts.discount === 'number')
+        ? opts.discount
+        : ((order.coupon && !order.coupon.failed) ? Number(order.coupon.discount || order.coupon.amount || 0) : 0);
+      var store = opts.store || (order.buyer && order.buyer.store) || order.store || '';
+      var sourceItems = Array.isArray(opts.items) && opts.items.length
+        ? opts.items
+        : (Array.isArray(order.items) && order.items.length ? order.items : (order.productName ? [order] : []));
+      var items = normalizeItems(sourceItems);
+      if (!items.length && order.productName){
+        items = normalizeItems([{ name: order.productName, variantName: order.variantName, qty: order.qty || 1, price: order.price || order.amount || 0 }]);
+      }
+      if (!amount && items.length){
+        amount = items.reduce(function(sum, it){ return sum + (Number(it.total)||0); }, 0) + shipping;
+      }
+      var title = opts.title || '訂單建立成功';
+      var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
+      var note = opts.note || '請截圖保存本頁資訊，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
+      var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : '轉帳匯款');
+      var lookupDigits = opts.orderLookupDigits || digitsId.slice(-5);
+      var phone = opts.phone || '';
+      var last5 = opts.last5 || (order.transferLast5 || '');
+      var continueBtn = document.getElementById('successContinue');
+      var doneBtn = document.getElementById('successDone');
+      var closeBtn = document.getElementById('successClose');
+      var lookupBtn = document.getElementById('successLookup');
+      var copyBtn = document.getElementById('successCopyId');
+      var idEl = document.getElementById('successOrderId');
+      var amountEl = document.getElementById('successAmount');
+      var badgeEl = document.getElementById('successBadge');
+      var titleEl = document.getElementById('successTitle');
+      var descEl = document.getElementById('successDesc');
+      var noteEl = document.getElementById('successHint');
+      var itemsEl = document.getElementById('successItems');
+      var metaEl = document.getElementById('successMeta');
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+      if (noteEl) noteEl.textContent = note;
+      if (idEl) idEl.textContent = id || '—';
+      if (amountEl) amountEl.textContent = 'NT$ ' + fmtPrice(amount);
+      if (badgeEl) badgeEl.textContent = badge;
+      if (itemsEl){
+        if (!items.length){
+          itemsEl.innerHTML = '<div class="os-item muted">暫無商品資訊</div>';
+        }else{
+          itemsEl.innerHTML = '';
+          items.forEach(function(it){
+            var spec = it.spec ? '<span class="os-item-spec">'+ escHtml(it.spec) +'</span>' : '';
+            var meta = '<div class="os-item-meta">數量：'+ it.qty +'</div>';
+            var node = document.createElement('div');
+            node.className = 'os-item';
+            node.innerHTML = '<div><div class="os-item-name">'+ escHtml(it.name) +'</div>'+ spec + meta +'</div>'
+              + '<div class="os-item-price">NT$ '+ fmtPrice(it.total || (it.unit*it.qty)) +'</div>';
+            itemsEl.appendChild(node);
+          });
+        }
+      }
+      if (metaEl){
+        var rows = [];
+        if (store) rows.push({ label:'取貨門市', value:store });
+        if (shipping > 0) rows.push({ label:'運費', value:'+NT$ '+ fmtPrice(shipping) });
+        if (discount > 0) rows.push({ label:'優惠折抵', value:'-NT$ '+ fmtPrice(discount), warn:true });
+        if (rows.length){
+          metaEl.style.display = 'flex';
+          metaEl.innerHTML = rows.map(function(r){
+            return '<div class="os-meta-row'+(r.warn?' warn':'')+'"><span>'+ escHtml(r.label) +'</span><span>'+ escHtml(r.value) +'</span></div>';
+          }).join('');
+        }else{
+          metaEl.style.display = 'none';
+          metaEl.innerHTML = '';
+        }
+      }
+      if (lookupBtn){
+        lookupBtn.disabled = !phone;
+        lookupBtn.textContent = '查詢訂單狀態';
+        lookupBtn.onclick = function(){
+          closeSuccessDialog();
+          if (phone && typeof window.openOrderLookup === 'function'){
+            window.openOrderLookup(phone, last5, lookupDigits || (id ? id.slice(-5) : ''), { focusPhone: false });
+          } else if (!phone){
+            alert('請至左側「查詢訂單狀態」輸入手機號碼與資料。');
           }
         };
       }
-      // auto-hide after 10s (if not interacted)
-      setTimeout(function(){ try{ if (host && host.style.display !== 'none') host.style.display='none'; }catch(e){} }, 10000);
-    }catch(e){}
+      if (copyBtn){
+        copyBtn.onclick = function(){
+          if (!id) return;
+          try{
+            if (typeof copyToClipboard === 'function'){
+              copyToClipboard(id);
+            }else{
+              if (navigator.clipboard && navigator.clipboard.writeText){
+                navigator.clipboard.writeText(id);
+              }else{
+                var ta=document.createElement('textarea');
+                ta.value=id;
+                ta.style.position='fixed';
+                ta.style.opacity='0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+              }
+            }
+            copyBtn.textContent = '已複製';
+            setTimeout(function(){ copyBtn.textContent = '複製'; }, 2000);
+          }catch(_){}
+        };
+      }
+      var callback = (typeof opts.onContinue === 'function') ? opts.onContinue : null;
+      var cbCalled = false;
+      function runCallback(){
+        if (cbCalled || !callback) return;
+        cbCalled = true;
+        try{ callback(); }catch(_){}
+      }
+      if (continueBtn){
+        if (callback){
+          continueBtn.style.display = '';
+          continueBtn.textContent = opts.continueLabel || '前往下一步';
+          continueBtn.onclick = function(){
+            closeSuccessDialog();
+            runCallback();
+          };
+        }else{
+          continueBtn.style.display = 'none';
+          continueBtn.onclick = null;
+        }
+      }
+      if (doneBtn){
+        if (callback){
+          doneBtn.style.display = 'none';
+          doneBtn.onclick = null;
+        }else{
+          doneBtn.style.display = '';
+          doneBtn.onclick = closeSuccessDialog;
+        }
+      }
+      if (closeBtn){
+        if (callback){
+          closeBtn.style.display = 'none';
+          closeBtn.onclick = null;
+        }else{
+          closeBtn.style.display = '';
+          closeBtn.onclick = closeSuccessDialog;
+        }
+      }
+      dlg.setAttribute('data-lock', callback ? '1' : '0');
+      dlg.__pendingContinue = callback ? runCallback : null;
+      if (callback){
+        dlg.onclick = function(ev){
+          if (ev.target === dlg){
+            ev.preventDefault();
+          }
+        };
+      }else{
+        dlg.onclick = null;
+      }
+      if (typeof dlg.showModal === 'function'){
+        dlg.showModal();
+      }else{
+        alert('訂單已送出，請截圖保存。訂單編號：'+ (id || ''));
+      }
+    }catch(err){
+      console.error(err);
+      try{ alert('訂單已送出，請截圖保存。'); }catch(_){}
+    }
   };
 
   function copyAll(){
@@ -456,7 +642,18 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           var phoneVal = (document.getElementById('bfContact') && document.getElementById('bfContact').value) || '';
           var last5Val = (document.getElementById('bfLast5') && document.getElementById('bfLast5').value) || '';
           if (typeof window.showOrderSuccessPanel === 'function'){
-            window.showOrderSuccessPanel(phoneVal, last5Val);
+            window.showOrderSuccessPanel({
+              channel:'bank',
+              phone: phoneVal,
+              last5: last5Val,
+              orderId: (data && data.id) || '',
+              order: (data && data.order) || null,
+              items: data && data.order && data.order.items,
+              amount: data && data.order ? data.order.amount : null,
+              shipping: data && data.order ? (data.order.shippingFee || data.order.shipping) : null,
+              discount: data && data.order && data.order.coupon && !data.order.coupon.failed ? (data.order.coupon.discount || data.order.coupon.amount) : null,
+              store: data && data.order && data.order.buyer && data.order.buyer.store
+            });
           }
         }catch(e){}
 
@@ -534,7 +731,29 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   }
   function matchesOrder(o, phone, last5, orderDigits){
     try{
+      var pUser = normalizeTWPhone(phone);
+      if (!pUser) return false;
       var ordUser = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+      var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
+      var wantL5 = (l5User.length === 5);
+
+      // Gather as many phone candidates as possible from common schemas
+      var phoneCandidates = [
+        o && o.phone, o && o.contact, o && o.mobile, o && o.phoneNumber, o && o.contactPhone,
+        o && o.recipientPhone, o && o.buyerPhone, o && o.customerPhone,
+        // buyer object from your backend schema
+        o && o.buyer && (o.buyer.phone || o.buyer.mobile || o.buyer.contactPhone),
+        // nested shipping/billing/customer/payment/bank/transfer objects
+        o && o.shipping && (o.shipping.phone || o.shipping.contactPhone),
+        o && o.billing  && (o.billing.phone  || o.billing.contactPhone),
+        o && o.customer && (o.customer.phone || o.customer.mobile || (o.customer.contact && o.customer.contact.phone)),
+        o && o.payment  && (o.payment.phone  || o.payment.contactPhone),
+        o && o.bank     && (o.bank.phone     || o.bank.contactPhone),
+        o && o.transfer && (o.transfer.phone || o.transfer.contactPhone)
+      ].filter(Boolean);
+
+      var phoneOk = phoneCandidates.some(function(v){ return phonesEqualLoose(v, pUser); });
+
       if (ordUser){
         var ordCandidates = [
           o && o.id,
@@ -555,30 +774,8 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           if (!digits) return false;
           return digits.slice(-5) === ordUser;
         });
-        if (ordMatch) return true;
+        if (ordMatch) return phoneOk;
       }
-
-      var pUser = normalizeTWPhone(phone);
-      var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
-      var wantPhone = !!pUser;
-      var wantL5 = (l5User.length === 5);
-
-      // Gather as many phone candidates as possible from common schemas
-      var phoneCandidates = [
-        o && o.phone, o && o.contact, o && o.mobile, o && o.phoneNumber, o && o.contactPhone,
-        o && o.recipientPhone, o && o.buyerPhone, o && o.customerPhone,
-        // buyer object from your backend schema
-        o && o.buyer && (o.buyer.phone || o.buyer.mobile || o.buyer.contactPhone),
-        // nested shipping/billing/customer/payment/bank/transfer objects
-        o && o.shipping && (o.shipping.phone || o.shipping.contactPhone),
-        o && o.billing  && (o.billing.phone  || o.billing.contactPhone),
-        o && o.customer && (o.customer.phone || o.customer.mobile || (o.customer.contact && o.customer.contact.phone)),
-        o && o.payment  && (o.payment.phone  || o.payment.contactPhone),
-        o && o.bank     && (o.bank.phone     || o.bank.contactPhone),
-        o && o.transfer && (o.transfer.phone || o.transfer.contactPhone)
-      ].filter(Boolean);
-
-      var phoneOk = phoneCandidates.some(function(v){ return phonesEqualLoose(v, pUser); });
 
       // Try to recover phone from notes/free text
       if (!phoneOk){
@@ -618,7 +815,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         l5Ok = !!(m && m[1] === l5User);
       }
 
-      return phoneOk && l5Ok && wantPhone && wantL5;
+      if (!phoneOk) return false;
+      if (!wantL5) return false;
+      return l5Ok;
     }catch(e){ return false; }
   }
   function filterOrdersByQuery(list, phone, last5, orderDigits){
@@ -705,10 +904,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   async function tryAllLookups(phone, last5, orderDigits){
     // Normalize inputs
     var pNorm = normalizeTWPhone(phone);
+    if (!pNorm) return [];
     var l5 = String(last5||'').replace(/\D+/g,'').slice(-5);
     var ord = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
     var usingOrder = !!ord;
-    var usingBank = !!(pNorm && l5.length === 5);
+    var usingBank = (l5.length === 5);
     if (!usingOrder && !usingBank) return [];
 
     var headersRO = {
@@ -730,6 +930,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     if (usingOrder){
       var uspOrder = new URLSearchParams();
       uspOrder.set('order', ord);
+      uspOrder.set('phone', phone);
       uspOrder.set('lookupOnly','1');
       pushArr(await fetchJsonSafe('/api/orders/lookup?'+uspOrder.toString(), {headers:headersRO}));
       pushArr(await fetchJsonSafe('/api/orders?'+uspOrder.toString(), {headers:headersRO}));
@@ -822,13 +1023,17 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var orderRaw = (document.getElementById('qOrder').value||'').trim();
       var orderDigits = String(orderRaw).replace(/\D+/g,'').slice(-5);
       var last5 = String(last5Raw).replace(/\D+/g,'').slice(-5);
-      var usingOrder = orderDigits.length === 5;
-      var usingBank = (!!phone && !!last5);
-      if (!usingOrder && !usingBank){
-        alert('請輸入手機＋匯款末五碼，或訂單編號末五碼');
+      if (!phone){
+        alert('請輸入手機號碼');
         return;
       }
-      if (!usingOrder && last5.length !== 5){
+      var hasOrder = orderDigits.length === 5;
+      var hasLast5 = last5.length === 5;
+      if (!hasOrder && !hasLast5){
+        alert('請輸入匯款末五碼或訂單編號末五碼');
+        return;
+      }
+      if (hasLast5 === false && last5Raw){
         alert('匯款末五碼需為 5 位數字');
         return;
       }
@@ -865,10 +1070,18 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           var focusTarget = null;
           var phoneFilled = !!(p && p.value);
           var last5Filled = !!(l && l.value);
-          if (o && !o.value && !phoneFilled && !last5Filled) focusTarget = o;
-          else if (p && !p.value) focusTarget = p;
-          else if (l && !l.value) focusTarget = l;
-          else if (orderDigits && o) focusTarget = o;
+          var forcePhone = !!(opts && opts.focusPhone);
+          if (forcePhone && p){
+            focusTarget = p;
+          }else if (p && !p.value){
+            focusTarget = p;
+          }else if (l && !l.value){
+            focusTarget = l;
+          }else if (o && !o.value){
+            focusTarget = o;
+          }else if (orderDigits && o){
+            focusTarget = o;
+          }
           if (focusTarget) focusTarget.focus();
 
           var wantsAuto = !!(opts && opts.autoSubmit);
@@ -897,7 +1110,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       try{ raw = decodeURIComponent(m[1]); }catch(_){ raw = m[1]; }
       var digits = String(raw||'').replace(/\D+/g,'');
       if (digits){
-        window.openOrderLookup('', '', digits.slice(-5), { autoSubmit:true });
+        window.openOrderLookup('', '', digits.slice(-5), { focusPhone:true });
       }else{
         openLookup();
       }
@@ -1249,8 +1462,31 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();
         }catch(_){}
         try{ localStorage.removeItem('cart'); }catch(_){}
-        submitECPayForm(data.action, data.params);
         if (dlg) dlg.close();
+        var proceedPayment = function(){ submitECPayForm(data.action, data.params); };
+        var usedDialog = false;
+        if (typeof window.showOrderSuccessPanel === 'function'){
+          usedDialog = true;
+          window.showOrderSuccessPanel({
+            channel:'credit',
+            phone: payload.buyer.phone,
+            orderId: data.orderId,
+            orderLookupDigits: data.orderId,
+            items: ctx.items,
+            amount: ctx.grand,
+            shipping: ctx.shipping,
+            discount: ctx.off,
+            store: payload.store,
+            badge:'信用卡付款',
+            desc:'感謝您的訂購，請確認以下資訊後再前往綠界刷卡頁面。',
+            note:'建議先截圖保存訂單資訊，若需查詢可在左側「查詢訂單狀態」輸入手機號碼與訂單編號末五碼。',
+            continueLabel:'前往刷卡',
+            onContinue: proceedPayment
+          });
+        }
+        if (!usedDialog){
+          proceedPayment();
+        }
       }catch(err){
         console.error(err);
         alert('刷卡請求失敗，請稍後再試。\n' + (err && err.message ? err.message : err));

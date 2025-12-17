@@ -252,6 +252,122 @@
       </div>
     </div>
   </dialog>
+
+  <!-- 訂單完成提示 Dialog -->
+  <dialog id="dlgOrderSuccess" class="order-success-dialog" style="border:none;border-radius:20px;padding:0;max-width:540px;width:95%;">
+    <div class="order-success-card">
+      <button type="button" class="os-close" id="successClose" aria-label="關閉">×</button>
+      <div class="os-icon">✨</div>
+      <div class="os-title" id="successTitle">訂單建立成功</div>
+      <div class="os-desc" id="successDesc">感謝您的訂購，核對無誤後將儘速安排出貨。</div>
+      <div class="os-order-line">
+        <div>
+          <div class="os-label">訂單編號</div>
+          <div class="os-order-id" id="successOrderId">—</div>
+        </div>
+        <button type="button" class="os-copy" id="successCopyId">複製</button>
+      </div>
+      <div class="os-items" id="successItems">
+        <div class="os-item muted">商品資訊載入中…</div>
+      </div>
+      <div class="os-meta" id="successMeta" style="display:none"></div>
+      <div class="os-amount">
+        <div>
+          <div class="os-label">應付金額</div>
+          <div class="os-amount-value" id="successAmount">NT$ 0</div>
+        </div>
+        <div class="os-chip" id="successBadge">訂單資訊</div>
+      </div>
+      <div class="os-note" id="successHint">
+        請截圖保存本頁資訊，日後可在左側「查詢訂單狀態」輸入資料查看處理進度。
+      </div>
+      <div class="os-actions">
+        <button type="button" class="btn ghost" id="successLookup">查看訂單狀態</button>
+        <div style="flex:1"></div>
+        <button type="button" class="btn" id="successDone">知道了</button>
+        <button type="button" class="btn primary" id="successContinue" style="display:none">前往下一步</button>
+      </div>
+    </div>
+  </dialog>
+  <style>
+    #dlgOrderSuccess::backdrop{
+      background:rgba(15,23,42,0.6);
+      backdrop-filter:blur(3px);
+    }
+    .order-success-card{
+      padding:28px 26px 22px;
+      border-radius:24px;
+      background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+      box-shadow:0 30px 70px rgba(15,23,42,0.2);
+      border:1px solid rgba(148,163,184,0.35);
+      position:relative;
+      color:#0f172a;
+    }
+    .order-success-card .os-icon{
+      width:62px;height:62px;border-radius:18px;
+      background:linear-gradient(135deg,#fcd34d 0%,#fb923c 100%);
+      color:#fff;font-size:28px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 12px 30px rgba(251,146,60,0.45);
+      margin-bottom:14px;
+    }
+    .order-success-card .os-title{font-size:22px;font-weight:800;margin:0 0 6px;}
+    .order-success-card .os-desc{font-size:14px;color:#475569;line-height:1.6;}
+    .order-success-card .os-order-line{
+      display:flex;align-items:center;justify-content:space-between;
+      background:rgba(148,163,184,0.18);border-radius:16px;padding:12px 16px;margin:18px 0 16px;
+    }
+    .os-label{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;}
+    .os-order-id{font-size:18px;font-weight:800;color:#0f172a;margin-top:4px;}
+    .os-copy{
+      border:none;background:#0f172a;color:#f8fafc;font-size:13px;font-weight:700;
+      padding:8px 14px;border-radius:999px;cursor:pointer;
+      box-shadow:0 10px 20px rgba(15,23,42,0.15);
+    }
+    .os-items{display:flex;flex-direction:column;gap:10px;}
+    .os-item{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 14px;border:1px solid rgba(148,163,184,0.35);border-radius:14px;
+      background:#fff;font-size:14px;
+    }
+    .os-item-name{font-weight:700;color:#0f172a;}
+    .os-item-spec{font-weight:500;color:#475569;margin-left:4px;font-size:13px;}
+    .os-item-meta{font-size:12px;color:#94a3b8;margin-top:2px;}
+    .os-item-price{font-weight:800;color:#0f172a;font-size:15px;margin-left:12px;}
+    .os-item.muted{justify-content:center;color:#94a3b8;}
+    .os-meta{display:flex;flex-direction:column;gap:6px;margin:14px 0 4px;}
+    .os-meta-row{display:flex;justify-content:space-between;font-size:13px;color:#475569;}
+    .os-meta-row.warn{color:#b91c1c;}
+    .os-amount{display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px;}
+    .os-amount-value{font-size:28px;font-weight:800;color:#0f172a;}
+    .os-chip{
+      padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;
+      background:rgba(37,99,235,0.1);color:#2563eb;
+    }
+    .os-note{
+      font-size:13px;color:#475569;line-height:1.7;
+      border:1px dashed rgba(148,163,184,0.8);border-radius:14px;padding:12px 14px;margin:12px 0 18px;
+      background:#f8fafc;
+    }
+    .os-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .os-close{
+      position:absolute;top:14px;right:14px;border:none;background:rgba(148,163,184,0.25);
+      width:34px;height:34px;border-radius:50%;font-size:18px;color:#475569;cursor:pointer;
+    }
+    .order-success-card .btn{padding:10px 18px;border-radius:999px;font-weight:700;}
+    .order-success-card .btn.ghost{
+      background:#fff;color:#0f172a;border:1px solid rgba(15,23,42,0.12);
+      box-shadow:0 8px 18px rgba(15,23,42,0.08);
+    }
+    @media (max-width:520px){
+      .order-success-card{padding:24px 20px;}
+      .os-item{flex-direction:column;align-items:flex-start;gap:6px;}
+      .os-item-price{margin-left:0;}
+      .os-order-line{flex-direction:column;gap:10px;align-items:flex-start;}
+      .os-actions{flex-direction:column;align-items:stretch;}
+      .os-actions .btn{width:100%;text-align:center;}
+    }
+  </style>
 <div id="toast" style="position:fixed;right:16px;bottom:16px;z-index:1000;display:none;max-width:92vw"></div>
 
 
@@ -559,40 +675,226 @@ function ensureCandleFields(required){
 (function(){
   const BANK = { bank: '中國信託 (822)', no: '148540417073' };
 
-  // Rich success panel (uses #toast) with "查詢訂單狀態" action
-  window.showOrderSuccessPanel = function(phone, last5){
+  (function(){
+    var dlg = document.getElementById('dlgOrderSuccess');
+    if (dlg){
+      dlg.addEventListener('cancel', function(ev){
+        if (dlg.getAttribute('data-lock') === '1'){
+          ev.preventDefault();
+        }
+      });
+    }
+  })();
+  function fmtPrice(n){
+    try{ return Number(n||0).toLocaleString('zh-TW'); }
+    catch(_){ return String(n||0); }
+  }
+  function escHtml(s){
+    return String(s||'').replace(/[&<>\"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+  }
+  function normalizeItems(source){
+    var arr = [];
+    (source||[]).forEach(function(it){
+      if (!it) return;
+      var qty = Math.max(1, Number(it.qty || it.quantity || 1) || 1);
+      var unit = Number(it.unitPrice ?? it.price ?? it.amount ?? 0) || 0;
+      var total = Number(it.total ?? 0);
+      if (!total) total = unit * qty;
+      var spec = it.variantName || it.spec || it.deity || '';
+      var name = it.name || it.productName || it.title || '商品';
+      var img = it.image || it.cover || it.thumb || '';
+      arr.push({ name:name, spec:spec, qty:qty, unit:unit, total:total, image:img });
+    });
+    return arr;
+  }
+  function closeSuccessDialog(){
     try{
-      var host = document.getElementById('toast');
-      if (!host) return;
-      var html = ''
-        + '<div id="toastCard" style="background:#111827;color:#e5e7eb;border:1px solid rgba(255,255,255,.06);'
-        + 'padding:12px 14px;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.25);min-width:260px;max-width:380px">'
-        + '<div style="font-weight:800;margin-bottom:6px;font-size:14px">送出成功</div>'
-        + '<div style="font-size:13px;line-height:1.5;color:#cbd5e1">'
-        + '已收到你的匯款資訊。圖片較大時上傳需數秒，請勿重複點擊。你也可以立即查看訂單處理進度與祈福成果。'
-        + '</div>'
-        + '<div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">'
-        +   '<button id="toastClose" class="btn" style="padding:6px 10px;border-radius:8px;font-size:13px;background:#374151;color:#fff;border:1px solid rgba(255,255,255,.08)">稍後</button>'
-        +   '<button id="toastLookup" class="btn" style="padding:6px 10px;border-radius:8px;font-size:13px;background:#10b981;color:#062a1a;border:1px solid rgba(0,0,0,.06)">立即查詢</button>'
-        + '</div>'
-        + '</div>';
-      host.innerHTML = html;
-      host.style.display = '';
-      // wire buttons
-      var closeBtn = document.getElementById('toastClose');
-      var goBtn = document.getElementById('toastLookup');
-      if (closeBtn){ closeBtn.onclick = function(){ host.style.display='none'; }; }
-      if (goBtn){
-        goBtn.onclick = function(){
-          host.style.display = 'none';
-          if (typeof window.openOrderLookup === 'function'){
-            window.openOrderLookup(phone||'', (String(last5||'').replace(/\D+/g,'').slice(-5)));
+      var dlg = document.getElementById('dlgOrderSuccess');
+      if (dlg && dlg.open) dlg.close();
+    }catch(_){}
+  }
+  window.showOrderSuccessPanel = function(payload, legacyLast5){
+    var opts = (payload && typeof payload === 'object' && !Array.isArray(payload))
+      ? payload
+      : { phone: payload, last5: legacyLast5 };
+    opts = opts || {};
+    try{
+      var dlg = document.getElementById('dlgOrderSuccess');
+      if (!dlg){
+        alert('訂單已送出，請截圖保存。訂單編號：' + (opts.orderId || opts.id || ''));
+        return;
+      }
+      var order = (opts.order && typeof opts.order === 'object') ? opts.order : {};
+      var id = opts.orderId || order.id || opts.id || '';
+      var digitsId = id ? String(id).replace(/\D+/g,'') : '';
+      var amount = (typeof opts.amount === 'number') ? opts.amount : Number(order.amount || 0) || 0;
+      var shipping = (typeof opts.shipping === 'number') ? opts.shipping : Number(order.shippingFee || order.shipping || 0) || 0;
+      var discount = (typeof opts.discount === 'number')
+        ? opts.discount
+        : ((order.coupon && !order.coupon.failed) ? Number(order.coupon.discount || order.coupon.amount || 0) : 0);
+      var store = opts.store || (order.buyer && order.buyer.store) || order.store || '';
+      var sourceItems = Array.isArray(opts.items) && opts.items.length
+        ? opts.items
+        : (Array.isArray(order.items) && order.items.length ? order.items : (order.productName ? [order] : []));
+      var items = normalizeItems(sourceItems);
+      if (!items.length && order.productName){
+        items = normalizeItems([{ name: order.productName, variantName: order.variantName, qty: order.qty || 1, price: order.price || order.amount || 0 }]);
+      }
+      if (!amount && items.length){
+        amount = items.reduce(function(sum, it){ return sum + (Number(it.total)||0); }, 0) + shipping;
+      }
+      var title = opts.title || '訂單建立成功';
+      var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
+      var note = opts.note || '請截圖保存本頁資訊，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
+      var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : '轉帳匯款');
+      var lookupDigits = opts.orderLookupDigits || digitsId.slice(-5);
+      var phone = opts.phone || '';
+      var last5 = opts.last5 || (order.transferLast5 || '');
+      var continueBtn = document.getElementById('successContinue');
+      var doneBtn = document.getElementById('successDone');
+      var closeBtn = document.getElementById('successClose');
+      var lookupBtn = document.getElementById('successLookup');
+      var copyBtn = document.getElementById('successCopyId');
+      var idEl = document.getElementById('successOrderId');
+      var amountEl = document.getElementById('successAmount');
+      var badgeEl = document.getElementById('successBadge');
+      var titleEl = document.getElementById('successTitle');
+      var descEl = document.getElementById('successDesc');
+      var noteEl = document.getElementById('successHint');
+      var itemsEl = document.getElementById('successItems');
+      var metaEl = document.getElementById('successMeta');
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+      if (noteEl) noteEl.textContent = note;
+      if (idEl) idEl.textContent = id || '—';
+      if (amountEl) amountEl.textContent = 'NT$ ' + fmtPrice(amount);
+      if (badgeEl) badgeEl.textContent = badge;
+      if (itemsEl){
+        if (!items.length){
+          itemsEl.innerHTML = '<div class="os-item muted">暫無商品資訊</div>';
+        }else{
+          itemsEl.innerHTML = '';
+          items.forEach(function(it){
+            var spec = it.spec ? '<span class="os-item-spec">'+ escHtml(it.spec) +'</span>' : '';
+            var meta = '<div class="os-item-meta">數量：'+ it.qty +'</div>';
+            var node = document.createElement('div');
+            node.className = 'os-item';
+            node.innerHTML = '<div><div class="os-item-name">'+ escHtml(it.name) +'</div>'+ spec + meta +'</div>'
+              + '<div class="os-item-price">NT$ '+ fmtPrice(it.total || (it.unit*it.qty)) +'</div>';
+            itemsEl.appendChild(node);
+          });
+        }
+      }
+      if (metaEl){
+        var rows = [];
+        if (store) rows.push({ label:'取貨門市', value:store });
+        if (shipping > 0) rows.push({ label:'運費', value:'+NT$ '+ fmtPrice(shipping) });
+        if (discount > 0) rows.push({ label:'優惠折抵', value:'-NT$ '+ fmtPrice(discount), warn:true });
+        if (rows.length){
+          metaEl.style.display = 'flex';
+          metaEl.innerHTML = rows.map(function(r){
+            return '<div class="os-meta-row'+(r.warn?' warn':'')+'"><span>'+ escHtml(r.label) +'</span><span>'+ escHtml(r.value) +'</span></div>';
+          }).join('');
+        }else{
+          metaEl.style.display = 'none';
+          metaEl.innerHTML = '';
+        }
+      }
+      if (lookupBtn){
+        lookupBtn.disabled = !phone;
+        lookupBtn.textContent = '查詢訂單狀態';
+        lookupBtn.onclick = function(){
+          closeSuccessDialog();
+          if (phone && typeof window.openOrderLookup === 'function'){
+            window.openOrderLookup(phone, last5, lookupDigits || (id ? id.slice(-5) : ''), { focusPhone: false });
+          } else if (!phone){
+            alert('請至左側「查詢訂單狀態」輸入手機號碼與資料。');
           }
         };
       }
-      // auto-hide after 10s (if not interacted)
-      setTimeout(function(){ try{ if (host && host.style.display !== 'none') host.style.display='none'; }catch(e){} }, 10000);
-    }catch(e){}
+      if (copyBtn){
+        copyBtn.onclick = function(){
+          if (!id) return;
+          try{
+            if (typeof copyToClipboard === 'function'){
+              copyToClipboard(id);
+            }else{
+              if (navigator.clipboard && navigator.clipboard.writeText){
+                navigator.clipboard.writeText(id);
+              }else{
+                var ta=document.createElement('textarea');
+                ta.value=id;
+                ta.style.position='fixed';
+                ta.style.opacity='0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+              }
+            }
+            copyBtn.textContent = '已複製';
+            setTimeout(function(){ copyBtn.textContent = '複製'; }, 2000);
+          }catch(_){}
+        };
+      }
+      var callback = (typeof opts.onContinue === 'function') ? opts.onContinue : null;
+      var cbCalled = false;
+      function runCallback(){
+        if (cbCalled || !callback) return;
+        cbCalled = true;
+        try{ callback(); }catch(_){}
+      }
+      if (continueBtn){
+        if (callback){
+          continueBtn.style.display = '';
+          continueBtn.textContent = opts.continueLabel || '前往下一步';
+          continueBtn.onclick = function(){
+            closeSuccessDialog();
+            runCallback();
+          };
+        }else{
+          continueBtn.style.display = 'none';
+          continueBtn.onclick = null;
+        }
+      }
+      if (doneBtn){
+        if (callback){
+          doneBtn.style.display = 'none';
+          doneBtn.onclick = null;
+        }else{
+          doneBtn.style.display = '';
+          doneBtn.onclick = closeSuccessDialog;
+        }
+      }
+      if (closeBtn){
+        if (callback){
+          closeBtn.style.display = 'none';
+          closeBtn.onclick = null;
+        }else{
+          closeBtn.style.display = '';
+          closeBtn.onclick = closeSuccessDialog;
+        }
+      }
+      dlg.setAttribute('data-lock', callback ? '1' : '0');
+      dlg.__pendingContinue = callback ? runCallback : null;
+      if (callback){
+        dlg.onclick = function(ev){
+          if (ev.target === dlg){
+            ev.preventDefault();
+          }
+        };
+      }else{
+        dlg.onclick = null;
+      }
+      if (typeof dlg.showModal === 'function'){
+        dlg.showModal();
+      }else{
+        alert('訂單已送出，請截圖保存。訂單編號：'+ (id || ''));
+      }
+    }catch(err){
+      console.error(err);
+      try{ alert('訂單已送出，請截圖保存。'); }catch(_){}
+    }
   };
 
   function copyAll(){
@@ -1058,7 +1360,18 @@ function ensureCandleFields(required){
           var phoneVal = (document.getElementById('bfContact') && document.getElementById('bfContact').value) || '';
           var last5Val = (document.getElementById('bfLast5') && document.getElementById('bfLast5').value) || '';
           if (typeof window.showOrderSuccessPanel === 'function'){
-            window.showOrderSuccessPanel(phoneVal, last5Val);
+            window.showOrderSuccessPanel({
+              channel:'bank',
+              phone: phoneVal,
+              last5: last5Val,
+              orderId: (data && data.id) || '',
+              order: (data && data.order) || null,
+              items: data && data.order && data.order.items,
+              amount: data && data.order ? data.order.amount : null,
+              shipping: data && data.order ? (data.order.shippingFee || data.order.shipping) : null,
+              discount: data && data.order && data.order.coupon && !data.order.coupon.failed ? (data.order.coupon.discount || data.order.coupon.amount) : null,
+              store: data && data.order && data.order.buyer && data.order.buyer.store
+            });
           }
         }catch(e){}
 
@@ -3975,27 +4288,27 @@ function ensureCandleFields(required){
     <div style="padding:18px 18px 10px;">
       <div style="font-weight:800;font-size:18px;">查詢訂單狀態</div>
       <div style="color:#6b7280;font-size:14px;margin-top:4px">
-        可輸入 <b>手機號碼＋匯款末五碼</b>（適用匯款），或改用 <b>訂單編號末五碼</b>（適用信用卡）。
+        查詢需輸入 <b>手機號碼</b>，並搭配 <b>匯款末五碼</b> 或 <b>訂單編號末五碼</b>（信用卡）。
       </div>
     </div>
     <form id="lookupForm" style="padding:0 18px 16px;display:grid;gap:10px">
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">手機號碼（匯款查詢需填）</label>
+        <label style="font-size:12px;color:#6b7280">手機號碼（必填）</label>
         <input id="qPhone" name="phone" type="tel" inputmode="tel"
-               pattern="^(?:\+?886[-\s]?9\d{8}|09\d{8}|\d{9,13})$"
+               pattern="^(?:\+?886[-\s]?9\d{8}|09\d{8}|\d{9,13})$" required
                placeholder="例：0969123456 或 +886 969 123 456"
                title="請輸入 09 開頭或 +8869 開頭的手機號碼（允許空白與破折號）"
                autocomplete="tel-national"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">匯款末五碼（僅匯款需要）</label>
+        <label style="font-size:12px;color:#6b7280">匯款末五碼</label>
         <input id="qLast5" name="last5" type="text" inputmode="numeric" pattern="\d{5}" placeholder="12345"
                title="請輸入匯款末五碼（5 位數字）"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">訂單編號末五碼（信用卡使用）</label>
+        <label style="font-size:12px;color:#6b7280">訂單編號末五碼（信用卡）</label>
         <input id="qOrder" name="order" type="text" inputmode="numeric" pattern="\d{5,}"
                placeholder="輸入訂單編號末 5 位" title="請輸入訂單編號末 5 位數字"
                autocomplete="one-time-code"
@@ -4006,7 +4319,7 @@ function ensureCandleFields(required){
         <button type="submit" id="lookupSubmit" class="btn primary">查詢</button>
       </div>
       <div id="lookupHint" style="font-size:12px;color:#6b7280;line-height:1.6">
-        匯款訂單請輸入手機＋匯款末五碼；信用卡訂單可直接輸入訂單編號末五碼。
+        每筆查詢皆需輸入手機號碼，並搭配匯款末五碼或訂單編號末五碼（信用卡）。
       </div>
     </form>
 
@@ -4056,7 +4369,29 @@ function ensureCandleFields(required){
   }
   function matchesOrder(o, phone, last5, orderDigits){
     try{
+      var pUser = normalizeTWPhone(phone);
+      if (!pUser) return false;
       var ordUser = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+      var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
+      var wantL5 = (l5User.length === 5);
+
+      // Gather as many phone candidates as possible from common schemas
+      var phoneCandidates = [
+        o && o.phone, o && o.contact, o && o.mobile, o && o.phoneNumber, o && o.contactPhone,
+        o && o.recipientPhone, o && o.buyerPhone, o && o.customerPhone,
+        // buyer object from your backend schema
+        o && o.buyer && (o.buyer.phone || o.buyer.mobile || o.buyer.contactPhone),
+        // nested shipping/billing/customer/payment/bank/transfer objects
+        o && o.shipping && (o.shipping.phone || o.shipping.contactPhone),
+        o && o.billing  && (o.billing.phone  || o.billing.contactPhone),
+        o && o.customer && (o.customer.phone || o.customer.mobile || (o.customer.contact && o.customer.contact.phone)),
+        o && o.payment  && (o.payment.phone  || o.payment.contactPhone),
+        o && o.bank     && (o.bank.phone     || o.bank.contactPhone),
+        o && o.transfer && (o.transfer.phone || o.transfer.contactPhone)
+      ].filter(Boolean);
+
+      var phoneOk = phoneCandidates.some(function(v){ return phonesEqualLoose(v, pUser); });
+
       if (ordUser){
         var ordCandidates = [
           o && o.id,
@@ -4079,28 +4414,6 @@ function ensureCandleFields(required){
         });
         if (ordMatch) return true;
       }
-
-      var pUser = normalizeTWPhone(phone);
-      var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
-      var wantPhone = !!pUser;
-      var wantL5 = (l5User.length === 5);
-
-      // Gather as many phone candidates as possible from common schemas
-      var phoneCandidates = [
-        o && o.phone, o && o.contact, o && o.mobile, o && o.phoneNumber, o && o.contactPhone,
-        o && o.recipientPhone, o && o.buyerPhone, o && o.customerPhone,
-        // buyer object from your backend schema
-        o && o.buyer && (o.buyer.phone || o.buyer.mobile || o.buyer.contactPhone),
-        // nested shipping/billing/customer/payment/bank/transfer objects
-        o && o.shipping && (o.shipping.phone || o.shipping.contactPhone),
-        o && o.billing  && (o.billing.phone  || o.billing.contactPhone),
-        o && o.customer && (o.customer.phone || o.customer.mobile || (o.customer.contact && o.customer.contact.phone)),
-        o && o.payment  && (o.payment.phone  || o.payment.contactPhone),
-        o && o.bank     && (o.bank.phone     || o.bank.contactPhone),
-        o && o.transfer && (o.transfer.phone || o.transfer.contactPhone)
-      ].filter(Boolean);
-
-      var phoneOk = phoneCandidates.some(function(v){ return phonesEqualLoose(v, pUser); });
 
       // Try to recover phone from notes/free text
       if (!phoneOk){
@@ -4130,7 +4443,9 @@ function ensureCandleFields(required){
 
       var l5Ok = last5Candidates.some(function(v){ return v === l5User; });
       
-      return phoneOk && l5Ok && wantPhone && wantL5;
+      if (!phoneOk) return false;
+      if (!wantL5) return false;
+      return l5Ok;
     }catch(e){ return false; }
   }
   function filterOrdersByQuery(list, phone, last5, orderDigits){
@@ -4217,10 +4532,11 @@ function ensureCandleFields(required){
   async function tryAllLookups(phone, last5, orderDigits){
     // Normalize inputs
     var pNorm = normalizeTWPhone(phone);
+    if (!pNorm) return [];
     var l5 = String(last5||'').replace(/\D+/g,'').slice(-5);
     var ord = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
     var usingOrder = !!ord;
-    var usingBank = !!(pNorm && l5.length === 5);
+    var usingBank = (l5.length === 5);
     if (!usingOrder && !usingBank) return [];
 
     var headersRO = {
@@ -4242,6 +4558,7 @@ function ensureCandleFields(required){
     if (usingOrder){
       var uspOrder = new URLSearchParams();
       uspOrder.set('order', ord);
+      uspOrder.set('phone', phone);
       uspOrder.set('lookupOnly','1');
       pushArr(await fetchJsonSafe('/api/orders/lookup?'+uspOrder.toString(), {headers:headersRO}));
       pushArr(await fetchJsonSafe('/api/orders?'+uspOrder.toString(), {headers:headersRO}));
@@ -4334,13 +4651,17 @@ function ensureCandleFields(required){
       var orderRaw = (document.getElementById('qOrder').value||'').trim();
       var orderDigits = String(orderRaw).replace(/\D+/g,'').slice(-5);
       var last5 = String(last5Raw).replace(/\D+/g,'').slice(-5);
-      var usingOrder = orderDigits.length === 5;
-      var usingBank = (!!phone && !!last5);
-      if (!usingOrder && !usingBank){
-        alert('請輸入手機＋匯款末五碼，或訂單編號末五碼');
+      if (!phone){
+        alert('請輸入手機號碼');
         return;
       }
-      if (!usingOrder && last5.length !== 5){
+      var hasOrder = orderDigits.length === 5;
+      var hasLast5 = last5.length === 5;
+      if (!hasOrder && !hasLast5){
+        alert('請輸入匯款末五碼或訂單編號末五碼');
+        return;
+      }
+      if (hasLast5 === false && last5Raw){
         alert('匯款末五碼需為 5 位數字');
         return;
       }
@@ -4377,10 +4698,18 @@ function ensureCandleFields(required){
           var focusTarget = null;
           var phoneFilled = !!(p && p.value);
           var last5Filled = !!(l && l.value);
-          if (o && !o.value && !phoneFilled && !last5Filled) focusTarget = o;
-          else if (p && !p.value) focusTarget = p;
-          else if (l && !l.value) focusTarget = l;
-          else if (orderDigits && o) focusTarget = o;
+          var forcePhone = !!(opts && opts.focusPhone);
+          if (forcePhone && p){
+            focusTarget = p;
+          }else if (p && !p.value){
+            focusTarget = p;
+          }else if (l && !l.value){
+            focusTarget = l;
+          }else if (o && !o.value){
+            focusTarget = o;
+          }else if (orderDigits && o){
+            focusTarget = o;
+          }
           if (focusTarget) focusTarget.focus();
 
           var wantsAuto = !!(opts && opts.autoSubmit);
@@ -4409,7 +4738,7 @@ function ensureCandleFields(required){
       try{ raw = decodeURIComponent(m[1]); }catch(_){ raw = m[1]; }
       var digits = String(raw||'').replace(/\D+/g,'');
       if (digits){
-        window.openOrderLookup('', '', digits.slice(-5), { autoSubmit:true });
+        window.openOrderLookup('', '', digits.slice(-5), { focusPhone:true });
       }else{
         openLookup();
       }
