@@ -262,6 +262,12 @@ html,body{
   .ok-done{color:#34d399;background:rgba(52,211,153,.08);border-color:#34d399}
   .ok-muted{color:#6b7280;font-size:13px}
   .ok-card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff}
+  .ok-items-grid{display:flex;flex-direction:column;gap:12px;margin:10px 0;}
+  .ok-item{display:flex;gap:12px;align-items:flex-start;}
+  .ok-item-img{width:64px;height:64px;border-radius:12px;background-size:cover;background-position:center;background-color:#f1f5f9;flex-shrink:0;}
+  .ok-item-img.placeholder{background:#e5e7eb;}
+  .ok-item-info .name{font-weight:700;font-size:14px;color:#0f172a;}
+  .ok-item-info .meta{font-size:12px;color:#94a3b8;margin-top:4px;}
 
   .cartSum div:last-child{ min-width:96px; text-align:right; }
 /* 強制固定購物車關閉鈕尺寸與排版（最後載入，優先級最高） */
@@ -280,6 +286,12 @@ html,body{
   .ok-done{color:#34d399;background:rgba(52,211,153,.08);border-color:#34d399}
   .ok-muted{color:#6b7280;font-size:13px}
   .ok-card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff}
+  .ok-items-grid{display:flex;flex-direction:column;gap:12px;margin:10px 0;}
+  .ok-item{display:flex;gap:12px;align-items:flex-start;}
+  .ok-item-img{width:64px;height:64px;border-radius:12px;background-size:cover;background-position:center;background-color:#f1f5f9;flex-shrink:0;}
+  .ok-item-img.placeholder{background:#e5e7eb;}
+  .ok-item-info .name{font-weight:700;font-size:14px;color:#0f172a;}
+  .ok-item-info .meta{font-size:12px;color:#94a3b8;margin-top:4px;}
 
 .line-support-btn{
   display:block;
