@@ -159,6 +159,29 @@ function parseCouponAssignment(raw){
   return null;
 }
 
+const MOCK_SERVICE_PRODUCTS = [
+  {
+    id: 'svc-candle-basic',
+    name: '蠟燭祈福｜基本祈請',
+    category: '服務型',
+    description: '老師於指定吉日時為您點燃蠟燭祈願，並以泰文逐一祝禱所託願望。',
+    duration: '約 7 天',
+    includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
+    price: 799,
+    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-basic.png'
+  },
+  {
+    id: 'svc-candle-plus',
+    name: '蠟燭祈福｜進階供品組',
+    category: '服務型',
+    description: '加上供品與祈福儀式照片回傳，適合需要長期加持的願望。',
+    duration: '約 14 天',
+    includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
+    price: 1299,
+    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-plus.png'
+  }
+];
+
 // === Helper: unified proof retriever (R2 first, then KV) ===
 async function getProofFromStore(env, rawKey) {
   const k = String(rawKey || '');
@@ -2687,6 +2710,10 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     } catch (e) {
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
+}
+
+if (pathname === '/api/service/products' && request.method === 'GET') {
+  return new Response(JSON.stringify({ ok:true, items: MOCK_SERVICE_PRODUCTS }), { status:200, headers: jsonHeaders });
 }
 
     // 圖片上傳

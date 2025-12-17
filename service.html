@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>服務型商品｜unalomecodes</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body{
+      background:linear-gradient(180deg,#090f1c,#0f172a);
+      color:#e5e7eb;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    .svc-wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:24px 18px 60px;
+    }
+    .svc-hero{
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(99,102,241,.12));
+      padding:32px 28px;
+      margin-bottom:32px;
+      box-shadow:0 25px 60px rgba(15,23,42,.45);
+    }
+    .svc-hero h1{
+      margin:0;
+      font-size:30px;
+      letter-spacing:1px;
+    }
+    .svc-hero p{
+      margin:12px 0 0;
+      color:rgba(226,232,240,.9);
+      line-height:1.6;
+    }
+    .svc-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:18px;
+    }
+    .svc-card{
+      background:#111827;
+      border-radius:20px;
+      padding:18px;
+      border:1px solid rgba(255,255,255,.06);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .svc-card .meta{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      font-size:13px;
+      color:#94a3b8;
+    }
+    .svc-card button{
+      margin-top:auto;
+      border:none;
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:700;
+      color:#0f172a;
+      background:linear-gradient(90deg,#fcd34d,#fca5a5);
+      cursor:pointer;
+    }
+    #svcListEmpty{
+      grid-column:1/-1;
+      padding:40px 24px;
+      text-align:center;
+      color:#94a3b8;
+      border:1px dashed rgba(255,255,255,.12);
+      border-radius:20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="svc-wrap">
+    <div class="svc-hero">
+      <h1>服務型商品專區</h1>
+      <p>蠟燭祈福、遠距加持、客製儀式等服務全部在這裡完成。每項服務將有獨立的流程、購物車與祈福成果查詢，避免與實體商品混用。</p>
+    </div>
+    <section>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;">
+        <div>
+          <div style="font-size:18px;font-weight:700">可選服務</div>
+          <div style="color:#94a3b8;font-size:14px;">未來的蠟燭祈福／儀式服務會透過這裡上架</div>
+        </div>
+        <button id="svcLookupBtn" class="btn primary" style="margin-left:auto;">查祈福進度</button>
+      </div>
+      <div id="svcList" class="svc-grid">
+        <div id="svcListEmpty">載入中…</div>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="svcLookup" style="border:none;border-radius:18px;padding:0;width:92%;max-width:520px;">
+    <div style="padding:20px;border-bottom:1px solid rgba(148,163,184,.2);">
+      <h2 style="margin:0;font-size:20px;">祈福進度查詢</h2>
+      <p style="margin:8px 0 0;color:#6b7280;font-size:13px;">此區將接上獨立的服務訂單查詢 API。</p>
+    </div>
+    <form id="svcLookupForm" style="padding:18px;display:grid;gap:12px;">
+      <label style="display:grid;gap:6px;font-size:13px;color:#cbd5f5;">
+        手機號碼
+        <input type="tel" name="phone" required placeholder="請輸入下單時的電話" style="padding:10px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#e5e7eb;">
+      </label>
+      <label style="display:grid;gap:6px;font-size:13px;color:#cbd5f5;">
+        訂單編號末五碼
+        <input type="text" name="orderDigits" required inputmode="numeric" pattern="\\d{5}" placeholder="12345" style="padding:10px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#e5e7eb;">
+      </label>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn" id="svcLookupClose">關閉</button>
+        <button type="submit" class="btn primary">查詢</button>
+      </div>
+      <p id="svcLookupHint" style="margin:0;font-size:12px;color:#94a3b8;">查詢功能將在後續步驟接上服務訂單 API。</p>
+    </form>
+  </dialog>
+
+  <script src="/js/service-main.js"></script>
+</body>
+</html>
