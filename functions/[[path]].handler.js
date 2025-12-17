@@ -2641,35 +2641,6 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
   }
 }
 
-if (pathname === '/api/order/notify' && request.method === 'POST') {
-  if (!env.ORDERS) {
-    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
-  }
-  if (!isAdmin(request, env)) {
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
-  }
-  try {
-    const body = await request.json().catch(()=>({}));
-    const id = String(body.id || '').trim();
-    if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
-    const raw = await env.ORDERS.get(id);
-    if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
-    const order = JSON.parse(raw);
-    const customerEmail = (order?.buyer?.email || '').trim();
-    if (!customerEmail) {
-      return new Response(JSON.stringify({ ok:false, error:'訂單缺少顧客 Email，無法寄送' }), { status:400, headers: jsonHeaders });
-    }
-    await maybeSendOrderEmails(env, order, {
-      origin,
-      channel: order.method || '訂單',
-      notifyAdmin: false,
-      emailContext: body.context || 'status_update'
-    });
-    return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
-  } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
-  }
-}
     // 圖片上傳
     if (pathname === "/api/upload" && request.method === "POST") {
       return handleUpload(request, env, origin);

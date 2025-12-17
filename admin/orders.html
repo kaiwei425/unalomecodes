@@ -399,7 +399,6 @@ const items = Array.isArray(o.items) ? o.items : [{
         <button class="btn danger" data-act="singleDel" data-id="${o.id}">刪除</button>
         <button class="btn gold" data-act="addRitual" data-id="${o.id}">新增祈福成果</button>
         <button class="btn" data-act="copyResultLink" data-id="${o.id}">複製成果頁連結</button>
-        <button class="btn" data-act="notifyStatus" data-id="${o.id}">寄信通知顧客</button>
       </td>
     </tr>`;
   }).join('');
@@ -603,22 +602,6 @@ document.addEventListener('click', async e=>{
       await navigator.clipboard.writeText(full);
       toast('已複製成果頁連結');
     }catch(e){ toast('複製失敗'); }
-    return;
-  }
-
-  if (act === 'notifyStatus'){
-    try{
-      const res = await authedFetch('/api/order/notify', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ id })
-      });
-      const j = await res.json().catch(()=>({}));
-      if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
-      toast('已寄出狀態通知');
-    }catch(err){
-      toast('寄信失敗：' + (err && err.message || err));
-    }
     return;
   }
 });
