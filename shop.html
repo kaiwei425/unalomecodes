@@ -4385,11 +4385,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       </div>
     </form>
 
-    <!-- 提示：查詢結果上方（蠟燭祈福成果說明） -->
-    <div id="lookupResultHint" style="padding:0 18px 8px;color:#6b7280;font-size:12px;line-height:1.6">
-      若訂單包含<span style="font-weight:700">蠟燭加持祈福</span>服務，完成後會在該訂單卡片中出現
-      <span style="font-weight:700">查看祈福成果</span>按鈕，點擊即可查看儀式的照片或影片。
-    </div>
+    <div id="lookupResultHint" style="padding:0 18px 8px;color:#6b7280;font-size:12px;line-height:1.6"></div>
 
     <div id="lookupResult" style="display:none;padding:0 18px 18px">
       <div style="font-weight:800;margin:4px 0 8px">查詢結果</div>
@@ -4646,9 +4642,6 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         + contactHtml
         + '<div class="ok-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;margin-top:8px">'
         +   '<div class="ok-status">'+ statusBadge(o.status) +'</div>'
-        +   ( (o && o.resultToken)
-              ? ('<div class="ok-actions"><a class="btn" style="padding:6px 10px;font-size:13px" target="_blank" rel="noopener" href="/o/'+ encodeURIComponent(String(id||'')) +'?token='+ encodeURIComponent(String(o.resultToken||'')) +'">查看祈福成果</a></div>')
-              : '' )
         + '</div>';
       box.appendChild(div);
     });

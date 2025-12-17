@@ -410,8 +410,6 @@ const items = Array.isArray(o.items) ? o.items : [{
         </select>
         <button class="btn" data-act="applyStatus" data-id="${o.id}">套用</button>
         <button class="btn danger" data-act="singleDel" data-id="${o.id}">刪除</button>
-        <button class="btn gold" data-act="addRitual" data-id="${o.id}">新增祈福成果</button>
-        <button class="btn" data-act="copyResultLink" data-id="${o.id}">複製成果頁連結</button>
       </td>
     </tr>`;
   }).join('');
@@ -495,49 +493,6 @@ function ensureAdminKey(){
   }
   return k;
 }
-async function postRitualResults(id, items){
-  const key0 = ensureAdminKey();
-  if (!key0) throw new Error('未提供 ADMIN_KEY');
-  const payload = { orderId: id, items: items };
-  const endpoints = [
-    `/api/ritual_result?admin_key=${encodeURIComponent(key0)}`,
-    `/api/order.results/${encodeURIComponent(id)}?admin_key=${encodeURIComponent(key0)}`,
-    `/api/orders/${encodeURIComponent(id)}/results?admin_key=${encodeURIComponent(key0)}`
-  ];
-  async function tryOnce(url){
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // simple request, 避免 OPTIONS
-      body: JSON.stringify(payload)
-    });
-    const j = await res.json().catch(()=>({}));
-    if (!res.ok || !j.ok){
-      const msg = j && (j.error || j.message);
-      const err = new Error(msg || ('HTTP '+res.status));
-      err.status = res.status;
-      throw err;
-    }
-    return j;
-  }
-  // attempt endpoints; on 401, clear key & prompt once to retry
-  let lastErr = null;
-  for (const url of endpoints){
-    try{
-      return await tryOnce(url);
-    }catch(e){
-      if (e && e.status === 401){
-        clearAdminKey();
-        const key1 = ensureAdminKey();
-        if (!key1) throw new Error('未提供 ADMIN_KEY');
-        const url2 = url.replace(/admin_key=[^&]*/,'admin_key='+encodeURIComponent(key1));
-        try{ return await tryOnce(url2); }catch(e2){ lastErr = e2; }
-      }else{
-        lastErr = e;
-      }
-    }
-  }
-  throw lastErr || new Error('上傳失敗');
-}
 
 // Single row actions
 document.addEventListener('click', async e=>{
@@ -603,30 +558,6 @@ document.addEventListener('click', async e=>{
     return;
   }
 
-  if (act === 'addRitual'){
-    const url = prompt('請輸入成果圖片或影片網址（可多個以逗號分隔）');
-    if (!url) return;
-      const urls = url.split(',').map(s=>s.trim()).filter(Boolean).map(u=>({type:/\.mp4|\.mov|\.m4v|\.avi|\.webm/i.test(u)?'video':'image',url:u}));
-    try{
-      const j = await postRitualResults(id, urls);
-      toast('已新增祈福成果');
-      await loadOrders();
-    }catch(err){
-      toast('上傳失敗：' + (err && err.message || err));
-    }
-    return;
-  }
-
-  if (act === 'copyResultLink'){
-    try{
-      const token = (o=>o.resultToken||o.token||'')(ORDERS.find(x=>x.id===id)||{});
-      if (!token){ toast('此訂單尚無成果頁 token'); return; }
-      const full = `${location.origin}/o/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`;
-      await navigator.clipboard.writeText(full);
-      toast('已複製成果頁連結');
-    }catch(e){ toast('複製失敗'); }
-    return;
-  }
 });
 
 // Batch: mark paid
