@@ -4411,6 +4411,70 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   }
   function escapeHtml(s){ return String(s||'').replace(/[&<>\"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m] || m; }); }
   function numTW(v){ try{ return 'NT$ ' + Number(String(v||0).toString().replace(/[^\d.]/g,'')).toLocaleString('zh-TW'); }catch(e){ return String(v||''); } }
+  var lookupImageHost = (function(){
+    var raw = (window.LOOKUP_IMAGE_HOST || window.ORDER_LOOKUP_IMAGE_HOST || window.PUBLIC_FILE_HOST || window.FILE_HOST || '').trim();
+    if (!raw){
+      if (/\.pages\.dev$/i.test(window.location.hostname)){
+        raw = 'https://shop.unalomecodes.com';
+      }else{
+        raw = window.location.origin;
+      }
+    }
+    if (!/^https?:\/\//i.test(raw)){
+      raw = 'https://' + raw.replace(/^\/+/, '');
+    }
+    try{
+      var u = new URL(raw);
+      u.hash = '';
+      u.search = '';
+      return u.toString().replace(/\/+$/,'');
+    }catch(e){
+      return window.location.origin;
+    }
+  })();
+  function rewriteLookupImageUrl(url){
+    if (!url) return '';
+    try{
+      var base = new URL(lookupImageHost);
+      var resolved = new URL(url, lookupImageHost);
+      var host = resolved.hostname.replace(/^www\./,'');
+      if (/\.pages\.dev$/i.test(host)){
+        resolved.protocol = base.protocol;
+        resolved.hostname = base.hostname;
+        resolved.port = base.port;
+      }
+      return resolved.toString();
+    }catch(e){
+      return url;
+    }
+  }
+  function renderLookupImage(url, alt){
+    var finalUrl = rewriteLookupImageUrl(url);
+    if (!finalUrl) return '<div class="ok-item-img placeholder"></div>';
+    return '<div class="ok-item-img"><img src="'+ escapeHtml(finalUrl) +'" alt="'+ escapeHtml(alt || '商品圖片') +'" loading="lazy"></div>';
+  }
+  function firstTextValue(list){
+    for (var i=0;i<list.length;i++){
+      var v = list[i];
+      if (v === undefined || v === null) continue;
+      var s = String(v).trim();
+      if (s) return s;
+    }
+    return '';
+  }
+  function gatherContactInfo(o){
+    var buyer = (o && o.buyer) || {};
+    var shipping = o && (o.shipping || o.receiver || o.logistics || o.cvs || o.storeInfo || {});
+    var payment = o && (o.payment || o.bank || o.transfer || {});
+    var customer = o && (o.customer || {});
+    return {
+      name: firstTextValue([buyer.name, buyer.fullName, buyer.recipient, buyer.contactName, o && o.recipient, customer.name, shipping.name, shipping.recipient, o && o.name]),
+      phone: firstTextValue([buyer.phone, buyer.mobile, buyer.contact, o && o.phone, o && o.mobile, o && o.contact, shipping.phone, shipping.contactPhone, payment.phone, payment.contactPhone, customer.phone]),
+      email: firstTextValue([buyer.email, customer.email, o && o.email, o && o.contactEmail]),
+      store: firstTextValue([buyer.store, buyer.storeName, shipping.store, shipping.storeName, shipping.storeAddress, shipping.address, o && o.store, o && o.storeName, o && o.storeAddress, o && o.store_address]),
+      note: firstTextValue([buyer.note, o && o.note, o && o.memo, o && o.remark, o && o.comment, o && o.comments, shipping.note, payment.note])
+    };
+  }
   function digitsOnly(s){ return String(s||'').replace(/\D+/g,''); }
   function normalizeTWPhone(s){
     var d = digitsOnly(s);
@@ -4554,26 +4618,21 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           var unit = numTW(it.unitPrice||it.price);
           var img = it.image || it.picture || it.cover || '';
           if (!img && o.image) img = o.image;
-          var imgTag = img ? '<div class="ok-item-img" style="background-image:url(\''+ encodeURI(img) +'\');"></div>' : '<div class="ok-item-img placeholder"></div>';
+          var imgTag = renderLookupImage(img, name);
           return '<div class="ok-item">'+ imgTag +'<div class="ok-item-info"><div class="name">'+ escapeHtml(name) +'</div><div class="meta">'+ (spec? '規格：'+ escapeHtml(spec)+'｜':'' ) +'單價：'+ unit +'｜數量：'+ qty +'</div></div></div>';
         }).join('') + '</div>');
       }else if (o.productName){
         lines.push('<div class="ok-item">'+
-          (o.image ? '<div class="ok-item-img" style="background-image:url(\''+ encodeURI(o.image)+'\');"></div>' : '<div class="ok-item-img placeholder"></div>') +
+          renderLookupImage(o.image, o.productName) +
           '<div class="ok-item-info"><div class="name">'+ escapeHtml(o.productName) +'</div></div></div>');
       }
-      var buyer = o && o.buyer || {};
+      var contact = gatherContactInfo(o);
       var contactLines = [];
-      var nameLine = buyer && (buyer.name || buyer.fullName || buyer.recipient);
-      var phoneLine = buyer && (buyer.phone || buyer.contact || buyer.mobile || o.phone);
-      var emailLine = buyer && (buyer.email || o.email);
-      var storeLine = buyer && (buyer.store || o.store);
-      var noteLine  = buyer && (buyer.note  || o.note);
-      if (nameLine) contactLines.push('<div>收件人：'+ escapeHtml(nameLine) +'</div>');
-      if (phoneLine) contactLines.push('<div>電話：'+ escapeHtml(phoneLine) +'</div>');
-      if (emailLine) contactLines.push('<div>Email：'+ escapeHtml(emailLine) +'</div>');
-      if (storeLine) contactLines.push('<div>7-11 門市：'+ escapeHtml(storeLine) +'</div>');
-      if (noteLine)  contactLines.push('<div>備註：'+ escapeHtml(noteLine) +'</div>');
+      if (contact.name) contactLines.push('<div>收件人：'+ escapeHtml(contact.name) +'</div>');
+      if (contact.phone) contactLines.push('<div>電話：'+ escapeHtml(contact.phone) +'</div>');
+      if (contact.email) contactLines.push('<div>Email：'+ escapeHtml(contact.email) +'</div>');
+      if (contact.store) contactLines.push('<div>7-11 門市：'+ escapeHtml(contact.store) +'</div>');
+      if (contact.note)  contactLines.push('<div>備註：'+ escapeHtml(contact.note) +'</div>');
       var contactHtml = contactLines.length
         ? '<div class="ok-contact">'+ contactLines.join('') +'</div>'
         : '';

@@ -1459,7 +1459,9 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const adminSubject = emailContext === 'status_update'
       ? `[${siteName}] 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
       : `[${siteName}] 新訂單通知 #${order.id}`;
-    const composeOpts = { siteName, lookupUrl, channelLabel, context: emailContext, plain: true };
+    const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://shop.unalomecodes.com';
+    const imageHost = ctx.imageHost || defaultImageHost || origin;
+    const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext };
     const { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
     const { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
     const tasks = [];
