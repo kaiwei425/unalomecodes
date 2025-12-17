@@ -1459,9 +1459,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const adminSubject = emailContext === 'status_update'
       ? `[${siteName}] 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
       : `[${siteName}] 新訂單通知 #${order.id}`;
-    const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://shop.unalomecodes.com';
-    const imageHost = ctx.imageHost || defaultImageHost || origin;
-    const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext };
+    const composeOpts = { siteName, lookupUrl, channelLabel, context: emailContext, plain: true };
     const { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
     const { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
     const tasks = [];
@@ -1521,38 +1519,45 @@ function composeOrderEmail(order, opts = {}) {
   const lineInstruction = 'LINE ID：@427oaemj（請於官方 LINE 搜尋加入）';
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
-  const itemsHtml = items.length
-    ? items.map((it, idx) => {
-        const imgUrl = rewriteEmailImageUrl(it.image, opts.imageHost);
-        const img = imgUrl
-          ? `<img src="${esc(imgUrl)}" alt="${esc(it.name)}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-right:16px;">`
-          : `<div style="width:64px;height:64px;border-radius:12px;background:#e2e8f0;margin-right:16px;"></div>`;
-        const dividerStyle = idx === items.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
-        return `<div style="display:flex;align-items:center;${dividerStyle}">
-          ${img}
-          <div style="flex:1;">
-            <div style="font-weight:600;color:#0f172a;">${esc(it.name)}</div>
-            ${it.spec ? `<div style="color:#475569;font-size:14px;margin:4px 0;">${esc(it.spec)}</div>` : ''}
-            <div style="color:#0f172a;font-size:14px;">數量：${it.qty}</div>
-          </div>
-          <div style="font-weight:600;color:#0f172a;">${fmt(it.total)}</div>
-        </div>`;
-      }).join('')
-    : '<p style="margin:0;color:#475569;">本次訂單明細將由客服另行確認。</p>';
+  const plainMode = !!opts.plain;
+  const itemsHtml = plainMode
+    ? items.map(it => `• ${esc(it.name)}${it.spec ? `（${esc(it.spec)}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('<br>') || '<p>本次訂單明細將由客服另行確認。</p>'
+    : items.length
+      ? items.map((it, idx) => {
+          const imgUrl = rewriteEmailImageUrl(it.image, opts.imageHost);
+          const img = imgUrl
+            ? `<img src="${esc(imgUrl)}" alt="${esc(it.name)}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-right:16px;">`
+            : `<div style="width:64px;height:64px;border-radius:12px;background:#e2e8f0;margin-right:16px;"></div>`;
+          const dividerStyle = idx === items.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
+          return `<div style="display:flex;align-items:center;${dividerStyle}">
+            ${img}
+            <div style="flex:1;">
+              <div style="font-weight:600;color:#0f172a;">${esc(it.name)}</div>
+              ${it.spec ? `<div style="color:#475569;font-size:14px;margin:4px 0;">${esc(it.spec)}</div>` : ''}
+              <div style="color:#0f172a;font-size:14px;">數量：${it.qty}</div>
+            </div>
+            <div style="font-weight:600;color:#0f172a;">${fmt(it.total)}</div>
+          </div>`;
+        }).join('')
+      : '<p style="margin:0;color:#475569;">本次訂單明細將由客服另行確認。</p>';
   const itemsText = items.length
     ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
     : '（本次訂單明細將由客服另行確認）';
   const shippingNote = shippingFee ? `（含運費${fmt(shippingFee).replace('NT$ ', '')}）` : '';
-  const baseInfoHtml = [
-    `<p><strong>訂單編號：</strong>${esc(order.id || '')}</p>`,
-    `<p><strong>訂單狀態：</strong>${esc(status)}</p>`,
-    `<p><strong>付款方式：</strong>${esc(method)}</p>`,
-    `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}${shippingNote}</p>`
-  ].filter(Boolean).join('');
+  const baseInfoHtml = plainMode
+    ? `<p>訂單編號：${esc(order.id || '')}<br>訂單狀態：${esc(status)}<br>付款方式：${esc(method)}<br>應付金額：${fmt(order.amount || 0)}${shippingNote}</p>`
+    : [
+        `<p><strong>訂單編號：</strong>${esc(order.id || '')}</p>`,
+        `<p><strong>訂單狀態：</strong>${esc(status)}</p>`,
+        `<p><strong>付款方式：</strong>${esc(method)}</p>`,
+        `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}${shippingNote}</p>`
+      ].filter(Boolean).join('');
   const lookupHtml = opts.lookupUrl
-    ? `<div style="margin-top:16px;padding:12px;border-radius:8px;background:#eef2ff;color:#312e81;font-size:13px;">
-        查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）
-      </div>`
+    ? plainMode
+      ? `<p>查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）</p>`
+      : `<div style="margin-top:16px;padding:12px;border-radius:8px;background:#eef2ff;color:#312e81;font-size:13px;">
+          查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）
+        </div>`
     : '';
   const customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
@@ -1570,44 +1575,58 @@ function composeOrderEmail(order, opts = {}) {
   const contactHtml = contactRows.length
     ? `<div style="padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:14px;">${contactRows.join('')}</div>`
     : '';
-  const amountHtml = `
-    <div style="margin-top:24px;padding:20px;border-radius:12px;background:#0f172a;color:#f8fafc;">
-      <h3 style="margin:0 0 12px;font-size:18px;">付款明細</h3>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>商品金額</span><span>${fmt(subtotal)}</span></div>
-      ${discountAmount ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#fbbf24;"><span>優惠折抵</span><span>- ${fmt(discountAmount)}</span></div>` : ''}
-      ${shippingFee ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>運費</span><span>${fmt(shippingFee)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-top:12px;"><span>合計應付</span><span>${fmt(totalAmount)}</span></div>
-    </div>
-  `;
-  const customerFooter = opts.admin ? '' : `
-    <div style="margin-top:24px;padding:16px;border-radius:12px;background:#f1f5f9;color:#475569;font-size:13px;line-height:1.6;">
-      本信件為系統自動發送，請勿直接回覆。<br>
-      客服信箱：${esc(supportEmail)}<br>
-      官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）
-    </div>
-  `;
-  const html = `
-    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px 10px;background:#f5f7fb;">
-      <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
-        <p style="margin:0 0 12px;font-weight:700;font-size:18px;">${esc(brand)}</p>
+  const amountHtml = plainMode
+    ? `<p>商品金額：${fmt(subtotal)}${discountAmount ? `<br>優惠折抵：-${fmt(discountAmount)}` : ''}${shippingFee ? `<br>運費：${fmt(shippingFee)}` : ''}<br>合計應付：${fmt(totalAmount)}</p>`
+    : `
+      <div style="margin-top:24px;padding:20px;border-radius:12px;background:#0f172a;color:#f8fafc;">
+        <h3 style="margin:0 0 12px;font-size:18px;">付款明細</h3>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>商品金額</span><span>${fmt(subtotal)}</span></div>
+        ${discountAmount ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;color:#fbbf24;"><span>優惠折抵</span><span>- ${fmt(discountAmount)}</span></div>` : ''}
+        ${shippingFee ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>運費</span><span>${fmt(shippingFee)}</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-top:12px;"><span>合計應付</span><span>${fmt(totalAmount)}</span></div>
+      </div>
+    `;
+  const customerFooter = opts.admin ? '' : plainMode
+    ? `<p>本信件為系統自動發送，請勿直接回覆。客服信箱：${esc(supportEmail)}；官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
+    : `
+      <div style="margin-top:24px;padding:16px;border-radius:12px;background:#f1f5f9;color:#475569;font-size:13px;line-height:1.6;">
+        本信件為系統自動發送，請勿直接回覆。<br>
+        客服信箱：${esc(supportEmail)}<br>
+        官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）
+      </div>
+    `;
+  const html = plainMode
+    ? `
+      <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px;">
+        <p style="font-weight:700;font-size:18px;">${esc(brand)}</p>
         ${opts.admin ? adminIntro : customerIntro}
-        <h3 style="font-size:16px;margin:18px 0 8px;">基本資訊</h3>
-        <table style="border-collapse:collapse;width:100%;font-size:14px;">
-          <tr><td style="padding:6px 0;width:110px;color:#475569;">訂單編號</td><td style="padding:6px 0;">${esc(order.id || '')}</td></tr>
-          <tr><td style="padding:6px 0;color:#475569;">訂單狀態</td><td style="padding:6px 0;">${esc(status)}</td></tr>
-          <tr><td style="padding:6px 0;color:#475569;">付款方式</td><td style="padding:6px 0;">${esc(method)}</td></tr>
-          <tr><td style="padding:6px 0;color:#475569;">應付金額</td><td style="padding:6px 0;">${fmt(order.amount || 0)}${shippingNote}</td></tr>
-        </table>
+        ${baseInfoHtml}
         ${amountHtml}
-        <h3 style="font-size:16px;margin:24px 0 10px;">商品明細</h3>
-        ${itemsHtml}
-        ${contactHtml ? `<h3 style="font-size:16px;margin:20px 0 10px;">聯絡資訊</h3>${contactHtml}` : ''}
-        ${lookupHtml ? `<div style="margin-top:18px;font-size:13px;">${lookupHtml}</div>` : ''}
-        ${opts.admin ? '' : '<p style="margin:18px 0 0;">感謝您的支持，祝福一切順心圓滿！</p>'}
+        <p>商品明細：</p>
+        <p>${itemsHtml}</p>
+        ${contactHtml ? `<p>聯絡資訊：<br>${contactHtml}</p>` : ''}
+        ${lookupHtml}
+        ${opts.admin ? '' : '<p>感謝您的支持，祝福一切順心圓滿！</p>'}
         ${customerFooter}
       </div>
-    </div>
-  `;
+    `
+    : `
+      <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px 10px;background:#f5f7fb;">
+        <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
+          <p style="margin:0 0 12px;font-weight:700;font-size:18px;">${esc(brand)}</p>
+          ${opts.admin ? adminIntro : customerIntro}
+          <h3 style="font-size:16px;margin:18px 0 8px;">基本資訊</h3>
+          ${baseInfoHtml}
+          ${amountHtml}
+          <h3 style="font-size:16px;margin:24px 0 10px;">商品明細</h3>
+          ${itemsHtml}
+          ${contactHtml ? `<h3 style="font-size:16px;margin:20px 0 10px;">聯絡資訊</h3>${contactHtml}` : ''}
+          ${lookupHtml}
+          ${opts.admin ? '' : '<p style="margin:18px 0 0;">感謝您的支持，祝福一切順心圓滿！</p>'}
+          ${customerFooter}
+        </div>
+      </div>
+    `;
   const textParts = [];
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
