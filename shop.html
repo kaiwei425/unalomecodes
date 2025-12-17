@@ -4554,12 +4554,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           var unit = numTW(it.unitPrice||it.price);
           var img = it.image || it.picture || it.cover || '';
           if (!img && o.image) img = o.image;
-          var imgTag = img ? '<div class="ok-item-img" style="background-image:url('+ encodeURI(img) +');"></div>' : '<div class="ok-item-img placeholder"></div>';
+          var imgTag = img ? '<div class="ok-item-img" style="background-image:url(\''+ encodeURI(img) +'\');"></div>' : '<div class="ok-item-img placeholder"></div>';
           return '<div class="ok-item">'+ imgTag +'<div class="ok-item-info"><div class="name">'+ escapeHtml(name) +'</div><div class="meta">'+ (spec? '規格：'+ escapeHtml(spec)+'｜':'' ) +'單價：'+ unit +'｜數量：'+ qty +'</div></div></div>';
         }).join('') + '</div>');
       }else if (o.productName){
         lines.push('<div class="ok-item">'+
-          (o.image ? '<div class="ok-item-img" style="background-image:url('+ encodeURI(o.image)+');"></div>' : '<div class="ok-item-img placeholder"></div>') +
+          (o.image ? '<div class="ok-item-img" style="background-image:url(\''+ encodeURI(o.image)+'\');"></div>' : '<div class="ok-item-img placeholder"></div>') +
           '<div class="ok-item-info"><div class="name">'+ escapeHtml(o.productName) +'</div></div></div>');
       }
       var buyer = o && o.buyer || {};
