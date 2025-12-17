@@ -5,6 +5,19 @@
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
   const lookupForm = document.getElementById('svcLookupForm');
+  const detailDialog = document.getElementById('svcDetail');
+  const detailClose = document.getElementById('svcDetailClose');
+  const detailTitle = document.getElementById('svcDetailTitle');
+  const detailPrice = document.getElementById('svcDetailPrice');
+  const detailDesc = document.getElementById('svcDetailDesc');
+  const detailIncludes = document.getElementById('svcDetailIncludes');
+  const detailGallery = document.getElementById('svcDetailGallery');
+  const detailAction = document.getElementById('svcDetailAction');
+  let detailDataset = null;
+
+  function escapeHtml(str){
+    return String(str||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
+  }
 
   async function fetchServices(){
     try{
@@ -18,6 +31,11 @@
     }
   }
 
+  function formatTWD(num){
+    try{ return 'NT$ ' + Number(num||0).toLocaleString('zh-TW'); }
+    catch(_){ return 'NT$ ' + (num||0); }
+  }
+
   function renderList(items){
     if (!listEl) return;
     listEl.innerHTML = '';
@@ -29,19 +47,23 @@
       return;
     }
     items.forEach(service => {
+      const cover = service.cover || service.image || service.banner || '';
       const card = document.createElement('div');
       card.className = 'svc-card';
       card.innerHTML = `
-        <div style="font-size:18px;font-weight:700;">${service.name}</div>
-        <div class="meta">
-          <span>建議準備：${service.duration || '—'}</span>
-          <span>費用：NT$ ${Number(service.price || 0).toLocaleString('zh-TW')}</span>
+        <div class="svc-pic">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(service.name||'')}">` : ''}</div>
+        <div class="body">
+          <div style="font-size:18px;font-weight:700;">${escapeHtml(service.name||'服務')}</div>
+          <div class="meta">
+            <span>${escapeHtml(service.duration || '時間依照老師安排')}</span>
+            <span>${formatTWD(service.price)}</span>
+          </div>
+          <p style="margin:0;color:#cbd5f5;line-height:1.6;">${escapeHtml(service.summary || service.description || service.desc || '')}</p>
+          <button data-service="${service.id}">查看服務</button>
         </div>
-        <p style="margin:0;color:#cbd5f5;line-height:1.6;">${service.desc || ''}</p>
-        <button data-service="${service.id}">查看並下單</button>
       `;
       card.querySelector('button').addEventListener('click', () => {
-        alert('後續會跳出服務專用的購物車與結帳流程。\n目前為骨架階段。');
+        openServiceDetail(service);
       });
       listEl.appendChild(card);
     });
@@ -62,6 +84,41 @@
         alert('祈福進度查詢 API 尚未接線，後續會實作。');
       });
     }
+  }
+
+  function openServiceDetail(service){
+    if (!detailDialog) return;
+    detailDataset = service;
+    if (detailTitle) detailTitle.textContent = service.name || '服務';
+    if (detailPrice) detailPrice.textContent = formatTWD(service.price || 0);
+    if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
+    if (detailIncludes){
+      const list = Array.isArray(service.includes) ? service.includes : [];
+      if (list.length){
+        detailIncludes.innerHTML = list.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+      }else{
+        detailIncludes.innerHTML = '<li>老師依實際情況安排內容</li>';
+      }
+    }
+    if (detailGallery){
+      const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
+      detailGallery.innerHTML = gallery.length
+        ? gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}">`).join('')
+        : '<div style="color:#94a3b8;">目前尚未提供示意圖</div>';
+    }
+    if (detailAction){
+      detailAction.dataset.serviceId = service.id || '';
+    }
+    detailDialog.showModal();
+  }
+
+  if (detailClose && detailDialog){
+    detailClose.addEventListener('click', () => detailDialog.close());
+  }
+  if (detailAction){
+    detailAction.addEventListener('click', ()=>{
+      alert('服務購物車尚在建置，將於後續步驟完成。');
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
