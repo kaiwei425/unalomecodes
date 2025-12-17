@@ -8,14 +8,12 @@
   <style>
 body.service-view{background:var(--bg);color:var(--fg);}
 .service-top .service-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.service-top .service-actions .btn{border-radius:999px;padding:8px 14px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:pointer;}
+.service-top .service-actions .btn{border-radius:999px;padding:8px 14px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:pointer;text-decoration:none;}
 .service-top .service-actions .btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border-color:#1095d6;box-shadow:0 8px 18px rgba(16,149,214,.2);}
 .service-hero{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);}
-.service-hero h1{margin:0 0 6px;font-size:26px;font-weight:800;}
-.service-hero p{margin:0;color:var(--muted);line-height:1.6;}
+.service-hero h1{margin:0;font-size:26px;font-weight:800;}
 .svc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 12px;}
 .svc-head .title{font-weight:800;font-size:18px;}
-.svc-head .sub{font-size:13px;color:var(--muted);}
 .service-grid{margin-top:16px;}
 .service-grid .card .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0;}
 .service-grid .card .meta span{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;color:#1d4ed8;font-weight:600;}
@@ -74,10 +72,6 @@ body.service-view{background:var(--bg);color:var(--fg);}
         <div class="side-cart">
           <button id="cartFab" type="button" title="查看購物車" disabled style="opacity:.4;cursor:not-allowed;"><span class="lbl">實體購物車</span><span id="cartBadge">0</span></button>
         </div>
-        <h3>服務流程說明</h3>
-        <div class="list">
-          <span class="muted" style="display:block;line-height:1.6;">本專區的服務與實體商品完全分開，請透過此頁面提交資料並等待通知。</span>
-        </div>
         <div class="tools-box">
           <h4>常用連結</h4>
           <div class="list">
@@ -91,15 +85,12 @@ body.service-view{background:var(--bg);color:var(--fg);}
       <div class="main service-main">
         <div class="svc-hero">
           <h1>服務型商品專區</h1>
-          <p>蠟燭祈福、遠距加持、客製儀式等服務全部在這裡完成。每項服務擁有獨立流程、購物車與祈福進度查詢，確保體驗清楚不混淆。</p>
         </div>
         <section>
           <div class="svc-head">
             <div>
               <div class="title">可選服務</div>
-              <div class="sub">未來的蠟燭祈福／儀式服務都會透過此處上架</div>
             </div>
-            <button id="svcLookupBtn2" class="btn primary ghost">查祈福進度</button>
           </div>
           <div id="svcList" class="grid service-grid">
             <div id="svcListEmpty">載入中…</div>

@@ -1,7 +1,7 @@
 (() => {
   const listEl = document.getElementById('svcList');
   const emptyEl = document.getElementById('svcListEmpty');
-  const lookupTriggers = Array.from(document.querySelectorAll('#svcLookupBtn, #svcLookupBtn2, #linkServiceLookup'));
+  const lookupTriggers = Array.from(document.querySelectorAll('#svcLookupBtn, #linkServiceLookup'));
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
   const lookupForm = document.getElementById('svcLookupForm');
@@ -75,11 +75,7 @@
         <div class="pic">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
         <div class="body">
           <div class="name">${escapeHtml(service.name||'服務')}</div>
-          <div class="meta">
-            <span>${escapeHtml(service.duration || '約 7 天')}</span>
-            <span>${formatTWD(service.price)}</span>
-          </div>
-          <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.5;">${escapeHtml(service.summary || service.description || service.desc || '')}</p>
+          <div class="price">${formatTWD(service.price)}</div>
           <div class="cta">
             <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
           </div>
@@ -195,7 +191,7 @@
           <label>
             <span>
               <span style="font-weight:600;">${escapeHtml(opt.name)}</span>
-              <span style="color:#6b7280;font-size:12px;margin-left:4px;">${opt.price ? '+'+formatTWD(opt.price) : '不加價'}</span>
+              ${opt.price ? `<span style="color:#6b7280;font-size:12px;margin-left:4px;">+${formatTWD(opt.price)}</span>` : ''}
             </span>
             <input type="radio" name="svcOptRadio" value="${escapeHtml(opt.name)}" ${idx===0 ? 'checked':''}>
           </label>
