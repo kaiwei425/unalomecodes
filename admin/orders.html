@@ -52,6 +52,19 @@
   #loginCard .hint{color:#94a3b8;font-size:12px;margin-top:6px}
   #loginCard .row{display:flex;gap:8px;margin-top:12px}
   #loginCard .row .btn{flex:1}
+  tr.mail-ok td:nth-child(7)::after{
+    content:'（已寄信）';
+    margin-left:6px;
+    font-size:12px;
+    color:#60a5fa;
+    font-weight:600;
+  }
+  tr.mail-fail td:nth-child(7)::after{
+    content:'（尚未寄信）';
+    margin-left:6px;
+    font-size:12px;
+    color:#fbbf24;
+  }
 </style>
 </head>
 <body>
@@ -549,9 +562,19 @@ document.addEventListener('click', async e=>{
       if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
       const badge = row && row.querySelector('td:nth-child(7) .badge');
       if (badge) badge.textContent = status;
+      if (row){
+        row.classList.remove('mail-ok','mail-fail');
+        if (j.notified) row.classList.add('mail-ok');
+        else row.classList.add('mail-fail');
+        const infoCell = row.querySelector('td:nth-child(2) .muted');
+        if (infoCell){
+          const stamp = new Date().toLocaleString('zh-TW',{hour12:false});
+          infoCell.textContent = j.notified ? `通知信已寄出：${stamp}` : `未寄信：${stamp}`;
+        }
+      }
       const target = ORDERS.find(x=> x.id === id);
       if (target) target.status = status;
-      toast('狀態已更新');
+      toast(j.notified ? '狀態已更新，已寄出通知信' : '狀態已更新');
     }catch(err){
       toast('更新狀態失敗：' + (err && err.message || err));
     }
@@ -610,15 +633,22 @@ document.addEventListener('click', async e=>{
 $('#markPaid').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
+  let notified = 0;
   for (const id of selected){
-    const res = await authedFetch('/api/order/status', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ id, action:'set', status:'已付款待出貨' })
-    });
-    if (res.ok) ok++;
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'set', status:'已付款待出貨' })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (res.ok && j && j.ok){
+        ok++;
+        if (j.notified) notified++;
+      }
+    }catch(_){}
   }
-  toast('已標記已付款待出貨：' + ok + ' 筆');
+  toast('已標記已付款待出貨：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
   await loadOrders();
 });
 
@@ -626,15 +656,22 @@ $('#markPaid').addEventListener('click', async ()=>{
 $('#markShipped').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
+  let notified = 0;
   for (const id of selected){
-    const res = await authedFetch('/api/order/status', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ id, action:'set', status:'已寄件' })
-    });
-    if (res.ok) ok++;
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'set', status:'已寄件' })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (res.ok && j && j.ok){
+        ok++;
+        if (j.notified) notified++;
+      }
+    }catch(_){}
   }
-  toast('已標記已出貨：' + ok + ' 筆');
+  toast('已標記已出貨：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
   await loadOrders();
 });
 
@@ -642,15 +679,22 @@ $('#markShipped').addEventListener('click', async ()=>{
 $('#markDone').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
+  let notified = 0;
   for (const id of selected){
-    const res = await authedFetch('/api/order/status', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ id, action:'set', status:'已完成訂單' })
-    });
-    if (res.ok) ok++;
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'set', status:'已完成訂單' })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (res.ok && j && j.ok){
+        ok++;
+        if (j.notified) notified++;
+      }
+    }catch(_){}
   }
-  toast('已標記已完成訂單：' + ok + ' 筆');
+  toast('已標記已完成訂單：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
   await loadOrders();
 });
 

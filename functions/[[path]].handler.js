@@ -2671,14 +2671,16 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       }
       obj.updatedAt = new Date().toISOString();
       await env.ORDERS.put(id, JSON.stringify(obj));
+      let emailNotified = false;
       if (statusChanged && shouldNotifyStatus(obj.status)) {
         try {
           await maybeSendOrderEmails(env, obj, { origin, channel: obj.method || '轉帳匯款', notifyAdmin:false, emailContext:'status_update' });
+          emailNotified = true;
         } catch (err) {
           console.error('status update email error', err);
         }
       }
-      return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:true, status: obj.status, notified: emailNotified }), { status:200, headers: jsonHeaders });
     }
 
     return new Response(JSON.stringify({ ok:false, error:'Missing action/status' }), { status:400, headers: jsonHeaders });
