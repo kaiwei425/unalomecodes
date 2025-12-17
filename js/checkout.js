@@ -902,6 +902,70 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }
     return a || 0;
   }
+  var lookupImageHost = (function(){
+    var raw = (window.LOOKUP_IMAGE_HOST || window.ORDER_LOOKUP_IMAGE_HOST || window.PUBLIC_FILE_HOST || window.FILE_HOST || '').trim();
+    if (!raw){
+      if (/\.pages\.dev$/i.test(window.location.hostname)){
+        raw = 'https://shop.unalomecodes.com';
+      }else{
+        raw = window.location.origin;
+      }
+    }
+    if (!/^https?:\/\//i.test(raw)){
+      raw = 'https://' + raw.replace(/^\/+/, '');
+    }
+    try{
+      var u = new URL(raw);
+      u.hash = '';
+      u.search = '';
+      return u.toString().replace(/\/+$/,'');
+    }catch(e){
+      return window.location.origin;
+    }
+  })();
+  function rewriteLookupImageUrl(url){
+    if (!url) return '';
+    try{
+      var base = new URL(lookupImageHost);
+      var resolved = new URL(url, lookupImageHost);
+      var host = resolved.hostname.replace(/^www\./,'');
+      if (/\.pages\.dev$/i.test(host)){
+        resolved.protocol = base.protocol;
+        resolved.hostname = base.hostname;
+        resolved.port = base.port;
+      }
+      return resolved.toString();
+    }catch(e){
+      return url;
+    }
+  }
+  function renderLookupImage(url, alt){
+    var finalUrl = rewriteLookupImageUrl(url);
+    if (!finalUrl) return '<div class="ok-item-img placeholder"></div>';
+    return '<div class="ok-item-img"><img src="'+ escapeHtml(finalUrl) +'" alt="'+ escapeHtml(alt || '商品圖片') +'" loading="lazy"></div>';
+  }
+  function firstTextValue(list){
+    for (var i=0;i<list.length;i++){
+      var v = list[i];
+      if (v === undefined || v === null) continue;
+      var s = String(v).trim();
+      if (s) return s;
+    }
+    return '';
+  }
+  function gatherContactInfo(o){
+    var buyer = (o && o.buyer) || {};
+    var shipping = o && (o.shipping || o.receiver || o.logistics || o.cvs || o.storeInfo || {});
+    var payment = o && (o.payment || o.bank || o.transfer || {});
+    var customer = o && (o.customer || {});
+    return {
+      name: firstTextValue([buyer.name, buyer.fullName, buyer.recipient, buyer.contactName, o && o.recipient, customer.name, shipping.name, shipping.recipient, o && o.name]),
+      phone: firstTextValue([buyer.phone, buyer.mobile, buyer.contact, o && o.phone, o && o.mobile, o && o.contact, shipping.phone, shipping.contactPhone, payment.phone, payment.contactPhone, customer.phone]),
+      email: firstTextValue([buyer.email, customer.email, o && o.email, o && o.contactEmail]),
+      store: firstTextValue([buyer.store, buyer.storeName, shipping.store, shipping.storeName, shipping.storeAddress, shipping.address, o && o.store, o && o.storeName, o && o.storeAddress, o && o.store_address]),
+      note: firstTextValue([buyer.note, o && o.note, o && o.memo, o && o.remark, o && o.comment, o && o.comments, shipping.note, payment.note])
+    };
+  }
   function renderOrders(arr){
     var box = document.getElementById('lookupList');
     var wrap = document.getElementById('lookupResult');
@@ -919,24 +983,38 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var items = Array.isArray(o.items) ? o.items : [];
       var lines = [];
       if (items.length){
-        items.forEach(function(it){
+        lines.push('<div class="ok-items-grid">'+ items.map(function(it){
           var name = it.name || it.productName || it.title || '商品';
           var spec = it.variantName || it.spec || it.deity || '';
           var qty  = it.qty || it.quantity || 1;
           var unit = numTW(it.unitPrice||it.price);
-          lines.push('<div>'+ escapeHtml(name) +'｜單價：'+ unit +'｜規格：'+ escapeHtml(spec) +'｜數量：'+ qty +'</div>');
-        });
+          var img = it.image || it.picture || it.cover || '';
+          if (!img && o.image) img = o.image;
+          var imgTag = renderLookupImage(img, name);
+          return '<div class="ok-item">'+ imgTag +'<div class="ok-item-info"><div class="name">'+ escapeHtml(name) +'</div><div class="meta">'+ (spec? '規格：'+ escapeHtml(spec)+'｜':'' ) +'單價：'+ unit +'｜數量：'+ qty +'</div></div></div>';
+        }).join('') + '</div>');
       }else if (o.productName){
-        lines.push('<div>'+ escapeHtml(o.productName) +'</div>');
+        lines.push('<div class="ok-item">'+
+          renderLookupImage(o.image, o.productName) +
+          '<div class="ok-item-info"><div class="name">'+ escapeHtml(o.productName) +'</div></div></div>');
       }
+      var contact = gatherContactInfo(o);
+      var contactLines = [];
+      if (contact.name) contactLines.push('<div>收件人：'+ escapeHtml(contact.name) +'</div>');
+      if (contact.phone) contactLines.push('<div>電話：'+ escapeHtml(contact.phone) +'</div>');
+      if (contact.email) contactLines.push('<div>Email：'+ escapeHtml(contact.email) +'</div>');
+      if (contact.store) contactLines.push('<div>7-11 門市：'+ escapeHtml(contact.store) +'</div>');
+      if (contact.note)  contactLines.push('<div>備註：'+ escapeHtml(contact.note) +'</div>');
+      var contactHtml = contactLines.length
+        ? '<div class="ok-contact">'+ contactLines.join('') +'</div>'
+        : '';
       var div = document.createElement('div');
       div.className = 'ok-card';
       div.innerHTML = ''
         + '<div style="font-weight:800">訂單編號：'+ escapeHtml(String(id||'')) +'</div>'
         + '<div class="ok-muted">金額：'+ amt + (lines.length? '（以下為明細）' : '') +'</div>'
         + (lines.join('')||'')
-        + (o.store ? '<div class="ok-muted">門市：'+ escapeHtml(o.store) +'</div>' : '')
-        + (o.contact ? '<div class="ok-muted">聯絡方式：'+ escapeHtml(o.contact) +'</div>' : '')
+        + contactHtml
         + '<div class="ok-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;margin-top:8px">'
         +   '<div class="ok-status">'+ statusBadge(o.status) +'</div>'
         +   ( (o && o.resultToken)
