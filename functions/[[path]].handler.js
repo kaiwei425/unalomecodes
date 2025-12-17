@@ -752,6 +752,11 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     try { await bumpSoldCounters(env, items, productId, qty); } catch(_){}
     // Decrement inventory (variants 或 product-level)
     try { await decStockCounters(env, items, productId, (body.variantName||body.variant||''), qty); } catch(_){}
+    try {
+      await maybeSendOrderEmails(env, order, { origin, channel: 'bank' });
+    } catch (err) {
+      console.error('sendOrderEmails(bank) error', err);
+    }
 
     return new Response(JSON.stringify({ ok:true, id: order.id, order }), { status:200, headers: jsonHeaders });
   } catch (e) {
@@ -904,6 +909,11 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
     await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
     try { await bumpSoldCounters(env, draft.items, order.productId, order.qty); } catch(_){}
     try { await decStockCounters(env, draft.items, order.productId, order.variantName, order.qty); } catch(_){}
+    try {
+      await maybeSendOrderEmails(env, order, { origin, channel: 'credit' });
+    } catch (err) {
+      console.error('sendOrderEmails(credit) error', err);
+    }
 
     return new Response(JSON.stringify({
       ok:true,
@@ -1413,6 +1423,198 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   };
 
   return { order, items, couponApplied, couponCode, couponDeity, useCartOnly };
+}
+
+async function maybeSendOrderEmails(env, order, ctx = {}) {
+  try {
+    if (!order || !env) return;
+    const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
+    const fromDefault = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
+    const hasTransport = apiKey && fromDefault;
+    if (!hasTransport) {
+      console.log('[mail] skip sending — missing config', { hasApiKey: !!apiKey, fromDefault });
+      return;
+    }
+    const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+    const origin = (ctx.origin || '').replace(/\/$/, '');
+    const lookupUrl = (origin && order.id) ? `${origin}/shop#lookup=${encodeURIComponent(order.id)}` : '';
+    const channel = ctx.channel || order.method || '';
+    const customerEmail = (order?.buyer?.email || '').trim();
+    const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
+    const channelLabel = channel ? channel : (order.method || '訂單');
+    const { html: customerHtml, text: customerText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:false });
+    const { html: adminHtml, text: adminText } = composeOrderEmail(order, { siteName, lookupUrl, channelLabel, admin:true });
+    const tasks = [];
+    if (customerEmail) {
+      tasks.push(sendEmailMessage(env, {
+        from: fromDefault,
+        to: [customerEmail],
+        subject: `${siteName} 訂單確認 #${order.id}`,
+        html: customerHtml,
+        text: customerText
+      }));
+    }
+    if (adminRaw.length) {
+      tasks.push(sendEmailMessage(env, {
+        from: fromDefault,
+        to: adminRaw,
+        subject: `[${siteName}] 新訂單通知 #${order.id}`,
+        html: adminHtml,
+        text: adminText
+      }));
+    }
+    if (!tasks.length) {
+      console.log('[mail] skip sending — no recipients resolved');
+      return;
+    }
+    await Promise.allSettled(tasks);
+  } catch (err) {
+    console.error('sendOrderEmails error', err);
+  }
+}
+
+function composeOrderEmail(order, opts = {}) {
+  const esc = escapeHtmlEmail;
+  const fmt = formatCurrencyTWD;
+  const buyerName = (order?.buyer?.name || '').trim() || '貴賓';
+  const phone = (order?.buyer?.phone || order?.buyer?.contact || order?.contact || '').trim();
+  const email = (order?.buyer?.email || '').trim();
+  const store = (order?.buyer?.store || order?.store || '').trim();
+  const status = order.status || '處理中';
+  const note = (order.note || '').trim();
+  const method = opts.channelLabel || order.method || '訂單';
+  const items = buildOrderItems(order);
+  const itemsHtml = items.length
+    ? '<ul>' + items.map(it => `<li><strong>${esc(it.name)}</strong>${it.spec ? `（${esc(it.spec)}）` : ''} × ${it.qty} ─ ${fmt(it.total)}</li>`).join('') + '</ul>'
+    : '<p>本次訂單明細將由客服另行確認。</p>';
+  const itemsText = items.length
+    ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
+    : '（本次訂單明細將由客服另行確認）';
+  const baseInfoHtml = [
+    `<p><strong>訂單編號：</strong>${esc(order.id || '')}</p>`,
+    `<p><strong>訂單狀態：</strong>${esc(status)}</p>`,
+    `<p><strong>付款方式：</strong>${esc(method)}</p>`,
+    `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}</p>`,
+    order.shippingFee ? `<p><strong>運費：</strong>${fmt(order.shippingFee)}</p>` : ''
+  ].filter(Boolean).join('');
+  const lookupHtml = opts.lookupUrl ? `<p>可隨時透過 <a href="${esc(opts.lookupUrl)}">${esc(opts.lookupUrl)}</a> 查詢訂單處理進度。</p>` : '';
+  const customerIntro = `<p>親愛的 ${esc(buyerName)} 您好：</p><p>我們已收到您的訂單，以下為確認資訊，請再次檢查若有任何疑問可回覆此信或透過 LINE 與我們聯繫。</p>`;
+  const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
+  const contactHtml = [
+    phone ? `<p><strong>聯絡電話：</strong>${esc(phone)}</p>` : '',
+    email ? `<p><strong>Email：</strong>${esc(email)}</p>` : '',
+    store ? `<p><strong>7-11 門市：</strong>${esc(store)}</p>` : '',
+    note ? `<p><strong>備註：</strong>${esc(note)}</p>` : ''
+  ].filter(Boolean).join('');
+  const html = `
+    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:#0f172a;line-height:1.7">
+      ${opts.admin ? adminIntro : customerIntro}
+      ${baseInfoHtml}
+      <p><strong>商品明細：</strong></p>
+      ${itemsHtml}
+      ${contactHtml || ''}
+      ${lookupHtml}
+      ${opts.admin ? '' : '<p>感謝您的支持，祝福一切順心圓滿！</p>'}
+    </div>
+  `;
+  const textParts = [];
+  if (opts.admin) {
+    textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
+  } else {
+    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，以下為確認資訊：`);
+  }
+  textParts.push(`訂單編號：${order.id}`);
+  textParts.push(`訂單狀態：${status}`);
+  textParts.push(`付款方式：${method}`);
+  textParts.push(`應付金額：${fmt(order.amount || 0)}`);
+  if (order.shippingFee) textParts.push(`運費：${fmt(order.shippingFee)}`);
+  textParts.push('商品明細：');
+  textParts.push(itemsText);
+  if (phone) textParts.push(`聯絡電話：${phone}`);
+  if (email) textParts.push(`Email：${email}`);
+  if (store) textParts.push(`7-11 門市：${store}`);
+  if (note) textParts.push(`備註：${note}`);
+  if (opts.lookupUrl) textParts.push(`查詢訂單：${opts.lookupUrl}`);
+  if (!opts.admin) textParts.push('感謝您的訂購！');
+  return { html, text: textParts.join('\n') };
+}
+
+function buildOrderItems(order) {
+  if (Array.isArray(order?.items) && order.items.length) {
+    return order.items.map(it => ({
+      name: String(it.productName || it.name || it.title || '商品'),
+      spec: String(it.variantName || it.spec || it.deity || '').trim(),
+      qty: Math.max(1, Number(it.qty || it.quantity || 1) || 1),
+      total: Number(it.total || (Number(it.price || it.unitPrice || 0) * Math.max(1, Number(it.qty || it.quantity || 1) || 1)) || 0)
+    }));
+  }
+  if (order.productName) {
+    const qty = Math.max(1, Number(order.qty || 1) || 1);
+    const unit = Number(order.price || (order.amount || 0) / qty || 0);
+    return [{
+      name: String(order.productName),
+      spec: String(order.variantName || '').trim(),
+      qty,
+      total: unit * qty
+    }];
+  }
+  return [];
+}
+
+async function sendEmailMessage(env, message) {
+  const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
+  const fromEnv = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
+  const from = (message.from || fromEnv).trim();
+  const toList = Array.isArray(message.to) ? message.to.filter(Boolean) : [message.to].filter(Boolean);
+  if (!apiKey || !from || !toList.length) {
+    console.log('[mail] transport unavailable', { hasApiKey: !!apiKey, from, toCount: toList.length });
+    return { ok:false, skipped:'missing_config' };
+  }
+  const endpoint = (env.RESEND_ENDPOINT || 'https://api.resend.com/emails').trim() || 'https://api.resend.com/emails';
+  const payload = {
+    from,
+    to: toList,
+    subject: message.subject || 'Order Notification',
+    html: message.html || undefined,
+    text: message.text || undefined
+  };
+  if (message.replyTo) payload.reply_to = message.replyTo;
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(()=> '');
+    throw new Error(`Email API ${res.status}: ${errText || res.statusText}`);
+  }
+  let data = {};
+  try { data = await res.json(); } catch(_){}
+  return data;
+}
+
+function escapeHtmlEmail(str) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  };
+  return String(str || '').replace(/[&<>"']/g, function(m){
+    return map[m] || m;
+  });
+}
+
+function formatCurrencyTWD(num) {
+  try {
+    return 'NT$ ' + Number(num || 0).toLocaleString('zh-TW');
+  } catch (_) {
+    return 'NT$ ' + (num || 0);
+  }
 }
 
 /* ========== CSV helpers ========== */
