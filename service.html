@@ -26,8 +26,9 @@ body.service-view{background:var(--bg);color:var(--fg);}
 .svc-dialog .svc-includes{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;list-style:disc;padding-left:22px;background:#f9fafb;}
 .svc-dialog .svc-includes li{margin-bottom:6px;color:#374151;}
 .svc-dialog .svc-options{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
-.svc-dialog .svc-options label{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;gap:10px;}
-.svc-dialog .svc-options input{margin:0;}
+.svc-dialog .svc-options label{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;gap:12px;flex-wrap:nowrap;}
+.svc-dialog .svc-options label span{display:flex;align-items:center;gap:6px;}
+.svc-dialog .svc-options input{margin:0;flex-shrink:0;}
 .svc-stepper{display:flex;gap:8px;justify-content:center;padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(24,161,104,.08),rgba(16,149,214,.08));}
 .svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:700;}
 .svc-stepper span.active{background:#16a34a;color:#fff;border-color:#16a34a;}
@@ -63,7 +64,6 @@ body.service-view{background:var(--bg);color:var(--fg);}
       </div>
       <div class="service-actions">
         <a href="/shop.html" class="btn">返回實體商品</a>
-        <button id="svcLookupBtn" class="btn primary">查祈福進度</button>
       </div>
     </div>
 
@@ -83,15 +83,7 @@ body.service-view{background:var(--bg);color:var(--fg);}
       </aside>
 
       <div class="main service-main">
-        <div class="svc-hero">
-          <h1>服務型商品專區</h1>
-        </div>
         <section>
-          <div class="svc-head">
-            <div>
-              <div class="title">可選服務</div>
-            </div>
-          </div>
           <div id="svcList" class="grid service-grid">
             <div id="svcListEmpty">載入中…</div>
           </div>
