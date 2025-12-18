@@ -271,15 +271,21 @@
   }
 
   function renderCheckoutSummary(cart){
-    if (!checkoutSummary || !checkoutTotal || !checkoutServiceName) return;
-    checkoutServiceName.textContent = cart[0].serviceName || '服務';
-    checkoutSummary.innerHTML = cart.map(item => `<li>${escapeHtml(item.optionName || '標準服務')}｜${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</li>`).join('');
-    checkoutTotal.textContent = formatTWD(cartTotal(cart));
-    checkoutForm.dataset.selectedOptions = JSON.stringify(cart.filter(it => it.optionName).map(it => ({ name: it.optionName, price: it.optionPrice })));
-    checkoutForm.dataset.baseCount = cart.filter(it => !it.optionName).length || 0;
+    if (!Array.isArray(cart) || !cart.length) return;
     const svcId = cart[0].serviceId || '';
-    checkoutForm.dataset.serviceId = svcId;
+    const selectedOpts = cart.filter(it => it.optionName).map(it => ({ name: it.optionName, price: it.optionPrice }));
+    const baseCount = cart.filter(it => !it.optionName).length || 0;
+    if (checkoutForm){
+      checkoutForm.dataset.selectedOptions = JSON.stringify(selectedOpts);
+      checkoutForm.dataset.baseCount = String(baseCount);
+      checkoutForm.dataset.serviceId = svcId;
+    }
     if (checkoutServiceIdInput) checkoutServiceIdInput.value = svcId;
+    if (checkoutServiceName) checkoutServiceName.textContent = cart[0].serviceName || '服務';
+    if (checkoutSummary){
+      checkoutSummary.innerHTML = cart.map(item => `<li>${escapeHtml(item.optionName || '標準服務')}｜${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</li>`).join('');
+    }
+    if (checkoutTotal) checkoutTotal.textContent = formatTWD(cartTotal(cart));
   }
 
   function openCheckoutDialog(){
@@ -452,7 +458,8 @@
     checkoutForm.addEventListener('submit', async ev=>{
       ev.preventDefault();
       if (!checkoutSubmitBtn) return;
-      const serviceId = checkoutServiceIdInput ? checkoutServiceIdInput.value : '';
+      const serviceIdFromInput = checkoutServiceIdInput ? checkoutServiceIdInput.value : '';
+      const serviceId = serviceIdFromInput || (checkoutForm && checkoutForm.dataset ? checkoutForm.dataset.serviceId : '') || '';
       if (!serviceId){
         alert('缺少服務資訊，請重新選擇。');
         return;
@@ -467,7 +474,7 @@
       try{
         const formData = new FormData(checkoutForm);
         const payload = {
-          serviceId: serviceId || checkoutForm.dataset.serviceId || '',
+          serviceId,
           name: formData.get('name')||'',
           phone: formData.get('phone')||'',
           email: formData.get('email')||'',
