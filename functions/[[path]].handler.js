@@ -163,6 +163,69 @@ function makeToken(len=32){
   return s;
 }
 
+function base64UrlEncode(str){
+  if (str instanceof Uint8Array){
+    str = String.fromCharCode(...str);
+  }
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function signSession(payload, secret){
+  const body = JSON.stringify(payload);
+  const data = new TextEncoder().encode(body);
+  const keyData = new TextEncoder().encode(secret || '');
+  const composite = new Uint8Array(keyData.length + data.length + 1);
+  composite.set(keyData, 0);
+  composite.set(new Uint8Array([46]), keyData.length); // '.'
+  composite.set(data, keyData.length + 1);
+  const digest = await crypto.subtle.digest('SHA-256', composite);
+  const signature = base64UrlEncode(new Uint8Array(digest));
+  return `${base64UrlEncode(body)}.${signature}`;
+}
+
+async function verifySessionToken(token, secret){
+  if (!token || token.indexOf('.') < 0) return null;
+  const [bodyB64, sigProvided] = token.split('.');
+  try{
+    const bodyJson = atob(bodyB64.replace(/-/g,'+').replace(/_/g,'/'));
+    const data = new TextEncoder().encode(bodyJson);
+    const keyData = new TextEncoder().encode(secret || '');
+    const composite = new Uint8Array(keyData.length + data.length + 1);
+    composite.set(keyData, 0);
+    composite.set(new Uint8Array([46]), keyData.length);
+    composite.set(data, keyData.length + 1);
+    const digest = await crypto.subtle.digest('SHA-256', composite);
+    const sigExpected = base64UrlEncode(new Uint8Array(digest));
+    if (sigExpected !== sigProvided) return null;
+    const payload = JSON.parse(bodyJson);
+    if (payload && payload.exp && Date.now() > Number(payload.exp)) return null;
+    return payload;
+  }catch(_){
+    return null;
+  }
+}
+
+function parseCookies(request){
+  const header = request.headers.get('cookie') || request.headers.get('Cookie') || '';
+  const obj = {};
+  header.split(';').forEach(part=>{
+    const idx = part.indexOf('=');
+    if (idx === -1) return;
+    const key = part.slice(0, idx).trim();
+    const val = part.slice(idx+1).trim();
+    if (key) obj[key] = decodeURIComponent(val);
+  });
+  return obj;
+}
+
+async function getSessionUser(request, env){
+  if (!env || !env.SESSION_SECRET) return null;
+  const cookies = parseCookies(request);
+  const token = cookies.auth || '';
+  if (!token) return null;
+  return await verifySessionToken(token, env.SESSION_SECRET);
+}
+
 // ======== ECPay helpers ========
 function ecpayEndpoint(env){
   const flag = String(env?.ECPAY_STAGE || env?.ECPAY_MODE || "").toLowerCase();
@@ -266,11 +329,10 @@ async function getProofFromStore(env, rawKey) {
 }
 
 export async function onRequest(context) {
-  // The context object contains request, env, and other properties.
-  // We can destructure it to get what we need.
   const { request, env, next } = context;
 
   const url = new URL(request.url);
+  const origin = url.origin;
   /*__CVS_CALLBACK_MERGE_FINAL__*/
   try{
     const _u = new URL(request.url);
@@ -376,6 +438,108 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
   });
 }
+
+  const pathname = url.pathname;
+
+  if (pathname === '/api/auth/google/login') {
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+      return new Response('Google OAuth not configured', { status:500 });
+    }
+    const state = makeToken(24);
+    const params = new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      redirect_uri: `${origin}/api/auth/google/callback`,
+      response_type: 'code',
+      scope: 'openid email profile',
+      state
+    });
+    const headers = new Headers({
+      Location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+    });
+    headers.append('Set-Cookie', `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`);
+    return new Response(null, { status:302, headers });
+  }
+
+  if (pathname === '/api/auth/google/callback') {
+    const code = url.searchParams.get('code') || '';
+    const state = url.searchParams.get('state') || '';
+    const cookies = parseCookies(request);
+    const expectedState = cookies.oauth_state || '';
+    if (!code || !state || !expectedState || state !== expectedState) {
+      return new Response('Invalid OAuth state', { status:400 });
+    }
+    const clearStateCookie = 'oauth_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+      return new Response('Google OAuth not configured', {
+        status:500,
+        headers:{ 'Set-Cookie': clearStateCookie }
+      });
+    }
+    try{
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({
+          code,
+          client_id: env.GOOGLE_CLIENT_ID,
+          client_secret: env.GOOGLE_CLIENT_SECRET,
+          redirect_uri: `${origin}/api/auth/google/callback`,
+          grant_type: 'authorization_code'
+        })
+      });
+      const tokens = await tokenRes.json();
+      if (!tokenRes.ok || !tokens.access_token){
+        return new Response('無法取得 Google token', {
+          status:500,
+          headers:{ 'Set-Cookie': clearStateCookie }
+        });
+      }
+      const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers:{ Authorization: `Bearer ${tokens.access_token}` }
+      });
+      const profile = await infoRes.json().catch(()=>null);
+      if (!infoRes.ok || !profile || !profile.sub){
+        return new Response('取得使用者資訊失敗', {
+          status:500,
+          headers:{ 'Set-Cookie': clearStateCookie }
+        });
+      }
+      const user = {
+        id: profile.sub,
+        email: profile.email || '',
+        name: profile.name || profile.email || '使用者',
+        picture: profile.picture || '',
+        provider: 'google',
+        exp: Date.now() + 30 * 24 * 60 * 60 * 1000
+      };
+      const token = await signSession(user, env.SESSION_SECRET || '');
+      const headers = new Headers({
+        'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+      });
+      headers.append('Set-Cookie', clearStateCookie);
+      headers.append('Location', `${origin}/`);
+      return new Response(null, { status:302, headers });
+    }catch(err){
+      return new Response('OAuth error', {
+        status:500,
+        headers:{ 'Set-Cookie': clearStateCookie }
+      });
+    }
+  }
+
+  if (pathname === '/api/auth/me') {
+    const user = await getSessionUser(request, env);
+    if (!user){
+      return json({ ok:false, error:'unauthenticated' }, 401);
+    }
+    return json({ ok:true, user });
+  }
+
+  if (pathname === '/api/logout' && request.method === 'POST') {
+    return new Response(JSON.stringify({ ok:true }), {
+      headers:{ 'Set-Cookie':'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax' }
+    });
+  }
 
 function __headersJSON__() {
   return {
