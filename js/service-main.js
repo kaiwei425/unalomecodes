@@ -140,6 +140,8 @@
       return;
     }
     items.forEach(service => {
+      const sid = resolveServiceId(service);
+      if (!service.id && sid) service.id = sid;
       const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
       const sold = Number(service.sold || 0);
       const card = document.createElement('div');
@@ -240,7 +242,7 @@
   function addCurrentSelection(){
     if (!detailDataset) return;
     let cart = loadCart();
-    cart = ensureSingleService(cart, detailDataset.id || '');
+    cart = ensureSingleService(cart, resolveServiceId(detailDataset));
     if (cart === null) return;
     const options = Array.isArray(detailDataset.options) ? detailDataset.options.filter(opt=>opt && opt.name) : [];
     const variant = options.length ? getVariantSelection(detailDataset) : null;
@@ -248,9 +250,10 @@
       alert('請先選擇服務項目');
       return;
     }
+    const svcId = resolveServiceId(detailDataset);
     const item = {
       uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
-      serviceId: detailDataset.id || '',
+      serviceId: svcId,
       serviceName: detailDataset.name || '服務',
       basePrice: Number(detailDataset.price||0),
       optionName: variant ? variant.name : '',
@@ -504,3 +507,7 @@
     renderCartPanel();
   });
 })();
+  function resolveServiceId(service){
+    if (!service) return '';
+    return service.id || service._id || service.key || service._key || '';
+  }
