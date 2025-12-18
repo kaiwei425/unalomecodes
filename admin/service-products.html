@@ -67,10 +67,7 @@
         <textarea id="svc_description" placeholder="完整介紹、祈福流程、注意事項…"></textarea>
         <label>包含內容（每行一項）</label>
         <textarea id="svc_includes" placeholder="蠟燭祈請一次&#10;祈福祝禱錄音節錄"></textarea>
-        <label style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="svc_active" checked>
-          <span>上架中（勾選才會在前台顯示）</span>
-        </label>
+        <input type="hidden" id="svc_active" value="1">
         <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;">
           <label style="margin:0">服務圖片（可多張，首張為封面）</label>
           <button class="btn" type="button" id="btnImagesUpload">上傳圖片</button>
@@ -135,6 +132,7 @@
   const btnReload = document.getElementById('btnReload');
   const imagesInput = document.getElementById('svc_images');
   const soldInput = document.getElementById('svc_sold');
+  const activeInput = document.getElementById('svc_active');
   const imagePreview = document.getElementById('svcImagePreview');
   const optionsWrap = document.getElementById('svc_options');
   let items = [];
@@ -193,7 +191,7 @@
       name: document.getElementById('svc_name').value.trim(),
       price: Number(document.getElementById('svc_price').value || 0),
       sold: Number(soldInput.value || 0),
-      active: document.getElementById('svc_active').checked,
+      active: activeInput.value !== '0',
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
       includes: document.getElementById('svc_includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
@@ -212,7 +210,7 @@
     document.getElementById('svc_name').value = data.name || '';
     document.getElementById('svc_price').value = Number(data.price||0);
     soldInput.value = Number(data.sold||0);
-    document.getElementById('svc_active').checked = data.active !== false;
+    activeInput.value = data.active === false ? '0' : '1';
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
     document.getElementById('svc_includes').value = Array.isArray(data.includes) ? data.includes.join('\n') : '';
@@ -244,6 +242,22 @@
     }
     return Array.isArray(data.files) ? data.files : [];
   }
+  async function toggleActive(id, active){
+    try{
+      await authedFetch('/api/service/products', {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, active })
+      });
+      if (formMsg) formMsg.textContent = active ? '已上架' : '已下架';
+      if (currentId === id){
+        activeInput.value = active ? '1' : '0';
+      }
+      await loadServices();
+    }catch(err){
+      alert('更新狀態失敗：' + err.message);
+    }
+  }
   function renderList(){
     const q = (filterInput.value||'').trim().toLowerCase();
     const view = items.filter(it => !q || String(it.name||'').toLowerCase().includes(q));
@@ -263,7 +277,12 @@
           <div>${Number(it.price||0).toLocaleString('zh-TW')}</div>
           <div class="muted">${it.active === false ? '（已下架）' : ''}</div>
         </td>
-        <td><button class="btn" data-act="edit" data-id="${it.id}">編輯</button></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn" data-act="edit" data-id="${it.id}">編輯</button>
+          <button class="btn" data-act="${it.active === false ? 'publish' : 'unpublish'}" data-id="${it.id}">
+            ${it.active === false ? '上架' : '下架'}
+          </button>
+        </td>
       </tr>
     `).join('');
   }
@@ -282,11 +301,20 @@
   filterInput.addEventListener('input', renderList);
   btnReset.addEventListener('click', resetForm);
   listBody.addEventListener('click', e=>{
-    const btn = e.target.closest('button[data-act="edit"]');
+    const btn = e.target.closest('button[data-act]');
     if (!btn) return;
+    const act = btn.getAttribute('data-act');
     const id = btn.getAttribute('data-id');
-    const item = items.find(x => x.id === id);
-    if (item) fillForm(item);
+    if (!id) return;
+    if (act === 'edit'){
+      const item = items.find(x => x.id === id);
+      if (item) fillForm(item);
+      return;
+    }
+    if (act === 'publish' || act === 'unpublish'){
+      const next = act === 'publish';
+      toggleActive(id, next);
+    }
   });
   btnSave.addEventListener('click', async ()=>{
     const data = readForm();
