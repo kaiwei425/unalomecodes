@@ -25,6 +25,12 @@
   .muted{color:var(--muted);font-size:13px;}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#1e293b;}
   .lookup{margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  dialog{border:none;border-radius:16px;padding:0;background:#0f172a;color:#e5e7eb;border:1px solid #1f2937;max-width:520px;width:95%;}
+  dialog .dlgHead{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;}
+  dialog .dlgBody{padding:18px;display:grid;gap:12px;font-size:14px;}
+  dialog .dlgBody div{line-height:1.5;}
+  .closeBtn{border:none;background:rgba(255,255,255,.1);color:#fff;border-radius:999px;width:28px;height:28px;font-size:16px;cursor:pointer;}
+  .proof-img{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.12);object-fit:cover;max-height:220px;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -50,6 +56,15 @@
       </table>
     </div>
   </div>
+  <dialog id="svcOrderDetail">
+    <div class="dlgHead">
+      <strong id="svcOrderDetailTitle">訂單明細</strong>
+      <button type="button" class="closeBtn" id="svcOrderDetailClose">✕</button>
+    </div>
+    <div class="dlgBody" id="svcOrderDetailBody">
+      <div>載入中…</div>
+    </div>
+  </dialog>
 <script>
 (function(){
   const STORAGE_KEY = 'ADMIN_KEY';
@@ -79,6 +94,16 @@
   let orders = [];
   const STATUSES = ['待處理','祈福進行中','祈福完成','祈福成果已通知'];
 
+  function fmtCurrency(val){
+    return 'NT$ ' + Number(val||0).toLocaleString('zh-TW');
+  }
+  function formatItems(order){
+    const list = Array.isArray(order.items) ? order.items : [];
+    if (list.length){
+      return list.map(it => `${it.name || order.serviceName || ''}｜${fmtCurrency(it.total || 0)}`).join('<br>');
+    }
+    return `金額：${fmtCurrency(order.amount || 0)}`;
+  }
   function render(){
     const q = (filterInput.value||'').toLowerCase();
     const view = orders.filter(o=>{
@@ -97,19 +122,25 @@
         </td>
         <td>
           <div>${o.serviceName||''}</div>
+          <div class="muted">${formatItems(o)}</div>
           <div class="muted">備註：${o.note || '—'}</div>
         </td>
         <td>
           <div>${o.buyer && o.buyer.name ? o.buyer.name : ''}</div>
           <div class="muted">${o.buyer && o.buyer.phone ? o.buyer.phone : ''}</div>
           <div class="muted">${o.buyer && o.buyer.email ? o.buyer.email : ''}</div>
+          <div class="muted">生日：${o.buyer && o.buyer.birth ? o.buyer.birth : '—'}</div>
+          <div class="muted">指定日期：${o.requestDate || '—'}</div>
         </td>
         <td><span class="badge">${o.status || '待處理'}</span></td>
         <td>
           <select data-id="${o.id}" class="statusSel">
             ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
           </select>
-          <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+            <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
+            <button class="btn" data-act="view" data-id="${o.id}">查看明細</button>
+          </div>
         </td>
       </tr>
     `).join('');
@@ -125,31 +156,67 @@
     }
   }
   bodyEl.addEventListener('click', async (e)=>{
-    const btn = e.target.closest('button[data-act="apply"]');
+    const btn = e.target.closest('button[data-act]');
     if (!btn) return;
+    const act = btn.getAttribute('data-act');
     const id = btn.getAttribute('data-id');
-    const row = btn.closest('tr');
-    const sel = row ? row.querySelector('select.statusSel') : null;
-    if (!sel) return;
-    const status = sel.value;
-    btn.disabled = true;
-    btn.textContent = '更新中…';
-    try{
-      await authedFetch('/api/service/order/status', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ id, status })
-      });
-      const target = orders.find(o=> o.id === id);
-      if (target) target.status = status;
-      render();
-    }catch(err){
-      alert('更新失敗：' + err.message);
-    }finally{
-      btn.disabled = false;
-      btn.textContent = '套用';
+    if (act === 'apply'){
+      const row = btn.closest('tr');
+      const sel = row ? row.querySelector('select.statusSel') : null;
+      if (!sel) return;
+      const status = sel.value;
+      btn.disabled = true;
+      btn.textContent = '更新中…';
+      try{
+        await authedFetch('/api/service/order/status', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ id, status })
+        });
+        const target = orders.find(o=> o.id === id);
+        if (target) target.status = status;
+        render();
+      }catch(err){
+        alert('更新失敗：' + err.message);
+      }finally{
+        btn.disabled = false;
+        btn.textContent = '套用';
+      }
+      return;
+    }
+    if (act === 'view'){
+      const order = orders.find(o=> o.id === id);
+      if (order) openDetail(order);
     }
   });
+  const detailDialog = document.getElementById('svcOrderDetail');
+  const detailBody = document.getElementById('svcOrderDetailBody');
+  const detailClose = document.getElementById('svcOrderDetailClose');
+  function escapeHtml(str){
+    return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function openDetail(order){
+    if (!detailDialog || !detailBody) return;
+    const transfer = order.transfer || {};
+    const receipt = transfer.receiptUrl || transfer.proofUrl || order.transferReceiptUrl || '';
+    const items = Array.isArray(order.items) ? order.items : [];
+    const itemHtml = items.length ? items.map(it=> `<div>${escapeHtml(it.name||'')}｜${fmtCurrency(it.total||0)}</div>`).join('') : `<div>${escapeHtml(order.serviceName||'')}</div>`;
+    const birth = (order.buyer && (order.buyer.birth || order.buyer.birthday)) || '—';
+    const reqDate = order.requestDate || '—';
+    detailBody.innerHTML = `
+      <div><span class="muted">訂單編號</span><br><strong>${escapeHtml(order.id||'')}</strong></div>
+      <div><span class="muted">服務內容</span>${itemHtml}</div>
+      <div><span class="muted">聯絡人</span><br>${escapeHtml(order.buyer && order.buyer.name || '')}｜${escapeHtml(order.buyer && order.buyer.phone || '')}<br>${escapeHtml(order.buyer && order.buyer.email || '')}<br>生日：${escapeHtml(birth)}｜指定日期：${escapeHtml(reqDate)}</div>
+      <div><span class="muted">匯款金額</span><br>${fmtCurrency(transfer.amount || order.amount || 0)}</div>
+      <div><span class="muted">匯款資訊</span><br>銀行：${escapeHtml(transfer.bank || '—')}<br>帳號：${escapeHtml(transfer.account || '—')}<br>末五碼：${escapeHtml(transfer.last5 || order.transferLast5 || '—')}</div>
+      <div><span class="muted">備註 / 匯款說明</span><br>${escapeHtml(transfer.memo || order.transferMemo || order.note || '—')}</div>
+      ${receipt ? `<div><span class="muted">匯款憑證</span><br><a href="${escapeHtml(receipt)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(receipt)}" alt="匯款憑證" class="proof-img"></div>` : '<div><span class="muted">匯款憑證</span><br>尚未提供</div>'}
+    `;
+    detailDialog.showModal();
+  }
+  if (detailClose){
+    detailClose.addEventListener('click', ()=> detailDialog.close());
+  }
   filterInput.addEventListener('input', render);
   btnReload.addEventListener('click', loadOrders);
   loadOrders();
