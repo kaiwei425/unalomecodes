@@ -1567,7 +1567,12 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       console.log('[mail] skip sending — no recipients resolved');
       return;
     }
-    await Promise.allSettled(tasks);
+    const settled = await Promise.allSettled(tasks);
+    settled.forEach((res, idx)=>{
+      if (res.status === 'rejected'){
+        console.error('[mail] send failed', idx, res.reason);
+      }
+    });
   } catch (err) {
     console.error('sendOrderEmails error', err);
   }
@@ -1837,10 +1842,12 @@ function shouldNotifyStatus(status) {
   if (/祈福進行中/.test(txt)) return true;
   if (/祈福完成/.test(txt)) return true;
   if (/成果已通知/.test(txt)) return true;
-  if (/已付款/.test(txt) && /出貨|寄件|發貨/.test(txt)) return true;
-  if (/已寄件/.test(txt) || /寄出/.test(txt)) return true;
+  if (/已付款/.test(txt) && /出貨|寄件|寄貨|出貨/.test(txt)) return true;
+  if (/已寄件/.test(txt) || /已寄出/.test(txt) || /寄出/.test(txt)) return true;
+  if (/已出貨/.test(txt)) return true;
   return txt === '已付款待出貨'
-    || txt === '已寄件';
+    || txt === '已寄件'
+    || txt === '已寄出';
 }
 
 function escapeHtmlEmail(str) {
