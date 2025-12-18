@@ -2788,7 +2788,9 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
     const raw = await store.get(key);
     if (!raw) continue;
     try{
-      items.push(JSON.parse(raw));
+      const obj = JSON.parse(raw);
+      if (!obj.id) obj.id = key;
+      items.push(obj);
     }catch(_){}
   }
   const finalItems = items.length ? items : DEFAULT_SERVICE_PRODUCTS;
@@ -2808,11 +2810,13 @@ if (pathname === '/api/service/products' && request.method === 'POST') {
   if (!name || !price){
     return new Response(JSON.stringify({ ok:false, error:'缺少名稱或價格' }), { status:400, headers: jsonHeaders });
   }
-  const payload = Object.assign({
+  const bodyData = Object.assign({}, body);
+  if (!bodyData.id) delete bodyData.id;
+  const payload = Object.assign({}, bodyData, {
     id,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
-  }, body);
+  });
   await store.put(id, JSON.stringify(payload));
   const idxKey = 'SERVICE_PRODUCT_INDEX';
   let list = [];

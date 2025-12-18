@@ -186,8 +186,7 @@
   function readForm(){
     const images = getImages();
     const idInput = document.getElementById('svc_id').value.trim();
-    return {
-      id: idInput || currentId || '',
+    const data = {
       name: document.getElementById('svc_name').value.trim(),
       price: Number(document.getElementById('svc_price').value || 0),
       sold: Number(soldInput.value || 0),
@@ -203,6 +202,9 @@
         return { name, price };
       }).filter(opt => opt.name)
     };
+    const resolvedId = idInput || currentId || '';
+    if (resolvedId) data.id = resolvedId;
+    return data;
   }
   function fillForm(data){
     currentId = data.id || '';
