@@ -19,6 +19,11 @@
   const detailAddBtn = document.getElementById('svcDetailAddCart');
   const detailHero = document.getElementById('svcDetailHero');
   const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
+  const reviewListEl = document.getElementById('svcRvList');
+  const reviewNickInput = document.getElementById('svcRvNick');
+  const reviewTextInput = document.getElementById('svcRvText');
+  const reviewFileInput = document.getElementById('svcRvFile');
+  const reviewSubmitBtn = document.getElementById('svcRvSubmit');
   const checkoutDialog = document.getElementById('svcCart');
   const checkoutForm = document.getElementById('svcCartForm');
   const checkoutServiceName = document.getElementById('svcCartServiceName');
@@ -84,6 +89,46 @@
   const STATUS_LABELS = {
     '祈福進行中': '已確認付款，祈福進行中'
   };
+  let currentReviewCode = '';
+  async function loadServiceReviews(code){
+    if (!reviewListEl) return;
+    if (!code){
+      reviewListEl.innerHTML = '<div style="color:#94a3b8;">尚未提供評價。</div>';
+      return;
+    }
+    reviewListEl.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:10px;">讀取中...</div>';
+    try{
+      const cacheBust = Date.now();
+      const res = await fetch(`/api/stories?code=${encodeURIComponent(code)}&_=${cacheBust}`);
+      const data = await res.json();
+      if (!res.ok || !data || data.ok === false){
+        throw new Error((data && data.error) || '無法讀取留言');
+      }
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (!items.length){
+        reviewListEl.innerHTML = '<div style="color:#94a3b8;">還沒有任何分享，歡迎成為第一位分享者！</div>';
+        return;
+      }
+      reviewListEl.innerHTML = items.map(item=>{
+        const date = new Date(item.ts).toLocaleString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+        const img = item.imageUrl ? `<a href="${escapeHtml(item.imageUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(item.imageUrl)}" alt="" class="rvImage"></a>` : '';
+        return `
+          <div class="rvItem">
+            ${img}
+            <div class="rvContent">
+              <div class="rvHead">
+                <strong class="rvNick">${escapeHtml(item.nick)}</strong>
+                <span class="rvDate">${escapeHtml(date)}</span>
+              </div>
+              <div class="rvMsg">${escapeHtml(item.msg)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }catch(err){
+      reviewListEl.innerHTML = `<div style="color:#ef4444;padding:10px;">${escapeHtml(err.message || '讀取失敗')}</div>`;
+    }
+  }
   function resolveResultPhoto(order){
     if (!order) return '';
     if (order.resultPhotoUrl) return order.resultPhotoUrl;
@@ -394,8 +439,10 @@
       const includes = Array.isArray(service.includes) ? service.includes : [];
       detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : '<li>老師依實際情況安排內容</li>';
     }
+    currentReviewCode = (service.reviewCode || service.deityCode || service.deity || service.code || resolveServiceId(service) || '').toString().trim().toUpperCase();
+    loadServiceReviews(currentReviewCode);
+    const igUrl = service.instagram || service.ig || service.igUrl || '';
     if (detailIG){
-      const igUrl = service.instagram || service.ig || service.igUrl || '';
       if (igUrl){
         detailIG.innerHTML = buildInstagramEmbed(igUrl);
         detailIG.style.display = '';
@@ -411,29 +458,12 @@
     }
     if (detailGallery){
       if (gallery.length){
-        const igUrl = service.instagram || service.ig || service.igUrl || '';
-        const pics = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`);
-        if (igUrl){
-          pics.push(`<div class="thumb-ig" data-ig="${escapeHtml(igUrl)}">觀看 IG 影片</div>`);
-        }
-        detailGallery.innerHTML = pics.join('');
+        detailGallery.innerHTML = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
         Array.from(detailGallery.querySelectorAll('img')).forEach(img=>{
           img.addEventListener('click', ()=>{
             if (detailHero) detailHero.src = img.getAttribute('src') || '';
           });
         });
-        const igThumb = detailGallery.querySelector('.thumb-ig');
-        if (igThumb){
-          igThumb.addEventListener('click', ()=>{
-            if (detailIG){
-              detailIG.innerHTML = buildInstagramEmbed(igUrl);
-              detailIG.style.display = '';
-              detailIG.scrollIntoView({ behavior:'smooth', block:'center' });
-            }else{
-              window.open(igUrl, '_blank', 'noopener');
-            }
-          });
-        }
       }else{
         detailGallery.innerHTML = '<div class="muted">目前尚未提供示意圖</div>';
       }
@@ -901,6 +931,62 @@
       const url = btn.getAttribute('data-result-url');
       if (!url) return;
       window.open(url, '_blank', 'noopener');
+    });
+  }
+  if (reviewSubmitBtn){
+    reviewSubmitBtn.addEventListener('click', async ()=>{
+      if (!currentReviewCode){
+        alert('尚未選擇服務');
+        return;
+      }
+      const nick = reviewNickInput ? reviewNickInput.value.trim() : '';
+      const msg = reviewTextInput ? reviewTextInput.value.trim() : '';
+      if (!nick){
+        alert('請輸入您的名字或暱稱');
+        if (reviewNickInput) reviewNickInput.focus();
+        return;
+      }
+      if (!msg){
+        alert('請分享您的體驗內容');
+        if (reviewTextInput) reviewTextInput.focus();
+        return;
+      }
+      reviewSubmitBtn.disabled = true;
+      reviewSubmitBtn.textContent = '送出中...';
+      try{
+        let imageUrl = '';
+        if (reviewFileInput && reviewFileInput.files && reviewFileInput.files[0]){
+          const file = reviewFileInput.files[0];
+          const formData = new FormData();
+          formData.append('files[]', file);
+          const uploadRes = await fetch('/api/upload', { method:'POST', body: formData });
+          const uploadData = await uploadRes.json();
+          if (!uploadRes.ok || !uploadData || uploadData.ok === false || !uploadData.files || !uploadData.files.length){
+            throw new Error((uploadData && uploadData.error) || '圖片上傳失敗');
+          }
+          imageUrl = uploadData.files[0].url;
+        }
+        const payload = { code: currentReviewCode, nick, msg, imageUrl };
+        const res = await fetch('/api/stories', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data || data.ok === false){
+          throw new Error((data && data.error) || '送出分享失敗');
+        }
+        alert('感謝您的分享！');
+        if (reviewNickInput) reviewNickInput.value = '';
+        if (reviewTextInput) reviewTextInput.value = '';
+        if (reviewFileInput) reviewFileInput.value = '';
+        loadServiceReviews(currentReviewCode);
+      }catch(err){
+        alert(err && err.message ? err.message : '送出分享失敗');
+      }finally{
+        reviewSubmitBtn.disabled = false;
+        reviewSubmitBtn.textContent = '送出分享';
+      }
     });
   }
   function buildInstagramEmbed(url){
