@@ -1548,7 +1548,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       : `[${siteName}] 新訂單通知 #${order.id}`;
     const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://shop.unalomecodes.com';
     const imageHost = ctx.imageHost || defaultImageHost || origin;
-    const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext };
+    const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext, blessingDone: isBlessingDone };
     const { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
     const { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
     const tasks = [];
@@ -1660,6 +1660,7 @@ function composeOrderEmail(order, opts = {}) {
       <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
+  const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const lookupLine = opts.lookupUrl
       ? `請至 <a href="${esc(opts.lookupUrl)}" target="_blank" rel="noopener">查詢祈福進度</a> 輸入手機號碼，並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。`
