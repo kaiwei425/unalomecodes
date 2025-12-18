@@ -16,7 +16,6 @@
   const detailGallery = document.getElementById('svcDetailGallery');
   const detailVariant = document.getElementById('svcDetailVariant');
   const detailAddBtn = document.getElementById('svcDetailAddCart');
-  const detailCheckoutBtn = document.getElementById('svcDetailCheckout');
   const detailHero = document.getElementById('svcDetailHero');
   const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
   const checkoutDialog = document.getElementById('svcCart');
@@ -235,7 +234,7 @@
     return [];
   }
 
-  function addCurrentSelection(goCheckout){
+  function addCurrentSelection(){
     if (!detailDataset) return;
     let cart = loadCart();
     cart = ensureSingleService(cart, detailDataset.id || '');
@@ -260,11 +259,8 @@
     renderCartPanel();
     updateCartBadge(cart);
     detailDialog.close();
-    if (goCheckout){
-      openCheckoutDialog();
-    }else{
-      alert('已加入購物車，可透過左側按鈕查看。');
-    }
+    renderCartPanel();
+    if (cartPanel) cartPanel.showModal();
   }
 
   function renderCheckoutSummary(cart){
@@ -274,8 +270,9 @@
     checkoutTotal.textContent = formatTWD(cartTotal(cart));
     checkoutForm.dataset.selectedOptions = JSON.stringify(cart.filter(it => it.optionName).map(it => ({ name: it.optionName, price: it.optionPrice })));
     checkoutForm.dataset.baseCount = cart.filter(it => !it.optionName).length || 0;
-    checkoutForm.dataset.serviceId = cart[0].serviceId || '';
-    if (checkoutServiceIdInput) checkoutServiceIdInput.value = cart[0].serviceId || '';
+    const svcId = cart[0].serviceId || '';
+    checkoutForm.dataset.serviceId = svcId;
+    if (checkoutServiceIdInput) checkoutServiceIdInput.value = svcId;
   }
 
   function openCheckoutDialog(){
@@ -392,10 +389,7 @@
     detailVariant.addEventListener('change', updateDetailPrice);
   }
   if (detailAddBtn){
-    detailAddBtn.addEventListener('click', ()=> addCurrentSelection(false));
-  }
-  if (detailCheckoutBtn){
-    detailCheckoutBtn.addEventListener('click', ()=> addCurrentSelection(true));
+    detailAddBtn.addEventListener('click', ()=> addCurrentSelection());
   }
   if (cartFab){
     cartFab.addEventListener('click', ()=>{
