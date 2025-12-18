@@ -93,7 +93,7 @@
   const filterInput = document.getElementById('filter');
   const btnReload = document.getElementById('btnReload');
   let orders = [];
-  const STATUSES = ['待處理','祈福進行中','祈福完成','祈福成果已通知'];
+  const STATUSES = ['待處理','已確認付款，祈福進行中','祈福完成','祈福成果已通知'];
 
   function fmtCurrency(val){
     return 'NT$ ' + Number(val||0).toLocaleString('zh-TW');
