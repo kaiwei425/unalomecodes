@@ -2887,6 +2887,14 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       }
     }
     if (!svc) return new Response(JSON.stringify({ ok:false, error:'找不到服務項目' }), { status:404, headers: jsonHeaders });
+    const transferLast5 = String(body.transferLast5||'').trim();
+    const transferReceiptUrl = String(body.transferReceiptUrl||'').trim();
+    if (!/^\d{5}$/.test(transferLast5) || !transferReceiptUrl){
+      return new Response(JSON.stringify({ ok:false, error:'缺少匯款資訊' }), { status:400, headers: jsonHeaders });
+    }
+    const transferMemo = String(body.transferMemo||'').trim();
+    const transferBank = String(body.transferBank||'').trim();
+    const transferAccount = String(body.transferAccount||'').trim();
     const orderId = await generateServiceOrderId(env);
     const buyer = {
       name,
@@ -2941,6 +2949,15 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       }
     }
     const finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
+    const transfer = {
+      amount: Number(body.transferAmount || finalPrice) || finalPrice,
+      last5: transferLast5,
+      receiptUrl: transferReceiptUrl,
+      memo: transferMemo,
+      bank: transferBank,
+      account: transferAccount,
+      uploadedAt: new Date().toISOString()
+    };
     const order = {
       id: orderId,
       type: 'service',
@@ -2958,7 +2975,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       updatedAt: new Date().toISOString(),
       resultToken: makeToken(24),
       method: '服務型商品',
-      channel: '服務型商品'
+      channel: '服務型商品',
+      transfer
     };
     const store = env.SERVICE_ORDERS || env.ORDERS;
     if (!store){

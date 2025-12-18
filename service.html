@@ -47,8 +47,24 @@ body.service-view{background:var(--bg);color:var(--fg);}
 }
 .svc-dialog .svc-options input{margin:0;flex-shrink:0;}
 .svc-stepper{display:flex;gap:8px;justify-content:center;padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(24,161,104,.08),rgba(16,149,214,.08));}
-.svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:700;}
-.svc-stepper span.active{background:#16a34a;color:#fff;border-color:#16a34a;}
+.svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:#6b7280;font-weight:700;background:#fff;}
+.svc-stepper span.active{background:#16a34a;color:#fff;border-color:#16a34a;box-shadow:0 8px 20px rgba(22,163,74,.35);}
+.svc-stepper span.done{background:#bbf7d0;color:#166534;border-color:#86efac;}
+.svc-step-content{display:none;flex-direction:column;gap:16px;padding:18px;}
+.svc-step-content.active{display:flex;}
+.svc-step-title{font-weight:800;font-size:18px;}
+.svc-form-section{display:grid;gap:12px;}
+.svc-bank-box{border:1px solid var(--line);border-radius:14px;padding:14px;background:#f8fafc;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+.svc-bank-box .info{font-size:14px;color:#0f172a;font-weight:700;}
+.svc-bank-box .info span{display:block;font-size:12px;color:#6b7280;font-weight:600;}
+.svc-bank-copy{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;}
+.svc-bank-hint{font-size:12px;color:#6b7280;line-height:1.6;}
+.svc-upload-hint{font-size:12px;color:#ef4444;}
+.svc-step-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
+.svc-step-actions .btn{min-width:120px;}
+.svc-success-icon{width:64px;height:64px;border-radius:50%;background:#dcfce7;color:#166534;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto;}
+.svc-step3-card{border:1px solid var(--line);border-radius:14px;background:#f8fafc;padding:14px;display:grid;gap:8px;font-size:14px;color:#374151;}
+.svc-step3-card strong{font-size:16px;}
 .svc-cart-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:14px;padding:10px;gap:12px;background:#fff;}
 .svc-cart-item .info{display:flex;gap:10px;align-items:center;flex:1;}
 .svc-cart-item img{width:56px;height:56px;object-fit:cover;border-radius:12px;}
@@ -202,54 +218,120 @@ body.service-view{background:var(--bg);color:var(--fg);}
     </div>
   </dialog>
 
-  <dialog id="svcCart" class="svc-dialog">
+  <dialog id="svcCart" class="svc-dialog" data-bank-name="中國信託 (822)" data-bank-account="148540417073">
     <div class="svc-stepper">
-      <span class="active">1. 確認服務</span>
-      <span>2. 填寫資料</span>
-      <span>3. 完成</span>
+      <span data-step="1" class="active">1. 確認服務</span>
+      <span data-step="2">2. 匯款資料</span>
+      <span data-step="3">3. 完成</span>
     </div>
-    <div style="padding:18px;border-bottom:1px solid var(--line);">
-      <div style="font-weight:800;font-size:18px;">填寫訂單資料</div>
-    </div>
-    <form id="svcCartForm" class="svc-form">
-      <div class="svc-summary">
+    <form id="svcCartForm" class="svc-form" enctype="multipart/form-data">
+      <input type="hidden" id="svcCartServiceId">
+      <div class="svc-step-content active" id="svcCartStep1" data-step="1">
         <div>
-          <div style="font-size:12px;color:#6b7280;font-weight:700;">服務內容確認</div>
-          <div id="svcCartServiceName" style="font-weight:700;font-size:16px;margin-top:4px;">服務名稱</div>
-          <ul id="svcCartSummary" style="margin:6px 0 0;padding-left:18px;color:#475569;font-size:13px;line-height:1.5;"></ul>
+          <div class="svc-step-title">確認服務與填寫基本資料</div>
+          <p class="svc-bank-hint">請先確認服務內容，再填寫聯絡資訊與祈福需求，下一步即可查看匯款帳戶並上傳憑證。</p>
         </div>
-        <strong id="svcCartTotal">NT$ 0</strong>
+        <div class="svc-summary">
+          <div>
+            <div style="font-size:12px;color:#6b7280;font-weight:700;">服務內容確認</div>
+            <div id="svcCartServiceName" style="font-weight:700;font-size:16px;margin-top:4px;">服務名稱</div>
+            <ul id="svcCartSummary" style="margin:6px 0 0;padding-left:18px;color:#475569;font-size:13px;line-height:1.5;"></ul>
+          </div>
+          <strong id="svcCartTotal">NT$ 0</strong>
+        </div>
+        <section class="svc-form-section">
+          <label>
+            聯絡人姓名（必填）
+            <input type="text" name="name" required placeholder="請輸入姓名">
+          </label>
+          <label>
+            手機號碼（必填）
+            <input type="tel" name="phone" required placeholder="例：0969123456" inputmode="tel">
+          </label>
+          <label>
+            Email（必填）
+            <input type="email" name="email" required placeholder="請輸入通知用 Email">
+          </label>
+          <label>
+            生日（西元年/月/日，必填）
+            <input type="date" name="birth" required>
+          </label>
+          <label>
+            指定祈福日期（可留白）
+            <input type="date" name="requestDate">
+          </label>
+          <label>
+            備註
+            <textarea name="note" placeholder="可輸入備註或特殊需求…"></textarea>
+          </label>
+        </section>
+        <div class="svc-step-actions">
+          <button type="button" class="btn" id="svcCartBack">返回</button>
+          <button type="button" class="btn primary" id="svcCartNext">前往匯款資料</button>
+        </div>
       </div>
-      <section>
-        <input type="hidden" id="svcCartServiceId">
-        <label>
-          聯絡人姓名（必填）
-          <input type="text" name="name" required placeholder="請輸入姓名">
-        </label>
-        <label>
-          手機號碼（必填）
-          <input type="tel" name="phone" required placeholder="例：0969123456">
-        </label>
-        <label>
-          Email（必填）
-          <input type="email" name="email" required placeholder="請輸入通知用 Email">
-        </label>
-        <label>
-          生日（西元年/月/日，必填）
-          <input type="date" name="birth" required>
-        </label>
-        <label>
-          指定祈福日期（可留白）
-          <input type="date" name="requestDate">
-        </label>
-        <label>
-          備註
-          <textarea name="note" placeholder="可輸入備註或特殊需求…"></textarea>
-        </label>
-      </section>
-      <div style="padding:0 18px 18px;display:flex;justify-content:flex-end;gap:10px;">
-        <button type="button" class="btn" id="svcCartBack">返回</button>
-        <button type="submit" id="svcCartSubmit" class="btn primary">送出祈福訂單</button>
+
+      <div class="svc-step-content" id="svcCartStep2" data-step="2">
+        <div>
+          <div class="svc-step-title">填寫匯款資料並上傳憑證</div>
+          <p class="svc-bank-hint">請先完成轉帳，再輸入匯款末五碼並上傳匯款憑證，以便我們核帳、成立訂單。</p>
+        </div>
+        <div class="svc-bank-box">
+          <div class="info">
+            <span>匯款銀行</span>
+            <strong id="svcBankName">中國信託 (822)</strong>
+          </div>
+          <div class="info">
+            <span>匯款帳號</span>
+            <strong id="svcBankAccount">148540417073</strong>
+          </div>
+          <button type="button" class="svc-bank-copy" id="svcBankCopy">複製帳號</button>
+        </div>
+        <section class="svc-form-section">
+          <label>
+            匯款金額（NT$）
+            <input type="text" id="svcBankAmount" readonly>
+            <span class="svc-bank-hint">系統自動帶入，請勿修改。</span>
+          </label>
+          <label>
+            匯款末五碼
+            <input type="text" id="svcBankLast5" placeholder="12345" inputmode="numeric" pattern="\d{5}" required>
+          </label>
+          <label>
+            上傳匯款憑證（照片或截圖）
+            <input type="file" id="svcBankReceipt" accept="image/*,application/pdf" required>
+            <span class="svc-upload-hint">檔案需 20MB 以下，建議上傳清晰照片或 PDF。</span>
+            <span class="svc-bank-hint" id="svcBankReceiptName"></span>
+          </label>
+          <label>
+            匯款補充說明（可留白）
+            <textarea id="svcBankMemo" placeholder="例：匯款人姓名與帳號、備註事項"></textarea>
+          </label>
+        </section>
+        <div class="svc-step-actions">
+          <button type="button" class="btn" id="svcBankBack">上一步</button>
+          <button type="submit" id="svcBankSubmit" class="btn primary">送出匯款資料</button>
+        </div>
+      </div>
+
+      <div class="svc-step-content" id="svcCartStep3" data-step="3">
+        <div class="svc-success-icon">✓</div>
+        <div style="text-align:center;">
+          <div class="svc-step-title">訂單送出成功</div>
+          <p class="svc-bank-hint">我們已收到匯款資料並建立祈福訂單，請保留以下資訊或截圖備查。</p>
+        </div>
+        <div class="svc-step3-card">
+          <div><span style="font-size:12px;color:#6b7280;">訂單編號</span><strong id="svcStep3OrderId">SV000000</strong></div>
+          <div>服務內容：<span id="svcStep3Service">—</span></div>
+          <div>應付金額：<span id="svcStep3Amount">NT$ 0</span></div>
+          <div>匯款末五碼：<span id="svcStep3Last5">—</span></div>
+          <div>聯絡人：<span id="svcStep3Buyer">—</span></div>
+        </div>
+        <div class="svc-bank-hint">之後可透過左側「祈福進度查詢」輸入手機與訂單末五碼查詢最新進度。</div>
+        <div class="svc-step-actions">
+          <button type="button" class="btn" id="svcStep3Lookup">查詢進度</button>
+          <button type="button" class="btn primary" id="svcStep3Close">完成</button>
+        </div>
       </div>
     </form>
   </dialog>
