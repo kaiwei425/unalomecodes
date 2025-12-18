@@ -41,6 +41,7 @@
   const cartCheckoutBtn = document.getElementById('svcCartCheckout');
   const CART_KEY = 'svcCartItems';
   let detailDataset = null;
+  let lastDetailService = null;
 
   function escapeHtml(str){
     return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
@@ -97,16 +98,16 @@
       cartListEl.innerHTML = '<div style="color:#6b7280;">購物車尚無服務。</div>';
     }else{
       cartListEl.innerHTML = cart.map(item => `
-        <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:10px;gap:10px;">
-          <div style="display:flex;gap:10px;align-items:center;flex:1;">
-            ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:10px;">` : ''}
+        <div class="svc-cart-item">
+          <div class="info">
+            ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : ''}
             <div>
               <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
-              <div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(item.optionName||'標準服務')}</div>
+              <div class="meta">${escapeHtml(item.optionName||'標準服務')}</div>
             </div>
           </div>
-          <div style="font-weight:700;margin-right:10px;">${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</div>
-          <button type="button" class="btn" data-remove="${escapeHtml(item.uid||'')}">移除</button>
+          <div class="price">${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</div>
+          <button type="button" class="svc-cart-remove" data-remove="${escapeHtml(item.uid||'')}">移除</button>
         </div>
       `).join('');
     }
@@ -199,6 +200,7 @@
 
   function openServiceDetail(service){
     detailDataset = service;
+    lastDetailService = service;
     if (detailTitle) detailTitle.textContent = service.name || '服務';
     if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
     if (detailIncludes){
@@ -404,6 +406,9 @@
   if (cartPanelBack){
     cartPanelBack.addEventListener('click', ()=>{
       if (cartPanel) cartPanel.close();
+      if (lastDetailService){
+        openServiceDetail(lastDetailService);
+      }
     });
   }
   if (cartClearBtn){

@@ -49,6 +49,19 @@ body.service-view{background:var(--bg);color:var(--fg);}
 .svc-stepper{display:flex;gap:8px;justify-content:center;padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(24,161,104,.08),rgba(16,149,214,.08));}
 .svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:700;}
 .svc-stepper span.active{background:#16a34a;color:#fff;border-color:#16a34a;}
+.svc-cart-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:14px;padding:10px;gap:12px;background:#fff;}
+.svc-cart-item .info{display:flex;gap:10px;align-items:center;flex:1;}
+.svc-cart-item img{width:56px;height:56px;object-fit:cover;border-radius:12px;}
+.svc-cart-item .meta{font-size:12px;color:#6b7280;margin-top:2px;}
+.svc-cart-item .price{font-weight:800;margin-right:10px;}
+.svc-cart-remove{border:1px solid var(--line);background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+.svc-cart-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px;}
+.svc-cart-actions .btn{flex:1;min-width:120px;}
+@media(max-width:560px){
+  .svc-cart-item{flex-direction:column;align-items:flex-start;}
+  .svc-cart-item .price{margin-right:0;}
+  .svc-cart-actions .btn{flex:1 0 100%;}
+}
 #svcCartForm{padding:0;}
 #svcCartForm section{padding:18px;display:grid;gap:12px;}
 #svcCartForm label{display:grid;gap:4px;font-size:13px;color:#374151;font-weight:700;}
@@ -182,8 +195,8 @@ body.service-view{background:var(--bg);color:var(--fg);}
         <span id="svcCartAmount">NT$ 0</span>
       </div>
     </div>
-    <div style="padding:0 18px 18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-      <button class="btn" id="svcCartPanelBack">返回服務列表</button>
+    <div class="svc-cart-actions">
+      <button class="btn" id="svcCartPanelBack">返回上一頁</button>
       <button class="btn" id="svcCartClear">清空購物車</button>
       <button class="btn primary" id="svcCartCheckout">填寫訂單資料</button>
     </div>
@@ -222,8 +235,8 @@ body.service-view{background:var(--bg);color:var(--fg);}
           <input type="email" name="email" required placeholder="請輸入通知用 Email">
         </label>
         <label>
-          生日（西元年/月/日）
-          <input type="date" name="birth">
+          生日（西元年/月/日，必填）
+          <input type="date" name="birth" required>
         </label>
         <label>
           指定祈福日期（可留白）
