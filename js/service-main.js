@@ -13,6 +13,7 @@
   const detailPriceEl = document.getElementById('svcDetailPrice');
   const detailDesc = document.getElementById('svcDetailDesc');
   const detailIncludes = document.getElementById('svcDetailIncludes');
+  const detailIG = document.getElementById('svcDetailInstagram');
   const detailGallery = document.getElementById('svcDetailGallery');
   const detailVariant = document.getElementById('svcDetailVariant');
   const detailAddBtn = document.getElementById('svcDetailAddCart');
@@ -392,6 +393,16 @@
     if (detailIncludes){
       const includes = Array.isArray(service.includes) ? service.includes : [];
       detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : '<li>老師依實際情況安排內容</li>';
+    }
+    if (detailIG){
+      const igUrl = service.instagram || service.ig || service.igUrl || '';
+      if (igUrl){
+        detailIG.innerHTML = buildInstagramEmbed(igUrl);
+        detailIG.style.display = '';
+      }else{
+        detailIG.innerHTML = '';
+        detailIG.style.display = 'none';
+      }
     }
     const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
     if (detailHero){
@@ -874,5 +885,20 @@
       if (!url) return;
       window.open(url, '_blank', 'noopener');
     });
+  }
+  function buildInstagramEmbed(url){
+    if (!url) return '';
+    let src = url.trim();
+    if (src.indexOf('http') !== 0){
+      src = 'https://' + src.replace(/^\/+/, '');
+    }
+    src = src.replace(/[\?#].*$/, '');
+    const match = src.match(/(https?:\/\/[^/]*instagram\.com\/(?:p|reel|tv)\/[^/?#]+)/i);
+    if (match){
+      src = match[1].replace(/\/$/, '') + '/embed';
+    }else if (!/\/embed$/.test(src)){
+      src = src.replace(/\/$/, '') + '/embed';
+    }
+    return `<iframe src="${escapeHtml(src)}" allowtransparency="true" allowfullscreen="true" frameborder="0"></iframe>`;
   }
 })();

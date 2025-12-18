@@ -65,6 +65,8 @@
         <input id="svc_sold" type="number" min="0" value="0">
         <label>詳細說明</label>
         <textarea id="svc_description" placeholder="完整介紹、祈福流程、注意事項…"></textarea>
+        <label>IG 影片連結（可選）</label>
+        <input id="svc_instagram" placeholder="https://www.instagram.com/p/XXXX/">
         <label>包含內容（每行一項）</label>
         <textarea id="svc_includes" placeholder="蠟燭祈請一次&#10;祈福祝禱錄音節錄"></textarea>
         <input type="hidden" id="svc_active" value="1">
@@ -213,6 +215,7 @@
       active: activeInput.value !== '0',
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
+      instagram: document.getElementById('svc_instagram').value.trim(),
       includes: document.getElementById('svc_includes').value.split('\n').map(s=>s.trim()).filter(Boolean),
       cover: images[0] || '',
       gallery: images.slice(1),
@@ -235,6 +238,7 @@
     activeInput.value = data.active === false ? '0' : '1';
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
+    document.getElementById('svc_instagram').value = data.instagram || '';
     document.getElementById('svc_includes').value = Array.isArray(data.includes) ? data.includes.join('\n') : '';
     const gallery = Array.isArray(data.gallery) ? data.gallery : [];
     const imgs = [];
@@ -250,7 +254,7 @@
   }
   function resetForm(){
     currentId = '';
-    fillForm({ id:'', price:0, gallery:[], options:[{name:'',price:0}], active:true });
+    fillForm({ id:'', price:0, gallery:[], options:[{name:'',price:0}], active:true, instagram:'' });
     formMsg.textContent = '';
   }
   async function uploadFiles(fileList){

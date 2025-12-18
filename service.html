@@ -27,6 +27,8 @@ body.service-view{background:var(--bg);color:var(--fg);}
 @media(min-width:820px){.svc-dialog .dlgBody{grid-template-columns:1fr 1fr;}}
 .svc-dialog .svc-includes{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;list-style:disc;padding-left:22px;background:#f9fafb;}
 .svc-dialog .svc-includes li{margin-bottom:6px;color:#374151;}
+.svc-ig{margin-top:12px;}
+.svc-ig iframe{width:100%;border:none;border-radius:16px;min-height:420px;background:#fff;}
 .svc-dialog .svc-options{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
 .svc-dialog .svc-options label{
   display:flex;
@@ -193,6 +195,7 @@ body.service-view{background:var(--bg);color:var(--fg);}
         <ul id="svcDetailIncludes" class="svc-includes">
           <li>蠟燭祈請</li>
         </ul>
+        <div id="svcDetailInstagram" class="svc-ig" style="display:none;"></div>
         <div id="svcDetailOptionsWrap" style="margin-top:12px;">
           <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px;">服務項目（選擇後加入購物車，可重複加入不同選項）</label>
           <select id="svcDetailVariant" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);font-size:14px;"></select>
