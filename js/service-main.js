@@ -130,8 +130,9 @@
 
   function renderList(items){
     if (!listEl) return;
+    const activeItems = items.filter(it => it && it.active !== false);
     listEl.innerHTML = '';
-    if (!items.length){
+    if (!activeItems.length){
       const placeholder = document.createElement('div');
       placeholder.id = 'svcListEmpty';
       placeholder.className = 'empty';
@@ -139,7 +140,7 @@
       listEl.appendChild(placeholder);
       return;
     }
-    items.forEach(service => {
+    activeItems.forEach(service => {
       const sid = resolveServiceId(service);
       if (!service.id && sid) service.id = sid;
       const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
