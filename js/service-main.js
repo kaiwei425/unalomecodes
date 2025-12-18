@@ -586,7 +586,10 @@
         card.className = 'lookup-card';
         card.innerHTML = `
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
-          <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(STATUS_LABELS[order.status] || order.status || '處理中')}</div>
+          <div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:13px;font-weight:700;color:#0f172a;background:#dbeafe;">
+            <span style="width:8px;height:8px;border-radius:999px;background:#2563eb;display:inline-block;"></span>
+            ${escapeHtml(STATUS_LABELS[order.status] || order.status || '處理中')}
+          </div>
           <div style="margin-top:8px;font-weight:600;">服務：${serviceLine}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
           <div style="font-size:13px;color:#475569;">Email：${escapeHtml(buyer.email || '—')}</div>
