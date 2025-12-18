@@ -41,6 +41,7 @@
   const bankReceiptInput = document.getElementById('svcBankReceipt');
   const bankReceiptName = document.getElementById('svcBankReceiptName');
   const bankMemoInput = document.getElementById('svcBankMemo');
+  const requestDateInput = checkoutForm ? checkoutForm.querySelector('input[name="requestDate"]') : null;
   const contactPhotoInput = document.getElementById('svcContactPhoto');
   const contactPhotoName = document.getElementById('svcContactPhotoName');
   const bankBackBtn = document.getElementById('svcBankBack');
@@ -128,6 +129,13 @@
     return list.reduce((sum,item)=> sum + Number(item.basePrice||0) + Number(item.optionPrice||0), 0);
   }
 
+  function setRequestDateMin(){
+    if (!requestDateInput) return;
+    const today = new Date();
+    const iso = today.toISOString().split('T')[0];
+    requestDateInput.min = iso;
+  }
+
   function renderCartPanel(){
     if (!cartListEl) return;
     const cart = loadCart();
@@ -182,6 +190,7 @@
       checkoutForm.reset();
     }
     setCheckoutStep(1);
+    setRequestDateMin();
   }
 
   function collectStepOneData(){
@@ -627,6 +636,8 @@
       resetCheckoutFlow();
     });
   }
+
+  setRequestDateMin();
   if (checkoutBackBtn){
     checkoutBackBtn.addEventListener('click', ()=>{
       checkoutDialog.close();
