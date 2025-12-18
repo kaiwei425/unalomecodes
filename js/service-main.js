@@ -442,7 +442,11 @@
     });
   }
   if (checkoutBackBtn){
-    checkoutBackBtn.addEventListener('click', ()=> checkoutDialog.close());
+    checkoutBackBtn.addEventListener('click', ()=>{
+      checkoutDialog.close();
+      renderCartPanel();
+      if (cartPanel) cartPanel.showModal();
+    });
   }
   if (checkoutForm){
     checkoutForm.addEventListener('submit', async ev=>{
