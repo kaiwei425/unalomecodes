@@ -1583,7 +1583,9 @@ function composeOrderEmail(order, opts = {}) {
   const store = (order?.buyer?.store || order?.store || '').trim();
   const status = order.status || '處理中';
   const note = (order.note || '').trim();
-  const method = opts.channelLabel || order.method || '訂單';
+  const methodRaw = opts.channelLabel || order.method || '訂單';
+  const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || /服務/.test(String(order?.method||''));
+  const method = (isServiceOrder && (!order.paymentMethod || /服務/.test(methodRaw))) ? '轉帳匯款' : methodRaw;
   const context = opts.context || 'order_created';
   const items = buildOrderItems(order);
   const shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
@@ -1831,7 +1833,13 @@ async function sendEmailMessage(env, message) {
 function shouldNotifyStatus(status) {
   const txt = String(status || '').trim();
   if (!txt) return false;
-  return txt === '已付款待出貨' || txt === '已寄件' || txt === '祈福完成' || txt === '祈福成果已通知';
+  if (txt === '待處理' || txt === '處理中') return false;
+  if (txt === '已確認付款，祈福進行中' || txt === '祈福進行中') return true;
+  return txt === '已付款待出貨'
+    || txt === '已寄件'
+    || txt === '祈福完成'
+    || txt === '完成祈福'
+    || txt === '祈福成果已通知';
 }
 
 function escapeHtmlEmail(str) {

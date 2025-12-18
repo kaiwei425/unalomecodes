@@ -93,6 +93,19 @@
     '祈福進行中': '已確認付款，祈福進行中'
   };
   const supportsDialog = typeof HTMLDialogElement === 'function' && typeof HTMLDialogElement.prototype.showModal === 'function';
+  const fallbackBackdrops = new WeakMap();
+  function getFallbackBackdrop(el){
+    if (!document.body) return null;
+    let node = fallbackBackdrops.get(el);
+    if (!node){
+      node = document.createElement('div');
+      node.className = 'dialog-fallback-backdrop';
+      node.addEventListener('click', ()=> closeDialog(el));
+      document.body.appendChild(node);
+      fallbackBackdrops.set(el, node);
+    }
+    return node;
+  }
   function openDialog(el){
     if (!el) return;
     if (supportsDialog && typeof el.showModal === 'function'){
@@ -100,6 +113,10 @@
     }else{
       el.setAttribute('open','open');
       el.dataset.fallbackOpen = '1';
+      const backdrop = getFallbackBackdrop(el);
+      if (backdrop){
+        requestAnimationFrame(()=> backdrop.classList.add('active'));
+      }
     }
   }
   function closeDialog(el){
@@ -113,6 +130,10 @@
     }else{
       el.removeAttribute('open');
       delete el.dataset.fallbackOpen;
+      const backdrop = fallbackBackdrops.get(el);
+      if (backdrop){
+        backdrop.classList.remove('active');
+      }
     }
   }
   let currentReviewCode = '';
