@@ -1532,6 +1532,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const notifyCustomer = ctx.notifyCustomer === false ? false : !!customerEmail;
     const notifyAdmin = ctx.notifyAdmin === false ? false : adminRaw.length > 0;
     const statusLabel = (order.status || '').trim();
+    const isBlessingDone = statusLabel === '祈福完成';
     const customerSubject = emailContext === 'status_update'
       ? `${siteName} 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
       : `${siteName} 訂單確認 #${order.id}`;
@@ -1640,11 +1641,17 @@ function composeOrderEmail(order, opts = {}) {
           查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）
         </div>`
     : '';
-  const customerIntro = (context === 'status_update')
+  let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
+  if (context === 'status_update' && isBlessingDone){
+    const lookupLine = opts.lookupUrl
+      ? `請至 <a href="${esc(opts.lookupUrl)}" target="_blank" rel="noopener">查詢祈福進度</a> 輸入手機號碼，並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。`
+      : '請至查詢祈福進度輸入手機號碼，並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。';
+    customerIntro += `<p>${lookupLine}</p>`;
+  }
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
   const contactRows = [
     buyerName ? `<p style="margin:0 0 8px;"><strong>收件人：</strong>${esc(buyerName)}</p>` : '',
@@ -1713,6 +1720,12 @@ function composeOrderEmail(order, opts = {}) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
     textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或 LINE ID：${lineLabel} 聯繫。`);
+    if (isBlessingDone){
+      const lookupText = opts.lookupUrl
+        ? `請至 ${opts.lookupUrl} 查詢祈福進度，輸入手機號碼並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。`
+        : '請至查詢祈福進度輸入手機號碼並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。';
+      textParts.push(lookupText);
+    }
   } else {
     textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
   }
@@ -2987,6 +3000,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       method: '服務型商品',
       channel: '服務型商品',
       transfer,
+      transferLast5: transferLast5,
       ritualPhotoUrl: ritualPhotoUrl || undefined
     };
     const store = env.SERVICE_ORDERS || env.ORDERS;

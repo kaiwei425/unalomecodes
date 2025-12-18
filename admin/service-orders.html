@@ -129,6 +129,9 @@
     }
     return '';
   }
+  function getTransferLast5(order){
+    return (order && (order.transfer && order.transfer.last5 || order.transferLast5 || '')) || '';
+  }
   function render(){
     const q = (filterInput.value||'').toLowerCase();
     const view = orders.filter(o=>{
@@ -139,41 +142,46 @@
       bodyEl.innerHTML = '<tr><td colspan="5" class="muted">沒有符合的訂單。</td></tr>';
       return;
     }
-    bodyEl.innerHTML = view.map(o=>`
-      <tr data-id="${o.id}">
-        <td>
-          <div style="font-weight:700;">${o.id}</div>
-          <div class="muted">${(o.createdAt||'').replace('T',' ').replace('Z','')}</div>
-        </td>
-        <td>
-          <div style="font-weight:600;">${o.serviceName||''}</div>
-          <div class="muted">選項：${formatSelections(o)}</div>
-          <div class="muted">內容：${formatItems(o)}</div>
-          <div class="muted">備註：${o.note || '—'}</div>
-        </td>
-        <td>
-          <div>${o.buyer && o.buyer.name ? o.buyer.name : ''}</div>
-          <div class="muted">${o.buyer && o.buyer.phone ? o.buyer.phone : ''}</div>
-          <div class="muted">${o.buyer && o.buyer.email ? o.buyer.email : ''}</div>
-          <div class="muted">生日：${o.buyer && o.buyer.birth ? o.buyer.birth : '—'}</div>
-          <div class="muted">指定日期：${o.requestDate || '—'}</div>
-        </td>
-        <td><span class="badge">${o.status || '待處理'}</span></td>
-        <td>
-          <select data-id="${o.id}" class="statusSel">
-            ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
-          </select>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
-            <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
-            <button class="btn" data-act="view" data-id="${o.id}">查看明細</button>
-            <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
-            <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
-            <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
-            <button class="btn" data-act="proof" data-id="${o.id}">查看憑證</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    bodyEl.innerHTML = view.map(o=>{
+      const transferLast5 = getTransferLast5(o);
+      const transferDisplay = transferLast5 ? `<strong style="letter-spacing:1px;">${transferLast5}</strong>` : '—';
+      return `
+        <tr data-id="${o.id}">
+          <td>
+            <div style="font-weight:700;">${o.id}</div>
+            <div class="muted">${(o.createdAt||'').replace('T',' ').replace('Z','')}</div>
+          </td>
+          <td>
+            <div style="font-weight:600;">${o.serviceName||''}</div>
+            <div class="muted">選項：${formatSelections(o)}</div>
+            <div class="muted">內容：${formatItems(o)}</div>
+            <div class="muted">備註：${o.note || '—'}</div>
+          </td>
+          <td>
+            <div>${o.buyer && o.buyer.name ? o.buyer.name : ''}</div>
+            <div class="muted">${o.buyer && o.buyer.phone ? o.buyer.phone : ''}</div>
+            <div class="muted">${o.buyer && o.buyer.email ? o.buyer.email : ''}</div>
+            <div class="muted">生日：${o.buyer && o.buyer.birth ? o.buyer.birth : '—'}</div>
+            <div class="muted">指定日期：${o.requestDate || '—'}</div>
+            <div class="muted">匯款末五碼：${transferDisplay}</div>
+          </td>
+          <td><span class="badge">${o.status || '待處理'}</span></td>
+          <td>
+            <select data-id="${o.id}" class="statusSel">
+              ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+              <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
+              <button class="btn" data-act="view" data-id="${o.id}">查看明細</button>
+              <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
+              <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
+              <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
+              <button class="btn" data-act="proof" data-id="${o.id}">查看憑證</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
   async function loadOrders(){
     bodyEl.innerHTML = '<tr><td colspan="5" class="muted">載入中…</td></tr>';
