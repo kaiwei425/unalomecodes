@@ -112,6 +112,7 @@
 
   
 <script>
+const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const ADMIN_KEY_STORAGE = 'ADMIN_KEY';
@@ -143,7 +144,8 @@ function authHeaders(extra){
 async function authedFetch(url, options, retried){
   const opts = Object.assign({}, options || {});
   opts.headers = authHeaders(opts.headers || {});
-  const res = await fetch(url, opts);
+  const target = /^https?:/i.test(url) ? url : API_BASE + url;
+  const res = await fetch(target, opts);
   if (res.status === 401 && retried !== true){
     clearAdminKey();
     alert('管理員金鑰錯誤或已過期，請重新輸入');
@@ -175,7 +177,7 @@ function normalizeProof(u){
   if (!u) return "";
   u = String(u).trim();
   if (/^https?:\/\//i.test(u) || /^\/api\/proof(?:\.inline|\.view)?\//.test(u)) return u;
-  return '/api/proof/' + encodeURIComponent(u);
+  return API_BASE + '/api/proof/' + encodeURIComponent(u);
 }
 
 
@@ -276,15 +278,15 @@ const items = Array.isArray(o.items) ? o.items : [{
         let proofKey = '';
         if (proof){
           try {
-            const u2 = new URL(proof, location.origin);
+            const u2 = new URL(proof, API_BASE);
             proofKey = u2.pathname.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
           } catch {
             proofKey = (proof||'').replace(/^.*\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
           }
         }
         if (proofKey){
-          const inlineUrl = `/api/proof.inline/${encodeURIComponent(proofKey)}`;
-          const debugUrl  = `/api/proof/${encodeURIComponent(proofKey)}?debug=1`;
+          const inlineUrl = `${API_BASE}/api/proof.inline/${encodeURIComponent(proofKey)}`;
+          const debugUrl  = `${API_BASE}/api/proof/${encodeURIComponent(proofKey)}?debug=1`;
           parts.push(`<div class="muted"><a class="proofLink" data-src="${inlineUrl}" href="${inlineUrl}" target="_blank" rel="noopener noreferrer">查看憑證</a>　<a href="${debugUrl}" target="_blank" rel="noopener noreferrer" class="muted">（debug）</a></div>`);
         }
       }catch{}
@@ -349,7 +351,7 @@ const items = Array.isArray(o.items) ? o.items : [{
         if (!v) return '';
         v = String(v).trim();
         if (/^https?:\/\//i.test(v) || /^\//.test(v)) return v;
-        return '/api/proof/' + encodeURIComponent(v);
+        return API_BASE + '/api/proof/' + encodeURIComponent(v);
       }
       let ritual = pickRitual(o);
       // 祈福照片連結
@@ -357,7 +359,7 @@ const items = Array.isArray(o.items) ? o.items : [{
         let ritualKey = '';
         if (ritual){
           try {
-            const u3 = new URL(ritual, location.origin);
+            const u3 = new URL(ritual, API_BASE);
             const path = u3.pathname.replace(/\?.*$/,'');
             if (/^\/api\/proof(?:\.(?:view|inline))?\//.test(path)){
               ritualKey = path.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
@@ -372,8 +374,8 @@ const items = Array.isArray(o.items) ? o.items : [{
           }
         }
         if (ritualKey){
-          const rInline = `/api/proof.inline/${encodeURIComponent(ritualKey)}`;
-          const rDebug  = `/api/proof/${encodeURIComponent(ritualKey)}?debug=1`;
+          const rInline = `${API_BASE}/api/proof.inline/${encodeURIComponent(ritualKey)}`;
+          const rDebug  = `${API_BASE}/api/proof/${encodeURIComponent(ritualKey)}?debug=1`;
           parts.push(`<div class="muted"><a class="proofLink" data-src="${rInline}" href="${rInline}" target="_blank" rel="noopener noreferrer">祈福照片</a>　<a href="${rDebug}" target="_blank" rel="noopener noreferrer" class="muted">（debug）</a></div>`);
         } else if (ritual){
           // 無法抽出 key 時，至少給原始連結
@@ -423,11 +425,11 @@ function hydrateProofThumbs(){
     // derive key from /api/proof or /api/proof.view or /api/proof.inline or raw
     let key = '';
     try {
-      const u = new URL(src, location.origin);
+      const u = new URL(src, API_BASE);
       key = u.pathname.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
     } catch { key = src.replace(/^.*\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, ''); }
     try {
-      const r = await fetch(`/api/proof.data/${key}`);
+      const r = await fetch(`${API_BASE}/api/proof.data/${key}`);
       const dataUrl = await r.text();
       if (/^data:image\//i.test(dataUrl)){
         img.src = dataUrl;    // 直接用 data URL 顯示
@@ -652,7 +654,7 @@ $('#exportCsv').addEventListener('click', ()=>{
   const ids = Array.from(selected).join(',');
   const key = getAdminKey();
   if (!key){ toast('尚未輸入管理員金鑰'); return; }
-  const url = `/api/orders/export?ids=${encodeURIComponent(ids)}&admin_key=${encodeURIComponent(key)}`;
+  const url = `${API_BASE}/api/orders/export?ids=${encodeURIComponent(ids)}&admin_key=${encodeURIComponent(key)}`;
   // 直接開啟下載
   window.open(url, '_blank');
 });
@@ -670,11 +672,11 @@ document.addEventListener('click', async function(e){
   // derive key
   let key = '';
   try {
-    const u = new URL(src, location.origin);
+    const u = new URL(src, API_BASE);
     key = u.pathname.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
   } catch { key = src; }
   try {
-    const r = await fetch(`/api/proof.data/${key}`);
+    const r = await fetch(`${API_BASE}/api/proof.data/${key}`);
     const dataUrl = await r.text();
     if (!/^data:image\//i.test(dataUrl)) throw new Error('not image data');
     img.src = dataUrl;

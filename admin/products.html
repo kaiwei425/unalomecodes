@@ -226,7 +226,7 @@
 
 <script>
 (function(){
-  const apiBase = location.origin;
+  const apiBase = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
   const ADMIN_KEY_STORAGE = 'ADMIN_KEY';
   function promptAdminKey(){
     var key = prompt('請輸入管理員金鑰');

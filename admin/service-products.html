@@ -103,6 +103,7 @@
   </div>
 <script>
 (function(){
+  const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
   const STORAGE_KEY = 'ADMIN_KEY';
   function getAdminKey(){
     let key = sessionStorage.getItem(STORAGE_KEY) || '';
@@ -117,7 +118,8 @@
     if (!key) throw new Error('未提供管理員金鑰');
     const headers = Object.assign({}, init && init.headers ? init.headers : {}, { 'X-Admin-Key': key });
     const opts = Object.assign({}, init||{}, { headers });
-    const res = await fetch(url, opts);
+    const target = /^https?:/i.test(url) ? url : API_BASE + url;
+    const res = await fetch(target, opts);
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       throw new Error((data && data.error) || ('HTTP '+res.status));
@@ -261,7 +263,7 @@
     if (!fileList || !fileList.length) return [];
     const form = new FormData();
     Array.from(fileList).forEach(f => form.append('files[]', f));
-    const res = await fetch('/api/upload', { method:'POST', body: form });
+        const res = await fetch(API_BASE + '/api/upload', { method:'POST', body: form });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       throw new Error((data && data.error) || '上傳失敗');

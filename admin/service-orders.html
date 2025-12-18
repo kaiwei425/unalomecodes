@@ -68,6 +68,7 @@
   <input type="file" id="resultPhotoInput" accept="image/*" style="display:none;">
 <script>
 (function(){
+  const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
   const STORAGE_KEY = 'ADMIN_KEY';
   function getKey(){
     let key = sessionStorage.getItem(STORAGE_KEY) || '';
@@ -82,7 +83,8 @@
     if (!key) throw new Error('未輸入管理員金鑰');
     const headers = Object.assign({}, init && init.headers ? init.headers : {}, { 'X-Admin-Key': key });
     const opts = Object.assign({}, init||{}, { headers });
-    const res = await fetch(url, opts);
+    const target = /^https?:/i.test(url) ? url : API_BASE + url;
+    const res = await fetch(target, opts);
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       throw new Error((data && data.error) || ('HTTP '+res.status));
