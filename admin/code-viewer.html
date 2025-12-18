@@ -205,6 +205,7 @@ textarea.raw{width:100%;min-height:140px;background:#0a1020;color:var(--fg);bord
 
 <script>
 const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+const svcListBtn = document.getElementById('btnLoadServices');
 const ADMIN_KEY = sessionStorage.getItem('ADMIN_KEY') || (function(){ const k=prompt('請輸入管理員金鑰'); if(k) sessionStorage.setItem('ADMIN_KEY', k); return k||''; })();
 function authHeaders(extra){
   const base = { 'x-admin-key': ADMIN_KEY };
