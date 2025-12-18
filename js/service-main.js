@@ -36,6 +36,7 @@
   const cartListEl = document.getElementById('svcCartList');
   const cartAmountEl = document.getElementById('svcCartAmount');
   const cartPanelClose = document.getElementById('svcCartPanelClose');
+  const cartPanelBack = document.getElementById('svcCartPanelBack');
   const cartClearBtn = document.getElementById('svcCartClear');
   const cartCheckoutBtn = document.getElementById('svcCartCheckout');
   const CART_KEY = 'svcCartItems';
@@ -399,6 +400,11 @@
   }
   if (cartPanelClose){
     cartPanelClose.addEventListener('click', ()=> cartPanel.close());
+  }
+  if (cartPanelBack){
+    cartPanelBack.addEventListener('click', ()=>{
+      if (cartPanel) cartPanel.close();
+    });
   }
   if (cartClearBtn){
     cartClearBtn.addEventListener('click', ()=>{
