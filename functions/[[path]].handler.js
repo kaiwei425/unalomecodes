@@ -1525,7 +1525,14 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
         : `${defaultLookupBase}/shop#lookup=${encodeURIComponent(order.id)}`
       : '';
     const channel = ctx.channel || order.method || '';
-    const customerEmail = (order?.buyer?.email || '').trim();
+    const customerEmail = (
+      order?.buyer?.email ||
+      order?.email ||
+      order?.contactEmail ||
+      order?.buyer_email ||
+      order?.recipientEmail ||
+      ''
+    ).trim();
     const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
     const channelLabel = channel ? channel : (order.method || '訂單');
     const emailContext = ctx.emailContext || 'order_created';
