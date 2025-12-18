@@ -459,7 +459,7 @@
       try{
         const formData = new FormData(checkoutForm);
         const payload = {
-          serviceId,
+          serviceId: serviceId || checkoutForm.dataset.serviceId || '',
           name: formData.get('name')||'',
           phone: formData.get('phone')||'',
           email: formData.get('email')||'',
