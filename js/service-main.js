@@ -93,7 +93,7 @@
     '祈福進行中': '已確認付款，祈福進行中'
   };
   const supportsDialog = typeof HTMLDialogElement === 'function' && typeof HTMLDialogElement.prototype.showModal === 'function';
-  const fallbackBackdrops = new WeakMap();
+  const fallbackBackdrops = new Map();
   function getFallbackBackdrop(el){
     if (!document.body) return null;
     let node = fallbackBackdrops.get(el);
@@ -111,7 +111,7 @@
     if (supportsDialog && typeof el.showModal === 'function'){
       el.showModal();
     }else{
-      el.setAttribute('open','open');
+      el.setAttribute('open','');
       el.dataset.fallbackOpen = '1';
       const backdrop = getFallbackBackdrop(el);
       if (backdrop){
@@ -325,6 +325,11 @@
     }
     if (!birth){
       alert('請填寫生日');
+      return null;
+    }
+    if (!contactPhotoInput || !contactPhotoInput.files || !contactPhotoInput.files[0]){
+      alert('請上傳祈福用照片');
+      if (contactPhotoInput) contactPhotoInput.focus();
       return null;
     }
     return { name, phone: phoneDigits, email, birth, requestDate, note };
