@@ -301,13 +301,14 @@
   filterInput.addEventListener('input', renderList);
   btnReset.addEventListener('click', resetForm);
   listBody.addEventListener('click', e=>{
-    const btn = e.target.closest('button[data-act]');
+    const target = e.target instanceof Element ? e.target : (e.target && e.target.parentElement) || null;
+    const btn = target ? target.closest('button[data-act]') : null;
     if (!btn) return;
     const act = btn.getAttribute('data-act');
-    const id = btn.getAttribute('data-id');
+    const id = (btn.getAttribute('data-id') || '').trim();
     if (!id) return;
     if (act === 'edit'){
-      const item = items.find(x => x.id === id);
+      const item = items.find(x => String(x.id) === id);
       if (item) fillForm(item);
       return;
     }
