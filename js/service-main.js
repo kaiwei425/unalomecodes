@@ -487,12 +487,19 @@
         const formData = new FormData(lookupForm);
         const phone = String(formData.get('phone')||'').trim();
         const orderDigits = String(formData.get('orderDigits')||'').trim();
-        if (!phone || !orderDigits){
-          alert('請輸入手機與訂單末五碼');
+        const bankDigits = String(formData.get('bankDigits')||'').trim();
+        if (!phone){
+          alert('請輸入手機號碼');
+          return;
+        }
+        if (!orderDigits && !bankDigits){
+          alert('請輸入訂單末五碼或匯款帳號末五碼');
           return;
         }
         try{
-          const usp = new URLSearchParams({ phone, order: orderDigits });
+          const usp = new URLSearchParams({ phone });
+          if (orderDigits) usp.append('order', orderDigits);
+          if (bankDigits) usp.append('bank', bankDigits);
           const res = await fetch('/api/service/orders/lookup?'+usp.toString(), { cache:'no-store' });
           const data = await res.json().catch(()=>({}));
           if (!res.ok || !data || data.ok === false){

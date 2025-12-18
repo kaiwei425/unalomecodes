@@ -1513,8 +1513,14 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     const origin = (ctx.origin || '').replace(/\/$/, '');
-    const lookupBase = (env.ORDER_LOOKUP_URL || env.SITE_URL || env.PUBLIC_SITE_URL || 'https://shop.unalomecodes.com').replace(/\/$/, '');
-    const lookupUrl = order.id ? `${lookupBase}/shop#lookup=${encodeURIComponent(order.id)}` : '';
+    const serviceLookupBase = env.SERVICE_LOOKUP_URL || (env.SITE_URL ? `${env.SITE_URL.replace(/\/$/, '')}/service.html` : '');
+    const defaultLookupBase = (env.ORDER_LOOKUP_URL || env.SITE_URL || env.PUBLIC_SITE_URL || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || String(order?.method||'').includes('服務');
+    const lookupUrl = order.id
+      ? isServiceOrder && serviceLookupBase
+        ? `${serviceLookupBase}#lookup=${encodeURIComponent(order.id)}`
+        : `${defaultLookupBase}/shop#lookup=${encodeURIComponent(order.id)}`
+      : '';
     const channel = ctx.channel || order.method || '';
     const customerEmail = (order?.buyer?.email || '').trim();
     const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -3062,7 +3068,8 @@ if (pathname === '/api/service/order/status' && request.method === 'POST') {
 if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
   const phone = normalizeTWPhoneStrict(url.searchParams.get('phone')||'');
   const orderDigits = lastDigits(url.searchParams.get('order')||'', 5);
-  if (!phone || !orderDigits){
+  const bankDigits = lastDigits(url.searchParams.get('bank')||'', 5);
+  if (!phone || (!orderDigits && !bankDigits)){
     return new Response(JSON.stringify({ ok:false, error:'缺少查詢條件' }), { status:400, headers: jsonHeaders });
   }
   const store = env.SERVICE_ORDERS || env.ORDERS;
@@ -3083,7 +3090,8 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     if (!order) continue;
     const buyerPhone = normalizeTWPhoneStrict(order?.buyer?.phone || '');
     const orderLast5 = lastDigits(order.id || '', 5);
-    if (buyerPhone && buyerPhone.endsWith(phone.slice(-9)) && orderLast5 === orderDigits){
+    const transferLast5 = lastDigits(order?.transfer?.last5 || order?.transferLast5 || '', 5);
+    if (buyerPhone && buyerPhone.endsWith(phone.slice(-9)) && ((orderDigits && orderLast5 === orderDigits) || (bankDigits && transferLast5 === bankDigits))){
       matches.push(order);
     }
   }

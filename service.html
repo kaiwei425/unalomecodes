@@ -146,16 +146,20 @@ body.service-view{background:var(--bg);color:var(--fg);}
   <dialog id="svcLookup">
     <header>
       <div style="font-weight:800;font-size:18px;">祈福進度查詢</div>
-      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">輸入手機與訂單編號末五碼，即可查看服務最新狀態。</p>
+      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">輸入手機並搭配訂單編號末五碼或匯款帳號末五碼，即可查看服務最新狀態。</p>
     </header>
     <form id="svcLookupForm">
       <label>
         手機號碼
-        <input type="tel" name="phone" required placeholder="請輸入下單時的電話">
+        <input type="tel" name="phone" required placeholder="請輸入下單時的電話" pattern="09\\d{8}">
       </label>
       <label>
         訂單編號末五碼
-        <input type="text" name="orderDigits" required inputmode="numeric" pattern="\\d{5}" placeholder="12345">
+        <input type="text" name="orderDigits" inputmode="numeric" pattern="\\d{5}" placeholder="12345">
+      </label>
+      <label>
+        匯款帳號末五碼
+        <input type="text" name="bankDigits" inputmode="numeric" pattern="\\d{5}" placeholder="12345">
       </label>
       <div class="actions">
         <button type="button" class="btn" id="svcLookupClose">關閉</button>
