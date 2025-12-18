@@ -65,6 +65,7 @@
       <div>載入中…</div>
     </div>
   </dialog>
+  <input type="file" id="resultPhotoInput" accept="image/*" style="display:none;">
 <script>
 (function(){
   const STORAGE_KEY = 'ADMIN_KEY';
@@ -117,6 +118,17 @@
   function getRitualPhotoUrl(order){
     return order?.ritualPhotoUrl || order?.transfer?.ritualPhotoUrl || order?.ritual_photo || order?.ritualPhoto || '';
   }
+  function getResultPhoto(order){
+    if (!order) return '';
+    if (order.resultPhotoUrl) return order.resultPhotoUrl;
+    const list = Array.isArray(order.results) ? order.results : [];
+    for (const item of list){
+      if (!item) continue;
+      const url = item.url || item.image || item.imageUrl;
+      if (url) return url;
+    }
+    return '';
+  }
   function render(){
     const q = (filterInput.value||'').toLowerCase();
     const view = orders.filter(o=>{
@@ -155,6 +167,8 @@
             <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
             <button class="btn" data-act="view" data-id="${o.id}">查看明細</button>
             <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
+            <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
+            <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
             <button class="btn" data-act="proof" data-id="${o.id}">查看憑證</button>
           </div>
         </td>
@@ -219,6 +233,28 @@
       window.open(url, '_blank', 'noopener');
       return;
     }
+    if (act === 'result-view'){
+      const order = orders.find(o=> o.id === id);
+      if (!order){
+        alert('找不到訂單資訊');
+        return;
+      }
+      const url = getResultPhoto(order);
+      if (!url){
+        alert('尚未上傳祈福成果');
+        return;
+      }
+      window.open(url, '_blank', 'noopener');
+      return;
+    }
+    if (act === 'result-upload'){
+      const input = document.getElementById('resultPhotoInput');
+      if (!input) return;
+      input.dataset.targetId = id;
+      input.value = '';
+      input.click();
+      return;
+    }
     if (act === 'proof'){
       const order = orders.find(o=> o.id === id);
       if (!order){
@@ -244,6 +280,7 @@
     const transfer = order.transfer || {};
     const receipt = transfer.receiptUrl || transfer.proofUrl || order.transferReceiptUrl || '';
     const ritualPhoto = getRitualPhotoUrl(order);
+    const resultPhoto = getResultPhoto(order);
     const items = Array.isArray(order.items) ? order.items : [];
     const itemHtml = items.length ? items.map(it=> `<div>${escapeHtml(it.name||'')}｜${fmtCurrency(it.total||0)}</div>`).join('') : `<div>${escapeHtml(order.serviceName||'')}</div>`;
     const birth = (order.buyer && (order.buyer.birth || order.buyer.birthday)) || '—';
@@ -257,11 +294,45 @@
       <div><span class="muted">備註 / 匯款說明</span><br>${escapeHtml(transfer.memo || order.transferMemo || order.note || '—')}</div>
       ${receipt ? `<div><span class="muted">匯款憑證</span><br><a href="${escapeHtml(receipt)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(receipt)}" alt="匯款憑證" class="proof-img"></div>` : '<div><span class="muted">匯款憑證</span><br>尚未提供</div>'}
       ${ritualPhoto ? `<div><span class="muted">顧客照片</span><br><a href="${escapeHtml(ritualPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(ritualPhoto)}" alt="顧客照片" class="proof-img"></div>` : '<div><span class="muted">顧客照片</span><br>未提供</div>'}
+      ${resultPhoto ? `<div><span class="muted">祈福成果</span><br><a href="${escapeHtml(resultPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(resultPhoto)}" alt="祈福成果" class="proof-img"></div>` : '<div><span class="muted">祈福成果</span><br>未上傳</div>'}
     `;
     detailDialog.showModal();
   }
   if (detailClose){
     detailClose.addEventListener('click', ()=> detailDialog.close());
+  }
+  const resultInput = document.getElementById('resultPhotoInput');
+  if (resultInput){
+    resultInput.addEventListener('change', async ()=>{
+      const id = resultInput.dataset.targetId;
+      if (!id || !resultInput.files || !resultInput.files[0]) return;
+      const file = resultInput.files[0];
+      if (file.size > 20 * 1024 * 1024){
+        alert('檔案過大（限 20MB）');
+        resultInput.value = '';
+        return;
+      }
+      try{
+        const form = new FormData();
+        form.append('files[]', file);
+        const upload = await authedFetch('/api/upload', { method:'POST', body: form });
+        const url = upload.files && upload.files[0] && upload.files[0].url;
+        if (!url) throw new Error('上傳失敗');
+        await authedFetch('/api/service/order/result-photo', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ id, photo: url })
+        });
+        const target = orders.find(o=> o.id === id);
+        if (target) target.resultPhotoUrl = url;
+        render();
+        alert('祈福成果已更新');
+      }catch(err){
+        alert('上傳失敗：' + err.message);
+      }finally{
+        resultInput.value = '';
+      }
+    });
   }
   filterInput.addEventListener('input', render);
   btnReload.addEventListener('click', loadOrders);

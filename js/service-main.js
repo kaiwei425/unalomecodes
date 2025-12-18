@@ -80,6 +80,18 @@
     name: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-name') || checkoutDialog.dataset.bankName || '中國信託 (822)') : '中國信託 (822)',
     account: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-account') || checkoutDialog.dataset.bankAccount || '148540417073') : '148540417073'
   };
+  function resolveResultPhoto(order){
+    if (!order) return '';
+    if (order.resultPhotoUrl) return order.resultPhotoUrl;
+    const list = Array.isArray(order.results) ? order.results : [];
+    for (const item of list){
+      if (!item) continue;
+      if (item.url) return item.url;
+      if (item.imageUrl) return item.imageUrl;
+      if (item.image) return item.image;
+    }
+    return '';
+  }
 
   function escapeHtml(str){
     return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
@@ -565,13 +577,19 @@
         const serviceLine = selectionNames.length
           ? `${escapeHtml(order.serviceName || '')}｜${escapeHtml(selectionNames.join('、'))}`
           : escapeHtml(order.serviceName || '');
+        const buyer = order && order.buyer ? order.buyer : {};
+        const resultUrl = resolveResultPhoto(order);
         const card = document.createElement('div');
         card.className = 'lookup-card';
         card.innerHTML = `
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
           <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(order.status || '處理中')}</div>
           <div style="margin-top:8px;font-weight:600;">服務：${serviceLine}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
+          <div style="font-size:13px;color:#475569;">Email：${escapeHtml(buyer.email || '—')}</div>
+          <div style="font-size:13px;color:#475569;">生日：${escapeHtml(buyer.birth || '—')}｜指定日期：${escapeHtml(order.requestDate || '—')}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">備註：${escapeHtml(order.note || '—')}</div>
+          ${resultUrl ? `<div style="margin-top:10px;"><button type="button" class="btn primary" data-result-url="${escapeHtml(resultUrl)}">查看祈福成果照片</button></div>` : ''}
         `;
         lookupCards.appendChild(card);
       });
@@ -833,4 +851,13 @@
   function resolveServiceId(service){
     if (!service) return '';
     return service.id || service._id || service.key || service._key || '';
+  }
+  if (lookupCards){
+    lookupCards.addEventListener('click', e=>{
+      const btn = e.target.closest('button[data-result-url]');
+      if (!btn) return;
+      const url = btn.getAttribute('data-result-url');
+      if (!url) return;
+      window.open(url, '_blank', 'noopener');
+    });
   }

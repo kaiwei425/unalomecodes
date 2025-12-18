@@ -1513,8 +1513,11 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     const origin = (ctx.origin || '').replace(/\/$/, '');
-    const serviceLookupBase = env.SERVICE_LOOKUP_URL || (env.SITE_URL ? `${env.SITE_URL.replace(/\/$/, '')}/service.html` : '');
-    const defaultLookupBase = (env.ORDER_LOOKUP_URL || env.SITE_URL || env.PUBLIC_SITE_URL || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const serviceLookupBase = env.SERVICE_LOOKUP_URL
+      ? env.SERVICE_LOOKUP_URL.replace(/\/$/, '')
+      : `${primarySite}/service.html`;
+    const defaultLookupBase = (env.ORDER_LOOKUP_URL || primarySite).replace(/\/$/, '');
     const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || String(order?.method||'').includes('服務');
     const lookupUrl = order.id
       ? isServiceOrder && serviceLookupBase
@@ -3064,6 +3067,31 @@ if (pathname === '/api/service/order/status' && request.method === 'POST') {
     return new Response(JSON.stringify({ ok:true, notified }), { status:200, headers: jsonHeaders });
   }catch(e){
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
+}
+
+if (pathname === '/api/service/order/result-photo' && request.method === 'POST') {
+  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
+  }
+  try{
+    const body = await request.json();
+    const id = String(body.id||'').trim();
+    const photo = String(body.photo||body.url||'').trim();
+    if (!id || !photo){
+      return new Response(JSON.stringify({ ok:false, error:'缺少必要欄位' }), { status:400, headers: jsonHeaders });
+    }
+    const raw = await store.get(id);
+    if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+    const order = JSON.parse(raw);
+    order.resultPhotoUrl = photo;
+    order.updatedAt = new Date().toISOString();
+    await store.put(id, JSON.stringify(order));
+    return new Response(JSON.stringify({ ok:true, photo }), { status:200, headers: jsonHeaders });
+  }catch(err){
+    return new Response(JSON.stringify({ ok:false, error:String(err) }), { status:500, headers: jsonHeaders });
   }
 }
 
