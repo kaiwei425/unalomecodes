@@ -247,27 +247,65 @@ function storyCodeFromProduct(p){
   return '';
 }
 
+function storyCodeFromService(s){
+  if (!s) return '';
+  if (s.reviewCode) {
+    const rc = String(s.reviewCode).trim().toUpperCase();
+    if (rc) return rc;
+  }
+  if (s.deityCode) {
+    const dc = String(s.deityCode).trim().toUpperCase();
+    if (dc) return dc;
+  }
+  const guess = toDeityCode((s && (s.deity || s.name)) || '');
+  if (guess) return guess;
+  if (s.id) return String(s.id).trim().toUpperCase();
+  return '';
+}
+
 async function loadProducts(){
   const list = $('#productList');
   list.textContent = '載入中...';
   try{
-    const res = await fetch(API_BASE + '/api/products',{cache:'no-store', headers: authHeaders()});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-    const items = data.items || [];
-    if(!items.length){ list.textContent = '目前沒有上架商品'; return; }
-    list.innerHTML = items.map(p => `
-      <div class="item" data-id="${esc(p.id||'')}" data-deity-code="${esc(storyCodeFromProduct(p))}">
-        <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
-        <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
-        ${p.deity?`<div class="deity-info">神祇：${esc(p.deity)}</div>`:''}
-        <div class="row">
-          <button class="btn" data-act="view">查看留言(JSON)</button>
-          <button class="btn primary" data-act="manage">管理留言</button>
-          <button class="btn warn" data-act="del">整品項全刪</button>
+    const fetchProducts = fetch(API_BASE + '/api/products',{cache:'no-store', headers: authHeaders()})
+      .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .catch(err=>({ error: err.message, items: [] }));
+    const fetchServices = fetch(API_BASE + '/api/service/products',{cache:'no-store', headers: authHeaders()})
+      .then(r=> r.ok ? r.json() : ({ items: [] }))
+      .catch(()=>({ items: [] }));
+    const [prodData, svcData] = await Promise.all([fetchProducts, fetchServices]);
+    const combined = [];
+    (Array.isArray(prodData.items) ? prodData.items : []).forEach(p=>{
+      combined.push({ type:'physical', raw:p, code: storyCodeFromProduct(p) });
+    });
+    (Array.isArray(svcData.items) ? svcData.items : []).forEach(s=>{
+      combined.push({ type:'service', raw:s, code: storyCodeFromService(s) });
+    });
+    if (!combined.length){
+      list.textContent = '目前沒有可用的商品或服務';
+      return;
+    }
+    list.innerHTML = combined.map(item => {
+      const p = item.raw || {};
+      const typeLabel = item.type === 'service'
+        ? '<span class="chip alt">服務商品</span>'
+        : '<span class="chip">實體商品</span>';
+      return `
+        <div class="item" data-type="${esc(item.type)}" data-id="${esc(p.id||'')}" data-deity-code="${esc(item.code)}">
+          <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
+          <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
+          <div class="row" style="margin:4px 0 8px;gap:6px;flex-wrap:wrap;">
+            ${typeLabel}
+            ${p.deity ? `<span class="chip">神祇：${esc(p.deity)}</span>` : ''}
+          </div>
+          <div class="row">
+            <button class="btn" data-act="view">查看留言(JSON)</button>
+            <button class="btn primary" data-act="manage">管理留言</button>
+            <button class="btn warn" data-act="del">整品項全刪</button>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
     list.onclick = handleListAction;
   }catch(e){
     $('#productList').textContent = '讀取失敗：' + e.message;
