@@ -411,12 +411,29 @@
     }
     if (detailGallery){
       if (gallery.length){
-        detailGallery.innerHTML = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
+        const igUrl = service.instagram || service.ig || service.igUrl || '';
+        const pics = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`);
+        if (igUrl){
+          pics.push(`<div class="thumb-ig" data-ig="${escapeHtml(igUrl)}">觀看 IG 影片</div>`);
+        }
+        detailGallery.innerHTML = pics.join('');
         Array.from(detailGallery.querySelectorAll('img')).forEach(img=>{
           img.addEventListener('click', ()=>{
             if (detailHero) detailHero.src = img.getAttribute('src') || '';
           });
         });
+        const igThumb = detailGallery.querySelector('.thumb-ig');
+        if (igThumb){
+          igThumb.addEventListener('click', ()=>{
+            if (detailIG){
+              detailIG.innerHTML = buildInstagramEmbed(igUrl);
+              detailIG.style.display = '';
+              detailIG.scrollIntoView({ behavior:'smooth', block:'center' });
+            }else{
+              window.open(igUrl, '_blank', 'noopener');
+            }
+          });
+        }
       }else{
         detailGallery.innerHTML = '<div class="muted">目前尚未提供示意圖</div>';
       }
