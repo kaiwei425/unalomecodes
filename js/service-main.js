@@ -80,6 +80,9 @@
     name: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-name') || checkoutDialog.dataset.bankName || '中國信託 (822)') : '中國信託 (822)',
     account: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-account') || checkoutDialog.dataset.bankAccount || '148540417073') : '148540417073'
   };
+  const STATUS_LABELS = {
+    '祈福進行中': '已確認付款，祈福進行中'
+  };
   function resolveResultPhoto(order){
     if (!order) return '';
     if (order.resultPhotoUrl) return order.resultPhotoUrl;
@@ -583,7 +586,7 @@
         card.className = 'lookup-card';
         card.innerHTML = `
           <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
-          <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(order.status || '處理中')}</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:4px;">狀態：${escapeHtml(STATUS_LABELS[order.status] || order.status || '處理中')}</div>
           <div style="margin-top:8px;font-weight:600;">服務：${serviceLine}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
           <div style="font-size:13px;color:#475569;">Email：${escapeHtml(buyer.email || '—')}</div>
