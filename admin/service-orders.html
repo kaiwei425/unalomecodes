@@ -102,7 +102,17 @@
     if (list.length){
       return list.map(it => `${it.name || order.serviceName || ''}｜${fmtCurrency(it.total || 0)}`).join('<br>');
     }
-    return `金額：${fmtCurrency(order.amount || 0)}`;
+    return `${order.serviceName || ''}｜${fmtCurrency(order.amount || 0)}`;
+  }
+  function formatSelections(order){
+    const options = Array.isArray(order.selectedOptions) ? order.selectedOptions : (order.selectedOption ? [order.selectedOption] : []);
+    if (options.length){
+      return options.map(opt => `${opt.name || ''}${opt.price ? `（+${fmtCurrency(opt.price)}）` : ''}`).join('、');
+    }
+    return '標準服務';
+  }
+  function getProofUrl(order){
+    return order?.transfer?.receiptUrl || order?.transfer?.proofUrl || order?.transferReceiptUrl || '';
   }
   function render(){
     const q = (filterInput.value||'').toLowerCase();
@@ -121,8 +131,9 @@
           <div class="muted">${(o.createdAt||'').replace('T',' ').replace('Z','')}</div>
         </td>
         <td>
-          <div>${o.serviceName||''}</div>
-          <div class="muted">${formatItems(o)}</div>
+          <div style="font-weight:600;">${o.serviceName||''}</div>
+          <div class="muted">選項：${formatSelections(o)}</div>
+          <div class="muted">內容：${formatItems(o)}</div>
           <div class="muted">備註：${o.note || '—'}</div>
         </td>
         <td>
@@ -140,6 +151,7 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
             <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
             <button class="btn" data-act="view" data-id="${o.id}">查看明細</button>
+            <button class="btn" data-act="proof" data-id="${o.id}">查看憑證</button>
           </div>
         </td>
       </tr>
@@ -187,6 +199,20 @@
     if (act === 'view'){
       const order = orders.find(o=> o.id === id);
       if (order) openDetail(order);
+      return;
+    }
+    if (act === 'proof'){
+      const order = orders.find(o=> o.id === id);
+      if (!order){
+        alert('找不到訂單資訊');
+        return;
+      }
+      const url = getProofUrl(order);
+      if (!url){
+        alert('此訂單尚未上傳匯款憑證');
+        return;
+      }
+      window.open(url, '_blank', 'noopener');
     }
   });
   const detailDialog = document.getElementById('svcOrderDetail');
