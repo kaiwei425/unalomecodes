@@ -590,6 +590,13 @@
           <div style="font-size:13px;color:#475569;">生日：${escapeHtml(buyer.birth || '—')}｜指定日期：${escapeHtml(order.requestDate || '—')}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">備註：${escapeHtml(order.note || '—')}</div>
           ${resultUrl ? `<div style="margin-top:10px;"><button type="button" class="btn primary" data-result-url="${escapeHtml(resultUrl)}">查看祈福成果照片</button></div>` : ''}
+          <div style="margin-top:12px;font-size:13px;color:#475569;line-height:1.6;">由於祈福影片較長檔案過大無法直接上傳，請點選下方官方 LINE 加入，並輸入訂單相關資訊（訂單編號、手機或姓名皆可），我們會將完整影片傳給您。</div>
+          <div style="margin-top:8px;">
+            <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#22c55e;color:#fff;text-decoration:none;font-weight:700;">
+              <span style="display:inline-block;width:20px;height:20px;background:#fff;color:#22c55e;border-radius:50%;font-size:13px;line-height:20px;text-align:center;">L</span>
+              點我加入官方 LINE
+            </a>
+          </div>
         `;
         lookupCards.appendChild(card);
       });
