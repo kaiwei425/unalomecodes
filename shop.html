@@ -12,6 +12,16 @@
 <title>泰國寺廟map ©️ unalomecodes</title>
 <link rel="stylesheet" href="/css/style.css">
 <meta name="theme-color" content="#ffffff">
+<style>
+  .policy-link{color:#2563eb;text-decoration:underline;font-weight:600;cursor:pointer;}
+  .policy-dialog{border:none;border-radius:18px;padding:0;width:92%;max-width:560px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;box-shadow:0 20px 60px rgba(15,23,42,.35);}
+  .policy-dialog header{padding:18px 20px;border-bottom:1px solid #e5e7eb;font-weight:800;font-size:18px;}
+  .policy-dialog .body{padding:20px;font-size:14px;line-height:1.7;color:#1e293b;max-height:60vh;overflow:auto;}
+  .policy-dialog .body ol{padding-left:18px;display:grid;gap:10px;}
+  .policy-dialog .body li strong{color:#0f172a;}
+  .policy-dialog footer{padding:18px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;}
+  .policy-dialog .btn{border:none;border-radius:999px;padding:8px 18px;background:#111827;color:#fff;font-weight:600;cursor:pointer;}
+</style>
 </head>
 <body>
 <script>
@@ -77,9 +87,28 @@
   <strong>聯絡我們</strong><br>
   bkkaiwei@gmail.com<br>
   客服LINE official @427oaemj<br>
-  2025©unalomecodes
+  2025©unalomecodes ｜ <a href="#" id="privacyLinkShop" class="policy-link">隱私權政策</a>
 </div>
 </div>
+
+<dialog id="privacyDialogShop" class="policy-dialog">
+  <header>隱私權政策</header>
+  <div class="body">
+    <p>感謝您在泰國寺廟map @ unalomecodes 選購商品或預約祈福服務。本政策說明我們如何依據一般電商平台的標準，保護並使用您的個人資料。</p>
+    <ol>
+      <li><strong>資料蒐集項目：</strong>包含下單資訊（姓名、電話、Email、地址或門市）、付款憑證、祈福需求、上傳的照片／影片及您在客服或留言中的回饋。</li>
+      <li><strong>使用目的：</strong>用於訂單聯繫、付款核對、物流／客服通知、祈福成果回傳、會員優惠與必要的行銷活動（例如寄送出貨或進度通知）。</li>
+      <li><strong>保存方式：</strong>交易資料儲存在 Cloudflare KV / R2 與 Google Workspace 等受控系統，僅授權的工作人員可存取；影像檔案採限時連結避免對外曝光。</li>
+      <li><strong>第三方分享：</strong>僅在需要出貨、金流或祈福服務時，提供必要資訊給物流、金流或合作師父；不出售、不出租您的個資。</li>
+      <li><strong>安全措施：</strong>網站採用 HTTPS 加密、管理端需金鑰驗證，並定期檢視資料存取紀錄，若無後續需求會匿名化或刪除。</li>
+      <li><strong>您的權利：</strong>可透過官方 LINE（@427oaemj）或 bkkaiwei@gmail.com 申請查詢、更正、下載或刪除個資，我們會於合理時間內回覆並處理。</li>
+    </ol>
+    <p>繼續使用本網站即表示同意上述條款。如需更多協助，歡迎聯繫我們，將盡速回覆。</p>
+  </div>
+  <footer>
+    <button type="button" class="btn" id="privacyCloseShop">關閉</button>
+  </footer>
+</dialog>
 
 <dialog id="dlg">
   <div class="closeBar">
@@ -5516,5 +5545,36 @@ function escapeHtml(s) {
 #lineWarning .line-actions{display:flex;gap:10px;margin-top:10px;}
 #lineWarning .line-actions .btn{flex:1;}
 </style>
+<script>
+(function(){
+  const link = document.getElementById('privacyLinkShop');
+  const dialog = document.getElementById('privacyDialogShop');
+  const closeBtn = document.getElementById('privacyCloseShop');
+  if (!dialog) return;
+  function openPolicy(){
+    if (typeof dialog.showModal === 'function'){
+      dialog.showModal();
+    }else{
+      dialog.setAttribute('open','open');
+    }
+  }
+  function closePolicy(){
+    if (typeof dialog.close === 'function'){
+      dialog.close();
+    }else{
+      dialog.removeAttribute('open');
+    }
+  }
+  if (link){
+    link.addEventListener('click', e=>{
+      e.preventDefault();
+      openPolicy();
+    });
+  }
+  if (closeBtn){
+    closeBtn.addEventListener('click', closePolicy);
+  }
+})();
+</script>
 </body>
 </html>

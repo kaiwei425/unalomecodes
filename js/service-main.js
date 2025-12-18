@@ -92,6 +92,29 @@
   const STATUS_LABELS = {
     '祈福進行中': '已確認付款，祈福進行中'
   };
+  const supportsDialog = typeof HTMLDialogElement === 'function' && typeof HTMLDialogElement.prototype.showModal === 'function';
+  function openDialog(el){
+    if (!el) return;
+    if (supportsDialog && typeof el.showModal === 'function'){
+      el.showModal();
+    }else{
+      el.setAttribute('open','open');
+      el.dataset.fallbackOpen = '1';
+    }
+  }
+  function closeDialog(el){
+    if (!el) return;
+    if (supportsDialog && typeof el.close === 'function'){
+      try{
+        el.close();
+      }catch(_){
+        el.removeAttribute('open');
+      }
+    }else{
+      el.removeAttribute('open');
+      delete el.dataset.fallbackOpen;
+    }
+  }
   let currentReviewCode = '';
   async function loadServiceReviews(code){
     if (!reviewListEl) return;
@@ -473,7 +496,7 @@
     }
     populateVariantSelect(service);
     updateDetailPrice();
-    detailDialog.showModal();
+    openDialog(detailDialog);
   }
 
   function ensureSingleService(cart, serviceId){
@@ -509,9 +532,9 @@
     saveCart(cart);
     renderCartPanel();
     updateCartBadge(cart);
-    detailDialog.close();
+    closeDialog(detailDialog);
     renderCartPanel();
-    if (cartPanel) cartPanel.showModal();
+    if (cartPanel) openDialog(cartPanel);
   }
 
   function renderCheckoutSummary(cart){
@@ -552,7 +575,7 @@
     }
     resetCheckoutFlow();
     renderCheckoutSummary(cart);
-    checkoutDialog.showModal();
+    openDialog(checkoutDialog);
   }
 
   function getCheckoutOptions(){
@@ -589,12 +612,12 @@
         if (!btn) return;
         btn.addEventListener('click', ev=>{
           ev.preventDefault();
-          lookupDialog.showModal();
+          openDialog(lookupDialog);
         });
       });
     }
     if (lookupClose){
-      lookupClose.addEventListener('click', ()=> lookupDialog.close());
+      lookupClose.addEventListener('click', ()=> closeDialog(lookupDialog));
     }
     if (lookupForm){
       lookupForm.addEventListener('submit', async ev=>{
@@ -674,7 +697,7 @@
   }
 
   if (detailClose){
-    detailClose.addEventListener('click', ()=> detailDialog.close());
+    detailClose.addEventListener('click', ()=> closeDialog(detailDialog));
   }
   if (detailVariant){
     detailVariant.addEventListener('change', updateDetailPrice);
@@ -685,15 +708,15 @@
   if (cartFab){
     cartFab.addEventListener('click', ()=>{
       renderCartPanel();
-      if (cartPanel) cartPanel.showModal();
+      if (cartPanel) openDialog(cartPanel);
     });
   }
   if (cartPanelClose){
-    cartPanelClose.addEventListener('click', ()=> cartPanel.close());
+    cartPanelClose.addEventListener('click', ()=> closeDialog(cartPanel));
   }
   if (cartPanelBack){
     cartPanelBack.addEventListener('click', ()=>{
-      if (cartPanel) cartPanel.close();
+      closeDialog(cartPanel);
       if (lastDetailService){
         openServiceDetail(lastDetailService);
       }
@@ -710,7 +733,7 @@
   }
   if (cartCheckoutBtn){
     cartCheckoutBtn.addEventListener('click', ()=>{
-      cartPanel.close();
+      closeDialog(cartPanel);
       openCheckoutDialog();
     });
   }
@@ -734,9 +757,9 @@
   setRequestDateMin();
   if (checkoutBackBtn){
     checkoutBackBtn.addEventListener('click', ()=>{
-      checkoutDialog.close();
+      closeDialog(checkoutDialog);
       renderCartPanel();
-      if (cartPanel) cartPanel.showModal();
+      if (cartPanel) openDialog(cartPanel);
     });
   }
   if (checkoutNextBtn){
@@ -891,23 +914,23 @@
             orderInput.value = digits;
           }
         }
-        checkoutDialog.close();
-        lookupDialog.showModal();
+        closeDialog(checkoutDialog);
+        openDialog(lookupDialog);
       }
     });
   }
   if (checkoutStep3Close){
     checkoutStep3Close.addEventListener('click', ()=>{
-      checkoutDialog.close();
+      closeDialog(checkoutDialog);
     });
   }
   if (successCloseBtn){
-    successCloseBtn.addEventListener('click', ()=> successDialog.close());
+    successCloseBtn.addEventListener('click', ()=> closeDialog(successDialog));
   }
   if (successLookupBtn){
     successLookupBtn.addEventListener('click', ()=>{
-      successDialog.close();
-      if (lookupDialog) lookupDialog.showModal();
+      closeDialog(successDialog);
+      if (lookupDialog) openDialog(lookupDialog);
     });
   }
 
@@ -995,11 +1018,11 @@
   if (privacyLink && privacyDialog){
     privacyLink.addEventListener('click', e=>{
       e.preventDefault();
-      privacyDialog.showModal();
+      openDialog(privacyDialog);
     });
   }
   if (privacyClose && privacyDialog){
-    privacyClose.addEventListener('click', ()=> privacyDialog.close());
+    privacyClose.addEventListener('click', ()=> closeDialog(privacyDialog));
   }
   function buildInstagramEmbed(url){
     if (!url) return '';

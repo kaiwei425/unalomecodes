@@ -3016,6 +3016,20 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }
     list = [order.id].concat(list.filter(id => id !== order.id)).slice(0,500);
     await store.put(idxKey, JSON.stringify(list));
+    if (svcStore && svc){
+      try{
+        const soldUnits = items.reduce((sum, it)=> sum + Math.max(1, Number(it.qty||1)), 0) || 1;
+        const currSold = Number(svc.sold || 0) || 0;
+        const updatedSvc = Object.assign({}, svc, {
+          sold: currSold + soldUnits,
+          updatedAt: new Date().toISOString()
+        });
+        await svcStore.put(serviceId, JSON.stringify(updatedSvc));
+        svc = updatedSvc;
+      }catch(err){
+        console.error('service sold counter update failed', err);
+      }
+    }
     try{
       await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created' });
     }catch(err){
