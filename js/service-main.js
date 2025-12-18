@@ -71,6 +71,9 @@
   const cartPanelBack = document.getElementById('svcCartPanelBack');
   const cartClearBtn = document.getElementById('svcCartClear');
   const cartCheckoutBtn = document.getElementById('svcCartCheckout');
+  const privacyLink = document.getElementById('privacyLink');
+  const privacyDialog = document.getElementById('privacyDialog');
+  const privacyClose = document.getElementById('privacyClose');
   const CART_KEY = 'svcCartItems';
   let detailDataset = null;
   let lastDetailService = null;
@@ -988,6 +991,15 @@
         reviewSubmitBtn.textContent = '送出分享';
       }
     });
+  }
+  if (privacyLink && privacyDialog){
+    privacyLink.addEventListener('click', e=>{
+      e.preventDefault();
+      privacyDialog.showModal();
+    });
+  }
+  if (privacyClose && privacyDialog){
+    privacyClose.addEventListener('click', ()=> privacyDialog.close());
   }
   function buildInstagramEmbed(url){
     if (!url) return '';

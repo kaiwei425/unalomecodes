@@ -33,6 +33,11 @@ body.service-view{background:var(--bg);color:var(--fg);}
 #svcRvList > .rvItem:last-child{border-bottom:none;}
 #svcRvList:empty::before{content:"還沒有人分享故事，成為第一個分享的人吧！";display:block;padding:20px;text-align:center;color:#94a3b8;font-size:14px;border:1px dashed #e5e7eb;}
 #sideDeities .list a.line-btn{display:flex;border:none;background:#16a34a;color:#fff;font-weight:700;justify-content:center;align-items:center;gap:8px;padding:10px 18px;box-shadow:0 6px 14px rgba(22,163,74,.35);}
+.policy-link{color:#2563eb;text-decoration:underline;cursor:pointer;font-weight:600;}
+.policy-dialog{border:none;border-radius:18px;padding:0;background:#fff;color:#0f172a;max-width:640px;width:95%;box-shadow:0 30px 60px rgba(15,23,42,.35);}
+.policy-dialog header{padding:18px;border-bottom:1px solid #e5e7eb;font-weight:800;font-size:18px;}
+.policy-dialog .body{padding:18px;line-height:1.7;font-size:14px;max-height:70vh;overflow:auto;}
+.policy-dialog footer{padding:0 18px 18px;text-align:right;}
 .svc-dialog .svc-options{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
 .svc-dialog .svc-options label{
   display:flex;
@@ -147,9 +152,28 @@ body.service-view{background:var(--bg);color:var(--fg);}
       <strong>聯絡我們</strong><br>
       bkkaiwei@gmail.com<br>
       客服LINE official @427oaemj<br>
-      2025©unalomecodes
+      2025©unalomecodes ｜ <a href="#" id="privacyLink" class="policy-link">隱私權政策</a>
     </div>
   </div>
+
+  <dialog id="privacyDialog" class="policy-dialog">
+    <header>隱私權政策</header>
+    <div class="body">
+      <p>感謝您使用 unalomecodes 服務商品，我們遵循一般電商平台對個資與交易資料的保護做法，以下條列服務型商品專區的個資使用方式：</p>
+      <ol>
+        <li><strong>蒐集來源：</strong>您透過下單表單、祈福進度查詢、顧客故事分享所提供的姓名、聯絡方式、祈福需求與上傳檔案。</li>
+        <li><strong>使用目的：</strong>用於聯絡客戶、核對匯款、進行祈福流程、出貨或售後服務，以及寄送祈福成果或客服通知。</li>
+        <li><strong>資料保存：</strong>訂單與匯款資訊會儲存在與實體商品相同的系統（Cloudflare / Google Workspace 等）；祈福成果照片僅用於通知本人，不會公開給第三方。</li>
+        <li><strong>分享對象：</strong>僅在必要時提供給協助祈福的老師與合作神壇人員，不會轉售或提供給其他公司。若有金流或物流服務，僅提供必要資訊。</li>
+        <li><strong>資料安全：</strong>我們使用與商城一致的加密連線與存取權限制度，並定期清查與刪除不再需要的個資。</li>
+        <li><strong>您的權利：</strong>您可透過官方 LINE 或 email 要求查詢、下載、更新或刪除個資。我們會於合理時間內回覆並完成作業。</li>
+      </ol>
+      <p>使用本服務即表示您同意上述條款。如有疑問，歡迎透過官方 LINE 客服聯繫。</p>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="privacyClose">關閉</button>
+    </footer>
+  </dialog>
 
   <dialog id="svcLookup">
     <header>
