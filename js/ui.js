@@ -1,4 +1,5 @@
 const dlg = document.getElementById('dlg');
+const dlgInstagram = document.getElementById('dlgInstagram');
 
 function storyCodeFromProduct(p){
   try{
@@ -56,6 +57,16 @@ function openDetail(p){
     t.addEventListener('click',()=>{ big.src = u; });
     thumbs.appendChild(t);
   });
+  if (dlgInstagram){
+    const igUrl = (p.instagram || p.ig || p.instagramUrl || '').trim();
+    if (igUrl){
+      dlgInstagram.innerHTML = buildInstagramEmbed(igUrl);
+      dlgInstagram.style.display = '';
+    }else{
+      dlgInstagram.innerHTML = '';
+      dlgInstagram.style.display = 'none';
+    }
+  }
 
   // 規格
   const sel = document.getElementById('dlgVariant');
@@ -167,7 +178,7 @@ function openDetail(p){
     }catch(e){ alert('加入購物車失敗'); }
   };
 
-  function stashPendingDetail(){
+function stashPendingDetail(){
     try{
       var sel = document.getElementById('dlgVariant');
       var qtyEl = document.getElementById('dlgQty');
@@ -281,6 +292,22 @@ function openDetail(p){
   };
 
   dlg.showModal();
+}
+
+function buildInstagramEmbed(url){
+  if (!url) return '';
+  let src = url.trim();
+  if (src.indexOf('http') !== 0){
+    src = 'https://' + src.replace(/^\/+/, '');
+  }
+  src = src.replace(/[\?#].*$/, '');
+  const match = src.match(/(https?:\/\/[^/]*instagram\.com\/(?:p|reel|tv)\/[^/?#]+)/i);
+  if (match){
+    src = match[1].replace(/\/$/, '') + '/embed';
+  }else if (!/\/embed$/.test(src)){
+    src = src.replace(/\/$/, '') + '/embed';
+  }
+  return `<iframe src="${escapeHtml(src)}" allowtransparency="true" allowfullscreen="true" frameborder="0"></iframe>`;
 }
 
 function renderReviews(pidOrCode){

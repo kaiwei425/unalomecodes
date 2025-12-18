@@ -3515,7 +3515,7 @@ async function patchProduct(id, request, env) {
 
     const next = {
       ...curr,
-      ...pick(patch, ["name","deity","basePrice","sold","stock","description","active"]),
+      ...pick(patch, ["name","deity","basePrice","sold","stock","description","active","instagram"]),
     };
 
     if (Array.isArray(patch.images)) {
@@ -3677,6 +3677,7 @@ function normalizeProduct(body, nowIso) {
       priceDiff: Number(v.priceDiff ?? 0),
       stock: Number(v.stock ?? 0)
     })) : [],
+    instagram: String(body.instagram || body.ig || body.instagramUrl || body.igUrl || ""),
     category: inferCategory(body), // 改為使用智慧分類函式
     active: body.active !== false,
     createdAt: body.createdAt || nowIso,

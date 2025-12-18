@@ -152,6 +152,9 @@
 
       <label>商品描述</label>
       <textarea id="new_desc" placeholder="材質、尺寸、加持資訊、注意事項…"></textarea>
+      <label>Instagram 影片連結（選填）</label>
+      <input id="new_instagram" placeholder="https://www.instagram.com/p/XXXX/">
+      <div class="hint">貼上 IG 貼文或 Reels 的網址，前台商品頁會自動嵌入影片。</div>
 
       <div class="hr"></div>
 
@@ -366,6 +369,7 @@
     const basePrice = Number($("new_price").value || 0);
     const sold = Number($("new_sold").value || 0);
     const description = $("new_desc").value.trim();
+    const instagram = $("new_instagram") ? $("new_instagram").value.trim() : "";
 
     const images = Array.from(newImgsBox.querySelectorAll("img")).map(i=>i.src);
     const variants = Array.from(newVars.querySelectorAll(".varRow")).map(row=>{
@@ -391,7 +395,7 @@
       const res = await authedFetch(apiBase + "/api/products", {
         method:"POST",
         headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ name, deity, deityCode, category, basePrice, sold, description, images, variants, active:true })
+        body: JSON.stringify({ name, deity, deityCode, category, basePrice, sold, description, images, variants, instagram, active:true })
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error||"建立失敗");
@@ -411,6 +415,7 @@
     $("new_price").value = "0";
     $("new_sold").value  = "0";
     $("new_desc").value  = "";
+    if ($("new_instagram")) $("new_instagram").value = "";
     newImgsBox.innerHTML = "";
     newVars.innerHTML = "";
   }
@@ -588,6 +593,7 @@
     const price= inputRow("基礎價格（NT$）", String(Number(p.basePrice||0)), "number");
     const sold = inputRow("已售出", String(Number(p.sold||0)), "number");
     const desc = areaRow("商品描述", p.description||"");
+    const ig = inputRow("Instagram 影片連結（選填）", p.instagram || "");
 
     const imgTitle = el("label",{}, "圖片");
     const addBtn = el("button",{ class:"btn", style:"margin-left:8px" },"＋新增圖片");
@@ -644,6 +650,7 @@
         basePrice: Number(price.input.value||0),
         sold: Number(sold.input.value||0),
         description: desc.input.value.trim(),
+        instagram: ig.input.value.trim(),
         images: p.images||[],
         variants: p.variants||[]
       };
@@ -657,6 +664,7 @@
       name.row, deity.row, deityCodeWrap, catWrap,
       twoCols(price.row, sold.row),
       desc.row,
+      ig.row,
       hr(),
       rowBetween(imgTitle, addBtn),
       thumbs, picker,
@@ -667,14 +675,15 @@
     );
 
     // 欄位失焦即存
-    [name.input, deity.input, price.input, sold.input, desc.input].forEach(inp=>{
+    [name.input, deity.input, price.input, sold.input, desc.input, ig.input].forEach(inp=>{
       inp.addEventListener("change", ()=> {
         queueSave(p.id, {
           name: name.input.value.trim(),
           deity: deity.input.value.trim(),
           basePrice: Number(price.input.value||0),
           sold: Number(sold.input.value||0),
-          description: desc.input.value.trim()
+          description: desc.input.value.trim(),
+          instagram: ig.input.value.trim()
         });
       });
     });
