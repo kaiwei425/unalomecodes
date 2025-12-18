@@ -1834,12 +1834,13 @@ function shouldNotifyStatus(status) {
   const txt = String(status || '').trim();
   if (!txt) return false;
   if (txt === '待處理' || txt === '處理中') return false;
-  if (txt === '已確認付款，祈福進行中' || txt === '祈福進行中') return true;
+  if (/祈福進行中/.test(txt)) return true;
+  if (/祈福完成/.test(txt)) return true;
+  if (/成果已通知/.test(txt)) return true;
+  if (/已付款/.test(txt) && /出貨|寄件|發貨/.test(txt)) return true;
+  if (/已寄件/.test(txt) || /寄出/.test(txt)) return true;
   return txt === '已付款待出貨'
-    || txt === '已寄件'
-    || txt === '祈福完成'
-    || txt === '完成祈福'
-    || txt === '祈福成果已通知';
+    || txt === '已寄件';
 }
 
 function escapeHtmlEmail(str) {
