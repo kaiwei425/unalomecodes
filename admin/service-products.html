@@ -138,6 +138,26 @@
   let items = [];
   let currentId = '';
 
+  function resolveServiceId(item){
+    if (!item) return '';
+    return item.id || item._id || item.key || item._key || '';
+  }
+  function ensureItemIds(list){
+    const stamp = Date.now();
+    list.forEach((item, idx)=>{
+      if (!item) return;
+      const resolved = resolveServiceId(item);
+      item.__virtualId = resolved || `svc-temp-${stamp}-${idx}`;
+    });
+  }
+  function getRowId(item){
+    return resolveServiceId(item) || item.__virtualId || '';
+  }
+  function findItemByRowId(rowId){
+    if (!rowId) return null;
+    return items.find(it => getRowId(it) === rowId) || null;
+  }
+
   function getImages(){
     const raw = (imagesInput.value || '').trim();
     if (!raw) return [];
@@ -207,8 +227,8 @@
     return data;
   }
   function fillForm(data){
-    currentId = data.id || '';
-    document.getElementById('svc_id').value = data.id || '';
+    currentId = resolveServiceId(data) || '';
+    document.getElementById('svc_id').value = currentId;
     document.getElementById('svc_name').value = data.name || '';
     document.getElementById('svc_price').value = Number(data.price||0);
     soldInput.value = Number(data.sold||0);
@@ -267,8 +287,10 @@
       listBody.innerHTML = '<tr><td colspan="4" class="muted">沒有符合條件的服務。</td></tr>';
       return;
     }
-    listBody.innerHTML = view.map(it => `
-      <tr data-id="${it.id}">
+    listBody.innerHTML = view.map(it => {
+      const rowId = getRowId(it);
+      return `
+      <tr data-id="${rowId}">
         <td>${it.cover ? `<img src="${it.cover}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px;">` : ''}</td>
         <td>
           <div style="font-weight:700;">${it.name||''}</div>
@@ -280,19 +302,20 @@
           <div class="muted">${it.active === false ? '（已下架）' : ''}</div>
         </td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn" data-act="edit" data-id="${it.id}">編輯</button>
-          <button class="btn" data-act="${it.active === false ? 'publish' : 'unpublish'}" data-id="${it.id}">
+          <button class="btn" data-act="edit" data-id="${rowId}">編輯</button>
+          <button class="btn" data-act="${it.active === false ? 'publish' : 'unpublish'}" data-id="${rowId}">
             ${it.active === false ? '上架' : '下架'}
           </button>
         </td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
   }
   async function loadServices(){
     listBody.innerHTML = '<tr><td colspan="4" class="muted">載入中…</td></tr>';
     try{
       const data = await authedFetch('/api/service/products');
       items = Array.isArray(data.items) ? data.items : [];
+      ensureItemIds(items);
       renderList();
     }catch(err){
       listBody.innerHTML = `<tr><td colspan="4" class="muted">載入失敗：${err.message}</td></tr>`;
@@ -310,13 +333,19 @@
     const id = (btn.getAttribute('data-id') || '').trim();
     if (!id) return;
     if (act === 'edit'){
-      const item = items.find(x => String(x.id) === id);
+      const item = findItemByRowId(id);
       if (item) fillForm(item);
       return;
     }
     if (act === 'publish' || act === 'unpublish'){
+      const item = findItemByRowId(id);
+      const realId = item ? resolveServiceId(item) : '';
+      if (!realId){
+        alert('此服務尚未產生 ID，請先編輯並儲存一次。');
+        return;
+      }
       const next = act === 'publish';
-      toggleActive(id, next);
+      toggleActive(realId, next);
     }
   });
   btnSave.addEventListener('click', async ()=>{
