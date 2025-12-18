@@ -41,6 +41,8 @@
   const bankReceiptInput = document.getElementById('svcBankReceipt');
   const bankReceiptName = document.getElementById('svcBankReceiptName');
   const bankMemoInput = document.getElementById('svcBankMemo');
+  const contactPhotoInput = document.getElementById('svcContactPhoto');
+  const contactPhotoName = document.getElementById('svcContactPhotoName');
   const bankBackBtn = document.getElementById('svcBankBack');
   const checkoutStep3OrderId = document.getElementById('svcStep3OrderId');
   const checkoutStep3Service = document.getElementById('svcStep3Service');
@@ -68,6 +70,7 @@
   let checkoutStep = 1;
   let checkoutContact = null;
   let checkoutReceipt = { url:'', name:'' };
+  let checkoutRitualPhoto = { url:'', name:'' };
   let lastCartSnapshot = [];
   let lastOrderResult = null;
   let lastRemitLast5 = '';
@@ -166,12 +169,15 @@
   function resetCheckoutFlow(){
     checkoutContact = null;
     checkoutReceipt = { url:'', name:'' };
+    checkoutRitualPhoto = { url:'', name:'' };
     lastOrderResult = null;
     lastRemitLast5 = '';
     if (bankReceiptInput) bankReceiptInput.value = '';
     if (bankReceiptName) bankReceiptName.textContent = '';
     if (bankLast5Input) bankLast5Input.value = '';
     if (bankMemoInput) bankMemoInput.value = '';
+    if (contactPhotoInput) contactPhotoInput.value = '';
+    if (contactPhotoName) contactPhotoName.textContent = '';
     if (checkoutForm){
       checkoutForm.reset();
     }
@@ -228,6 +234,30 @@
     }
     checkoutReceipt = { url: data.files[0].url, name: file.name };
     return checkoutReceipt.url;
+  }
+
+  async function ensureRitualPhotoUploaded(){
+    if (!contactPhotoInput) return checkoutRitualPhoto.url || '';
+    const file = contactPhotoInput.files && contactPhotoInput.files[0];
+    if (!file){
+      return checkoutRitualPhoto.url || '';
+    }
+    if (file.size > RECEIPT_MAX_SIZE){
+      throw new Error('祈福照片檔案過大（上限 20MB）');
+    }
+    if (checkoutRitualPhoto.url && checkoutRitualPhoto.name === file.name){
+      return checkoutRitualPhoto.url;
+    }
+    const form = new FormData();
+    form.append('files[]', file);
+    const res = await fetch('/api/upload', { method:'POST', body: form });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false || !Array.isArray(data.files) || !data.files.length){
+      throw new Error((data && data.error) || '祈福照片上傳失敗');
+    }
+    checkoutRitualPhoto = { url: data.files[0].url, name: file.name };
+    if (contactPhotoName) contactPhotoName.textContent = file.name;
+    return checkoutRitualPhoto.url;
   }
 
   function renderCheckoutSuccess(orderId, total){
@@ -605,10 +635,16 @@
     });
   }
   if (checkoutNextBtn){
-    checkoutNextBtn.addEventListener('click', ()=>{
+    checkoutNextBtn.addEventListener('click', async ()=>{
       const data = collectStepOneData();
       if (!data) return;
       checkoutContact = data;
+      try{
+        await ensureRitualPhotoUploaded();
+      }catch(err){
+        alert(err && err.message ? err.message : '上傳祈福照片失敗');
+        return;
+      }
       setCheckoutStep(2);
     });
   }
@@ -651,6 +687,23 @@
         if (bankReceiptName) bankReceiptName.textContent = file.name;
       }else if (bankReceiptName){
         bankReceiptName.textContent = '';
+      }
+    });
+  }
+  if (contactPhotoInput){
+    contactPhotoInput.addEventListener('change', ()=>{
+      checkoutRitualPhoto = { url:'', name:'' };
+      if (contactPhotoInput.files && contactPhotoInput.files[0]){
+        const file = contactPhotoInput.files[0];
+        if (file.size > RECEIPT_MAX_SIZE){
+          alert('檔案過大（上限 20MB）');
+          contactPhotoInput.value = '';
+          if (contactPhotoName) contactPhotoName.textContent = '';
+          return;
+        }
+        if (contactPhotoName) contactPhotoName.textContent = file.name;
+      }else if (contactPhotoName){
+        contactPhotoName.textContent = '';
       }
     });
   }
@@ -701,7 +754,8 @@
           transferMemo: bankMemoInput ? bankMemoInput.value.trim() : '',
           transferReceiptUrl: receiptUrl,
           transferBank: BANK_INFO.name,
-          transferAccount: BANK_INFO.account
+          transferAccount: BANK_INFO.account,
+          ritualPhotoUrl: checkoutRitualPhoto.url || ''
         };
         const result = await submitServiceOrder(payload);
         lastOrderResult = result;

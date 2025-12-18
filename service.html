@@ -268,6 +268,12 @@ body.service-view{background:var(--bg);color:var(--fg);}
             備註
             <textarea name="note" placeholder="可輸入備註或特殊需求…"></textarea>
           </label>
+          <label>
+            上傳個人照片（祈福使用）
+            <input type="file" id="svcContactPhoto" accept="image/*">
+            <span class="svc-bank-hint">建議上傳清晰的正面照片，僅供老師祈福使用。</span>
+            <span class="svc-bank-hint" id="svcContactPhotoName"></span>
+          </label>
         </section>
         <div class="svc-step-actions">
           <button type="button" class="btn" id="svcCartBack">返回</button>

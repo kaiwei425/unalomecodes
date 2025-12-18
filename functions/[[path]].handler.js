@@ -2895,6 +2895,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     if (!svc) return new Response(JSON.stringify({ ok:false, error:'找不到服務項目' }), { status:404, headers: jsonHeaders });
     const transferLast5 = String(body.transferLast5||'').trim();
     const transferReceiptUrl = String(body.transferReceiptUrl||'').trim();
+    const ritualPhotoUrl = String(body.ritualPhotoUrl||'').trim();
     if (!/^\d{5}$/.test(transferLast5) || !transferReceiptUrl){
       return new Response(JSON.stringify({ ok:false, error:'缺少匯款資訊' }), { status:400, headers: jsonHeaders });
     }
@@ -2982,7 +2983,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       resultToken: makeToken(24),
       method: '服務型商品',
       channel: '服務型商品',
-      transfer
+      transfer,
+      ritualPhotoUrl: ritualPhotoUrl || undefined
     };
     const store = env.SERVICE_ORDERS || env.ORDERS;
     if (!store){
