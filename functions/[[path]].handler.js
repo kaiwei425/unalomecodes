@@ -163,11 +163,22 @@ function makeToken(len=32){
   return s;
 }
 
-function base64UrlEncode(str){
-  if (str instanceof Uint8Array){
-    str = String.fromCharCode(...str);
+function base64UrlEncode(input){
+  let bytes;
+  if (typeof input === 'string'){
+    bytes = new TextEncoder().encode(input);
+  } else if (input instanceof Uint8Array){
+    bytes = input;
+  } else if (input instanceof ArrayBuffer){
+    bytes = new Uint8Array(input);
+  } else {
+    bytes = new TextEncoder().encode(String(input || ''));
   }
-  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++){
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 
 async function signSession(payload, secret){
