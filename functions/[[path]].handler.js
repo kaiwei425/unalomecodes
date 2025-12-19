@@ -3488,7 +3488,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
         });
       }
     }
-    const finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
+    let finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
     const transfer = {
       amount: Number(body.transferAmount || finalPrice) || finalPrice,
       last5: transferLast5,
