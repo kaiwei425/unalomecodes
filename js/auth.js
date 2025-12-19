@@ -90,6 +90,13 @@
   }
 
   async function refreshAdmin(){
+    if (!state.user){
+      state.admin = false;
+      state.adminReady = true;
+      updateWidgets();
+      adminListeners.forEach(fn=>{ try{ fn(state.admin); }catch(_){ } });
+      return;
+    }
     try{
       const res = await fetch('/api/auth/admin/me', { credentials:'include' });
       if (res.ok){
