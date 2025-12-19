@@ -428,6 +428,8 @@
         padding:0;
         border-radius:14px;
         max-height:90vh;
+        left:0;
+        right:0;
       }
       #dlgOrderConfirm > div,
       #dlgStore > div,
@@ -435,6 +437,21 @@
       #dlgCC > div{
         max-height:86vh;
         overflow:auto;
+      }
+      /* 避免 iOS 焦點自動縮放，統一表單字級 */
+      #dlgOrderConfirm input,
+      #dlgOrderConfirm select,
+      #dlgOrderConfirm textarea,
+      #dlgStore input,
+      #dlgStore select,
+      #dlgStore textarea,
+      #dlgBank input,
+      #dlgBank select,
+      #dlgBank textarea,
+      #dlgCC input,
+      #dlgCC select,
+      #dlgCC textarea{
+        font-size:16px !important;
       }
     }
   </style>
