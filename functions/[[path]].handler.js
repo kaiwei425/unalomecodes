@@ -79,9 +79,6 @@ async function redeemCoupon(env, { code, deity, orderId }){
           address: String(body.address || body.storeaddress || '').trim(),
           tel: String(body.tel || body.storetel || '').trim()
         };
-        if (!store.id && !store.name){
-          return json({ ok:false, error:'missing store info' }, 400);
-        }
         await updateUserDefaultStore(env, record.id, store);
         const refreshed = await loadUserRecord(env, record.id);
         return json({ ok:true, store: refreshed.defaultStore || store });

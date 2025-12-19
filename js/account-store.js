@@ -56,7 +56,7 @@
       });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || data.ok === false){
-        statusEl.textContent = (data && data.error) || '儲存失敗';
+        statusEl.textContent = (data && data.error) ? ('儲存失敗：' + data.error) : '儲存失敗';
       }else{
         statusEl.textContent = '已儲存，之後結帳會自動帶入。';
       }
