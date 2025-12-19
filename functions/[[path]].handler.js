@@ -787,6 +787,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const idx = list.indexOf(pid);
         if (action === 'remove') {
           if (idx !== -1) list.splice(idx,1);
+        } else if (action === 'toggle') {
+          if (idx !== -1) {
+            list.splice(idx,1);
+          } else {
+            list.unshift(pid);
+          }
         } else {
           if (idx === -1) list.unshift(pid);
         }

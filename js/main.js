@@ -145,6 +145,19 @@ document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
 
+// 會員中心側欄折疊
+(function(){
+  const toggle = document.getElementById('memberCenterToggle');
+  const panel = document.getElementById('memberCenterPanel');
+  if (toggle && panel){
+    toggle.addEventListener('click', ()=>{
+      const isOpen = panel.style.display === 'grid';
+      panel.style.display = isOpen ? 'none' : 'grid';
+      toggle.textContent = isOpen ? '會員中心 ▾' : '會員中心 ▴';
+    });
+  }
+})();
+
 // 將 loadProducts() 包在一個函式中，等待 shop.html 中的 DOMContentLoaded 事件觸發
 function runMain() {
   loadProducts();

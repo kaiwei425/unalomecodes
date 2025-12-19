@@ -77,7 +77,14 @@
     <h3>連結</h3>
     <div class="list">
       <a href="#" id="linkOrderLookup">查詢訂單狀態</a>
-      <a href="/account.html">我的訂單</a>
+      <div class="nested-link">
+        <button type="button" id="memberCenterToggle" class="btn" style="width:100%;justify-content:flex-start;gap:8px;">會員中心 ▾</button>
+        <div id="memberCenterPanel" style="display:none;padding:8px 0 0 0;display:grid;gap:6px;">
+          <a href="/account.html">我的訂單</a>
+          <a href="/account.html#wishlist">我的收藏</a>
+          <a href="#" id="linkDefaultStore">門市預設（待建置）</a>
+        </div>
+      </div>
       <a href="https://unalomecodes.pages.dev/share?view=deity-menu&amp;api=https%3A%2F%2Fproud-boat-794c.kaiwei425.workers.dev" target="_blank" rel="noopener">神祇介紹</a>
       <a href="https://myship.7-11.com.tw/general/detail/GM2509114839878" target="_blank" rel="noopener">7-11賣貨便</a>
     </div>

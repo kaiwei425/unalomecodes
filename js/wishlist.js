@@ -46,13 +46,14 @@
       method:'POST',
       headers:{'Content-Type':'application/json'},
       credentials:'include',
-      body: JSON.stringify({ productId })
+      body: JSON.stringify({ productId, action:'toggle' })
     }).then(async res=>{
       const data = await res.json().catch(()=>({}));
       if (!res.ok || (data && data.ok === false)){
         throw new Error((data && data.error) || '更新收藏失敗');
       }
       state.ids = Array.isArray(data.wishlist) ? data.wishlist : [];
+      fetchWishlist(); // refresh items for account page
       notify();
       return state.ids;
     });

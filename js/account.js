@@ -94,11 +94,10 @@
       statusEl.textContent = '需要登入模組載入失敗。';
       return;
     }
-    if (window.authState.isLoggedIn()){
+    if (window.authState.isLoggedIn && window.authState.isLoggedIn()){
       loadAccountData();
     }else{
-      statusEl.textContent = '請先登入以查看訂單。';
-      window.authState.requireLogin('請先登入即可查看訂單與會員資訊。').catch(()=>{});
+      statusEl.textContent = '請先登入以查看訂單與收藏。';
     }
   }
 
@@ -108,7 +107,7 @@
         loadAccountData();
       }else{
         if (gridEl) gridEl.style.display = 'none';
-        if (statusEl) statusEl.textContent = '請先登入以查看訂單。';
+        if (statusEl) statusEl.textContent = '請先登入以查看訂單與收藏。';
       }
     });
   }

@@ -833,6 +833,19 @@
       if (existingProfile) fillContactFromProfile(existingProfile);
     }
   }
+
+  // 會員中心折疊（側邊）
+  (function(){
+    const toggle = document.getElementById('memberCenterToggleSvc');
+    const panel = document.getElementById('memberCenterPanelSvc');
+    if (toggle && panel){
+      toggle.addEventListener('click', ()=>{
+        const isOpen = panel.style.display === 'grid';
+        panel.style.display = isOpen ? 'none' : 'grid';
+        toggle.textContent = isOpen ? '會員中心 ▾' : '會員中心 ▴';
+      });
+    }
+  })();
   if (checkoutBackBtn){
     checkoutBackBtn.addEventListener('click', ()=>{
       closeDialog(checkoutDialog);
