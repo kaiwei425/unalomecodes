@@ -32,6 +32,26 @@
       const svcLine = order.serviceName
         ? `${escapeHtml(order.serviceName)}${order.selectedOption && order.selectedOption.name ? '｜'+escapeHtml(order.selectedOption.name) : ''}`
         : '';
+    const shipping = order.shipping || order.receiver || order.logistics || order.cvs || order.storeInfo || {};
+    const storeTextRaw = [
+      order.store,
+      order.storeName,
+      order.storeAddress,
+      order?.buyer?.store,
+      shipping.store,
+      shipping.storeName,
+      shipping.storeAddress,
+      shipping.address
+    ].find(Boolean);
+    const storeText = storeTextRaw
+      ? escapeHtml(storeTextRaw)
+      : (()=> {
+          const name = shipping.storeName || shipping.name || '';
+          const sid  = shipping.storeId || shipping.id || '';
+          const addr = shipping.storeAddress || shipping.address || '';
+          const parts = [name, sid ? `(${sid})` : '', addr].filter(Boolean);
+          return parts.length ? escapeHtml(parts.join(' ')) : '';
+        })();
     const itemsLine = Array.isArray(order.items) && order.items.length
       ? order.items.map(it=>{
           const vn = it.variantName ? `（${escapeHtml(it.variantName)}）` : '';
@@ -56,6 +76,7 @@
       <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
       <div class="order-meta">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
       <div class="order-meta">Email：${escapeHtml(buyer.email || '')}</div>
+      ${storeText ? `<div class="order-meta">取貨門市：${storeText}</div>` : ''}
       ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
       ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
       ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
