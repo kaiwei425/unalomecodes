@@ -847,6 +847,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     return json({ ok:true, user });
   }
+  if (pathname === '/api/auth/admin/me') {
+    const admin = await getAdminSession(request, env);
+    if (!admin){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    return json({ ok:true, admin:true, email: admin.email || '', name: admin.name || admin.email || '' });
+  }
 
   if (pathname === '/api/me/store') {
     const record = await getSessionUserRecord(request, env);

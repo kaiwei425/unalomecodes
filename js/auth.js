@@ -1,7 +1,8 @@
 (function(){
-  const state = { user:null, ready:false, loading:false, profile:null };
+  const state = { user:null, ready:false, loading:false, profile:null, admin:false, adminReady:false };
   const listeners = [];
   const profileListeners = [];
+  const adminListeners = [];
   const loginUrl = '/api/auth/google/login';
 
   function notify(){
@@ -36,6 +37,9 @@
         btn.disabled = false;
       }
     });
+    document.querySelectorAll('[data-admin-only]').forEach(el=>{
+      el.style.display = state.admin ? '' : 'none';
+    });
   }
 
   function notifyProfile(){
@@ -64,6 +68,22 @@
     notifyProfile();
   }
 
+  async function refreshAdmin(){
+    try{
+      const res = await fetch('/api/auth/admin/me', { credentials:'include' });
+      if (res.ok){
+        state.admin = true;
+      }else{
+        state.admin = false;
+      }
+    }catch(_){
+      state.admin = false;
+    }
+    state.adminReady = true;
+    updateWidgets();
+    adminListeners.forEach(fn=>{ try{ fn(state.admin); }catch(_){ } });
+  }
+
   async function refreshUser(){
     state.loading = true;
     updateWidgets();
@@ -87,6 +107,7 @@
     updateWidgets();
     notify();
     refreshProfile();
+    refreshAdmin();
   }
 
   function login(){
@@ -146,12 +167,14 @@
   window.authState = {
     getUser: ()=>state.user,
     getProfile: ()=>state.profile,
+    isAdmin: ()=>state.admin,
     isLoggedIn,
     login,
     logout,
     promptLogin,
     requireLogin,
     refreshProfile,
+    refreshAdmin,
     subscribe(fn){
       if (typeof fn === 'function'){
         listeners.push(fn);
@@ -165,6 +188,14 @@
         profileListeners.push(fn);
         if (state.ready){
           try{ fn(state.profile); }catch(_){}
+        }
+      }
+    },
+    onAdmin(fn){
+      if (typeof fn === 'function'){
+        adminListeners.push(fn);
+        if (state.adminReady){
+          try{ fn(state.admin); }catch(_){}
         }
       }
     }
