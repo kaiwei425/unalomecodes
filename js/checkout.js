@@ -43,6 +43,7 @@ const bfNameInput = document.getElementById('bfName');
 const bfPhoneInput = document.getElementById('bfContact');
 const bfEmailInput = document.getElementById('bfEmail');
 const memberPerkHintEl = document.getElementById('memberPerkHint');
+const bfStoreInput = document.getElementById('bfStore');
 
 function applyBankProfile(profile){
   if (!profile) return;
@@ -59,6 +60,13 @@ function applyBankProfile(profile){
   if (bfPhoneInput && !bfPhoneInput.value && source.phone) bfPhoneInput.value = source.phone;
   if (bfEmailInput && !bfEmailInput.value) bfEmailInput.value = source.email || '';
   updateMemberPerkHint(profile);
+  if (bfStoreInput && profile.defaultStore){
+    if (profile.defaultStore.name) bfStoreInput.value = profile.defaultStore.name;
+    if (profile.defaultStore.id) bfStoreInput.setAttribute('data-storeid', profile.defaultStore.id);
+    if (profile.defaultStore.name) bfStoreInput.setAttribute('data-storename', profile.defaultStore.name);
+    if (profile.defaultStore.address) bfStoreInput.setAttribute('data-storeaddress', profile.defaultStore.address);
+    if (profile.defaultStore.tel) bfStoreInput.setAttribute('data-storetel', profile.defaultStore.tel);
+  }
 }
 
 function updateMemberPerkHint(profile){
@@ -73,6 +81,25 @@ function updateMemberPerkHint(profile){
   }else{
     memberPerkHintEl.style.display = 'none';
   }
+}
+
+function maybeSaveDefaultStore(){
+  if (!bfStoreInput) return;
+  const payload = {
+    name: bfStoreInput.value || bfStoreInput.getAttribute('data-storename') || '',
+    id: bfStoreInput.getAttribute('data-storeid') || '',
+    address: bfStoreInput.getAttribute('data-storeaddress') || '',
+    tel: bfStoreInput.getAttribute('data-storetel') || ''
+  };
+  if (!payload.name && !payload.id) return;
+  try{
+    fetch('/api/me/store', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify(payload)
+    }).catch(()=>{});
+  }catch(_){}
 }
 
 if (window.authState){
@@ -669,6 +696,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           fd.append('store_tel', sEl.getAttribute('data-storetel')||'');
         }
       }catch(_){ }
+      maybeSaveDefaultStore();
       // 不再強制檢查蠟燭加持額外欄位；改以備註＋可選照片
       try{ /* no-op */ }catch(_){ }
       try{

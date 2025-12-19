@@ -63,6 +63,34 @@ async function redeemCoupon(env, { code, deity, orderId }){
   }catch(e){
     return { ok:false, reason: "fetch_error" };
   }
+
+  if (pathname === '/api/me/store') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (request.method === 'GET') {
+      return json({ ok:true, store: record.defaultStore || null });
+    }
+    if (request.method === 'POST' || request.method === 'PATCH') {
+      try{
+        const body = await request.json();
+        const store = {
+          id: String(body.id || body.storeid || '').trim(),
+          name: String(body.name || body.storename || '').trim(),
+          address: String(body.address || body.storeaddress || '').trim(),
+          tel: String(body.tel || body.storetel || '').trim()
+        };
+        if (!store.id && !store.name){
+          return json({ ok:false, error:'missing store info' }, 400);
+        }
+        await updateUserDefaultStore(env, record.id, store);
+        const refreshed = await loadUserRecord(env, record.id);
+        return json({ ok:true, store: refreshed.defaultStore || store });
+      }catch(_){
+        return json({ ok:false, error:'invalid payload' }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
 }
 
 async function generateOrderId(env){
@@ -708,6 +736,26 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             email: refreshed.email,
             picture: refreshed.picture,
             defaultContact: refreshed.defaultContact || null,
+            defaultStore: refreshed.defaultStore || null,
+            memberPerks: refreshed.memberPerks || {},
+            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : []
+          }});
+        }
+        if (body && body.defaultStore){
+          await updateUserDefaultStore(env, record.id, {
+            id: String(body.defaultStore.id || body.defaultStore.storeid || '').trim(),
+            name: String(body.defaultStore.name || body.defaultStore.storename || '').trim(),
+            address: String(body.defaultStore.address || body.defaultStore.storeaddress || '').trim(),
+            tel: String(body.defaultStore.tel || body.defaultStore.storetel || '').trim()
+          });
+          const refreshed = await loadUserRecord(env, record.id);
+          return json({ ok:true, profile: {
+            id: refreshed.id,
+            name: refreshed.name,
+            email: refreshed.email,
+            picture: refreshed.picture,
+            defaultContact: refreshed.defaultContact || null,
+            defaultStore: refreshed.defaultStore || null,
             memberPerks: refreshed.memberPerks || {},
             wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : []
           }});
