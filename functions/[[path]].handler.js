@@ -31,8 +31,31 @@ const jsonHeaders = {
 };
 
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
-function isAdmin(request, env){
+function parseAdminEmails(env){
   try{
+    const raw = env.ADMIN_ALLOWED_EMAILS || '';
+    return raw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  }catch(_){ return []; }
+}
+async function getAdminSession(request, env){
+  if (!env || !env.ADMIN_JWT_SECRET) return null;
+  const cookies = parseCookies(request);
+  const token = cookies.admin_session || '';
+  if (!token) return null;
+  try{
+    const payload = await verifySessionToken(token, env.ADMIN_JWT_SECRET);
+    if (!payload) return null;
+    const email = (payload.email || '').toLowerCase();
+    if (!email) return null;
+    const allowed = parseAdminEmails(env);
+    if (allowed.length && !allowed.includes(email)) return null;
+    return payload;
+  }catch(_){ return null; }
+}
+async function isAdmin(request, env){
+  try{
+    const fromCookie = await getAdminSession(request, env);
+    if (fromCookie) return true;
     const key = (request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key') || '').trim();
     return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
   }catch(e){ return false; }
@@ -545,7 +568,7 @@ if (url.pathname === '/payment-result' && request.method === 'POST') {
     return listProducts(url, env);
   }
   if (pathname === "/api/products" && request.method === "POST") {
-    if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
     return createProduct(request, env);
   }
 
@@ -554,9 +577,9 @@ if (url.pathname === '/payment-result' && request.method === 'POST') {
     if (prodIdMatch) {
       const id = decodeURIComponent(prodIdMatch[1]);
       if (request.method === "GET")   return getProduct(id, env);
-      if (request.method === "PUT")   { if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return putProduct(id, request, env); }
-      if (request.method === "PATCH") { if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return patchProduct(id, request, env); }
-      if (request.method === "DELETE"){ if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return deleteProduct(id, env); }
+      if (request.method === "PUT")   { if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return putProduct(id, request, env); }
+      if (request.method === "PATCH") { if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return patchProduct(id, request, env); }
+      if (request.method === "DELETE"){ if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return deleteProduct(id, env); }
     }
 // ======== Bank Transfer Additions (non-breaking) ========
 if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathname === '/api/order/confirm-transfer')) {
@@ -679,6 +702,137 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return new Response(null, { status:302, headers });
     }catch(err){
       console.error('OAuth error', err);
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('OAuth error', { status:500, headers: h });
+    }
+  }
+
+  // === Admin OAuth (Google) ===
+  if (pathname === '/api/auth/google/admin/start') {
+    if (!env.GOOGLE_ADMIN_CLIENT_ID || !env.GOOGLE_ADMIN_CLIENT_SECRET) {
+      return new Response('Admin Google OAuth not configured', { status:500 });
+    }
+    const state = makeToken(24);
+    const redirectRaw = url.searchParams.get('redirect') || '';
+    let redirectPath = '/admin/';
+    if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
+      redirectPath = redirectRaw;
+    }
+    const params = new URLSearchParams({
+      client_id: env.GOOGLE_ADMIN_CLIENT_ID,
+      redirect_uri: `${origin}/api/auth/google/admin/callback`,
+      response_type: 'code',
+      scope: 'openid email profile',
+      state
+    });
+    const headers = new Headers({
+      Location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+    });
+    headers.append('Set-Cookie', `admin_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`);
+    headers.append('Set-Cookie', `admin_oauth_redirect=${encodeURIComponent(redirectPath)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
+    return new Response(null, { status:302, headers });
+  }
+
+  if (pathname === '/api/auth/google/admin/callback') {
+    const code = url.searchParams.get('code') || '';
+    const state = url.searchParams.get('state') || '';
+    const cookies = parseCookies(request);
+    const expectedState = cookies.admin_oauth_state || '';
+    const clearStateCookie = 'admin_oauth_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const clearRedirectCookie = 'admin_oauth_redirect=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const redirectPath = (()=> {
+      const raw = cookies.admin_oauth_redirect || '';
+      if (raw) {
+        try{
+          const decoded = decodeURIComponent(raw);
+          if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
+        }catch(_){}
+      }
+      return '/admin/';
+    })();
+    if (!code || !state || !expectedState || state !== expectedState) {
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('Invalid OAuth state', { status:400, headers: h });
+    }
+    if (!env.GOOGLE_ADMIN_CLIENT_ID || !env.GOOGLE_ADMIN_CLIENT_SECRET) {
+      return new Response('Admin Google OAuth not configured', {
+        status:500,
+        headers:{ 'Set-Cookie': clearStateCookie }
+      });
+    }
+    try{
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({
+          code,
+          client_id: env.GOOGLE_ADMIN_CLIENT_ID,
+          client_secret: env.GOOGLE_ADMIN_CLIENT_SECRET,
+          redirect_uri: `${origin}/api/auth/google/admin/callback`,
+          grant_type: 'authorization_code'
+        })
+      });
+      const tokenText = await tokenRes.text();
+      let tokens = null;
+      try{ tokens = JSON.parse(tokenText); }catch(_){}
+      if (!tokenRes.ok || !tokens || !tokens.id_token){
+        console.error('admin google token error', tokenRes.status, tokenText);
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('無法取得 Google token', { status:500, headers: h });
+      }
+      const parts = String(tokens.id_token||'').split('.');
+      if (parts.length < 2){
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('無法解析 id_token', { status:500, headers: h });
+      }
+      let profile = null;
+      try{
+        const payloadBytes = base64UrlDecodeToBytes(parts[1]);
+        profile = JSON.parse(new TextDecoder().decode(payloadBytes));
+      }catch(_){}
+      if (!profile || !profile.email){
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('無法取得使用者資訊', { status:500, headers: h });
+      }
+      const email = (profile.email || '').toLowerCase();
+      const emailVerified = profile.email_verified === true || profile.email_verified === 'true';
+      const aud = profile.aud || '';
+      const iss = profile.iss || '';
+      const allowedIss = ['https://accounts.google.com', 'accounts.google.com'];
+      const allowedEmails = parseAdminEmails(env);
+      if (!emailVerified || !allowedEmails.includes(email) || aud !== env.GOOGLE_ADMIN_CLIENT_ID || !allowedIss.includes(iss)){
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('非授權的管理員帳號', { status:403, headers: h });
+      }
+      const adminPayload = {
+        sub: profile.sub || email,
+        email,
+        name: profile.name || email,
+        role: 'admin',
+        exp: Date.now() + 60 * 60 * 1000
+      };
+      const adminToken = await signSession(adminPayload, env.ADMIN_JWT_SECRET || '');
+      const headers = new Headers({
+        'Set-Cookie': `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`,
+      });
+      headers.append('Set-Cookie', clearStateCookie);
+      headers.append('Set-Cookie', clearRedirectCookie);
+      headers.append('Location', `${origin}${redirectPath}`);
+      return new Response(null, { status:302, headers });
+    }catch(err){
+      console.error('Admin OAuth error', err);
       const h = new Headers();
       h.append('Set-Cookie', clearStateCookie);
       h.append('Set-Cookie', clearRedirectCookie);
@@ -3271,7 +3425,7 @@ if (pathname === '/api/order') {
   }
 
   if (request.method === 'DELETE') {
-    if (!isAdmin(request, env)) {
+    if (!(await isAdmin(request, env))) {
       return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
     }
     try {
@@ -3295,7 +3449,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
   }
-  if (!isAdmin(request, env)) {
+  if (!(await isAdmin(request, env))) {
     return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   }
   try {
@@ -3387,7 +3541,7 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'POST') {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -3421,7 +3575,7 @@ if (pathname === '/api/service/products' && request.method === 'POST') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'PUT') {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
   const body = await request.json();
@@ -3438,7 +3592,7 @@ if (pathname === '/api/service/products' && request.method === 'PUT') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'DELETE') {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
   const id = String(url.searchParams.get('id')||'').trim();
@@ -3636,7 +3790,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
 }
 
 if (pathname === '/api/service/orders' && request.method === 'GET') {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -3663,7 +3817,7 @@ if (pathname === '/api/service/orders' && request.method === 'GET') {
 }
 
 if (pathname === '/api/service/order/status' && request.method === 'POST') {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -3693,7 +3847,7 @@ if (pathname === '/api/service/order/status' && request.method === 'POST') {
 }
 
 if (pathname === '/api/service/order/result-photo' && request.method === 'POST') {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -3757,12 +3911,12 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
 
     // 圖片刪除
     if (pathname.startsWith("/api/file/") && request.method === "DELETE") {
-      if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       const key = decodeURIComponent(pathname.replace("/api/file/", ""));
       return deleteR2FileByKey(key, env);
     }
     if (pathname === "/api/deleteFile" && request.method === "POST") {
-      if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       return deleteR2FileViaBody(request, env);
     }
 
@@ -3889,13 +4043,13 @@ if (pathname === "/api/stories" && request.method === "POST") {
   // Support method override: POST + _method=DELETE
   const _m = (url.searchParams.get("_method") || "").toUpperCase();
   if (_m === "DELETE") {
-    if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
     return deleteStories(url, env);
   }
   return createStory(request, env);
 }
 if (pathname === "/api/stories" && request.method === "DELETE") {
-  if (!isAdmin(request, env)) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   return deleteStories(url, env);
 }
     // Image resize proxy
