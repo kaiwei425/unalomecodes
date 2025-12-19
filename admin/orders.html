@@ -156,10 +156,16 @@ async function loadOrders(){
     const res = await authedFetch('/api/orders?limit=500', { cache:'no-store' });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-    ORDERS = Array.isArray(data.orders) ? data.orders : [];
+    ORDERS = Array.isArray(data.items)
+      ? data.items
+      : (Array.isArray(data.orders) ? data.orders : []);
   }catch(e){
     ORDERS = [];
     console.error(e);
+    const body = document.getElementById('body');
+    if (body){
+      body.innerHTML = `<tr><td colspan="7" class="muted">讀取失敗：${(e && e.message) || e}</td></tr>`;
+    }
   }
   render();
 }

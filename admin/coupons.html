@@ -73,7 +73,21 @@
   </div>
 </div>
 <script>
-  const FALLBACK_DEITIES = ['FM','GA','CD','KP','HM','RH','JL','ZD','ZF','WE','XZ','HP'];
+  const DEITY_LABELS = {
+    FM:'四面神（FM）',
+    GA:'象神（GA）',
+    CD:'崇迪（CD）',
+    KP:'坤平（KP）',
+    HM:'哈魯曼（HM）',
+    RH:'拉胡（RH）',
+    JL:'迦樓羅（JL）',
+    ZD:'澤度金（ZD）',
+    ZF:'招財女神（ZF）',
+    WE:'五眼四耳（WE）',
+    XZ:'徐祝老人（XZ）',
+    HP:'魂魄勇（HP）'
+  };
+  const FALLBACK_DEITIES = Object.keys(DEITY_LABELS);
   async function loadDeities(){
     const sel = document.getElementById('cpnDeity');
     sel.innerHTML = '<option value="">載入中...</option>';
@@ -86,6 +100,10 @@
         if (p && p.deity){
           set.add(String(p.deity).toUpperCase());
         }
+        // 若產品有 deityCode 也加入
+        if (p && p.deityCode){
+          set.add(String(p.deityCode).toUpperCase());
+        }
       });
       const list = Array.from(set).sort();
       if (!list.length){
@@ -95,7 +113,7 @@
         list.forEach(code=>{
           const opt = document.createElement('option');
           opt.value = code;
-          opt.textContent = code;
+          opt.textContent = DEITY_LABELS[code] || code;
           sel.appendChild(opt);
         });
       }
@@ -123,7 +141,8 @@
       });
       const data = await resp.json().catch(()=>({}));
       if (!resp.ok || !data || !data.code){
-        throw new Error(data && data.error ? data.error : '發券失敗');
+        const msg = (data && (data.error || data.reason)) || ('HTTP '+resp.status);
+        throw new Error(msg);
       }
       resBox.innerHTML = `優惠碼：${data.code} <br>守護神：${data.deity || deity}｜折抵：NT$ ${Number(data.amount||amount)}`;
       resBox.style.display='block';
