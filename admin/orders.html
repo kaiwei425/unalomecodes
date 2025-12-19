@@ -115,43 +115,13 @@
 const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
-const ADMIN_KEY_STORAGE = 'ADMIN_KEY';
-function promptAdminKey(){
-  var key = prompt('請輸入管理員金鑰');
-  if (key){
-    key = key.trim();
-    if (key) sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
-  }
-  return key ? key.trim() : '';
-}
-function getAdminKey(){
-  var key = sessionStorage.getItem(ADMIN_KEY_STORAGE) || '';
-  if (!key){
-    key = promptAdminKey();
-  }
-  return key ? key.trim() : '';
-}
-function clearAdminKey(){
-  try{ sessionStorage.removeItem(ADMIN_KEY_STORAGE); }catch(_){}
-}
-function authHeaders(extra){
-  const headers = Object.assign({}, extra || {});
-  const key = getAdminKey();
-  if (!key) throw new Error('尚未輸入管理員金鑰');
-  headers['x-admin-key'] = key;
-  return headers;
-}
-async function authedFetch(url, options, retried){
+async function authedFetch(url, options){
   const opts = Object.assign({}, options || {});
-  opts.headers = authHeaders(opts.headers || {});
+  opts.credentials = 'include';
   const target = /^https?:/i.test(url) ? url : API_BASE + url;
   const res = await fetch(target, opts);
-  if (res.status === 401 && retried !== true){
-    clearAdminKey();
-    alert('管理員金鑰錯誤或已過期，請重新輸入');
-    const key = getAdminKey();
-    if (!key) throw new Error('沒有管理員金鑰');
-    return authedFetch(url, options, true);
+  if (res.status === 401){
+    throw new Error('未登入或無權限，請使用管理員帳號重新登入');
   }
   return res;
 }
@@ -487,15 +457,6 @@ $('#checkAll').addEventListener('change', e=>{
   render();
 });
 
-// --- PATCH 2/2: resilient admin call + remember ADMIN_KEY ---
-function ensureAdminKey(){
-  let k = getAdminKey();
-  if (!k){
-    k = getAdminKey();
-  }
-  return k;
-}
-
 // Single row actions
 document.addEventListener('click', async e=>{
   const btn = e.target.closest && e.target.closest('button[data-act]');
@@ -652,11 +613,22 @@ $('#batchDelete').addEventListener('click', async ()=>{
 $('#exportCsv').addEventListener('click', ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   const ids = Array.from(selected).join(',');
-  const key = getAdminKey();
-  if (!key){ toast('尚未輸入管理員金鑰'); return; }
-  const url = `${API_BASE}/api/orders/export?ids=${encodeURIComponent(ids)}&admin_key=${encodeURIComponent(key)}`;
-  // 直接開啟下載
-  window.open(url, '_blank');
+  const url = `${API_BASE}/api/orders/export?ids=${encodeURIComponent(ids)}`;
+  try{
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = 'orders.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  }catch(err){
+    toast('匯出失敗：' + (err.message||err));
+  }
 });
 
 // Proof lightbox

@@ -206,9 +206,8 @@ textarea.raw{width:100%;min-height:140px;background:#0a1020;color:var(--fg);bord
 <script>
 const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
 const svcListBtn = document.getElementById('btnLoadServices');
-const ADMIN_KEY = sessionStorage.getItem('ADMIN_KEY') || (function(){ const k=prompt('請輸入管理員金鑰'); if(k) sessionStorage.setItem('ADMIN_KEY', k); return k||''; })();
 function authHeaders(extra){
-  const base = { 'x-admin-key': ADMIN_KEY };
+  const base = {};
   if (extra) return Object.assign(base, extra);
   return base;
 }
@@ -267,10 +266,10 @@ async function loadProducts(){
   const list = $('#productList');
   list.textContent = '載入中...';
   try{
-    const fetchProducts = fetch(API_BASE + '/api/products',{cache:'no-store', headers: authHeaders()})
+    const fetchProducts = fetch(API_BASE + '/api/products',{cache:'no-store', headers: authHeaders(), credentials:'include'})
       .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .catch(err=>({ error: err.message, items: [] }));
-    const fetchServices = fetch(API_BASE + '/api/service/products',{cache:'no-store', headers: authHeaders()})
+    const fetchServices = fetch(API_BASE + '/api/service/products',{cache:'no-store', headers: authHeaders(), credentials:'include'})
       .then(r=> r.ok ? r.json() : ({ items: [] }))
       .catch(()=>({ items: [] }));
     const [prodData, svcData] = await Promise.all([fetchProducts, fetchServices]);
@@ -341,7 +340,8 @@ async function delAllViaPost(id){
     const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code) + '&_method=DELETE', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ _method: 'DELETE' })
+      body: JSON.stringify({ _method: 'DELETE' }),
+      credentials:'include'
     });
     if (!r.ok) throw new Error('HTTP '+r.status);
     toast('已刪除 '+code+' 的所有留言');
@@ -353,7 +353,7 @@ async function delAllViaPost(id){
 async function fetchStories(code){
   const realCode = (code || '').toString().trim().toUpperCase();
   if (!realCode) throw new Error('缺少神祇代碼');
-  const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(realCode), { cache:'no-store', headers: authHeaders() });
+  const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(realCode), { cache:'no-store', headers: authHeaders(), credentials:'include' });
   const js = await r.json();
   return js;
 }
@@ -428,7 +428,8 @@ function renderMessages(code, data){
         const rr = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code) + '&id=' + encodeURIComponent(mid) + '&_method=DELETE', {
           method: 'POST',
           headers: authHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ _method: 'DELETE' })
+          body: JSON.stringify({ _method: 'DELETE' }),
+          credentials:'include'
         });
         if (!rr.ok) throw new Error('HTTP '+rr.status);
         // After deletion, re-fetch and re-render to update the list
