@@ -11,12 +11,24 @@
   }
   *{box-sizing:border-box;}body{margin:0;font-family:"Space Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);}
   .wrap{max-width:960px;margin:0 auto;padding:20px 16px 36px;}
-  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .top h1{margin:0;font-size:22px;font-weight:800;}
   .top .muted{margin:0;font-size:13px;color:var(--muted);}
+  .top-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill-link{
+    text-decoration:none;
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 12px;border-radius:999px;
+    background:#fff;border:1px solid var(--line);color:var(--fg);
+    font-weight:700;font-size:13px;
+    box-shadow:0 10px 24px rgba(15,23,42,.08);
+    transition:all .18s ease;
+  }
+  .pill-link:hover{border-color:#bfdbfe;color:#2563eb;transform:translateY(-1px);}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
   label{display:block;font-weight:700;font-size:13px;margin-bottom:6px;color:#0f172a;}
   input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:#fff;}
+  select:disabled{background:#f8fafc;color:#94a3b8;}
   .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
   button{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:800;font-size:15px;cursor:pointer;}
   .btn-primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,.25);}
@@ -33,17 +45,19 @@
       <h1>優惠券工具</h1>
       <p class="muted">產生單一神祇固定金額優惠碼（預設 NT$200）。</p>
     </div>
-    <div class="actions">
-      <a class="btn-ghost" href="./index.html" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">← 返回後台首頁</a>
-      <a class="btn-ghost" href="/shop.html" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🏠 商品首頁</a>
+    <div class="top-actions">
+      <a class="pill-link" href="./index.html">← 返回後台首頁</a>
+      <a class="pill-link" href="/shop.html">🏠 商品首頁</a>
     </div>
   </div>
 
   <div class="card">
     <div class="grid">
       <div>
-        <label for="cpnDeity">守護神代碼（例：FM、GA、XZ）</label>
-        <input id="cpnDeity" placeholder="必填，如：FM">
+        <label for="cpnDeity">守護神代碼</label>
+        <select id="cpnDeity">
+          <option value="">載入守護神清單中...</option>
+        </select>
       </div>
       <div>
         <label for="cpnAmount">折抵金額（NT$）</label>
@@ -59,6 +73,35 @@
   </div>
 </div>
 <script>
+  async function loadDeities(){
+    const sel = document.getElementById('cpnDeity');
+    sel.innerHTML = '<option value="">載入中...</option>';
+    try{
+      const res = await fetch('/api/products?active=true',{cache:'no-store'});
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      const set = new Set();
+      items.forEach(p=>{
+        if (p && p.deity){
+          set.add(String(p.deity).toUpperCase());
+        }
+      });
+      const list = Array.from(set).sort();
+      if (!list.length){
+        sel.innerHTML = '<option value="">尚未找到守護神代碼</option>';
+      }else{
+        sel.innerHTML = '<option value="">請選擇守護神</option>';
+        list.forEach(code=>{
+          const opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = code;
+          sel.appendChild(opt);
+        });
+      }
+    }catch(_){
+      sel.innerHTML = '<option value="">無法載入守護神</option>';
+    }
+  }
   async function issue(){
     const deity = (document.getElementById('cpnDeity').value||'').trim().toUpperCase();
     const amount = Number(document.getElementById('cpnAmount').value||200)||200;
@@ -93,6 +136,7 @@
     document.getElementById('cpnResult').style.display='none';
     document.getElementById('cpnError').style.display='none';
   });
+  loadDeities();
 </script>
 </body>
 </html>
