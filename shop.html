@@ -2319,24 +2319,33 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     var qd = (sp.get('deity') || '').trim();
     var qa = Number(sp.get('amount') || sp.get('off') || 200) || 200;
     if (qc){
-      var obj = { code: qc, deity: qd || '', amount: qa };
-      // 推入多券系統（避免重複）
-      var cur = getCartCoupons();
-      var dup = cur.some(function(c){ return String(c.code||'').toUpperCase() === qc.toUpperCase(); });
-      if (!dup){
-        cur.push(obj);
-        setCartCoupons(cur);
-      }
-      // 也寫入舊版 activeCoupon，供 direct-buy 流程使用
-      try{
-        localStorage.setItem('__activeCoupon__', JSON.stringify(obj));
-        window.__coupon = window.__coupon || {};
-        window.__coupon.getActiveCoupon = function(){
-          try{ var raw=localStorage.getItem('__activeCoupon__'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
-        };
-      }catch(_){}
-      try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
-      try{ if (typeof updateCartTotals === 'function') updateCartTotals(); }catch(_){}
+      (async function(){
+        try{
+          // 先向後端檢查券狀態，避免已使用的券被重複自動套用
+          var res = await checkCoupon(qc.toUpperCase(), qd || '');
+          if (!res || res.ok === false){
+            return;
+          }
+          var obj = { code: res.code || qc, deity: res.deity || qd || '', amount: Number(res.amount||qa)||qa };
+          // 推入多券系統（避免重複）
+          var cur = getCartCoupons();
+          var dup = cur.some(function(c){ return String(c.code||'').toUpperCase() === String(obj.code||'').toUpperCase(); });
+          if (!dup){
+            cur.push(obj);
+            setCartCoupons(cur);
+          }
+          // 也寫入舊版 activeCoupon，供 direct-buy 流程使用
+          try{
+            localStorage.setItem('__activeCoupon__', JSON.stringify(obj));
+            window.__coupon = window.__coupon || {};
+            window.__coupon.getActiveCoupon = function(){
+              try{ var raw=localStorage.getItem('__activeCoupon__'); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+            };
+          }catch(_){}
+          try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+          try{ if (typeof updateCartTotals === 'function') updateCartTotals(); }catch(_){}
+        }catch(_){}
+      })();
     }
   }catch(_){}
 

@@ -2198,6 +2198,21 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     ...(Object.keys(extra).length ? { extra } : {})
   };
 
+  // 最後保險：若已算出折扣但尚未鎖券，這裡再鎖一次，避免同券重複使用
+  if (couponApplied && couponApplied.discount > 0 && !couponApplied.locked) {
+    try{
+      const codesToLock = Array.from(new Set(
+        (couponApplied.codes && couponApplied.codes.length ? couponApplied.codes : [couponApplied.code])
+          .map(c=> String(c||'').toUpperCase())
+          .filter(Boolean)
+      ));
+      for (const c of codesToLock){
+        await markCouponUsageOnce(env, c, newId);
+      }
+      couponApplied.locked = true;
+    }catch(_){}
+  }
+
   return { order, items, couponApplied, couponCode, couponDeity, useCartOnly };
 }
 
