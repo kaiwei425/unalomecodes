@@ -40,6 +40,17 @@
     document.querySelectorAll('[data-admin-only]').forEach(el=>{
       el.style.display = state.admin ? '' : 'none';
     });
+    document.querySelectorAll('[data-admin-login]').forEach(el=>{
+      if (logged && !state.admin){
+        el.style.display = '';
+        try{
+          const path = window.location.pathname + window.location.search + window.location.hash;
+          el.setAttribute('href', `/api/auth/google/admin/start?redirect=${encodeURIComponent(path || '/admin/')}`);
+        }catch(_){}
+      }else{
+        el.style.display = 'none';
+      }
+    });
   }
 
   function notifyProfile(){
