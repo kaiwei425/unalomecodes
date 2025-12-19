@@ -72,7 +72,9 @@ async function redeemCoupon(env, { code, deity, orderId }){
     }
     if (request.method === 'POST' || request.method === 'PATCH') {
       try{
-        const body = await request.json();
+        const raw = await request.text();
+        let body = {};
+        try{ body = JSON.parse(raw||'{}'); }catch(_){ body = {}; }
         const store = {
           id: String(body.id || body.storeid || '').trim(),
           name: String(body.name || body.storename || '').trim(),
