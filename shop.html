@@ -2342,6 +2342,19 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           // 先向後端檢查券狀態，避免已使用的券被重複自動套用
           var res = await checkCoupon(qc.toUpperCase(), qd || '');
           if (!res || res.ok === false){
+            // 若無效則移除本地殘留
+            try{ removeCartCoupon(qc); }catch(_){}
+            try{
+              var ac = localStorage.getItem('__activeCoupon__');
+              if (ac){
+                var obj = JSON.parse(ac);
+                if (obj && String(obj.code||'').toUpperCase() === qc.toUpperCase()){
+                  localStorage.removeItem('__activeCoupon__');
+                }
+              }
+            }catch(_){}
+            try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+            try{ if (typeof updateCartTotals === 'function') updateCartTotals(); }catch(_){}
             return;
           }
           var obj = { code: res.code || qc, deity: res.deity || qd || '', amount: Number(res.amount||qa)||qa };
@@ -2365,6 +2378,50 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }catch(_){}
       })();
     }
+    // 進站時同步檢查本地已存的優惠券，清掉已失效/已使用的
+    (async function(){
+      try{
+        var coupons = getCartCoupons();
+        var active = null;
+        try{
+          var acRaw = localStorage.getItem('__activeCoupon__');
+          active = acRaw ? JSON.parse(acRaw) : null;
+        }catch(_){}
+        var codes = [];
+        coupons.forEach(function(c){
+          if (c && c.code) codes.push({ code:String(c.code).toUpperCase(), deity:c.deity||'' });
+        });
+        if (active && active.code){
+          var up = String(active.code).toUpperCase();
+          var exists = codes.some(function(x){ return x.code === up; });
+          if (!exists) codes.push({ code:up, deity: active.deity || '' });
+        }
+        if (!codes.length) return;
+        var toRemove = [];
+        for (var i=0;i<codes.length;i++){
+          var c = codes[i];
+          var res = await checkCoupon(c.code, c.deity || '');
+          if (!res || res.ok === false){
+            toRemove.push(c.code);
+          }
+        }
+        if (toRemove.length){
+          var list = getCartCoupons().filter(function(c){ return toRemove.indexOf(String(c.code||'').toUpperCase()) === -1; });
+          setCartCoupons(list);
+          try{
+            var acRaw2 = localStorage.getItem('__activeCoupon__');
+            if (acRaw2){
+              var ac2 = JSON.parse(acRaw2);
+              if (ac2 && toRemove.indexOf(String(ac2.code||'').toUpperCase()) !== -1){
+                localStorage.removeItem('__activeCoupon__');
+              }
+            }
+          }catch(_){}
+          try{ window.__coupon && window.__coupon.updateTotalsDisplay && window.__coupon.updateTotalsDisplay(); }catch(_){}
+          try{ if (typeof updateCartTotals === 'function') updateCartTotals(); }catch(_){}
+        }
+      }catch(_){}
+    })();
   }catch(_){}
 
   // ---------- 基本工具 ----------
