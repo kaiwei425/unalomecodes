@@ -1905,6 +1905,41 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
   }
 }
 
+// Public issuance for quiz flow (no admin key, but deity/amount limited)
+if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
+  if (!env.COUPONS){
+    return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
+  try{
+    const body = await request.json().catch(()=>({}));
+    const deityRaw = String(body.deity || body.code || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(deityRaw)){
+      return new Response(JSON.stringify({ ok:false, error:'Missing or invalid deity' }), { status:400, headers: jsonHeaders });
+    }
+    const amount = Math.min(500, Math.max(1, Number(body.amount || 200) || 200)); // 上限 500，避免濫用
+    let code = '';
+    for (let i=0;i<5;i++){
+      const cand = makeCouponCode(deityRaw);
+      const exists = await env.COUPONS.get(couponKey(cand));
+      if (!exists){ code = cand; break; }
+    }
+    if (!code) code = makeCouponCode(deityRaw);
+    const now = new Date().toISOString();
+    const rec = {
+      code,
+      deity: deityRaw,
+      amount,
+      issuedAt: now,
+      issuedFrom: 'quiz',
+      used: false
+    };
+    await saveCoupon(env, rec);
+    return new Response(JSON.stringify({ ok:true, code, deity: deityRaw, amount }), { status:200, headers: jsonHeaders });
+  }catch(e){
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
+}
+
 // List coupons (admin)
 if (pathname === '/api/coupons/list' && request.method === 'GET') {
   if (!(await isAdmin(request, env))){

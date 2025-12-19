@@ -152,7 +152,7 @@
 /* =====================
    CONFIG（可改）
 ===================== */
-const API_BASE   = 'https://proud-boat-794c.kaiwei425.workers.dev'; // 取自 worker.js
+const API_BASE   = (function(){ try{ return location.origin; }catch(e){ return 'https://shop.unalomecodes.com'; }})();
 // 使用既有可用的外部網域，以確保「查看完整介紹／分享結果／瀏覽其他守護者」可正常開啟
 const SHARE_PAGE = 'https://unalomecodes.pages.dev/share';
 const DEITY_PAGE = 'https://unalomecodes.pages.dev/deity';
@@ -382,15 +382,14 @@ function generateCoupon(code){
 }
 
 async function issueCoupon(deityCode, amount){
-  const token = readQuizToken();
   const payload = { deity: String(deityCode||'').toUpperCase(), amount: Number(amount||200) };
   const headers = { 'Content-Type':'application/json' };
-  // quizToken 交給本域 proxy，由 proxy 轉給 coupon service
-  const res = await fetch(`${COUPON_API}/issue`, {
+  // 直接呼叫本站新優惠券系統（公共 quiz 發券端點）
+  const res = await fetch(`${COUPON_API}/issue-quiz`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ ...payload, quizToken: token }),
-    credentials: 'omit',
+    body: JSON.stringify(payload),
+    credentials: 'include',
     cache: 'no-store'
   });
   if (!res.ok) throw new Error(`ISSUE_FAILED_${res.status}`);
