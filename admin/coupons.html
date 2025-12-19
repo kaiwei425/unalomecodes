@@ -121,6 +121,11 @@
     XZ:'徐祝老人（XZ）',
     HP:'魂魄勇（HP）'
   };
+  const NAME_TO_CODE = {};
+  Object.entries(DEITY_LABELS).forEach(([code,label])=>{
+    const plain = label.replace(/（.*?）/g,'').trim().replace(/\s+/g,'');
+    NAME_TO_CODE[plain] = code;
+  });
   const FALLBACK_DEITIES = Object.keys(DEITY_LABELS);
   async function loadDeities(){
     const sel = document.getElementById('cpnDeity');
@@ -131,13 +136,20 @@
       const data = await res.json();
       const items = Array.isArray(data.items) ? data.items : [];
       items.forEach(p=>{
-        if (p && p.deity){
-          set.add(String(p.deity).toUpperCase());
-        }
-        // 若產品有 deityCode 也加入
-        if (p && p.deityCode){
-          set.add(String(p.deityCode).toUpperCase());
-        }
+        const candidates = [];
+        if (p && p.deity) candidates.push(String(p.deity));
+        if (p && p.deityCode) candidates.push(String(p.deityCode));
+        candidates.forEach(raw=>{
+          let code = '';
+          const up = raw.trim().toUpperCase();
+          if (/^[A-Z]{2}$/.test(up)) code = up;
+          else if (DEITY_LABELS[up]) code = up;
+          else {
+            const flat = raw.replace(/\s+/g,'');
+            if (NAME_TO_CODE[flat]) code = NAME_TO_CODE[flat];
+          }
+          if (code) set.add(code);
+        });
       });
       const list = Array.from(set).sort();
       if (!list.length){
