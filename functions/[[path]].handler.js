@@ -1288,20 +1288,9 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       };
     }
 
+    // 會員折扣暫時關閉
     let memberDiscount = 0;
     let perkInfo = null;
-    if (bankUserRecord){
-      const perk = getAvailableMemberDiscount(bankUserRecord);
-      if (perk){
-        memberDiscount = Math.min(perk.amount, amount);
-        if (memberDiscount > 0){
-          amount = Math.max(0, amount - memberDiscount);
-          perkInfo = perk;
-        } else {
-          memberDiscount = 0;
-        }
-      }
-    }
 
     const now = new Date().toISOString();
     const order = {
@@ -1323,7 +1312,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       results: [],
       coupon: couponApplied || undefined,
       couponAssignment: clientAssignment || undefined,
-      memberDiscount: memberDiscount ? { amount: memberDiscount, perk: perkInfo?.key } : undefined,
+      // memberDiscount: 暫不使用
       ...(Object.keys(extra).length ? { extra } : {})
     };
 
@@ -1352,9 +1341,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       console.error('sendOrderEmails(bank) error', err);
     }
 
-    if (memberDiscount > 0 && perkInfo){
-      await markMemberDiscountUsed(env, bankUserRecord, perkInfo.key, order.id);
-    }
+    // 會員折扣暫不啟用，因此不需標記使用狀態
     try{
       await updateUserDefaultContact(env, bankUser.id, {
         name: buyer.name || '',
@@ -3560,21 +3547,9 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       account: transferAccount,
       uploadedAt: new Date().toISOString()
     };
+    // 會員折扣暫不啟用
     let memberDiscount = 0;
     let perkInfo = null;
-    if (svcUserRecord){
-      const perk = getAvailableMemberDiscount(svcUserRecord);
-      if (perk){
-        memberDiscount = Math.min(perk.amount, finalPrice);
-        if (memberDiscount > 0){
-          finalPrice = Math.max(0, finalPrice - memberDiscount);
-          transfer.amount = Math.max(0, Number(transfer.amount || finalPrice) - memberDiscount);
-          perkInfo = perk;
-        } else {
-          memberDiscount = 0;
-        }
-      }
-    }
 
     const order = {
       id: orderId,
@@ -3596,8 +3571,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       channel: '服務型商品',
       transfer,
       transferLast5: transferLast5,
-      ritualPhotoUrl: ritualPhotoUrl || undefined,
-      memberDiscount: memberDiscount ? { amount: memberDiscount, perk: perkInfo?.key } : undefined
+      ritualPhotoUrl: ritualPhotoUrl || undefined
     };
     const store = env.SERVICE_ORDERS || env.ORDERS;
     if (!store){
@@ -3631,9 +3605,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }catch(err){
       console.error('service order email error', err);
     }
-    if (memberDiscount > 0 && perkInfo){
-      await markMemberDiscountUsed(env, svcUserRecord, perkInfo.key, order.id);
-    }
+    // 會員折扣關閉，無需記錄使用
     try{
       await updateUserDefaultContact(env, svcUser.id, {
         name: buyer.name || '',

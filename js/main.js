@@ -19,8 +19,8 @@ async function loadProducts(){
   try{
     const res = await fetch('/api/products?active=true',{cache:'no-store'});
     const data = await res.json();
-    if(!data.ok){ throw new Error('API error'); }
-    rawItems = data.items || [];
+    if (data.ok === false){ throw new Error('API error'); }
+    rawItems = Array.isArray(data.items) ? data.items : [];
     populateDeityFilter(rawItems);
     applyFilter();
     banner.style.display = rawItems.length ? 'none' : 'block';
@@ -28,6 +28,7 @@ async function loadProducts(){
   }catch(e){
     banner.style.display = 'block';
     banner.textContent = '讀取商品失敗，請稍後再試';
+    console.error('loadProducts error', e);
   }
 }
 

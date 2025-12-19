@@ -90,16 +90,8 @@ function applyBankProfile(profile){
 
 function updateMemberPerkHint(profile){
   if (!memberPerkHintEl) return;
-  const perk = profile && profile.memberPerks ? profile.memberPerks.welcomeDiscount : null;
-  if (perk && !perk.used && Number(perk.amount||0) > 0){
-    memberPerkHintEl.textContent = `會員專屬優惠：本次訂單將再折 NT$ ${Number(perk.amount).toLocaleString('zh-TW')}`;
-    memberPerkHintEl.style.display = 'block';
-  }else if (perk && perk.used){
-    memberPerkHintEl.textContent = '已使用會員專屬優惠';
-    memberPerkHintEl.style.display = 'block';
-  }else{
-    memberPerkHintEl.style.display = 'none';
-  }
+  // 暫不顯示會員折扣
+  memberPerkHintEl.style.display = 'none';
 }
 
 function maybeSaveDefaultStore(){
