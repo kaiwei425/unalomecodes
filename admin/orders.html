@@ -698,7 +698,9 @@ const items = Array.isArray(o.items) ? o.items : [{
 }
 
 // init
-loadOrders();
+document.addEventListener('DOMContentLoaded', ()=>{
+  try{ loadOrders(); }catch(e){ console.error('init loadOrders error', e); }
+});
 
 // sort change
 const sortSel = document.getElementById('sortSel');
