@@ -588,6 +588,21 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         pendingText = document.getElementById('orderPendingText');
       }
 
+      const auth = window.authState;
+      const loggedIn = !!(auth && typeof auth.isLoggedIn === 'function' ? auth.isLoggedIn() : false);
+      if (!loggedIn){
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+        if (auth && typeof auth.promptLogin === 'function'){
+          auth.promptLogin('請先登入後再送出匯款資料。');
+        }else{
+          alert('請先登入後再送出匯款資料。');
+          window.location.href = '/api/auth/google/login';
+        }
+        return;
+      }
+
       if (pendingOverlay) {
         pendingOverlay.style.display = 'flex';
         if (pendingText) pendingText.textContent = '訂單送出中，請稍候...';

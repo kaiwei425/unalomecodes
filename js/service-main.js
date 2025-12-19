@@ -865,6 +865,15 @@
     checkoutForm.addEventListener('submit', async ev=>{
       ev.preventDefault();
       if (checkoutStep !== 2 || !checkoutSubmitBtn) return;
+      if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+        if (window.authState && typeof window.authState.promptLogin === 'function'){
+          window.authState.promptLogin('請先登入後再送出匯款資料。');
+        }else{
+          alert('請先登入後再送出匯款資料。');
+          window.location.href = '/api/auth/google/login';
+        }
+        return;
+      }
       const serviceIdFromInput = checkoutServiceIdInput ? checkoutServiceIdInput.value : '';
       const serviceId = serviceIdFromInput || (checkoutForm && checkoutForm.dataset ? checkoutForm.dataset.serviceId : '') || '';
       if (!serviceId){

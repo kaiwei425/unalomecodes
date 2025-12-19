@@ -47,19 +47,25 @@
         <div class="t2">unalome象徵人生修行並通往覺悟的道路</div>
       </div>
     </div>
-    <div class="filters">
-      <select id="fDeity">
-        <option value="">全部神祇</option>
-      </select>
-      <select id="fSort">
-        <option value="">排序：預設</option>
-        <option value="sold-desc">已售出（多→少）</option>
-        <option value="price-asc">價格（低→高）</option>
-        <option value="price-desc">價格（高→低）</option>
-        <option value="newest">最新上架</option>
-      </select>
-      <input id="fMin" type="number" placeholder="最低價">
-      <input id="fMax" type="number" placeholder="最高價">
+    <div class="top-tools">
+      <div class="filters">
+        <select id="fDeity">
+          <option value="">全部神祇</option>
+        </select>
+        <select id="fSort">
+          <option value="">排序：預設</option>
+          <option value="sold-desc">已售出（多→少）</option>
+          <option value="price-asc">價格（低→高）</option>
+          <option value="price-desc">價格（高→低）</option>
+          <option value="newest">最新上架</option>
+        </select>
+        <input id="fMin" type="number" placeholder="最低價">
+        <input id="fMax" type="number" placeholder="最高價">
+      </div>
+      <div class="auth-widget" data-auth-widget>
+        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+        <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+      </div>
     </div>
   </div>
 
@@ -5249,6 +5255,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/cart.js"></script>
 <script src="/js/ui.js"></script>
 <script src="/js/main.js"></script>
+<script src="/js/auth.js"></script>
 <script src="/js/checkout.js"></script>
 <!-- Fallback binder for信用卡按鈕：若主程式未綁定，確保至少能呼叫 openCreditDialog 或提示重整 -->
 <script>

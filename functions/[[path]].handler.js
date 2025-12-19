@@ -333,6 +333,7 @@ export async function onRequest(context) {
 
   const url = new URL(request.url);
   const origin = url.origin;
+  const pathname = url.pathname;
   /*__CVS_CALLBACK_MERGE_FINAL__*/
   try{
     const _u = new URL(request.url);
@@ -402,8 +403,6 @@ if (url.pathname === '/payment-result' && request.method === 'POST') {
     }
   }
 
-const { pathname, origin } = url;
-
     // =================================================================
     //  主要 API 路由 (提前處理，避免被 fallback 攔截)
     // =================================================================
@@ -438,8 +437,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
   });
 }
-
-  const pathname = url.pathname;
 
   if (pathname === '/api/auth/google/login') {
     if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
@@ -581,6 +578,10 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
   
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
+  const bankUser = await getSessionUser(request, env);
+  if (!bankUser) {
+    return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
   }
   try {
     // Accept JSON or FormData
@@ -2762,6 +2763,10 @@ if (pathname === '/api/order') {
   }
 
   if (request.method === 'POST') {
+    const orderUser = await getSessionUser(request, env);
+    if (!orderUser) {
+      return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+    }
     try {
       const body = await request.json();
       const productId   = String(body.productId || '');
@@ -3080,6 +3085,10 @@ if (pathname === '/api/service/products' && request.method === 'DELETE') {
 }
 
 if (pathname === '/api/service/order' && request.method === 'POST') {
+  const svcUser = await getSessionUser(request, env);
+  if (!svcUser) {
+    return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+  }
   try{
     const body = await request.json();
     const serviceId = String(body.serviceId||'').trim();
