@@ -50,13 +50,13 @@
       </div>`;
     }).join('');
     div.innerHTML = `
-      ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
       <div class="order-id">${escapeHtml(order.id || order.orderId || '')}</div>
       <div class="order-meta">狀態：<span class="badge-status">${status}</span></div>
       <div class="order-meta">建立時間：${escapeHtml(dateStr)}</div>
       <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
       <div class="order-meta">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
       <div class="order-meta">Email：${escapeHtml(buyer.email || '')}</div>
+      ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
       ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
       ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
       ${itemCards}
