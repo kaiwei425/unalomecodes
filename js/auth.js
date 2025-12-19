@@ -39,9 +39,14 @@
     });
     document.querySelectorAll('[data-admin-only]').forEach(el=>{
       el.style.display = state.admin ? '' : 'none';
-      if (!state.admin){
-        // 確保非 admin 時移除可能殘留的 href
-        if (el.tagName === 'A'){ el.setAttribute('href', '#'); }
+      if (el.tagName === 'A'){
+        if (state.admin){
+          const target = el.getAttribute('data-admin-href') || '/admin/';
+          el.setAttribute('href', target);
+        }else{
+          // 確保非 admin 時移除可能殘留的 href
+          el.setAttribute('href', '#');
+        }
       }
     });
     document.querySelectorAll('[data-admin-login]').forEach(el=>{
