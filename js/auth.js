@@ -39,6 +39,10 @@
     });
     document.querySelectorAll('[data-admin-only]').forEach(el=>{
       el.style.display = state.admin ? '' : 'none';
+      if (!state.admin){
+        // 確保非 admin 時移除可能殘留的 href
+        if (el.tagName === 'A'){ el.setAttribute('href', '#'); }
+      }
     });
     document.querySelectorAll('[data-admin-login]').forEach(el=>{
       if (logged && !state.admin){

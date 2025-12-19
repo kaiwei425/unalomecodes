@@ -696,6 +696,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const headers = new Headers({
         'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
       });
+      // 移除可能存在的 admin session，避免一般登入沿用先前的管理員憑證
+      headers.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
       headers.append('Location', `${origin}${redirectPath}`);
@@ -884,7 +886,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
 
   if (pathname === '/api/logout' && request.method === 'POST') {
     return new Response(JSON.stringify({ ok:true }), {
-      headers:{ 'Set-Cookie':'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax' }
+      headers:{
+        'Set-Cookie': [
+          'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax',
+          'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax'
+        ].join(', ')
+      }
     });
   }
 
