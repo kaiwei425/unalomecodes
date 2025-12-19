@@ -844,6 +844,13 @@
         const isOpen = panel.style.display === 'block';
         if (isOpen) close(); else open();
       });
+      panel.addEventListener('click', ev=>{
+        const link = ev.target.closest('a[href]');
+        if (!link) return;
+        ev.preventDefault();
+        close();
+        window.location.href = link.href;
+      });
       document.addEventListener('click', (ev)=>{
         if (!panel.contains(ev.target) && ev.target !== toggle){
           close();

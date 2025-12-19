@@ -7,9 +7,6 @@
   <link rel="stylesheet" href="/css/style.css">
   <style>
 body.service-view{background:var(--bg);color:var(--fg);}
-.service-top .service-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.service-top .service-actions .btn{border-radius:999px;padding:8px 14px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:pointer;text-decoration:none;}
-.service-top .service-actions .btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border-color:#1095d6;box-shadow:0 8px 18px rgba(16,149,214,.2);}
 .line-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:999px;background:#16a34a;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 6px 14px rgba(22,163,74,.35);}
 .line-btn span{font-size:18px;}
 .service-hero{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);}
@@ -125,10 +122,10 @@ dialog[data-fallback-open]{display:block;}
           <div class="t2">服務型商品專區</div>
         </div>
       </div>
-      <div class="service-actions">
-          <div class="member-menu">
-            <button type="button" id="memberMenuBtnSvc">會員中心 ▾</button>
-            <div class="member-menu-panel" id="memberMenuPanelSvc">
+      <div class="top-actions-right">
+        <div class="member-menu">
+          <button type="button" id="memberMenuBtnSvc">會員中心 ▾</button>
+          <div class="member-menu-panel" id="memberMenuPanelSvc">
             <a href="/account-orders.html">我的訂單</a>
             <a href="/account-store.html">門市預設</a>
           </div>
