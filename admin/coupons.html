@@ -151,7 +151,7 @@
           if (code) set.add(code);
         });
       });
-      const list = Array.from(set).sort();
+      const list = Array.from(set).filter(v=>/^[A-Z]{2}$/.test(v)).sort(); // 僅保留兩碼代碼，避免重複中文名稱
       if (!list.length){
         sel.innerHTML = '<option value="">尚未找到守護神代碼</option>';
       }else{

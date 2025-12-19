@@ -617,7 +617,7 @@ $('#batchDelete').addEventListener('click', async ()=>{
 });
 
 // Export selected to CSV (use backend API so金額/備註/憑證網址都正確)
-$('#exportCsv').addEventListener('click', ()=>{
+$('#exportCsv').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   const ids = Array.from(selected).join(',');
   const url = `${API_BASE}/api/orders/export?ids=${encodeURIComponent(ids)}`;
@@ -701,6 +701,9 @@ const items = Array.isArray(o.items) ? o.items : [{
 document.addEventListener('DOMContentLoaded', ()=>{
   try{ loadOrders(); }catch(e){ console.error('init loadOrders error', e); }
 });
+
+// 保險措施：若 DOMContentLoaded 已經觸發過，仍直接嘗試載入一次
+try{ loadOrders(); }catch(e){ console.error('inline loadOrders error', e); }
 
 // sort change
 const sortSel = document.getElementById('sortSel');
