@@ -26,8 +26,13 @@ async function loadProducts(){
     banner.style.display = rawItems.length ? 'none' : 'block';
     banner.textContent = rawItems.length ? '' : '目前沒有上架商品'; const sk=document.getElementById('skeleton'); if(sk && rawItems.length===0) sk.style.display='none';
   }catch(e){
-    banner.style.display = 'block';
-    banner.textContent = '讀取商品失敗，請稍後再試';
+    // 如果先前已有資料，避免錯誤訊息覆蓋畫面
+    if (rawItems.length){
+      banner.style.display = 'none';
+    }else{
+      banner.style.display = 'block';
+      banner.textContent = '讀取商品失敗，請稍後再試';
+    }
     console.error('loadProducts error', e);
   }
 }
