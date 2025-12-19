@@ -63,33 +63,6 @@ async function redeemCoupon(env, { code, deity, orderId }){
   }catch(e){
     return { ok:false, reason: "fetch_error" };
   }
-
-  if (pathname === '/api/me/store') {
-    const record = await getSessionUserRecord(request, env);
-    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
-    if (request.method === 'GET') {
-      return json({ ok:true, store: record.defaultStore || null });
-    }
-    if (request.method === 'POST' || request.method === 'PATCH') {
-      try{
-        const raw = await request.text();
-        let body = {};
-        try{ body = JSON.parse(raw||'{}'); }catch(_){ body = {}; }
-        const store = {
-          id: String(body.id || body.storeid || '').trim(),
-          name: String(body.name || body.storename || '').trim(),
-          address: String(body.address || body.storeaddress || '').trim(),
-          tel: String(body.tel || body.storetel || '').trim()
-        };
-        await updateUserDefaultStore(env, record.id, store);
-        const refreshed = await loadUserRecord(env, record.id);
-        return json({ ok:true, store: refreshed.defaultStore || store });
-      }catch(_){
-        return json({ ok:false, error:'invalid payload' }, 400);
-      }
-    }
-    return json({ ok:false, error:'method not allowed' }, 405);
-  }
 }
 
 async function generateOrderId(env){
@@ -706,6 +679,33 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return json({ ok:false, error:'unauthenticated' }, 401);
     }
     return json({ ok:true, user });
+  }
+
+  if (pathname === '/api/me/store') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (request.method === 'GET') {
+      return json({ ok:true, store: record.defaultStore || null });
+    }
+    if (request.method === 'POST' || request.method === 'PATCH') {
+      try{
+        const raw = await request.text();
+        let body = {};
+        try{ body = JSON.parse(raw||'{}'); }catch(_){ body = {}; }
+        const store = {
+          id: String(body.id || body.storeid || '').trim(),
+          name: String(body.name || body.storename || '').trim(),
+          address: String(body.address || body.storeaddress || '').trim(),
+          tel: String(body.tel || body.storetel || '').trim()
+        };
+        await updateUserDefaultStore(env, record.id, store);
+        const refreshed = await loadUserRecord(env, record.id);
+        return json({ ok:true, store: refreshed.defaultStore || store });
+      }catch(_){
+        return json({ ok:false, error:'invalid payload' }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
   }
 
   if (pathname === '/api/logout' && request.method === 'POST') {
