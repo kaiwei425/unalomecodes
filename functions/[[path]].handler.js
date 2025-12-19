@@ -2198,7 +2198,7 @@ function composeOrderEmail(order, opts = {}) {
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
+      <p>我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const lookupLine = opts.lookupUrl
@@ -2281,7 +2281,7 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push(lookupText);
     }
   } else {
-    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
+    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);
