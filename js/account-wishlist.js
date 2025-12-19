@@ -45,15 +45,16 @@
       const div = document.createElement('div');
       div.className = 'item';
       const img = (item.images && item.images[0]) ? `<img src="${escapeHtml(item.images[0])}" alt="">` : '';
+      const link = `/shop.html#id=${encodeURIComponent(item.id||'')}`;
       div.innerHTML = `
         ${img}
         <div class="meta">
-          <div class="name">${escapeHtml(item.name || '')}</div>
+          <a class="name" href="${link}" target="_blank" rel="noopener" style="color:#0f172a;text-decoration:none;">${escapeHtml(item.name || '')}</a>
           <div class="price">NT$ ${Number(item.price || item.basePrice || 0).toLocaleString('zh-TW')}</div>
           <div class="price">神祇：${escapeHtml(item.deity || '—')}</div>
         </div>
         <div class="actions">
-          <a class="btn primary" href="/shop.html#id=${encodeURIComponent(item.id||'')}" target="_blank" rel="noopener">查看商品</a>
+          <a class="btn primary" href="${link}" target="_blank" rel="noopener">查看商品</a>
           <button class="btn" data-remove="${escapeHtml(item.id||'')}">移除</button>
         </div>
       `;
