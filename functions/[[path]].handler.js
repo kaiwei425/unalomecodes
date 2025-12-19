@@ -44,9 +44,21 @@ function getCouponAPI(env){
   const base = (env && env.COUPON_API_BASE) ? String(env.COUPON_API_BASE).trim() : "https://coupon-service.kaiwei425.workers.dev";
   return /\/$/.test(base) ? base.slice(0,-1) : base;
 }
+function inferCouponDeity(code, hint){
+  try{
+    const h = String(hint || '').trim().toUpperCase();
+    if (h) return h;
+    const c = String(code || '').trim().toUpperCase();
+    const m = c.match(/UC-([A-Z]{2})-/);
+    if (m && m[1]) return m[1];
+    return '';
+  }catch(e){ return ''; }
+}
 async function redeemCoupon(env, { code, deity, orderId }){
   const api = getCouponAPI(env);
   if (!code) return { ok:false, reason:"missing_code" };
+  const codeNorm = String(code||"").toUpperCase();
+  const deityNorm = inferCouponDeity(codeNorm, deity);
   try{
     const resp = await fetch(api + "/redeem", {
       method: "POST",
@@ -55,11 +67,12 @@ async function redeemCoupon(env, { code, deity, orderId }){
         // SHOP_SHARED_TOKEN must be configured in this Worker (Variables → Secret)
         "x-shop-token": String(env.SHOP_SHARED_TOKEN || "")
       },
-      body: JSON.stringify({ code: String(code||"").toUpperCase(), deity: String(deity||"").toUpperCase(), orderId: orderId ? String(orderId) : undefined })
+      body: JSON.stringify({ code: codeNorm, deity: deityNorm, orderId: orderId ? String(orderId) : undefined })
     });
     const j = await resp.json().catch(()=>({ ok:false }));
     if (!j || !j.ok) return { ok:false, reason: (j && (j.reason||j.error)) || "redeem_failed" };
-    return { ok:true, amount: Number(j.amount||200)||200, deity: String(j.deity||"").toUpperCase() };
+    const resolvedDeity = inferCouponDeity(codeNorm, j.deity || deityNorm);
+    return { ok:true, amount: Number(j.amount||200)||200, deity: resolvedDeity };
   }catch(e){
     return { ok:false, reason: "fetch_error" };
   }
@@ -1151,17 +1164,18 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
 
     // === Coupon (optional): server-verified discount, bound to this order ===
     const couponCode  = String(body.coupon || body.couponCode || "").trim().toUpperCase();
-    let couponDeity   = String(body.coupon_deity || body.deity || "").trim().toUpperCase();
+    let couponDeity   = inferCouponDeity(couponCode, body.coupon_deity || body.deity || "");
     if (!couponDeity && items.length) {
       // 若購物車只有單一守護神，推論其代碼；多種則留空交由券服務驗證 eligible
       const set = new Set(items.map(it => String(it.deity||'').toUpperCase()).filter(Boolean));
       couponDeity = (set.size === 1) ? Array.from(set)[0] : '';
     }
     const rawCoupons = Array.isArray(body.coupons) ? body.coupons : [];
-    const normalizedCoupons = rawCoupons.map(c => ({
-      code: String((c && c.code) || '').trim().toUpperCase(),
-      deity: String((c && c.deity) || '').trim().toUpperCase()
-    })).filter(c => c.code);
+    const normalizedCoupons = rawCoupons.map(c => {
+      const code = String((c && c.code) || '').trim().toUpperCase();
+      const deity = inferCouponDeity(code, c && c.deity);
+      return { code, deity };
+    }).filter(c => c.code);
     const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
     const firstCoupon = couponInputs[0] || null;
     const clientAssignment = parseCouponAssignment(body.coupon_assignment || body.couponAssignment);
@@ -1674,13 +1688,14 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
     }
 
     const amount = Math.max(0, Number(result.amount || 200) || 200);
+    const resolvedDeity = inferCouponDeity(code, result.deity || deity);
 
     return new Response(
       JSON.stringify({
         ok: true,
         valid: true,
         code,
-        deity: result.deity || deity,
+        deity: resolvedDeity,
         amount
       }),
       { status: 200, headers: jsonHeaders }
@@ -1763,7 +1778,7 @@ async function computeServerDiscount(env, items, couponInputs, orderId) {
 
   for (const c of (couponInputs || [])) {
     const code = (c.code || '').toUpperCase();
-    const deity = (c.deity || '').toUpperCase();
+    const deity = inferCouponDeity(code, c.deity);
     if (!code) continue;
 
     try {
@@ -1870,16 +1885,17 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   const newId = await generateOrderId(env);
 
   const couponCode  = String(body.coupon || body.couponCode || "").trim().toUpperCase();
-  let couponDeity   = String(body.coupon_deity || body.deity || "").trim().toUpperCase();
+  let couponDeity   = inferCouponDeity(couponCode, body.coupon_deity || body.deity || "");
   if (!couponDeity && items.length) {
     const set = new Set(items.map(it => String(it.deity||'').toUpperCase()).filter(Boolean));
     couponDeity = (set.size === 1) ? Array.from(set)[0] : '';
   }
   const rawCoupons = Array.isArray(body.coupons) ? body.coupons : [];
-  const normalizedCoupons = rawCoupons.map(c => ({
-    code: String((c && c.code) || '').trim().toUpperCase(),
-    deity: String((c && c.deity) || '').trim().toUpperCase()
-  })).filter(c => c.code);
+  const normalizedCoupons = rawCoupons.map(c => {
+    const code = String((c && c.code) || '').trim().toUpperCase();
+    const deity = inferCouponDeity(code, c && c.deity);
+    return { code, deity };
+  }).filter(c => c.code);
   const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
   const firstCoupon = couponInputs[0] || null;
   const clientAssignment = parseCouponAssignment(body.coupon_assignment || body.couponAssignment);
