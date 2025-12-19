@@ -6,6 +6,7 @@
   const telEl = document.getElementById('storeTel');
   const saveBtn = document.getElementById('saveStore');
   const backBtn = document.getElementById('backBtn');
+  const openBtn = document.getElementById('openCvsMap');
 
   function fill(store){
     if (!store) return;
@@ -77,6 +78,37 @@
   if (saveBtn){
     saveBtn.addEventListener('click', saveStore);
   }
+
+  if (openBtn){
+    openBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      try{
+        const base = "https://emap.presco.com.tw/c2cemap.ashx";
+        const params = new URLSearchParams();
+        params.set("eshopid", "870");
+        params.set("servicetype", "1");
+        const callbackUrl = new URL("/cvs_callback", location.origin);
+        params.set("url", callbackUrl.toString());
+        const href = base + "?" + params.toString();
+        window.open(href, 'cvs_popup', 'width=980,height=720,resizable=yes,scrollbars=yes');
+      }catch(_){}
+    });
+  }
+
+  window.addEventListener('message', function(ev){
+    try{
+      const d = ev.data || {};
+      if (!d.__cvs_store__) return;
+      const store = {
+        id: d.storeid || '',
+        name: d.storename || '',
+        address: d.storeaddress || '',
+        tel: d.storetel || ''
+      };
+      fill(store);
+      statusEl && (statusEl.textContent = '已選擇門市，按下儲存即可套用。');
+    }catch(_){}
+  });
 
   if (window.authState){
     window.authState.subscribe(user=>{
