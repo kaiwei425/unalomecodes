@@ -698,6 +698,22 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       });
       // 移除可能存在的 admin session，避免一般登入沿用先前的管理員憑證
       headers.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+      // 若為管理員白名單且已設定 ADMIN_JWT_SECRET，直接簽發 admin_session，免二次登入
+      try{
+        const allowed = parseAdminEmails(env);
+        const mail = (user.email || '').toLowerCase();
+        if (allowed.length && allowed.includes(mail) && env.ADMIN_JWT_SECRET){
+          const adminPayload = {
+            sub: user.id || mail,
+            email: mail,
+            name: user.name || mail,
+            role: 'admin',
+            exp: Date.now() + 60 * 60 * 1000 // 1 小時
+          };
+          const adminToken = await signSession(adminPayload, env.ADMIN_JWT_SECRET);
+          headers.append('Set-Cookie', `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+        }
+      }catch(_){}
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
       headers.append('Location', `${origin}${redirectPath}`);
