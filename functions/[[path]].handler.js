@@ -181,6 +181,18 @@ function base64UrlEncode(input){
   return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 
+function base64UrlDecodeToBytes(b64){
+  const normalized = b64.replace(/-/g,'+').replace(/_/g,'/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i=0;i<len;i++){
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 async function signSession(payload, secret){
   const body = JSON.stringify(payload);
   const data = new TextEncoder().encode(body);
@@ -198,8 +210,9 @@ async function verifySessionToken(token, secret){
   if (!token || token.indexOf('.') < 0) return null;
   const [bodyB64, sigProvided] = token.split('.');
   try{
-    const bodyJson = atob(bodyB64.replace(/-/g,'+').replace(/_/g,'/'));
-    const data = new TextEncoder().encode(bodyJson);
+    const bodyBytes = base64UrlDecodeToBytes(bodyB64);
+    const bodyJson = new TextDecoder().decode(bodyBytes);
+    const data = bodyBytes;
     const keyData = new TextEncoder().encode(secret || '');
     const composite = new Uint8Array(keyData.length + data.length + 1);
     composite.set(keyData, 0);
