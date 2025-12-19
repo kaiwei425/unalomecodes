@@ -484,8 +484,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           grant_type: 'authorization_code'
         })
       });
-      const tokens = await tokenRes.json();
-      if (!tokenRes.ok || !tokens.access_token){
+      const tokenText = await tokenRes.text();
+      let tokens = null;
+      try{ tokens = JSON.parse(tokenText); }catch(_){}
+      if (!tokenRes.ok || !tokens || !tokens.access_token){
+        console.error('google token error', tokenRes.status, tokenText);
         return new Response('無法取得 Google token', {
           status:500,
           headers:{ 'Set-Cookie': clearStateCookie }
@@ -494,8 +497,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers:{ Authorization: `Bearer ${tokens.access_token}` }
       });
-      const profile = await infoRes.json().catch(()=>null);
+      const infoText = await infoRes.text();
+      let profile = null;
+      try{ profile = JSON.parse(infoText); }catch(_){}
       if (!infoRes.ok || !profile || !profile.sub){
+        console.error('google userinfo error', infoRes.status, infoText);
         return new Response('取得使用者資訊失敗', {
           status:500,
           headers:{ 'Set-Cookie': clearStateCookie }
@@ -517,6 +523,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       headers.append('Location', `${origin}/`);
       return new Response(null, { status:302, headers });
     }catch(err){
+      console.error('OAuth error', err);
       return new Response('OAuth error', {
         status:500,
         headers:{ 'Set-Cookie': clearStateCookie }
