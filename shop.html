@@ -3802,9 +3802,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
              +  '</td>';
         html += '<td style="padding:6px 4px;vertical-align:top;">'+ tw(unit) +'</td>';
         html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">'
-             +  '<button type="button" class="order-qty-minus" style="width:28px;height:28px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;">-</button>'
-             +  '<input type="number" class="order-qty-input" min="1" value="'+ qty +'" style="width:56px;margin:0 4px;padding:4px 6px;border-radius:8px;border:1px solid #e5e7eb;text-align:center;font-size:13px;">'
-             +  '<button type="button" class="order-qty-plus" style="width:28px;height:28px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;">+</button>'
+             +  '<div class="order-qty-box">'
+             +    '<button type="button" class="order-qty-minus" aria-label="減少數量">-</button>'
+             +    '<input type="number" class="order-qty-input" min="1" value="'+ qty +'" aria-label="商品數量">'
+             +    '<button type="button" class="order-qty-plus" aria-label="增加數量">+</button>'
+             +  '</div>'
              +  '</td>';
         html += '<td style="padding:6px 4px;text-align:right;vertical-align:top;">'+ tw(line) +'</td>';
         html += '<td style="padding:6px 4px;text-align:center;vertical-align:top;">'

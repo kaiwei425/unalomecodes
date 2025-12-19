@@ -45,6 +45,38 @@ html,body{
 .auth-btn{border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 10px 20px rgba(16,149,214,.25);transition:transform .2s ease,filter .2s ease;}
 .auth-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
 .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
+/* Order qty controls */
+.order-qty-box{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:2px 4px;
+  border-radius:14px;
+}
+.order-qty-box button{
+  width:32px;
+  height:32px;
+  border-radius:10px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  cursor:pointer;
+  font-size:16px;
+  line-height:1;
+}
+.order-qty-box .order-qty-input{
+  width:64px;
+  height:34px;
+  padding:4px 6px;
+  border-radius:10px;
+  border:1px solid #e5e7eb;
+  text-align:center;
+  font-size:14px;
+}
+@media(max-width:640px){
+  .order-qty-box{gap:6px;}
+  .order-qty-box button{width:30px;height:30px;font-size:15px;}
+  .order-qty-box .order-qty-input{width:58px;height:32px;font-size:13px;}
+}
 @media(max-width:640px){
   .top{flex-direction:column;align-items:flex-start;}
   .top-actions-right{width:100%;justify-content:flex-start;gap:10px;}
