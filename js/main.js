@@ -145,15 +145,28 @@ document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
 
-// 會員中心側欄折疊
+// 會員中心頂部下拉
 (function(){
-  const toggle = document.getElementById('memberCenterToggle');
-  const panel = document.getElementById('memberCenterPanel');
+  const toggle = document.getElementById('memberMenuBtn');
+  const panel = document.getElementById('memberMenuPanel');
   if (toggle && panel){
-    toggle.addEventListener('click', ()=>{
-      const isOpen = panel.style.display === 'grid';
-      panel.style.display = isOpen ? 'none' : 'grid';
-      toggle.textContent = isOpen ? '會員中心 ▾' : '會員中心 ▴';
+    const close = ()=>{
+      panel.style.display = 'none';
+      toggle.textContent = '會員中心 ▾';
+    };
+    const open = ()=>{
+      panel.style.display = 'block';
+      toggle.textContent = '會員中心 ▴';
+    };
+    toggle.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const isOpen = panel.style.display === 'block';
+      if (isOpen) close(); else open();
+    });
+    document.addEventListener('click', (ev)=>{
+      if (!panel.contains(ev.target) && ev.target !== toggle){
+        close();
+      }
     });
   }
 })();

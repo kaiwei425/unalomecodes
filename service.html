@@ -126,6 +126,14 @@ dialog[data-fallback-open]{display:block;}
         </div>
       </div>
       <div class="service-actions">
+        <div class="member-menu">
+          <button type="button" id="memberMenuBtnSvc">會員中心 ▾</button>
+          <div class="member-menu-panel" id="memberMenuPanelSvc">
+            <a href="/account.html">我的訂單</a>
+            <a href="/account.html#wishlist">我的收藏</a>
+            <a href="#" id="linkDefaultStoreSvcTop">門市預設（待建置）</a>
+          </div>
+        </div>
         <div class="auth-widget" data-auth-widget>
           <span class="auth-status" data-auth-status>登入狀態載入中…</span>
           <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
@@ -143,14 +151,6 @@ dialog[data-fallback-open]{display:block;}
           <div class="list">
             <a href="/shop.html">返回商品館</a>
             <a href="#" id="linkServiceLookup">祈福進度查詢</a>
-            <div class="nested-link">
-              <button type="button" id="memberCenterToggleSvc" class="btn" style="width:100%;justify-content:flex-start;gap:8px;">會員中心 ▾</button>
-              <div id="memberCenterPanelSvc" style="display:none;padding:8px 0 0 0;display:grid;gap:6px;">
-                <a href="/account.html">我的訂單</a>
-                <a href="/account.html#wishlist">我的收藏</a>
-                <a href="#" id="linkDefaultStoreSvc">門市預設（待建置）</a>
-              </div>
-            </div>
             <a class="line-btn" href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener"><span>💬</span>官方LINE客服</a>
           </div>
         </div>

@@ -834,15 +834,28 @@
     }
   }
 
-  // 會員中心折疊（側邊）
+  // 會員中心頂部下拉
   (function(){
-    const toggle = document.getElementById('memberCenterToggleSvc');
-    const panel = document.getElementById('memberCenterPanelSvc');
+    const toggle = document.getElementById('memberMenuBtnSvc');
+    const panel = document.getElementById('memberMenuPanelSvc');
     if (toggle && panel){
-      toggle.addEventListener('click', ()=>{
-        const isOpen = panel.style.display === 'grid';
-        panel.style.display = isOpen ? 'none' : 'grid';
-        toggle.textContent = isOpen ? '會員中心 ▾' : '會員中心 ▴';
+      const close = ()=>{
+        panel.style.display = 'none';
+        toggle.textContent = '會員中心 ▾';
+      };
+      const open = ()=>{
+        panel.style.display = 'block';
+        toggle.textContent = '會員中心 ▴';
+      };
+      toggle.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const isOpen = panel.style.display === 'block';
+        if (isOpen) close(); else open();
+      });
+      document.addEventListener('click', (ev)=>{
+        if (!panel.contains(ev.target) && ev.target !== toggle){
+          close();
+        }
       });
     }
   })();

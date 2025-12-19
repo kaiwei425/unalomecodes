@@ -62,9 +62,19 @@
         <input id="fMin" type="number" placeholder="最低價">
         <input id="fMax" type="number" placeholder="最高價">
       </div>
-      <div class="auth-widget" data-auth-widget>
-        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
-        <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+      <div class="top-actions-right">
+        <div class="member-menu">
+          <button type="button" id="memberMenuBtn">會員中心 ▾</button>
+          <div class="member-menu-panel" id="memberMenuPanel">
+            <a href="/account.html">我的訂單</a>
+            <a href="/account.html#wishlist">我的收藏</a>
+            <a href="#" id="linkDefaultStore">門市預設（待建置）</a>
+          </div>
+        </div>
+        <div class="auth-widget" data-auth-widget>
+          <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+          <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+        </div>
       </div>
     </div>
   </div>
@@ -77,14 +87,6 @@
     <h3>連結</h3>
     <div class="list">
       <a href="#" id="linkOrderLookup">查詢訂單狀態</a>
-      <div class="nested-link">
-        <button type="button" id="memberCenterToggle" class="btn" style="width:100%;justify-content:flex-start;gap:8px;">會員中心 ▾</button>
-        <div id="memberCenterPanel" style="display:none;padding:8px 0 0 0;display:grid;gap:6px;">
-          <a href="/account.html">我的訂單</a>
-          <a href="/account.html#wishlist">我的收藏</a>
-          <a href="#" id="linkDefaultStore">門市預設（待建置）</a>
-        </div>
-      </div>
       <a href="https://unalomecodes.pages.dev/share?view=deity-menu&amp;api=https%3A%2F%2Fproud-boat-794c.kaiwei425.workers.dev" target="_blank" rel="noopener">神祇介紹</a>
       <a href="https://myship.7-11.com.tw/general/detail/GM2509114839878" target="_blank" rel="noopener">7-11賣貨便</a>
     </div>
