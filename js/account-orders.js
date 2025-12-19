@@ -32,35 +32,35 @@
       const svcLine = order.serviceName
         ? `${escapeHtml(order.serviceName)}${order.selectedOption && order.selectedOption.name ? '｜'+escapeHtml(order.selectedOption.name) : ''}`
         : '';
-      const itemsLine = Array.isArray(order.items) && order.items.length
-        ? order.items.map(it=>{
-            const vn = it.variantName ? `（${escapeHtml(it.variantName)}）` : '';
-            return {
-              text: `${escapeHtml(it.productName||it.name||'商品')}${vn}×${Math.max(1, Number(it.qty||1))}`,
-              image: it.image || it.cover || it.thumb || ''
-            };
-          })
-        : [];
-      const dateStr = fmtDate(order.createdAt || '');
-      const itemCards = itemsLine.map(it=>{
-        const img = it.image ? `<img src="${escapeHtml(it.image)}" style="width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);">` : '';
-        return `<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px;background:#f8fafc;">
-          ${img}
-          <div style="font-size:13px;color:#334155;">${it.text}</div>
-        </div>`;
-      }).join('');
-      div.innerHTML = `
-        <div class="order-id">${escapeHtml(order.id || order.orderId || '')}</div>
-        <div class="order-meta">狀態：<span class="badge-status">${status}</span></div>
-        <div class="order-meta">建立時間：${escapeHtml(dateStr)}</div>
-        <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
-        <div class="order-meta">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
-        <div class="order-meta">Email：${escapeHtml(buyer.email || '')}</div>
-        ${itemCards}
-        ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
-        ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
-        ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
-      `;
+    const itemsLine = Array.isArray(order.items) && order.items.length
+      ? order.items.map(it=>{
+          const vn = it.variantName ? `（${escapeHtml(it.variantName)}）` : '';
+          return {
+            text: `${escapeHtml(it.productName||it.name||'商品')}${vn}×${Math.max(1, Number(it.qty||1))}`,
+            image: it.image || it.cover || it.thumb || ''
+          };
+        })
+      : [];
+    const dateStr = fmtDate(order.createdAt || '');
+    const itemCards = itemsLine.map(it=>{
+      const img = it.image ? `<img src="${escapeHtml(it.image)}" style="width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);">` : '';
+      return `<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px;background:#f8fafc;">
+        ${img}
+        <div style="font-size:13px;color:#334155;">${it.text}</div>
+      </div>`;
+    }).join('');
+    div.innerHTML = `
+      ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
+      <div class="order-id">${escapeHtml(order.id || order.orderId || '')}</div>
+      <div class="order-meta">狀態：<span class="badge-status">${status}</span></div>
+      <div class="order-meta">建立時間：${escapeHtml(dateStr)}</div>
+      <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
+      <div class="order-meta">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
+      <div class="order-meta">Email：${escapeHtml(buyer.email || '')}</div>
+      ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
+      ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
+      ${itemCards}
+    `;
       listEl.appendChild(div);
     });
   }
