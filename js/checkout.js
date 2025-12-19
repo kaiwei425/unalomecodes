@@ -61,11 +61,30 @@ function applyBankProfile(profile){
   if (bfEmailInput && !bfEmailInput.value) bfEmailInput.value = source.email || '';
   updateMemberPerkHint(profile);
   if (bfStoreInput && profile.defaultStore){
-    if (profile.defaultStore.name) bfStoreInput.value = profile.defaultStore.name;
-    if (profile.defaultStore.id) bfStoreInput.setAttribute('data-storeid', profile.defaultStore.id);
-    if (profile.defaultStore.name) bfStoreInput.setAttribute('data-storename', profile.defaultStore.name);
-    if (profile.defaultStore.address) bfStoreInput.setAttribute('data-storeaddress', profile.defaultStore.address);
-    if (profile.defaultStore.tel) bfStoreInput.setAttribute('data-storetel', profile.defaultStore.tel);
+    const st = profile.defaultStore || {};
+    const textParts = [];
+    if (st.name) textParts.push(st.name);
+    if (st.id) textParts.push(`(${st.id})`);
+    if (!textParts.length && st.address) textParts.push(st.address);
+    const storeText = textParts.join(' ');
+    if (typeof window.fillStoreIntoForm === 'function'){
+      window.fillStoreIntoForm({
+        storename: st.name || '',
+        storeid: st.id || '',
+        storeaddress: st.address || '',
+        storetel: st.tel || ''
+      });
+    } else {
+      if (storeText) bfStoreInput.value = storeText;
+      if (st.id) bfStoreInput.setAttribute('data-storeid', st.id);
+      if (st.name) bfStoreInput.setAttribute('data-storename', st.name);
+      if (st.address) bfStoreInput.setAttribute('data-storeaddress', st.address);
+      if (st.tel) bfStoreInput.setAttribute('data-storetel', st.tel);
+      const dlgStore = document.getElementById('dlgStoreInput');
+      if (dlgStore && storeText) dlgStore.value = storeText;
+      const ccStore = document.getElementById('ccStore');
+      if (ccStore && storeText) ccStore.value = storeText;
+    }
   }
 }
 
