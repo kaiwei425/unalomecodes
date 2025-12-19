@@ -49,18 +49,6 @@
         }
       }
     });
-    document.querySelectorAll('[data-admin-login]').forEach(el=>{
-      const canShow = logged && state.adminReady && !state.admin;
-      el.style.display = canShow ? '' : 'none';
-      if (canShow){
-        try{
-          const path = window.location.pathname + window.location.search + window.location.hash;
-          el.setAttribute('href', `/api/auth/google/admin/start?redirect=${encodeURIComponent(path || '/admin/')}`);
-        }catch(_){}
-      } else {
-        el.removeAttribute('href');
-      }
-    });
   }
 
   function notifyProfile(){
