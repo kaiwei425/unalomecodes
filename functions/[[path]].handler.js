@@ -250,6 +250,94 @@ async function getSessionUser(request, env){
   return await verifySessionToken(token, env.SESSION_SECRET);
 }
 
+function getUserStore(env){
+  return env.USERS || env.USER_STORE || env.MEMBERS || env.PROFILES || env.ORDERS || null;
+}
+
+function userKey(id){
+  return `USER:${id}`;
+}
+
+async function loadUserRecord(env, id){
+  const store = getUserStore(env);
+  if (!store || !id) return null;
+  try{
+    const raw = await store.get(userKey(id));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  }catch(_){
+    return null;
+  }
+}
+
+async function saveUserRecord(env, data){
+  const store = getUserStore(env);
+  if (!store || !data || !data.id) return null;
+  const now = new Date().toISOString();
+  if (!data.createdAt) data.createdAt = now;
+  data.updatedAt = now;
+  await store.put(userKey(data.id), JSON.stringify(data));
+  return data;
+}
+
+async function ensureUserRecord(env, profile){
+  if (!profile || !profile.id) return null;
+  let record = await loadUserRecord(env, profile.id);
+  const now = new Date().toISOString();
+  if (!record){
+    record = {
+      id: profile.id,
+      createdAt: now,
+      wishlist: [],
+      memberPerks: {}
+    };
+  }
+  record.email = profile.email || record.email || '';
+  record.name = profile.name || record.name || '';
+  record.picture = profile.picture || record.picture || '';
+  record.provider = profile.provider || record.provider || 'google';
+  record.lastLoginAt = now;
+  if (!record.memberPerks) record.memberPerks = {};
+  if (!record.memberPerks.welcomeDiscount){
+    record.memberPerks.welcomeDiscount = {
+      amount: Number(env.MEMBER_DISCOUNT || env.MEMBER_BONUS || 100),
+      used: false
+    };
+  }
+  await saveUserRecord(env, record);
+  return record;
+}
+
+async function updateUserDefaultContact(env, userId, contact){
+  if (!userId || !contact) return;
+  const record = await loadUserRecord(env, userId);
+  if (!record) return;
+  record.defaultContact = Object.assign({}, record.defaultContact || {}, contact);
+  await saveUserRecord(env, record);
+}
+
+async function getSessionUserRecord(request, env){
+  const session = await getSessionUser(request, env);
+  if (!session) return null;
+  return await ensureUserRecord(env, session);
+}
+
+function getAvailableMemberDiscount(record){
+  const perk = record?.memberPerks?.welcomeDiscount;
+  if (!perk) return null;
+  const amount = Number(perk.amount || 0);
+  if (!amount || perk.used) return null;
+  return { key: 'welcomeDiscount', amount };
+}
+
+async function markMemberDiscountUsed(env, record, perkKey, orderId){
+  if (!record || !record.memberPerks || !record.memberPerks[perkKey]) return;
+  record.memberPerks[perkKey].used = true;
+  record.memberPerks[perkKey].usedOrder = orderId;
+  record.memberPerks[perkKey].usedAt = new Date().toISOString();
+  await saveUserRecord(env, record);
+}
+
 // ======== ECPay helpers ========
 function ecpayEndpoint(env){
   const flag = String(env?.ECPAY_STAGE || env?.ECPAY_MODE || "").toLowerCase();
@@ -559,6 +647,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         provider: 'google',
         exp: Date.now() + 30 * 24 * 60 * 60 * 1000
       };
+      await ensureUserRecord(env, user);
       const token = await signSession(user, env.SESSION_SECRET || '');
       const headers = new Headers({
         'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
@@ -588,6 +677,136 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return new Response(JSON.stringify({ ok:true }), {
       headers:{ 'Set-Cookie':'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax' }
     });
+  }
+
+  if (pathname === '/api/me/profile') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    if (request.method === 'PATCH') {
+      try{
+        const body = await request.json();
+        if (body && body.defaultContact){
+          await updateUserDefaultContact(env, record.id, {
+            name: String(body.defaultContact.name || '').trim(),
+            phone: String(body.defaultContact.phone || '').trim(),
+            email: String(body.defaultContact.email || '').trim()
+          });
+          const refreshed = await loadUserRecord(env, record.id);
+          return json({ ok:true, profile: {
+            id: refreshed.id,
+            name: refreshed.name,
+            email: refreshed.email,
+            picture: refreshed.picture,
+            defaultContact: refreshed.defaultContact || null,
+            memberPerks: refreshed.memberPerks || {},
+            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : []
+          }});
+        }
+      }catch(_){}
+      return json({ ok:false, error:'invalid payload' }, 400);
+    }
+    return json({ ok:true, profile: {
+      id: record.id,
+      name: record.name,
+      email: record.email,
+      picture: record.picture,
+      defaultContact: record.defaultContact || null,
+      memberPerks: record.memberPerks || {},
+      wishlist: Array.isArray(record.wishlist) ? record.wishlist : []
+    }});
+  }
+
+  if (pathname === '/api/me/orders' && request.method === 'GET') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    const ordersStore = env.ORDERS;
+    const svcStore = env.SERVICE_ORDERS || env.ORDERS;
+    const out = { physical: [], service: [] };
+    const matchOrder = (order)=>{
+      if (!order) return false;
+      if (order.buyer && order.buyer.uid && order.buyer.uid === record.id) return true;
+      if (record.email){
+        const emails = [
+          order?.buyer?.email,
+          order?.buyer?.contact,
+          order?.email,
+          order?.contact
+        ].filter(Boolean);
+        if (emails.some(e => String(e).toLowerCase() === record.email.toLowerCase())) return true;
+      }
+      return false;
+    };
+    if (ordersStore) {
+      try{
+        const idxRaw = await ordersStore.get(ORDER_INDEX_KEY);
+        const ids = idxRaw ? JSON.parse(idxRaw) : [];
+        for (const id of ids.slice(0, 200)){
+          const raw = await ordersStore.get(id);
+          if (!raw) continue;
+          try{
+            const order = JSON.parse(raw);
+            if (matchOrder(order)){
+              out.physical.push(Object.assign({ id }, order));
+            }
+          }catch(_){}
+        }
+      }catch(_){}
+    }
+    if (svcStore){
+      try{
+        const idxRaw = await svcStore.get('SERVICE_ORDER_INDEX');
+        const ids = idxRaw ? JSON.parse(idxRaw) : [];
+        for (const id of ids.slice(0, 200)){
+          const raw = await svcStore.get(id);
+          if (!raw) continue;
+          try{
+            const order = JSON.parse(raw);
+            if (matchOrder(order)){
+              out.service.push(Object.assign({ id }, order));
+            }
+          }catch(_){}
+        }
+      }catch(_){}
+    }
+    return json({ ok:true, orders: out });
+  }
+
+  if (pathname === '/api/me/wishlist') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    const store = getUserStore(env);
+    if (request.method === 'POST') {
+      try{
+        const body = await request.json();
+        const pid = String(body.productId || '').trim();
+        if (!pid) return json({ ok:false, error:'missing productId' }, 400);
+        const action = (body.action || 'toggle').toLowerCase();
+        const list = Array.isArray(record.wishlist) ? record.wishlist.slice() : [];
+        const idx = list.indexOf(pid);
+        if (action === 'remove') {
+          if (idx !== -1) list.splice(idx,1);
+        } else {
+          if (idx === -1) list.unshift(pid);
+        }
+        record.wishlist = list.slice(0, 200);
+        await saveUserRecord(env, record);
+        return json({ ok:true, wishlist: record.wishlist });
+      }catch(_){
+        return json({ ok:false, error:'invalid payload' }, 400);
+      }
+    }
+    const wishlistIds = Array.isArray(record.wishlist) ? record.wishlist : [];
+    const products = [];
+    if (wishlistIds.length && env.PRODUCTS){
+      for (const pid of wishlistIds.slice(0, 30)){
+        const raw = await env.PRODUCTS.get(`PRODUCT:${pid}`);
+        if (!raw) continue;
+        try{ products.push(JSON.parse(raw)); }catch(_){}
+      }
+    }
+    return json({ ok:true, wishlist: wishlistIds, items: products });
   }
 
 function __headersJSON__() {
@@ -635,6 +854,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
   if (!bankUser) {
     return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
   }
+  const bankUserRecord = await ensureUserRecord(env, bankUser);
   try {
     // Accept JSON or FormData
     let body = {};
@@ -815,6 +1035,16 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       phone: String((body?.buyer?.phone) || body?.phone || body?.contact || body?.buyer_phone || body?.bfContact || ''),
       store: String((body?.buyer?.store) || body?.store || body?.buyer_store || body?.storeid   || '')
     };
+    if (bankUserRecord && bankUserRecord.defaultContact){
+      if (!buyer.name) buyer.name = bankUserRecord.defaultContact.name || '';
+      if (!buyer.phone) buyer.phone = bankUserRecord.defaultContact.phone || '';
+      if (!buyer.email) buyer.email = bankUserRecord.defaultContact.email || '';
+    }
+    if (bankUser){
+      if (!buyer.name) buyer.name = bankUser.name || '';
+      if (!buyer.email) buyer.email = bankUser.email || '';
+      buyer.uid = bankUser.id;
+    }
     const transferLast5 = String(body?.transferLast5 || body?.last5 || body?.bfLast5 || '').trim();
     const receiptUrl = (() => {
       let u = body?.receiptUrl || body?.receipt || body?.proof || body?.proofUrl || body?.screenshot || body?.upload || '';
@@ -996,6 +1226,21 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       };
     }
 
+    let memberDiscount = 0;
+    let perkInfo = null;
+    if (bankUserRecord){
+      const perk = getAvailableMemberDiscount(bankUserRecord);
+      if (perk){
+        memberDiscount = Math.min(perk.amount, amount);
+        if (memberDiscount > 0){
+          amount = Math.max(0, amount - memberDiscount);
+          perkInfo = perk;
+        } else {
+          memberDiscount = 0;
+        }
+      }
+    }
+
     const now = new Date().toISOString();
     const order = {
       id: newId,
@@ -1016,6 +1261,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       results: [],
       coupon: couponApplied || undefined,
       couponAssignment: clientAssignment || undefined,
+      memberDiscount: memberDiscount ? { amount: memberDiscount, perk: perkInfo?.key } : undefined,
       ...(Object.keys(extra).length ? { extra } : {})
     };
 
@@ -1043,6 +1289,17 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     } catch (err) {
       console.error('sendOrderEmails(bank) error', err);
     }
+
+    if (memberDiscount > 0 && perkInfo){
+      await markMemberDiscountUsed(env, bankUserRecord, perkInfo.key, order.id);
+    }
+    try{
+      await updateUserDefaultContact(env, bankUser.id, {
+        name: buyer.name || '',
+        phone: buyer.phone || '',
+        email: buyer.email || ''
+      });
+    }catch(_){}
 
     return new Response(JSON.stringify({ ok:true, id: order.id, order }), { status:200, headers: jsonHeaders });
   } catch (e) {
@@ -3141,6 +3398,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
   if (!svcUser) {
     return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
   }
+  const svcUserRecord = await ensureUserRecord(env, svcUser);
   try{
     const body = await request.json();
     const serviceId = String(body.serviceId||'').trim();
@@ -3175,6 +3433,16 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       birth: String(body.birth||'').trim(),
       line: String(body.line||'').trim()
     };
+    if (svcUserRecord && svcUserRecord.defaultContact){
+      if (!buyer.name) buyer.name = svcUserRecord.defaultContact.name || '';
+      if (!buyer.phone) buyer.phone = svcUserRecord.defaultContact.phone || '';
+      if (!buyer.email) buyer.email = svcUserRecord.defaultContact.email || '';
+    }
+    if (svcUser){
+      buyer.uid = svcUser.id;
+      if (!buyer.email) buyer.email = svcUser.email || '';
+      if (!buyer.name) buyer.name = svcUser.name || buyer.name;
+    }
     const options = Array.isArray(svc.options) ? svc.options : [];
     let baseCount = Number(body.baseCount || 0);
     if (!Number.isFinite(baseCount) || baseCount < 0) baseCount = 0;
@@ -3230,6 +3498,22 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       account: transferAccount,
       uploadedAt: new Date().toISOString()
     };
+    let memberDiscount = 0;
+    let perkInfo = null;
+    if (svcUserRecord){
+      const perk = getAvailableMemberDiscount(svcUserRecord);
+      if (perk){
+        memberDiscount = Math.min(perk.amount, finalPrice);
+        if (memberDiscount > 0){
+          finalPrice = Math.max(0, finalPrice - memberDiscount);
+          transfer.amount = Math.max(0, Number(transfer.amount || finalPrice) - memberDiscount);
+          perkInfo = perk;
+        } else {
+          memberDiscount = 0;
+        }
+      }
+    }
+
     const order = {
       id: orderId,
       type: 'service',
@@ -3250,7 +3534,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       channel: '服務型商品',
       transfer,
       transferLast5: transferLast5,
-      ritualPhotoUrl: ritualPhotoUrl || undefined
+      ritualPhotoUrl: ritualPhotoUrl || undefined,
+      memberDiscount: memberDiscount ? { amount: memberDiscount, perk: perkInfo?.key } : undefined
     };
     const store = env.SERVICE_ORDERS || env.ORDERS;
     if (!store){
@@ -3284,6 +3569,16 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }catch(err){
       console.error('service order email error', err);
     }
+    if (memberDiscount > 0 && perkInfo){
+      await markMemberDiscountUsed(env, svcUserRecord, perkInfo.key, order.id);
+    }
+    try{
+      await updateUserDefaultContact(env, svcUser.id, {
+        name: buyer.name || '',
+        phone: buyer.phone || '',
+        email: buyer.email || ''
+      });
+    }catch(_){}
     return new Response(JSON.stringify({ ok:true, orderId }), { status:200, headers: jsonHeaders });
   }catch(e){
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });

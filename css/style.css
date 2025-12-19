@@ -91,6 +91,17 @@ html,body{
 .btn.link:hover{
   filter:brightness(1.1);
 }
+.wishlist-btn{
+  flex:0 0 auto;
+  min-width:110px;
+  background:#fff;
+  color:#0f172a;
+}
+.wishlist-btn.active{
+  background:#fee2e2;
+  border-color:#f87171;
+  color:#b91c1c;
+}
   .empty{opacity:.85;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:14px;margin-top:12px;background:var(--card)}
   .footer{margin:28px 0 8px;color:var(--muted);font-size:12px;text-align:center}
 

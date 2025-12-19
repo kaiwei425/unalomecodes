@@ -1,6 +1,7 @@
 (function(){
-  const state = { user:null, ready:false, loading:false };
+  const state = { user:null, ready:false, loading:false, profile:null };
   const listeners = [];
+  const profileListeners = [];
   const loginUrl = '/api/auth/google/login';
 
   function notify(){
@@ -37,6 +38,32 @@
     });
   }
 
+  function notifyProfile(){
+    profileListeners.forEach(fn=>{
+      try{ fn(state.profile); }catch(_){}
+    });
+  }
+
+  async function refreshProfile(){
+    if (!state.user){
+      state.profile = null;
+      notifyProfile();
+      return;
+    }
+    try{
+      const res = await fetch('/api/me/profile', { credentials:'include' });
+      if (res.ok){
+        const data = await res.json().catch(()=>null);
+        state.profile = data && data.profile ? data.profile : null;
+      }else{
+        state.profile = null;
+      }
+    }catch(_){
+      state.profile = null;
+    }
+    notifyProfile();
+  }
+
   async function refreshUser(){
     state.loading = true;
     updateWidgets();
@@ -59,6 +86,7 @@
     state.ready = true;
     updateWidgets();
     notify();
+    refreshProfile();
   }
 
   function login(){
@@ -76,7 +104,9 @@
       await fetch('/api/logout', { method:'POST', credentials:'include' });
     }catch(_){}
     state.user = null;
+    state.profile = null;
     updateWidgets();
+    notifyProfile();
     window.location.reload();
   }
 
@@ -115,16 +145,26 @@
 
   window.authState = {
     getUser: ()=>state.user,
+    getProfile: ()=>state.profile,
     isLoggedIn,
     login,
     logout,
     promptLogin,
     requireLogin,
+    refreshProfile,
     subscribe(fn){
       if (typeof fn === 'function'){
         listeners.push(fn);
         if (state.ready){
           try{ fn(state.user); }catch(_){}
+        }
+      }
+    },
+    onProfile(fn){
+      if (typeof fn === 'function'){
+        profileListeners.push(fn);
+        if (state.ready){
+          try{ fn(state.profile); }catch(_){}
         }
       }
     }

@@ -3,6 +3,23 @@ const banner = document.getElementById('banner');
 
 let rawItems = [];
 let viewItems = [];
+let wishlistIds = [];
+
+function refreshWishlistButtons(){
+  document.querySelectorAll('button[data-wishlist]').forEach(btn=>{
+    const id = btn.getAttribute('data-wishlist');
+    const active = wishlistIds.includes(String(id));
+    btn.classList.toggle('active', active);
+    btn.innerHTML = active ? '❤️ 已收藏' : '🤍 收藏';
+  });
+}
+
+if (window.wishlist){
+  window.wishlist.subscribe(ids=>{
+    wishlistIds = Array.isArray(ids) ? ids.map(String) : [];
+    refreshWishlistButtons();
+  });
+}
 
  // 目前不在列表卡顯示
 const DEITY_PAGE = 'https://unalomecodes.pages.dev/deity.html';
@@ -99,15 +116,28 @@ function renderList(items){
         <div class="price">NT$ ${formatPrice(price)}</div>
         <div class="cta">
           <button class="btn primary" data-open-detail="1">查看商品</button>
+          <button class="btn wishlist-btn" data-wishlist="${escapeHtml(p.id || '')}">🤍 收藏</button>
         </div>
       </div>
     `;
     // 查看商品 -> 打開詳情
     card.querySelector('.btn.primary').addEventListener('click',()=>openDetail(p));
+    const favBtn = card.querySelector('button[data-wishlist]');
+    if (favBtn){
+      favBtn.addEventListener('click', ev=>{
+        ev.stopPropagation();
+        if (!window.wishlist){
+          alert('請登入後再使用收藏功能');
+          return;
+        }
+        window.wishlist.toggle(p.id).catch(()=>{});
+      });
+    }
     // 加入卡片
     listEl.appendChild(card);
   const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
   }
+  refreshWishlistButtons();
 }
 
 document.getElementById('fDeity').addEventListener('change', applyFilter);

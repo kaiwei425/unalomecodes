@@ -47,7 +47,13 @@
   const bankReceiptInput = document.getElementById('svcBankReceipt');
   const bankReceiptName = document.getElementById('svcBankReceiptName');
   const bankMemoInput = document.getElementById('svcBankMemo');
+  const memberPerkHintEl = document.getElementById('svcMemberPerkHint');
   const requestDateInput = checkoutForm ? checkoutForm.querySelector('input[name="requestDate"]') : null;
+  const contactNameInput = checkoutForm ? checkoutForm.querySelector('input[name="name"]') : null;
+  const contactPhoneInput = checkoutForm ? checkoutForm.querySelector('input[name="phone"]') : null;
+  const contactEmailInput = checkoutForm ? checkoutForm.querySelector('input[name="email"]') : null;
+  const contactBirthInput = checkoutForm ? checkoutForm.querySelector('input[name="birth"]') : null;
+  const contactNoteInput = checkoutForm ? checkoutForm.querySelector('textarea[name="note"]') : null;
   const contactPhotoInput = document.getElementById('svcContactPhoto');
   const contactPhotoName = document.getElementById('svcContactPhotoName');
   const bankBackBtn = document.getElementById('svcBankBack');
@@ -242,6 +248,43 @@
     const today = new Date();
     const iso = today.toISOString().split('T')[0];
     requestDateInput.min = iso;
+  }
+
+  function fillContactFromProfile(profile){
+    if (!profile) return;
+    const defaults = profile.defaultContact || {};
+    const source = Object.assign(
+      {},
+      {
+        name: profile.name || '',
+        email: profile.email || ''
+      },
+      defaults
+    );
+    if (contactNameInput && !contactNameInput.value){
+      contactNameInput.value = source.name || '';
+    }
+    if (contactPhoneInput && !contactPhoneInput.value && source.phone){
+      contactPhoneInput.value = source.phone;
+    }
+    if (contactEmailInput && !contactEmailInput.value){
+      contactEmailInput.value = source.email || '';
+    }
+    updateMemberPerkHint(profile);
+  }
+
+  function updateMemberPerkHint(profile){
+    if (!memberPerkHintEl) return;
+    const perk = profile && profile.memberPerks ? profile.memberPerks.welcomeDiscount : null;
+    if (perk && !perk.used && Number(perk.amount||0) > 0){
+      memberPerkHintEl.textContent = `會員專屬優惠：本次訂單將再折 NT$ ${Number(perk.amount).toLocaleString('zh-TW')}`;
+      memberPerkHintEl.style.display = 'block';
+    }else if (perk && perk.used){
+      memberPerkHintEl.textContent = '已使用會員優惠，感謝支持。';
+      memberPerkHintEl.style.display = 'block';
+    }else{
+      memberPerkHintEl.style.display = 'none';
+    }
   }
 
   function renderCartPanel(){
@@ -781,6 +824,11 @@
   }
 
   setRequestDateMin();
+  if (window.authState){
+    window.authState.onProfile(profile=>{
+      fillContactFromProfile(profile);
+    });
+  }
   if (checkoutBackBtn){
     checkoutBackBtn.addEventListener('click', ()=>{
       closeDialog(checkoutDialog);
@@ -928,6 +976,9 @@
         renderCheckoutSuccess(result.orderId || result.id || '', totalAmount);
         if (bankReceiptInput) bankReceiptInput.value = '';
         if (bankReceiptName) bankReceiptName.textContent = '';
+        if (window.authState && typeof window.authState.refreshProfile === 'function'){
+          window.authState.refreshProfile();
+        }
       }catch(err){
         alert(err && err.message ? err.message : '送出失敗，請稍後再試');
       }finally{

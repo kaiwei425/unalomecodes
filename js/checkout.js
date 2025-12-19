@@ -39,6 +39,48 @@ if (typeof window.__clearCouponState !== 'function'){
 }
 var clearCouponState = window.__clearCouponState;
 
+const bfNameInput = document.getElementById('bfName');
+const bfPhoneInput = document.getElementById('bfContact');
+const bfEmailInput = document.getElementById('bfEmail');
+const memberPerkHintEl = document.getElementById('memberPerkHint');
+
+function applyBankProfile(profile){
+  if (!profile) return;
+  const defaults = profile.defaultContact || {};
+  const source = Object.assign(
+    {},
+    {
+      name: profile.name || '',
+      email: profile.email || ''
+    },
+    defaults
+  );
+  if (bfNameInput && !bfNameInput.value) bfNameInput.value = source.name || '';
+  if (bfPhoneInput && !bfPhoneInput.value && source.phone) bfPhoneInput.value = source.phone;
+  if (bfEmailInput && !bfEmailInput.value) bfEmailInput.value = source.email || '';
+  updateMemberPerkHint(profile);
+}
+
+function updateMemberPerkHint(profile){
+  if (!memberPerkHintEl) return;
+  const perk = profile && profile.memberPerks ? profile.memberPerks.welcomeDiscount : null;
+  if (perk && !perk.used && Number(perk.amount||0) > 0){
+    memberPerkHintEl.textContent = `會員專屬優惠：本次訂單將再折 NT$ ${Number(perk.amount).toLocaleString('zh-TW')}`;
+    memberPerkHintEl.style.display = 'block';
+  }else if (perk && perk.used){
+    memberPerkHintEl.textContent = '已使用會員專屬優惠';
+    memberPerkHintEl.style.display = 'block';
+  }else{
+    memberPerkHintEl.style.display = 'none';
+  }
+}
+
+if (window.authState){
+  window.authState.onProfile(profile=>{
+    applyBankProfile(profile);
+  });
+}
+
 if (typeof window.__scheduleOrderRefresh !== 'function'){
   window.__scheduleOrderRefresh = function(delay){
     try{
@@ -723,6 +765,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
               discount: data && data.order && data.order.coupon && !data.order.coupon.failed ? (data.order.coupon.discount || data.order.coupon.amount) : null,
               store: data && data.order && data.order.buyer && data.order.buyer.store
             });
+          }
+          if (window.authState && typeof window.authState.refreshProfile === 'function'){
+            window.authState.refreshProfile();
           }
         }catch(e){
           console.error(e);

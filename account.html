@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>我的訂單｜unalomecodes</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .account-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:16px;}
+    @media(min-width:900px){.account-grid{grid-template-columns:1fr 1fr;}}
+    .account-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .account-card h2{margin:0 0 12px;font-size:18px;font-weight:800;}
+    .order-item{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#f9fafb;}
+    .order-item:last-child{margin-bottom:0;}
+    .order-id{font-weight:800;}
+    .order-meta{font-size:13px;color:#475569;margin-top:6px;line-height:1.5;}
+    .badge-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:#e0e7ff;color:#1d4ed8;margin-top:6px;}
+    .empty-msg{padding:12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:#94a3b8;text-align:center;}
+    #accountStatus{font-size:14px;color:#6b7280;margin-top:6px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="https://i.ibb.co/7mtppQQ/logo.jpg" alt="">
+        <div>
+          <div class="t1">泰國寺廟map ©️ unalomecodes</div>
+          <div class="t2">會員中心｜我的訂單</div>
+        </div>
+      </div>
+      <div class="auth-widget" data-auth-widget>
+        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+        <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+      </div>
+    </div>
+
+    <div id="accountStatus">載入中…</div>
+    <div class="account-grid" id="accountGrid" style="display:none;">
+      <div class="account-card">
+        <h2>實體商品訂單</h2>
+        <div id="accountPhysical"></div>
+      </div>
+      <div class="account-card">
+        <h2>服務商品訂單</h2>
+        <div id="accountService"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/account.js"></script>
+</body>
+</html>
