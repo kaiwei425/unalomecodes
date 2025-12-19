@@ -8,6 +8,14 @@
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   }
+  function fmtDate(str){
+    if (!str) return '';
+    try{
+      const d = new Date(str);
+      return d.toLocaleString('zh-TW', { hour12:false });
+    }catch(_){ return str; }
+  }
+
   function renderOrders(listEl, items, emptyText){
     if (!listEl) return;
     listEl.innerHTML = '';
@@ -20,12 +28,28 @@
       div.className = 'order-item';
       const status = escapeHtml(order.status || '處理中');
       const amount = typeof order.amount === 'number' ? order.amount : Number(order.total || 0);
+      const buyer = order.buyer || {};
+      const svcLine = order.serviceName
+        ? `${escapeHtml(order.serviceName)}${order.selectedOption && order.selectedOption.name ? '｜'+escapeHtml(order.selectedOption.name) : ''}`
+        : '';
+      const itemsLine = Array.isArray(order.items) && order.items.length
+        ? order.items.map(it=>{
+            const vn = it.variantName ? `（${escapeHtml(it.variantName)}）` : '';
+            return `${escapeHtml(it.productName||it.name||'商品')}${vn}×${Math.max(1, Number(it.qty||1))}`;
+          }).join(' / ')
+        : '';
+      const dateStr = fmtDate(order.createdAt || '');
       div.innerHTML = `
         <div class="order-id">${escapeHtml(order.id || order.orderId || '')}</div>
         <div class="order-meta">狀態：<span class="badge-status">${status}</span></div>
-        <div class="order-meta">建立時間：${escapeHtml(order.createdAt || '')}</div>
+        <div class="order-meta">建立時間：${escapeHtml(dateStr)}</div>
         <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
-        <div class="order-meta">聯絡人：${escapeHtml(order?.buyer?.name || '—')}（${escapeHtml(order?.buyer?.phone || '')}）</div>
+        <div class="order-meta">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
+        <div class="order-meta">Email：${escapeHtml(buyer.email || '')}</div>
+        ${itemsLine ? `<div class="order-meta">商品：${itemsLine}</div>` : ''}
+        ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
+        ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
+        ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
       `;
       listEl.appendChild(div);
     });

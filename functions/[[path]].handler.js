@@ -316,6 +316,14 @@ async function updateUserDefaultContact(env, userId, contact){
   await saveUserRecord(env, record);
 }
 
+async function updateUserDefaultStore(env, userId, store){
+  if (!userId || !store) return;
+  const record = await loadUserRecord(env, userId);
+  if (!record) return;
+  record.defaultStore = Object.assign({}, record.defaultStore || {}, store);
+  await saveUserRecord(env, record);
+}
+
 async function getSessionUserRecord(request, env){
   const session = await getSessionUser(request, env);
   if (!session) return null;
@@ -713,6 +721,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       email: record.email,
       picture: record.picture,
       defaultContact: record.defaultContact || null,
+      defaultStore: record.defaultStore || null,
       memberPerks: record.memberPerks || {},
       wishlist: Array.isArray(record.wishlist) ? record.wishlist : []
     }});

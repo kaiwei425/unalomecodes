@@ -53,6 +53,7 @@
           <div class="price">神祇：${escapeHtml(item.deity || '—')}</div>
         </div>
         <div class="actions">
+          <a class="btn primary" href="/shop.html#id=${encodeURIComponent(item.id||'')}" target="_blank" rel="noopener">查看商品</a>
           <button class="btn" data-remove="${escapeHtml(item.id||'')}">移除</button>
         </div>
       `;
