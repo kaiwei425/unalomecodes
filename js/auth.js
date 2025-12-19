@@ -62,7 +62,13 @@
   }
 
   function login(){
-    window.location.href = loginUrl;
+    try{
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      const redirectParam = encodeURIComponent(path || '/shop.html');
+      window.location.href = `${loginUrl}?redirect=${redirectParam}`;
+    }catch(_){
+      window.location.href = `${loginUrl}?redirect=%2Fshop.html`;
+    }
   }
 
   async function logout(){

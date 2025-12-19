@@ -454,6 +454,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return new Response('Google OAuth not configured', { status:500 });
     }
     const state = makeToken(24);
+    const redirectRaw = url.searchParams.get('redirect') || '';
+    let redirectPath = '/shop.html';
+    if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
+      redirectPath = redirectRaw;
+    }
     const params = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       redirect_uri: `${origin}/api/auth/google/callback`,
@@ -465,6 +470,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       Location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
     });
     headers.append('Set-Cookie', `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`);
+    headers.append('Set-Cookie', `oauth_redirect=${encodeURIComponent(redirectPath)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
     return new Response(null, { status:302, headers });
   }
 
@@ -473,10 +479,24 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const state = url.searchParams.get('state') || '';
     const cookies = parseCookies(request);
     const expectedState = cookies.oauth_state || '';
-    if (!code || !state || !expectedState || state !== expectedState) {
-      return new Response('Invalid OAuth state', { status:400 });
-    }
     const clearStateCookie = 'oauth_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const clearRedirectCookie = 'oauth_redirect=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const redirectPath = (()=> {
+      const raw = cookies.oauth_redirect || '';
+      if (raw) {
+        try{
+          const decoded = decodeURIComponent(raw);
+          if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
+        }catch(_){}
+      }
+      return '/shop.html';
+    })();
+    if (!code || !state || !expectedState || state !== expectedState) {
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('Invalid OAuth state', { status:400, headers: h });
+    }
     if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
       return new Response('Google OAuth not configured', {
         status:500,
@@ -500,10 +520,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       try{ tokens = JSON.parse(tokenText); }catch(_){}
       if (!tokenRes.ok || !tokens || !tokens.access_token){
         console.error('google token error', tokenRes.status, tokenText);
-        return new Response('無法取得 Google token', {
-          status:500,
-          headers:{ 'Set-Cookie': clearStateCookie }
-        });
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('無法取得 Google token', { status:500, headers: h });
       }
       const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers:{ Authorization: `Bearer ${tokens.access_token}` }
@@ -513,10 +533,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       try{ profile = JSON.parse(infoText); }catch(_){}
       if (!infoRes.ok || !profile || !profile.sub){
         console.error('google userinfo error', infoRes.status, infoText);
-        return new Response('取得使用者資訊失敗', {
-          status:500,
-          headers:{ 'Set-Cookie': clearStateCookie }
-        });
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('取得使用者資訊失敗', { status:500, headers: h });
       }
       const user = {
         id: profile.sub,
@@ -531,14 +551,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
       });
       headers.append('Set-Cookie', clearStateCookie);
-      headers.append('Location', `${origin}/`);
+      headers.append('Set-Cookie', clearRedirectCookie);
+      headers.append('Location', `${origin}${redirectPath}`);
       return new Response(null, { status:302, headers });
     }catch(err){
       console.error('OAuth error', err);
-      return new Response('OAuth error', {
-        status:500,
-        headers:{ 'Set-Cookie': clearStateCookie }
-      });
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('OAuth error', { status:500, headers: h });
     }
   }
 
