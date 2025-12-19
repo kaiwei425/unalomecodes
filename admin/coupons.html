@@ -36,6 +36,14 @@
   .result{margin-top:12px;padding:12px;border-radius:12px;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;font-weight:700;word-break:break-all;}
   .error{margin-top:12px;padding:12px;border-radius:12px;border:1px solid #fecdd3;background:#fff1f2;color:#b91c1c;font-weight:700;}
   .actions{display:flex;gap:10px;flex-wrap:wrap;}
+  table{width:100%;border-collapse:collapse;margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;}
+  th,td{padding:10px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;}
+  th{background:#f8fafc;color:#475569;font-weight:800;}
+  tbody tr:hover{background:#f1f5f9;}
+  .status-used{color:#b91c1c;font-weight:700;}
+  .status-new{color:#166534;font-weight:700;}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 6px;}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;}
 </style>
 </head>
 <body>
@@ -70,6 +78,32 @@
     </div>
     <div id="cpnResult" class="result" style="display:none;"></div>
     <div id="cpnError" class="error" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <input id="q" placeholder="搜尋券碼 / 守護神" style="padding:10px 12px;border-radius:12px;border:1px solid var(--line);min-width:200px;">
+      <select id="filterUsed" style="padding:10px 12px;border-radius:12px;border:1px solid var(--line);">
+        <option value="">全部</option>
+        <option value="false">未使用</option>
+        <option value="true">已使用</option>
+      </select>
+      <button class="btn-ghost" id="btnReload" type="button">重新整理</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:220px">券碼</th>
+          <th style="width:120px">守護神</th>
+          <th style="width:100px">金額</th>
+          <th>發放時間</th>
+          <th style="width:120px">狀態</th>
+          <th style="width:180px">使用於訂單</th>
+          <th style="width:150px">使用時間</th>
+        </tr>
+      </thead>
+      <tbody id="cpnList"><tr><td colspan="7" class="muted">尚未載入</td></tr></tbody>
+    </table>
   </div>
 </div>
 <script>
@@ -157,7 +191,53 @@
     document.getElementById('cpnResult').style.display='none';
     document.getElementById('cpnError').style.display='none';
   });
+  // 列表
+  const qInput = document.getElementById('q');
+  const usedSel = document.getElementById('filterUsed');
+  const listBody = document.getElementById('cpnList');
+  async function loadList(){
+    if (listBody) listBody.innerHTML = '<tr><td colspan="7" class="muted">載入中…</td></tr>';
+    const q = (qInput.value||'').trim();
+    const used = usedSel.value;
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (used) params.set('used', used);
+    params.set('limit','300');
+    try{
+      const res = await fetch('/api/coupons/list?'+params.toString(), { credentials:'include' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok){
+        throw new Error(data && data.error ? data.error : ('HTTP '+res.status));
+      }
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (!items.length){
+        listBody.innerHTML = '<tr><td colspan="7" class="muted">目前沒有符合條件的優惠券</td></tr>';
+        return;
+      }
+      listBody.innerHTML = items.map(c=>{
+        const usedText = c.used ? '已使用' : '未使用';
+        const usedCls = c.used ? 'status-used' : 'status-new';
+        const issued = c.issuedAt ? new Date(c.issuedAt).toLocaleString() : '';
+        const usedAt = c.usedAt ? new Date(c.usedAt).toLocaleString() : '';
+        return `<tr>
+          <td style="font-weight:800;">${c.code||''}</td>
+          <td>${c.deity||''}</td>
+          <td>NT$ ${Number(c.amount||0)}</td>
+          <td>${issued}</td>
+          <td class="${usedCls}">${usedText}</td>
+          <td>${c.orderId||''}</td>
+          <td>${usedAt||''}</td>
+        </tr>`;
+      }).join('');
+    }catch(err){
+      if (listBody) listBody.innerHTML = `<tr><td colspan="7" class="error">讀取失敗：${err.message||err}</td></tr>`;
+    }
+  }
+  document.getElementById('btnReload').addEventListener('click', loadList);
+  qInput.addEventListener('input', ()=>{ clearTimeout(qInput._t); qInput._t=setTimeout(loadList,300); });
+  usedSel.addEventListener('change', loadList);
   loadDeities();
+  loadList();
 </script>
 </body>
 </html>

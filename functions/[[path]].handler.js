@@ -61,12 +61,7 @@ async function isAdmin(request, env){
   }catch(e){ return false; }
 }
 
-// === Coupon Service config ===
-function getCouponAPI(env){
-  // Prefer env.COUPON_API_BASE, fallback to your workers.dev
-  const base = (env && env.COUPON_API_BASE) ? String(env.COUPON_API_BASE).trim() : "https://coupon-service.kaiwei425.workers.dev";
-  return /\/$/.test(base) ? base.slice(0,-1) : base;
-}
+// === Coupon helpers (new in-house system) ===
 function inferCouponDeity(code, hint){
   try{
     const h = String(hint || '').trim().toUpperCase();
@@ -77,28 +72,48 @@ function inferCouponDeity(code, hint){
     return '';
   }catch(e){ return ''; }
 }
-async function redeemCoupon(env, { code, deity, orderId }){
-  const api = getCouponAPI(env);
-  if (!code) return { ok:false, reason:"missing_code" };
-  const codeNorm = String(code||"").toUpperCase();
-  const deityNorm = inferCouponDeity(codeNorm, deity);
+function couponKey(code){ return `COUPON:${String(code||'').toUpperCase()}`; }
+function makeCouponCode(deity){
+  const d = String(deity||'').trim().toUpperCase() || 'XX';
+  const rand = makeToken(6).toUpperCase();
+  return `UC-${d}-${rand}`;
+}
+async function readCoupon(env, code){
+  if (!env.COUPONS) return null;
+  if (!code) return null;
   try{
-    const resp = await fetch(api + "/redeem", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        // SHOP_SHARED_TOKEN must be configured in this Worker (Variables → Secret)
-        "x-shop-token": String(env.SHOP_SHARED_TOKEN || "")
-      },
-      body: JSON.stringify({ code: codeNorm, deity: deityNorm, orderId: orderId ? String(orderId) : undefined })
-    });
-    const j = await resp.json().catch(()=>({ ok:false }));
-    if (!j || !j.ok) return { ok:false, reason: (j && (j.reason||j.error)) || "redeem_failed" };
-    const resolvedDeity = inferCouponDeity(codeNorm, j.deity || deityNorm);
-    return { ok:true, amount: Number(j.amount||200)||200, deity: resolvedDeity };
-  }catch(e){
-    return { ok:false, reason: "fetch_error" };
+    const raw = await env.COUPONS.get(couponKey(code));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  }catch(_){ return null; }
+}
+async function saveCoupon(env, obj){
+  if (!env.COUPONS || !obj || !obj.code) return null;
+  const rec = Object.assign({}, obj);
+  await env.COUPONS.put(couponKey(obj.code), JSON.stringify(rec));
+  return rec;
+}
+async function redeemCoupon(env, { code, deity, orderId, lock }){
+  if (!code) return { ok:false, reason:"missing_code" };
+  const codeNorm = String(code||'').toUpperCase();
+  if (!env.COUPONS) return { ok:false, reason:'COUPONS_not_bound' };
+  const rec = await readCoupon(env, codeNorm);
+  if (!rec) return { ok:false, reason:'not_found' };
+  if (rec.used) return { ok:false, reason:'already_used' };
+  const targetDeity = String(rec.deity||'').toUpperCase();
+  const want = String(deity||'').toUpperCase();
+  if (targetDeity && want && targetDeity !== want){
+    return { ok:false, reason:'deity_not_match' };
   }
+  const amount = Number(rec.amount||200)||200;
+  if (lock){
+    const now = new Date().toISOString();
+    rec.used = true;
+    rec.usedAt = now;
+    rec.orderId = orderId || rec.orderId || '';
+    await saveCoupon(env, rec);
+  }
+  return { ok:true, amount, deity: targetDeity || want || inferCouponDeity(codeNorm) };
 }
 
 async function generateOrderId(env){
@@ -1815,71 +1830,31 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
       );
     }
 
-    if (!env.ORDERS) {
+    if (!env.COUPONS) {
       return new Response(
-        JSON.stringify({ ok: false, error: 'ORDERS KV not bound' }),
+        JSON.stringify({ ok: false, error: 'COUPONS KV not bound' }),
         { status: 500, headers: jsonHeaders }
       );
     }
 
-    // Step 1：先看這張券有沒有被任何訂單用過（COUPON_USED:<CODE>）
-    const lockKey = `COUPON_USED:${code}`;
-    const existing = await env.ORDERS.get(lockKey);
-    if (existing) {
-      let parsed = null;
-      try { parsed = JSON.parse(existing); } catch {}
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          code,
-          deity,
-          used: true,
-          reason: 'already_used',
-          usage: parsed || null
-        }),
-        { status: 200, headers: jsonHeaders }
-      );
+    const rec = await readCoupon(env, code);
+    if (!rec){
+      return new Response(JSON.stringify({ ok:false, code, reason:'not_found' }), { status:200, headers: jsonHeaders });
     }
-
-    // Step 2：沒被用過 → 呼叫 redeemCoupon 做資格檢查（不佔用）
-    let result;
-    try {
-      // orderId 用固定 '__CHECK__' 表示僅檢查，不綁定實際訂單
-      result = await redeemCoupon(env, { code, deity, orderId: '__CHECK__' });
-    } catch (e) {
-      console.error('redeemCoupon /api/coupons/check error', e);
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          code,
-          deity,
-          reason: 'error'
-        }),
-        { status: 200, headers: jsonHeaders }
-      );
+    if (rec.used){
+      return new Response(JSON.stringify({ ok:false, code, reason:'already_used', orderId: rec.orderId||'' }), { status:200, headers: jsonHeaders });
     }
-
-    if (!result || !result.ok) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          code,
-          deity,
-          reason: (result && result.reason) || 'invalid'
-        }),
-        { status: 200, headers: jsonHeaders }
-      );
+    const targetDeity = String(rec.deity||'').toUpperCase();
+    if (targetDeity && deity && targetDeity !== deity){
+      return new Response(JSON.stringify({ ok:false, code, reason:'deity_not_match', deity: targetDeity }), { status:200, headers: jsonHeaders });
     }
-
-    const amount = Math.max(0, Number(result.amount || 200) || 200);
-    const resolvedDeity = inferCouponDeity(code, result.deity || deity);
-
+    const amount = Math.max(0, Number(rec.amount||200) || 200);
     return new Response(
       JSON.stringify({
         ok: true,
         valid: true,
         code,
-        deity: resolvedDeity,
+        deity: targetDeity || deity,
         amount
       }),
       { status: 200, headers: jsonHeaders }
@@ -1893,34 +1868,87 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
 }
 
 
-// Proxy coupon issue to coupon service to bypass browser CORS
+// Issue coupon (new in-house system)
 if (pathname === '/api/coupons/issue' && request.method === 'POST') {
+  if (!(await isAdmin(request, env))){
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  }
+  if (!env.COUPONS){
+    return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
   try {
     const body = await request.json().catch(() => ({}));
     const deity  = String(body.deity || body.code || '').trim().toUpperCase();
     const amount = Number(body.amount || 200) || 200;
-    const token  = String(body.quizToken || body.token || body['x-quiz-token'] || '').trim();
     if (!deity) {
       return new Response(JSON.stringify({ ok:false, error:'Missing deity' }), { status:400, headers: jsonHeaders });
     }
-    const api = getCouponAPI(env);
-    const headers = { 'content-type':'application/json' };
-    const adminKey = env.COUPON_ADMIN_KEY || env.ADMIN_KEY || '';
-    if (adminKey) headers['x-admin-key'] = adminKey;
-    if (token) headers['X-Quiz-Token'] = token;
-    const upstream = await fetch(`${api}/issue`, {
-      method:'POST',
-      headers,
-      body: JSON.stringify({ deity, amount })
-    });
-    const text = await upstream.text();
-    const resHeaders = { ...jsonHeaders };
-    // override to allow browser access
-    resHeaders['Access-Control-Allow-Origin'] = '*';
-    return new Response(text, { status: upstream.status, headers: resHeaders });
+    let code = '';
+    for (let i=0;i<5;i++){
+      const cand = makeCouponCode(deity);
+      const exists = await env.COUPONS.get(couponKey(cand));
+      if (!exists){ code = cand; break; }
+    }
+    if (!code) code = makeCouponCode(deity);
+    const now = new Date().toISOString();
+    const rec = {
+      code,
+      deity,
+      amount,
+      issuedAt: now,
+      used: false
+    };
+    await saveCoupon(env, rec);
+    return new Response(JSON.stringify({ ok:true, code, deity, amount }), { status:200, headers: jsonHeaders });
   } catch (e) {
-    const resHeaders = { ...jsonHeaders, 'Access-Control-Allow-Origin':'*' };
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: resHeaders });
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+  }
+}
+
+// List coupons (admin)
+if (pathname === '/api/coupons/list' && request.method === 'GET') {
+  if (!(await isAdmin(request, env))){
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  }
+  if (!env.COUPONS){
+    return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
+  try{
+    const q = (url.searchParams.get('q') || '').trim().toUpperCase();
+    const usedParam = url.searchParams.get('used');
+    const limit = Math.min(Number(url.searchParams.get('limit')||200), 500);
+    let items = [];
+    if (env.COUPONS.list){
+      const iter = await env.COUPONS.list({ prefix:'COUPON:' });
+      const keys = Array.isArray(iter.keys) ? iter.keys : [];
+      for (const k of keys){
+        const name = k && k.name;
+        if (!name) continue;
+        const raw = await env.COUPONS.get(name);
+        if (!raw) continue;
+        try{
+          const obj = JSON.parse(raw);
+          if (obj && obj.code){
+            items.push(obj);
+          }
+        }catch(_){}
+      }
+    }
+    // sort by issuedAt desc
+    items.sort((a,b)=> new Date(b.issuedAt||0) - new Date(a.issuedAt||0));
+    let out = items;
+    if (q){
+      out = out.filter(c=> String(c.code||'').toUpperCase().includes(q) || String(c.deity||'').toUpperCase().includes(q));
+    }
+    if (usedParam === 'true'){
+      out = out.filter(c=> !!c.used);
+    }else if (usedParam === 'false'){
+      out = out.filter(c=> !c.used);
+    }
+    out = out.slice(0, limit);
+    return new Response(JSON.stringify({ ok:true, items: out }), { status:200, headers: jsonHeaders });
+  }catch(e){
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
 }
 
@@ -1940,6 +1968,17 @@ async function markCouponUsageOnce(env, code, orderId) {
     }
     const payload = { code: c, orderId: String(orderId || ""), ts: new Date().toISOString() };
     await env.ORDERS.put(key, JSON.stringify(payload));
+    try{
+      if (env.COUPONS){
+        const rec = await readCoupon(env, c);
+        if (rec){
+          rec.used = true;
+          rec.usedAt = payload.ts;
+          rec.orderId = payload.orderId;
+          await saveCoupon(env, rec);
+        }
+      }
+    }catch(_){}
     return { ok: true };
   } catch (e) {
     console.error("markCouponUsageOnce error", e);
