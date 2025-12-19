@@ -73,14 +73,15 @@
   </div>
 </div>
 <script>
+  const FALLBACK_DEITIES = ['FM','GA','CD','KP','HM','RH','JL','ZD','ZF','WE','XZ','HP'];
   async function loadDeities(){
     const sel = document.getElementById('cpnDeity');
     sel.innerHTML = '<option value="">載入中...</option>';
+    const set = new Set(FALLBACK_DEITIES);
     try{
       const res = await fetch('/api/products?active=true',{cache:'no-store'});
       const data = await res.json();
       const items = Array.isArray(data.items) ? data.items : [];
-      const set = new Set();
       items.forEach(p=>{
         if (p && p.deity){
           set.add(String(p.deity).toUpperCase());
@@ -117,7 +118,8 @@
       const resp = await fetch('/api/coupons/issue', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ deity, amount })
+        body: JSON.stringify({ deity, amount }),
+        credentials:'include'
       });
       const data = await resp.json().catch(()=>({}));
       if (!resp.ok || !data || !data.code){

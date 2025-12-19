@@ -1905,6 +1905,8 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
     }
     const api = getCouponAPI(env);
     const headers = { 'content-type':'application/json' };
+    const adminKey = env.COUPON_ADMIN_KEY || env.ADMIN_KEY || '';
+    if (adminKey) headers['x-admin-key'] = adminKey;
     if (token) headers['X-Quiz-Token'] = token;
     const upstream = await fetch(`${api}/issue`, {
       method:'POST',
