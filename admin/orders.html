@@ -152,6 +152,8 @@ function normalizeProof(u){
 
 
 async function loadOrders(){
+  const tbody = document.getElementById('tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">載入中…</td></tr>';
   try{
     const res = await authedFetch('/api/orders?limit=500', { cache:'no-store' });
     const data = await res.json().catch(()=>({}));
@@ -161,10 +163,9 @@ async function loadOrders(){
       : (Array.isArray(data.orders) ? data.orders : []);
   }catch(e){
     ORDERS = [];
-    console.error(e);
-    const body = document.getElementById('body');
-    if (body){
-      body.innerHTML = `<tr><td colspan="7" class="muted">讀取失敗：${(e && e.message) || e}</td></tr>`;
+    console.error('loadOrders error', e);
+    if (tbody){
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">讀取失敗：${(e && e.message) || e}</td></tr>`;
     }
   }
   render();
