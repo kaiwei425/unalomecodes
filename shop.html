@@ -414,6 +414,27 @@
       .os-actions{flex-direction:column;align-items:stretch;}
       .os-actions .btn{width:100%;text-align:center;}
     }
+    /* 手機：結帳對話框全寬且可內捲，避免超出螢幕需縮放 */
+    @media (max-width:640px){
+      #dlgOrderConfirm,
+      #dlgStore,
+      #dlgBank,
+      #dlgCC{
+        width:100vw !important;
+        max-width:100vw !important;
+        margin:0;
+        padding:0;
+        border-radius:14px;
+        max-height:90vh;
+      }
+      #dlgOrderConfirm > div,
+      #dlgStore > div,
+      #dlgBank > div,
+      #dlgCC > div{
+        max-height:86vh;
+        overflow:auto;
+      }
+    }
   </style>
 <div id="toast" style="position:fixed;right:16px;bottom:16px;z-index:1000;display:none;max-width:92vw"></div>
 
