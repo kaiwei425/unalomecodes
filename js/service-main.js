@@ -828,6 +828,10 @@
     window.authState.onProfile(profile=>{
       fillContactFromProfile(profile);
     });
+    if (typeof window.authState.getProfile === 'function'){
+      const existingProfile = window.authState.getProfile();
+      if (existingProfile) fillContactFromProfile(existingProfile);
+    }
   }
   if (checkoutBackBtn){
     checkoutBackBtn.addEventListener('click', ()=>{
@@ -973,7 +977,11 @@
         saveCart([]);
         renderCartPanel();
         updateCartBadge([]);
-        renderCheckoutSuccess(result.orderId || result.id || '', totalAmount);
+        const finalAmount = (result && result.order && Number(result.order.amount)) || Number(result.amount) || totalAmount;
+        renderCheckoutSuccess(result.orderId || result.id || '', finalAmount);
+        if (result && result.order && result.order.memberDiscount){
+          updateMemberPerkHint({ memberPerks:{ welcomeDiscount:{ used:true } } });
+        }
         if (bankReceiptInput) bankReceiptInput.value = '';
         if (bankReceiptName) bankReceiptName.textContent = '';
         if (window.authState && typeof window.authState.refreshProfile === 'function'){

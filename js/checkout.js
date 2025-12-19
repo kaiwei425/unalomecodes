@@ -79,6 +79,10 @@ if (window.authState){
   window.authState.onProfile(profile=>{
     applyBankProfile(profile);
   });
+  if (typeof window.authState.getProfile === 'function'){
+    const existing = window.authState.getProfile();
+    if (existing) applyBankProfile(existing);
+  }
 }
 
 if (typeof window.__scheduleOrderRefresh !== 'function'){

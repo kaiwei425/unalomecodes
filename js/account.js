@@ -3,6 +3,7 @@
   const gridEl = document.getElementById('accountGrid');
   const physicalEl = document.getElementById('accountPhysical');
   const serviceEl = document.getElementById('accountService');
+  const wishlistEl = document.getElementById('accountWishlist');
 
   function renderOrders(listEl, items, emptyText){
     if (!listEl) return;
@@ -33,30 +34,58 @@
     return String(str||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   }
 
-  async function loadOrders(){
+  function renderWishlist(items){
+    if (!wishlistEl) return;
+    wishlistEl.innerHTML = '';
+    if (!items.length){
+      wishlistEl.innerHTML = '<div class="empty-msg">目前沒有收藏的商品。</div>';
+      return;
+    }
+    items.forEach(item=>{
+      const div = document.createElement('div');
+      div.className = 'order-item';
+      div.innerHTML = `
+        <div class="order-id">${escapeHtml(item.name || '')}</div>
+        <div class="order-meta">價格：NT$ ${Number(item.price || item.basePrice || 0).toLocaleString('zh-TW')}</div>
+        <div class="order-meta">神祇：${escapeHtml(item.deity || '—')}</div>
+      `;
+      wishlistEl.appendChild(div);
+    });
+  }
+
+  async function loadAccountData(){
     if (!statusEl) return;
-    statusEl.textContent = '載入訂單中…';
+    statusEl.textContent = '載入資料中…';
     try{
-      const res = await fetch('/api/me/orders', { credentials:'include' });
-      if (!res.ok){
-        if (res.status === 401){
-          statusEl.textContent = '請先登入以查看訂單。';
-        }else{
-          statusEl.textContent = '讀取訂單失敗，請稍後再試。';
-        }
+      const [ordersRes, wishlistRes] = await Promise.all([
+        fetch('/api/me/orders', { credentials:'include' }),
+        fetch('/api/me/wishlist', { credentials:'include' })
+      ]);
+      if (ordersRes.status === 401 || wishlistRes.status === 401){
+        statusEl.textContent = '請先登入以查看訂單與收藏。';
         return;
       }
-      const data = await res.json().catch(()=>({}));
-      if (!data || data.ok === false){
-        statusEl.textContent = (data && data.error) || '讀取訂單失敗';
+      if (!ordersRes.ok || !wishlistRes.ok){
+        statusEl.textContent = '讀取資料失敗，請稍後再試。';
         return;
       }
-      statusEl.textContent = '以下為您最近的訂單。';
+      const ordersData = await ordersRes.json().catch(()=>({}));
+      const wishlistData = await wishlistRes.json().catch(()=>({}));
+      if (ordersData.ok === false){
+        statusEl.textContent = ordersData.error || '讀取訂單失敗';
+        return;
+      }
+      if (wishlistData.ok === false){
+        statusEl.textContent = wishlistData.error || '讀取收藏失敗';
+        return;
+      }
+      statusEl.textContent = '以下為您的訂單與收藏。';
       if (gridEl) gridEl.style.display = 'grid';
-      renderOrders(physicalEl, data.orders && Array.isArray(data.orders.physical) ? data.orders.physical : [], '尚無實體商品訂單');
-      renderOrders(serviceEl, data.orders && Array.isArray(data.orders.service) ? data.orders.service : [], '尚無服務型商品訂單');
+      renderOrders(physicalEl, Array.isArray(ordersData.orders?.physical) ? ordersData.orders.physical : [], '尚無實體商品訂單');
+      renderOrders(serviceEl, Array.isArray(ordersData.orders?.service) ? ordersData.orders.service : [], '尚無服務型商品訂單');
+      renderWishlist(Array.isArray(wishlistData.items) ? wishlistData.items : []);
     }catch(_){
-      statusEl.textContent = '讀取訂單失敗，請稍後再試。';
+      statusEl.textContent = '讀取資料失敗，請稍後再試。';
     }
   }
 
@@ -66,7 +95,7 @@
       return;
     }
     if (window.authState.isLoggedIn()){
-      loadOrders();
+      loadAccountData();
     }else{
       statusEl.textContent = '請先登入以查看訂單。';
       window.authState.requireLogin('請先登入即可查看訂單與會員資訊。').catch(()=>{});
@@ -76,7 +105,7 @@
   if (window.authState){
     window.authState.subscribe(user=>{
       if (user){
-        loadOrders();
+        loadAccountData();
       }else{
         if (gridEl) gridEl.style.display = 'none';
         if (statusEl) statusEl.textContent = '請先登入以查看訂單。';

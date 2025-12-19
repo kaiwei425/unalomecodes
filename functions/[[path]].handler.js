@@ -3579,7 +3579,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
         email: buyer.email || ''
       });
     }catch(_){}
-    return new Response(JSON.stringify({ ok:true, orderId }), { status:200, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:true, orderId, order }), { status:200, headers: jsonHeaders });
   }catch(e){
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
