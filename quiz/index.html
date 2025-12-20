@@ -137,6 +137,7 @@
         <div id="couponWrap" class="result" style="display:none"></div>
         <div style="margin-top:8px">
           <button id="copyCouponBtn" class="btn ghost" style="display:none">複製優惠碼</button>
+          <button id="saveCouponBtn" class="btn" style="display:none">存到我的優惠券</button>
         </div>
       </div>
       <div class="footer">
@@ -475,7 +476,32 @@ async function showResult(){
     const btn = document.getElementById('getCouponBtn');
     const box = document.getElementById('couponWrap');
     const copyBtn = document.getElementById('copyCouponBtn');
+    const saveBtn = document.getElementById('saveCouponBtn');
     const shopBtn = Array.from(document.querySelectorAll('#resultBox .footer a')).find(a=>/shopunalomecodes\.pages\.dev\/shop/.test(a.href) || /\/shop$/.test(a.pathname));
+    async function saveToAccount(codeStr){
+      if (!codeStr) return;
+      try{
+        const res = await fetch('/api/me/coupons', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ code: codeStr })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (res.status === 401){
+          alert('請先登入會員，再儲存到「我的優惠券」。\n將為你導向登入頁。');
+          window.location.href = '/api/auth/google/login?redirect=/quiz/';
+          return;
+        }
+        if (!res.ok || !data.ok){
+          throw new Error(data.error || ('HTTP '+res.status));
+        }
+        alert('已存到「我的優惠券」，可在購物車直接套用。');
+      }catch(err){
+        alert('儲存失敗，請稍後再試：' + (err.message||err));
+      }
+    }
+
     if (btn && !btn._bound){
       btn._bound = true;
       btn.addEventListener('click', async ()=>{
@@ -528,6 +554,14 @@ async function showResult(){
               });
             }
           }
+          if (saveBtn){
+            saveBtn.style.display = 'inline-flex';
+            saveBtn.dataset.code = coupon;
+            if (!saveBtn._bound){
+              saveBtn._bound = true;
+              saveBtn.addEventListener('click', ()=> saveToAccount(saveBtn.dataset.code||'')); 
+            }
+          }
         }catch(err){
           // 後端發券失敗時，給出友善訊息並提供臨時碼（仍以正式券優先）
           var fallback = generateCoupon(code);
@@ -536,6 +570,10 @@ async function showResult(){
           if (copyBtn){
             copyBtn.style.display = 'inline-flex';
             copyBtn.dataset.code = fallback;
+          }
+          if (saveBtn){
+            saveBtn.style.display = 'inline-flex';
+            saveBtn.dataset.code = fallback;
           }
           if (shopBtn){
             const u = new URL(shopBtn.href, location.origin);
