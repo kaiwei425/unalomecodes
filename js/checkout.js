@@ -124,14 +124,29 @@ if (window.authState){
 }
 
 // 後備：若未透過 authState 取得資料，直接呼叫 /api/me/profile 帶入
-(async function preloadProfileForCheckout(){
-  try{
-    const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
-    const data = await res.json().catch(()=>({}));
-    if (res.ok && data && data.profile){
-      applyBankProfile(data.profile);
+(function(){
+  let attempts = 0;
+  async function preloadProfileForCheckout(){
+    // 若已經填有值則不覆蓋使用者輸入
+    if ((bfNameInput && bfNameInput.value) || (bfPhoneInput && bfPhoneInput.value) || (bfEmailInput && bfEmailInput.value)){
+      attempts = 99; // 停止重試
+      return;
     }
-  }catch(_){}
+    try{
+      const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (res.ok && data && data.profile){
+        applyBankProfile(data.profile);
+        attempts = 99;
+        return;
+      }
+    }catch(_){}
+    attempts++;
+    if (attempts < 5){
+      setTimeout(preloadProfileForCheckout, 800);
+    }
+  }
+  preloadProfileForCheckout();
 })();
 
 if (typeof window.__scheduleOrderRefresh !== 'function'){
