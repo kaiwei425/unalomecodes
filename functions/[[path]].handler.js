@@ -888,6 +888,48 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, admin:true, email: admin.email || '', name: admin.name || admin.email || '' });
   }
 
+  // Admin: list users / profiles
+  if (pathname === '/api/admin/users' && request.method === 'GET') {
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    const store = getUserStore(env);
+    if (!store){
+      return json({ ok:false, error:'USERS KV not bound' }, 500);
+    }
+    if (!store.list){
+      return json({ ok:false, error:'list_not_supported_on_store' }, 500);
+    }
+    try{
+      const qRaw = (url.searchParams.get('q') || '').trim().toLowerCase();
+      const limit = Math.min(Number(url.searchParams.get('limit') || 200), 500);
+      const iter = await store.list({ prefix:'USER:' });
+      const keys = Array.isArray(iter.keys) ? iter.keys.map(k=>k.name) : [];
+      const out = [];
+      for (const key of keys.slice(0, limit)){
+        const raw = await store.get(key);
+        if (!raw) continue;
+        try{
+          const obj = JSON.parse(raw);
+          obj.id = obj.id || key.replace(/^USER:/,'');
+          if (qRaw){
+            const hay = JSON.stringify(obj).toLowerCase();
+            if (!hay.includes(qRaw)) continue;
+          }
+          out.push(obj);
+        }catch(_){}
+      }
+      out.sort((a,b)=>{
+        const la = new Date(a.lastLoginAt || a.updatedAt || a.createdAt || 0).getTime();
+        const lb = new Date(b.lastLoginAt || b.updatedAt || b.createdAt || 0).getTime();
+        return lb - la;
+      });
+      return json({ ok:true, items: out.slice(0, limit) });
+    }catch(e){
+      return json({ ok:false, error:String(e) }, 500);
+    }
+  }
+
   if (pathname === '/api/me/store') {
     const record = await getSessionUserRecord(request, env);
     if (!record) return json({ ok:false, error:'unauthorized' }, 401);

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>會員管理｜unalomecodes</title>
+<style>
+  :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--line:#1f2937;--brand:#3b82f6;}
+  html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1022,#0f172a);color:#e5e7eb;font-family:ui-sans-serif,system-ui,-apple-system;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px;}
+  .backLink{margin-bottom:10px;}
+  .backBtn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:999px;
+    background:#111827;border:1px solid #263046;color:#e5e7eb;
+    text-decoration:none;font-weight:700;font-size:13px;
+    transition:all .18s ease;
+  }
+  .backBtn:hover{border-color:#3b82f6;color:#3b82f6;}
+  h1{font-size:22px;margin:12px 0 16px 0;letter-spacing:.5px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  .bar input,.bar select{background:#0f172a;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:8px 10px}
+  .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px dashed rgba(255,255,255,.06);vertical-align:top}
+  th{color:#94a3b8;font-weight:700;text-align:left;background:#0f172a;position:sticky;top:0}
+  tbody tr:hover{background:#0f172a}
+  .muted{color:#94a3b8}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid #334155;font-size:12px;color:#e5e7eb}
+  .badge.green{border-color:#22c55e;color:#22c55e;background:rgba(34,197,94,.08)}
+  .badge.blue{border-color:#3b82f6;color:#3b82f6;background:rgba(59,130,246,.08)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
+    <h1>會員管理</h1>
+    <div class="bar">
+      <input id="q" placeholder="搜尋 姓名 / Email / 手機">
+      <select id="sortSel">
+        <option value="lastLogin">最近登入</option>
+        <option value="created">註冊時間</option>
+        <option value="name">姓名</option>
+      </select>
+      <button id="reload" class="backBtn" style="border-radius:10px;">重新整理</button>
+      <span class="muted" id="count"></span>
+    </div>
+    <div class="card">
+      <div style="overflow:auto; max-height:70vh;">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:160px">姓名 / Email</th>
+              <th style="min-width:120px">手機</th>
+              <th style="min-width:180px">預設門市</th>
+              <th style="min-width:160px">登入 / 建立</th>
+              <th style="min-width:140px">其他</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="5" class="muted">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<script>
+  const API = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users';
+  const q = document.getElementById('q');
+  const tbody = document.getElementById('tbody');
+  const sortSel = document.getElementById('sortSel');
+  const countEl = document.getElementById('count');
+  let items = [];
+
+  function render(){
+    let list = items.slice();
+    const key = (q.value||'').trim().toLowerCase();
+    if (key){
+      list = list.filter(u=> JSON.stringify(u).toLowerCase().includes(key));
+    }
+    const sort = sortSel.value;
+    list.sort((a,b)=>{
+      if (sort === 'name') return String(a.name||'').localeCompare(String(b.name||''));
+      if (sort === 'created'){
+        return new Date(b.createdAt||0) - new Date(a.createdAt||0);
+      }
+      return new Date(b.lastLoginAt||b.updatedAt||b.createdAt||0) - new Date(a.lastLoginAt||a.updatedAt||a.createdAt||0);
+    });
+    if (countEl) countEl.textContent = `共 ${list.length} 位`;
+    tbody.innerHTML = list.map(u=>{
+      const store = u.defaultStore || {};
+      const storeText = store.name ? `${store.name}${store.id ? '（'+store.id+'）' : ''}` : '';
+      const wd = u.memberPerks && u.memberPerks.welcomeDiscount ? u.memberPerks.welcomeDiscount : null;
+      return `<tr>
+        <td>
+          <div style="font-weight:700">${escapeHtml(u.name||'（未填寫）')}</div>
+          <div class="muted">${escapeHtml(u.email||'')}</div>
+        </td>
+        <td>${escapeHtml((u.defaultContact && u.defaultContact.phone) || '')}</td>
+        <td>${escapeHtml(storeText)}</td>
+        <td>
+          <div class="muted">登入：${fmt(u.lastLoginAt)}</div>
+          <div class="muted">建立：${fmt(u.createdAt)}</div>
+        </td>
+        <td>
+          ${(wd ? `<span class="badge ${wd.used ? 'blue':'green'}">迎新折扣：${wd.used ? '已使用':'未使用'}</span>` : '')}
+          ${u.wishlist && u.wishlist.length ? `<div class="muted">願望清單：${u.wishlist.length} 件</div>` : ''}
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" class="muted">目前沒有資料</td></tr>';
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]||c));
+  }
+  function fmt(ts){
+    if (!ts) return '';
+    try{ return new Date(ts).toLocaleString(); }catch(_){ return ts; }
+  }
+
+  async function load(){
+    tbody.innerHTML = '<tr><td colspan="5" class="muted">載入中…</td></tr>';
+    try{
+      const res = await fetch(API, { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok){
+        throw new Error(data.error || ('HTTP '+res.status));
+      }
+      items = Array.isArray(data.items) ? data.items : [];
+      render();
+    }catch(err){
+      tbody.innerHTML = `<tr><td colspan="5" style="color:#f87171;">讀取失敗：${escapeHtml(err.message||err)}</td></tr>`;
+    }
+  }
+
+  document.getElementById('reload').addEventListener('click', load);
+  q.addEventListener('input', ()=>{ clearTimeout(q._t); q._t=setTimeout(render,200); });
+  sortSel.addEventListener('change', render);
+  load();
+</script>
+</body>
+</html>
