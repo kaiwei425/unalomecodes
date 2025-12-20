@@ -80,7 +80,7 @@
     .chip.active{outline:2px solid var(--accent);background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.55);}
     .step{margin:10px 0 2px;font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
     .q{font-size:20px;font-weight:800;margin:6px 0 16px}
-    .footer{display:grid;gap:10px;margin-top:14px;grid-template-columns:1fr 1fr;position:sticky;bottom:12px;background:linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.86));padding:8px;border-radius:14px;border:1px solid rgba(0,0,0,0.04);box-shadow:0 12px 28px rgba(0,0,0,0.12);}
+    .footer{display:grid;gap:10px;margin-top:14px;grid-template-columns:1fr 1fr;}
     .result{padding:16px;border-radius:14px;background:#f9fafb;border:1px dashed rgba(0,0,0,0.08);white-space:pre-wrap;line-height:1.8;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
     code.k{background:#111827;padding:2px 6px;border-radius:6px;border:1px solid #1f2937;color:#facc15;}
     .note{font-size:12px;color:var(--muted)}
@@ -88,6 +88,8 @@
     .fill{height:100%;background:linear-gradient(90deg,#f59e0b,#2563eb);width:0%}
     #resultBox{border:1px solid rgba(0,0,0,0.05);}
     #resultBox img{border-radius:16px;box-shadow:0 14px 28px rgba(0,0,0,.16);}
+    /* 答題按鈕統一尺寸，手機易點 */
+    #opts .btn{width:100%; min-height:72px; border-radius:16px;}
   </style>
   <meta name="quiz-token" content="quiz_5A9kU3tZmE4hW2xP7qL8vN0r">
 </head>
@@ -99,22 +101,22 @@
         <h1>測驗與您有緣的守護神</h1>
         <p class="tagline">7 題 1 分鐘，找出守護神，解鎖專屬優惠與配戴建議</p>
       </div>
-      <a class="btn primary" href="/shop" style="margin-left:auto">回到商品頁</a>
+      <a class="btn primary" href="/shop" style="margin-left:auto;font-size:13px;padding:10px 14px;">回到商品頁</a>
     </div>
   </header>
 
   <main class="wrap">
-    <div class="card">
+    <div class="card step-card" id="stepDow">
       <h2>你是星期幾出生？</h2>
       <div id="dowBox" class="chips" role="group" aria-label="weekday"></div>
     </div>
 
-    <div class="card">
+    <div class="card step-card" id="stepZod">
       <h2>你的星座？</h2>
       <div id="zodiacBox" class="chips" role="group" aria-label="zodiac"></div>
     </div>
 
-    <div class="card" id="quizBox">
+    <div class="card step-card" id="quizBox">
       <div id="qTitle" class="q"></div>
       <div id="opts" class="grid"></div>
       <div class="footer">
@@ -311,14 +313,20 @@ function deityName(code){
    UI 狀態
 ===================== */
 const state = { dow:'', zod:'', job:'', p2:'', p3:'', p4:'', p5:'', p6:'', p7:'' };
-let current = 1;
+let currentStep = 0; // 0: dow, 1: zod, 2..8: questions 1-7
+const TOTAL_STEPS = 2 + 7;
+let currentQuestion = 1;
 
 // render weekday
 const dowBox = document.getElementById('dowBox');
 Object.entries(DOW).forEach(([k,v])=>{
   const b = document.createElement('div');
   b.className = 'chip'; b.textContent = v.label;
-  b.onclick = ()=>{ state.dow=k; [...dowBox.children].forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+  b.onclick = ()=>{
+    state.dow=k;
+    [...dowBox.children].forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    nextStep();
+  };
   dowBox.appendChild(b);
 });
 
@@ -327,42 +335,68 @@ const zodiacBox = document.getElementById('zodiacBox');
 Object.entries(ZODIAC).forEach(([k,v])=>{
   const b = document.createElement('div');
   b.className='chip'; b.textContent = v.name;
-  b.onclick = ()=>{ state.zod=k; [...zodiacBox.children].forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+  b.onclick = ()=>{
+    state.zod=k;
+    [...zodiacBox.children].forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    nextStep();
+  };
   zodiacBox.appendChild(b);
 });
 
 // render questions
 const qTitle = document.getElementById('qTitle');
 const optsEl  = document.getElementById('opts');
-function renderQ(){
-  const q = QUESTIONS[current];
-  qTitle.textContent = `第 ${current} 題（剩餘 ${Math.max(7-current,0)} 題）｜${q.text}`;
+function renderQ(qNum){
+  currentQuestion = qNum;
+  const q = QUESTIONS[qNum];
+  qTitle.textContent = `第 ${qNum} 題（剩餘 ${Math.max(7-qNum,0)} 題）｜${q.text}`;
   optsEl.innerHTML='';
-  const isJob = (current===1);
+  const isJob = (qNum===1);
   Object.entries(q.opts).forEach(([k,label])=>{
     const btn = document.createElement('button');
     btn.className = 'btn'; btn.textContent = label;
     btn.style.textAlign='left';
     btn.onclick = ()=>{
-      state['p'+current] = k;
+      state['p'+qNum] = k;
       if (isJob) state.job = k;
-      if (current<7) { current++; renderQ(); }
+      if (currentStep < TOTAL_STEPS-1){ nextStep(); }
       else { showResult(); }
     };
     const wrap = document.createElement('div'); wrap.appendChild(btn);
     optsEl.appendChild(wrap);
   });
-  document.getElementById('prevBtn').style.display = current>1 ? 'inline-flex' : 'none';
-  document.getElementById('nextBtn').style.display = current<7 ? 'inline-flex' : 'none';
+  document.getElementById('prevBtn').style.display = currentStep>2 ? 'inline-flex' : 'none';
+  document.getElementById('nextBtn').style.display = currentStep<TOTAL_STEPS-1 ? 'inline-flex' : 'none';
 }
 document.getElementById('prevBtn').onclick = ()=>{
-  if (current>1){ current--; renderQ(); }
+  if (currentStep>0){ currentStep--; renderStep(); }
 };
 document.getElementById('nextBtn').onclick = ()=>{
-  if (current<7){ current++; renderQ(); }
+  if (currentStep<TOTAL_STEPS-1){ currentStep++; renderStep(); }
 };
 
-renderQ();
+function renderStep(){
+  const cards = document.querySelectorAll('.step-card');
+  cards.forEach(c=> c.style.display='none');
+  if (currentStep === 0){
+    document.getElementById('stepDow').style.display='';
+  }else if (currentStep === 1){
+    document.getElementById('stepZod').style.display='';
+  }else{
+    document.getElementById('quizBox').style.display='';
+    renderQ(currentStep-1);
+  }
+}
+function nextStep(){
+  if (currentStep < TOTAL_STEPS-1){
+    currentStep++;
+    renderStep();
+  }else{
+    showResult();
+  }
+}
+
+renderStep();
 
 /* =====================
    結果
@@ -603,7 +637,20 @@ async function showResult(){
 
 
   document.getElementById('resultBox').style.display='block';
-  window.scrollTo({ top: document.getElementById('resultBox').offsetTop - 12, behavior:'smooth' });
+
+  // 將結果移至全新頁面（移除前面的題目卡片，僅保留結果）
+  try{
+    const main = document.querySelector('main');
+    const res = document.getElementById('resultBox');
+    const newWrap = document.createElement('div');
+    newWrap.className = 'wrap';
+    newWrap.appendChild(res);
+    main.innerHTML = '';
+    main.appendChild(newWrap);
+    res.style.marginTop = '12px';
+  }catch(_){ }
+
+  window.scrollTo({ top: 0, behavior:'smooth' });
 }
 </script>
 </body>
