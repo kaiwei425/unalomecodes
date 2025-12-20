@@ -453,6 +453,23 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{
       const dlg = document.getElementById('dlgBank');
       if(!dlg) return alert('無法顯示匯款視窗');
+      // 確保在開啟前帶入會員基本資料
+      (function ensureProfile(){
+        const fieldsEmpty = (!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value);
+        if (!fieldsEmpty) return;
+        const auth = window.authState;
+        if (auth && typeof auth.getProfile === 'function'){
+          const p = auth.getProfile();
+          if (p) applyBankProfile(p);
+        }
+        // 若仍未填入，直接打 API
+        if ((!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value)){
+          fetch('/api/me/profile', { credentials:'include', cache:'no-store' })
+            .then(r=>r.json().catch(()=>({})))
+            .then(data=>{ if (data && data.profile) applyBankProfile(data.profile); })
+            .catch(()=>{});
+        }
+      })();
       // 填入展示資訊
       const bankEl = document.getElementById('bankBankVal');
       const noEl   = document.getElementById('bankNoVal');
