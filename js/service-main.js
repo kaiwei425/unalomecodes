@@ -50,6 +50,7 @@
   const memberPerkHintEl = document.getElementById('svcMemberPerkHint');
   const requestDateInput = checkoutForm ? checkoutForm.querySelector('input[name="requestDate"]') : null;
   const contactNameInput = checkoutForm ? checkoutForm.querySelector('input[name="name"]') : null;
+  const contactNameEnInput = checkoutForm ? checkoutForm.querySelector('input[name="nameEn"]') : null;
   const contactPhoneInput = checkoutForm ? checkoutForm.querySelector('input[name="phone"]') : null;
   const contactEmailInput = checkoutForm ? checkoutForm.querySelector('input[name="email"]') : null;
   const contactBirthInput = checkoutForm ? checkoutForm.querySelector('input[name="birth"]') : null;
@@ -340,6 +341,7 @@
     if (!checkoutForm) return null;
     const fd = new FormData(checkoutForm);
     const name = String(fd.get('name')||'').trim();
+    const nameEn = String(fd.get('nameEn')||'').trim();
     const phoneRaw = String(fd.get('phone')||'').trim();
     const email = String(fd.get('email')||'').trim();
     const birth = String(fd.get('birth')||'').trim();
@@ -347,6 +349,10 @@
     const note = String(fd.get('note')||'').trim();
     if (!name){
       alert('請輸入聯絡人姓名');
+      return null;
+    }
+    if (!nameEn){
+      alert('請輸入英文姓名');
       return null;
     }
     const phoneDigits = phoneRaw.replace(/\D+/g,'');
@@ -367,7 +373,7 @@
       if (contactPhotoInput) contactPhotoInput.focus();
       return null;
     }
-    return { name, phone: phoneDigits, email, birth, requestDate, note };
+    return { name, nameEn, phone: phoneDigits, email, birth, requestDate, note };
   }
 
   async function ensureReceiptUploaded(){
@@ -1078,9 +1084,10 @@
         const receiptUrl = await ensureReceiptUploaded();
         const totalAmount = Number(bankAmountInput && bankAmountInput.dataset ? bankAmountInput.dataset.amount : cartTotal(cart));
         lastRemitLast5 = last5;
-        const payload = {
+      const payload = {
           serviceId,
           name: checkoutContact.name,
+          nameEn: checkoutContact.nameEn,
           phone: checkoutContact.phone,
           email: checkoutContact.email,
           birth: checkoutContact.birth,

@@ -373,6 +373,7 @@ const items = Array.isArray(o.items) ? o.items : [{
       <td>${payHtml}</td>
       <td>
   <div>${escapeHtml(buyer.name||"")}</div>
+  ${ buyer.nameEn ? `<div class="muted">英文姓名：${escapeHtml(buyer.nameEn)}</div>` : "" }
   ${ (buyer.phone||o.phone||buyer.tel||buyer.mobile) ? `<div class="muted">電話：${escapeHtml(buyer.phone||o.phone||buyer.tel||buyer.mobile)}</div>` : "" }
   ${ (buyer.email||o.email) ? `<div class="muted">Email：${escapeHtml(buyer.email||o.email)}</div>` : "" }
   ${ buyer.line ? `<div class="muted">LINE：${escapeHtml(buyer.line)}</div>` : "" }
