@@ -4148,8 +4148,16 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }
 
     if (subtotalEl) subtotalEl.textContent = tw(totals.sub || 0);
+    var shipOff = totals.shippingDiscount || 0;
     if (discountEl) discountEl.textContent = '-' + tw(totals.off || 0).replace(/^NT\$\s*/, 'NT$ ');
-    if (shippingEl) shippingEl.textContent = '+' + tw(totals.shipping || 0).replace(/^NT\$\s*/, 'NT$ ');
+    if (shippingEl){
+      var shipVal = totals.shipping || 0;
+      if (shipOff > 0){
+        shippingEl.textContent = '+NT$ ' + formatPrice(shipVal) + '（已折抵 NT$ ' + formatPrice(shipOff) + '）';
+      }else{
+        shippingEl.textContent = '+' + tw(shipVal).replace(/^NT\$\s*/, 'NT$ ');
+      }
+    }
     if (shippingRow) shippingRow.style.display = (totals.shipping && totals.shipping>0) ? 'flex' : 'none';
     if (grandEl)    grandEl.textContent    = tw(totals.grand || 0);
 
