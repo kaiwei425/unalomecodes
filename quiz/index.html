@@ -152,7 +152,11 @@
 /* =====================
    CONFIG（可改）
 ===================== */
-const API_BASE   = (function(){ try{ return location.origin; }catch(e){ return 'https://shop.unalomecodes.com'; }})();
+// 祈福建議仍使用既有 Worker（包含守護神資料與建議）
+const ADVICE_BASE = 'https://proud-boat-794c.kaiwei425.workers.dev';
+const API_BASE = ADVICE_BASE; // 供舊有分享/守護神資料 API 使用
+// 本站 API（新優惠券系統、商品結帳）
+const SITE_BASE   = (function(){ try{ return location.origin; }catch(e){ return 'https://shop.unalomecodes.com'; }})();
 // 使用既有可用的外部網域，以確保「查看完整介紹／分享結果／瀏覽其他守護者」可正常開啟
 const SHARE_PAGE = 'https://unalomecodes.pages.dev/share';
 const DEITY_PAGE = 'https://unalomecodes.pages.dev/deity';
@@ -160,7 +164,7 @@ const DEITY_IMG_OVERRIDES = { CD:'https://i.ibb.co/rGpp2w1s/image.jpg', RH:'http
 const BRAND_NAME = '守護指引';
 const BRAND_LOGO = 'https://i.ibb.co/7mtppQQ/logo.jpg';
 // Coupon service endpoint + token reader (needed for REAL issuance)
-const COUPON_API = (function(){ try{ return location.origin + '/api/coupons'; }catch(e){ return '/api/coupons'; }})();
+const COUPON_API = (function(){ try{ return SITE_BASE + '/api/coupons'; }catch(e){ return '/api/coupons'; }})();
 function readQuizToken(){
   try{
     var el = document.querySelector('meta[name="quiz-token"]');
@@ -444,7 +448,7 @@ async function showResult(){
 
   // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
   try {
-    const advUrl = `${API_BASE}/amulet/advice?code=${encodeURIComponent(code)}&job=${encodeURIComponent(state.job)}&dow=${encodeURIComponent(state.dow)}&zod=${encodeURIComponent(state.zod)}`;
+    const advUrl = `${ADVICE_BASE}/amulet/advice?code=${encodeURIComponent(code)}&job=${encodeURIComponent(state.job)}&dow=${encodeURIComponent(state.dow)}&zod=${encodeURIComponent(state.zod)}`;
     const advEl = document.getElementById('amuletAdvice');
     advEl.style.display = 'block';
     advEl.textContent = '載入中…';
@@ -478,14 +482,14 @@ async function showResult(){
         const key = `coupon_${code}`;
         const box = document.getElementById('couponWrap');
         let stored = null; try{ stored = JSON.parse(localStorage.getItem(key)||'null'); }catch(_){ stored = null; }
-        // 僅當已存在「正式券（issued:true）」才直接使用；否則必須呼叫後端 /issue
-        let coupon = (stored && stored.issued) ? stored.code : '';
+        // 僅沿用新系統（v2）正式券；舊資料一律重發
+        let coupon = (stored && stored.version === 'v2' && stored.issued) ? stored.code : '';
         try{
           if (!coupon){
             const real = await issueCoupon(code, 200);
             if (!real || typeof real !== 'string') throw new Error('NO_CODE');
             coupon = real;
-            try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code })); }catch(_){ }
+            try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2' })); }catch(_){ }
           }
           // 顯示正式券碼（不再顯示任何臨時券提示）
           box.style.display = 'block';
