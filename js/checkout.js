@@ -133,6 +133,12 @@ if (window.authState){
 // 後備：若未透過 authState 取得資料，直接呼叫 /api/me/profile 帶入
 (function(){
   let attempts = 0;
+  let cachedProfile = null;
+  function tryFillCached(){
+    if (cachedProfile){
+      applyBankProfile(cachedProfile);
+    }
+  }
   async function preloadProfileForCheckout(){
     // 若已經填有值則不覆蓋使用者輸入
     if ((bfNameInput && bfNameInput.value) || (bfPhoneInput && bfPhoneInput.value) || (bfEmailInput && bfEmailInput.value)){
@@ -143,6 +149,7 @@ if (window.authState){
       const res = await fetch(PROFILE_URL, { credentials:'include', cache:'no-store' });
       const data = await res.json().catch(()=>({}));
       if (data && data.profile){
+        cachedProfile = data.profile;
         applyBankProfile(data.profile);
       }
       if (res && !res.ok && (!data || !data.profile)){
@@ -164,6 +171,19 @@ if (window.authState){
   }
   // 若 3 秒後仍空白，再強制補一次
   setTimeout(()=>{ preloadProfileForCheckout(); }, 3000);
+  // 以 1 秒間隔連續嘗試 10 次補寫（避免其他腳本清空欄位）
+  (function(){
+    let count = 0;
+    const timer = setInterval(()=>{
+      if ((bfNameInput && bfNameInput.value) && (bfPhoneInput && bfPhoneInput.value) && (bfEmailInput && bfEmailInput.value)){
+        clearInterval(timer);
+        return;
+      }
+      tryFillCached();
+      count++;
+      if (count >= 10) clearInterval(timer);
+    }, 1000);
+  })();
 })();
 
 if (typeof window.__scheduleOrderRefresh !== 'function'){

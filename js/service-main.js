@@ -818,10 +818,12 @@
   setRequestDateMin();
   if (window.authState){
     window.authState.onProfile(profile=>{
+      try{ console.debug && console.debug('[svc] onProfile', profile); }catch(_){}
       fillContactFromProfile(profile);
     });
     if (typeof window.authState.getProfile === 'function'){
       const existingProfile = window.authState.getProfile();
+      try{ console.debug && console.debug('[svc] existing profile', existingProfile); }catch(_){}
       if (existingProfile) fillContactFromProfile(existingProfile);
     }
   }
@@ -956,6 +958,17 @@
       const data = collectStepOneData();
       if (!data) return;
       checkoutContact = data;
+      // 若尚未帶入會員基本資料，再嘗試一次（使用 profile）
+      try{
+        if (!contactNameInput.value || !contactPhoneInput.value || !contactEmailInput.value){
+          if (window.authState && typeof window.authState.getProfile === 'function'){
+            const p = window.authState.getProfile();
+            if (p){
+              fillContactFromProfile(p);
+            }
+          }
+        }
+      }catch(_){}
       try{
         await ensureRitualPhotoUploaded();
       }catch(err){
