@@ -2695,6 +2695,17 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       message: '目前購物車未找到可套用的商品，此優惠尚未生效'
     };
     var idx = line && typeof line.itemIndex === 'number' ? line.itemIndex : -1;
+    var cType = couponTypeOf(cpn);
+
+    if (cType === 'SHIP'){
+      info.status = line ? 'applied' : 'pending';
+      info.color = line ? '#059669' : '#ea580c';
+      info.message = line
+        ? ('免運券：運費折抵 ' + tw(amt).replace(/^NT\$\s*/, 'NT$ '))
+        : '免運券（折抵運費）';
+      return info;
+    }
+
     if (idx >= 0 && items && items[idx]){
       var it = items[idx] || {};
       var nm = it.name || it.title || it.productName || '商品';
