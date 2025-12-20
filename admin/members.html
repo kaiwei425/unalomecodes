@@ -51,17 +51,16 @@
         <table>
           <thead>
             <tr>
-              <th style="min-width:160px">姓名 / Email</th>
-              <th style="min-width:120px">手機</th>
-              <th style="min-width:180px">預設門市</th>
-              <th style="min-width:160px">登入 / 建立</th>
-              <th style="min-width:140px">其他</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"><tr><td colspan="5" class="muted">載入中…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+          <th style="min-width:160px">姓名 / Email</th>
+          <th style="min-width:120px">手機</th>
+          <th style="min-width:180px">預設門市</th>
+          <th style="min-width:160px">登入 / 建立</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="4" class="muted">載入中…</td></tr></tbody>
+    </table>
+  </div>
+</div>
   </div>
 <script>
   const API = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users';
@@ -101,12 +100,8 @@
           <div class="muted">登入：${fmt(u.lastLoginAt)}</div>
           <div class="muted">建立：${fmt(u.createdAt)}</div>
         </td>
-        <td>
-          ${(wd ? `<span class="badge ${wd.used ? 'blue':'green'}">迎新折扣：${wd.used ? '已使用':'未使用'}</span>` : '')}
-          ${u.wishlist && u.wishlist.length ? `<div class="muted">願望清單：${u.wishlist.length} 件</div>` : ''}
-        </td>
       </tr>`;
-    }).join('') || '<tr><td colspan="5" class="muted">目前沒有資料</td></tr>';
+    }).join('') || '<tr><td colspan="4" class="muted">目前沒有資料</td></tr>';
   }
 
   function escapeHtml(s){
