@@ -244,6 +244,24 @@ function base64UrlDecodeToBytes(b64){
   return bytes;
 }
 
+function csvEscape(val){
+  const s = String(val ?? '');
+  if (s.includes('"') || s.includes(',') || s.includes('\n')){
+    return `"${s.replace(/"/g,'""')}"`;
+  }
+  return s;
+}
+
+function formatTZ(ts, offsetHours=0){
+  if (!ts) return '';
+  try{
+    const t = new Date(ts).getTime();
+    const shifted = t + (offsetHours * 3600 * 1000);
+    const d = new Date(shifted);
+    return d.toISOString().replace('T',' ').replace(/\.\d+Z$/,'');
+  }catch(_){ return ts; }
+}
+
 async function signSession(payload, secret){
   const body = JSON.stringify(payload);
   const data = new TextEncoder().encode(body);
@@ -3810,6 +3828,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     const orderId = await generateServiceOrderId(env);
     const buyer = {
       name,
+      nameEn: String(body.nameEn || body.buyer_name_en || body.buyer_nameEn || body.buyer?.nameEn || '').trim(),
       phone,
       email: String(body.email||'').trim(),
       birth: String(body.birth||'').trim(),
@@ -3894,7 +3913,9 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       items,
       amount: finalPrice,
       status: '待處理',
-      buyer,
+      buyer: Object.assign({}, buyer, {
+        nameEn: String(body?.nameEn || body?.buyer?.nameEn || body?.buyer_name_en || body?.buyer_nameEn || '')
+      }),
       note: String(body.note||'').trim(),
       requestDate: String(body.requestDate||'').trim(),
       createdAt: new Date().toISOString(),
@@ -3979,6 +4000,67 @@ if (pathname === '/api/service/orders' && request.method === 'GET') {
   return new Response(JSON.stringify({ ok:true, items }), { status:200, headers: jsonHeaders });
 }
 
+// 匯出服務訂單 CSV
+if (pathname === '/api/service/orders/export' && request.method === 'GET') {
+  if (!(await isAdmin(request, env))) return new Response('Unauthorized', { status:401, headers:{'Content-Type':'text/plain'} });
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  if (!store){
+    return new Response('SERVICE_ORDERS 未綁定', { status:500, headers:{'Content-Type':'text/plain'} });
+  }
+  const idxKey = 'SERVICE_ORDER_INDEX';
+  try{
+    const limit = Math.min(Number(url.searchParams.get('limit')||200), 500);
+    const idxRaw = await store.get(idxKey);
+    const ids = idxRaw ? JSON.parse(idxRaw) : [];
+    const rows = [];
+    const header = [
+      '訂單編號','建立時間(UTC+7)','狀態','服務名稱','選項','總金額',
+      '匯款末五碼','聯絡人姓名','英文姓名','電話','Email','生日','指定日期','備註','匯款憑證'
+    ];
+    rows.push(header.map(csvEscape).join(','));
+    for (const id of ids.slice(0, limit)){
+      const raw = await store.get(id);
+      if (!raw) continue;
+      let o = null;
+      try{ o = JSON.parse(raw); }catch(_){}
+      if (!o) continue;
+      const created = formatTZ(o.createdAt || o.updatedAt || '', 7);
+      const opts = Array.isArray(o.selectedOptions) ? o.selectedOptions : (o.selectedOption ? [o.selectedOption] : []);
+      const optText = opts.length ? opts.map(x=> `${x.name||''}${x.price?`(+${x.price})`:''}`).join('、') : '標準服務';
+      const proof = o?.transfer?.receiptUrl || o?.transferReceiptUrl || '';
+      const row = [
+        o.id || '',
+        created,
+        o.status || '',
+        o.serviceName || '',
+        optText,
+        o.amount || '',
+        (o.transfer && o.transfer.last5) || o.transferLast5 || '',
+        o.buyer?.name || '',
+        o.buyer?.nameEn || '',
+        o.buyer?.phone || '',
+        o.buyer?.email || '',
+        o.buyer?.birth || '',
+        o.requestDate || '',
+        o.note || '',
+        proof
+      ];
+      rows.push(row.map(csvEscape).join(','));
+    }
+    const csv = rows.join('\n');
+    return new Response(csv, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="service-orders.csv"',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  }catch(e){
+    return new Response(String(e), { status:500, headers:{'Content-Type':'text/plain'} });
+  }
+}
+
 if (pathname === '/api/service/order/status' && request.method === 'POST') {
   if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   const store = env.SERVICE_ORDERS || env.ORDERS;
@@ -3989,10 +4071,27 @@ if (pathname === '/api/service/order/status' && request.method === 'POST') {
     const body = await request.json();
     const id = String(body.id||'').trim();
     const status = String(body.status||'').trim();
-    if (!id || !status) return new Response(JSON.stringify({ ok:false, error:'Missing id/status' }), { status:400, headers: jsonHeaders });
+    const action = String(body.action||'').trim();
+    if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
     const raw = await store.get(id);
     if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
     const order = JSON.parse(raw);
+    if (action === 'delete'){
+      const confirm = String(body.confirm||'').trim();
+      if (confirm !== '刪除') return new Response(JSON.stringify({ ok:false, error:'確認文字不符' }), { status:400, headers: jsonHeaders });
+      await store.delete(id);
+      try{
+        const idxKey = 'SERVICE_ORDER_INDEX';
+        const idxRaw = await store.get(idxKey);
+        if (idxRaw){
+          const list = JSON.parse(idxRaw) || [];
+          const next = list.filter(x=> String(x)!==id);
+          await store.put(idxKey, JSON.stringify(next));
+        }
+      }catch(_){}
+      return new Response(JSON.stringify({ ok:true, deleted:true }), { status:200, headers: jsonHeaders });
+    }
+    if (!status) return new Response(JSON.stringify({ ok:false, error:'Missing status' }), { status:400, headers: jsonHeaders });
     order.status = status;
     order.updatedAt = new Date().toISOString();
     await store.put(id, JSON.stringify(order));

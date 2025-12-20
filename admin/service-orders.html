@@ -40,6 +40,7 @@
     <div class="lookup">
       <input id="filter" placeholder="搜尋訂單編號 / 服務 / 電話" style="flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;">
       <button class="btn" id="btnReload">重新整理</button>
+      <button class="btn" id="btnExport">匯出 CSV</button>
     </div>
     <div class="card">
       <table>
@@ -84,6 +85,7 @@
   const bodyEl = document.getElementById('ordersBody');
   const filterInput = document.getElementById('filter');
   const btnReload = document.getElementById('btnReload');
+  const btnExport = document.getElementById('btnExport');
   let orders = [];
   const STATUSES = ['待處理','已確認付款，祈福進行中','祈福完成','祈福成果已通知'];
 
@@ -124,6 +126,13 @@
   function getTransferLast5(order){
     return (order && (order.transfer && order.transfer.last5 || order.transferLast5 || '')) || '';
   }
+  function fmt(ts){
+    if (!ts) return '';
+    try{
+      return new Date(ts).toLocaleString('zh-TW', { timeZone:'Asia/Bangkok', hour12:false });
+    }catch(_){ return ts; }
+  }
+
   function render(){
     const q = (filterInput.value||'').toLowerCase();
     const view = orders.filter(o=>{
@@ -141,7 +150,7 @@
         <tr data-id="${o.id}">
           <td>
             <div style="font-weight:700;">${o.id}</div>
-            <div class="muted">${(o.createdAt||'').replace('T',' ').replace('Z','')}</div>
+            <div class="muted">${fmt(o.createdAt)}</div>
           </td>
           <td>
             <div style="font-weight:600;">${o.serviceName||''}</div>
@@ -170,6 +179,7 @@
               <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
               <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
               <button class="btn" data-act="proof" data-id="${o.id}">查看憑證</button>
+              <button class="btn danger" data-act="delete" data-id="${o.id}">刪除</button>
             </div>
           </td>
         </tr>
@@ -268,6 +278,28 @@
         return;
       }
       window.open(url, '_blank', 'noopener');
+      return;
+    }
+    if (act === 'delete'){
+      const confirmText = prompt('請輸入「刪除」以確認刪除訂單 '+ id);
+      if (confirmText !== '刪除') return;
+      btn.disabled = true;
+      btn.textContent = '刪除中…';
+      try{
+        await authedFetch('/api/service/order/status', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ id, action:'delete', confirm: confirmText })
+        });
+        orders = orders.filter(o=> o.id !== id);
+        render();
+      }catch(err){
+        alert('刪除失敗：' + err.message);
+      }finally{
+        btn.disabled = false;
+        btn.textContent = '刪除';
+      }
+      return;
     }
   });
   const detailDialog = document.getElementById('svcOrderDetail');
@@ -337,6 +369,11 @@
   }
   filterInput.addEventListener('input', render);
   btnReload.addEventListener('click', loadOrders);
+  if (btnExport){
+    btnExport.addEventListener('click', ()=>{
+      window.location.href = API_BASE + '/api/service/orders/export';
+    });
+  }
   loadOrders();
 })();
 </script>
