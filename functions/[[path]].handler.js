@@ -1143,6 +1143,51 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, wishlist: wishlistIds, items: products });
   }
 
+  // 會員優惠券：儲存 / 讀取
+  if (pathname === '/api/me/coupons') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (request.method === 'GET') {
+      const codes = Array.isArray(record.coupons) ? record.coupons : [];
+      const items = [];
+      for (const code of codes){
+        const rec = await readCoupon(env, code);
+        if (rec){
+          items.push({
+            code: rec.code,
+            deity: rec.deity || inferCouponDeity(rec.code),
+            amount: rec.amount || 0,
+            issuedAt: rec.issuedAt || null,
+            used: !!rec.used,
+            usedAt: rec.usedAt || null,
+            orderId: rec.orderId || ''
+          });
+        } else {
+          items.push({ code, missing:true });
+        }
+      }
+      return json({ ok:true, items });
+    }
+    if (request.method === 'POST') {
+      try{
+        const body = await request.json();
+        const code = String(body.code||'').trim().toUpperCase();
+        if (!code) return json({ ok:false, error:'missing code' }, 400);
+        const list = Array.isArray(record.coupons) ? record.coupons.slice() : [];
+        if (!list.includes(code)){
+          list.unshift(code);
+          record.coupons = list.slice(0, 200);
+          await saveUserRecord(env, record);
+        }
+        const rec = await readCoupon(env, code);
+        return json({ ok:true, coupon: rec || { code } });
+      }catch(_){
+        return json({ ok:false, error:'invalid payload' }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
 function __headersJSON__() {
   return {
     'Content-Type': 'application/json; charset=utf-8',

@@ -67,6 +67,7 @@
           <button type="button" id="memberMenuBtn">會員中心 ▾</button>
           <div class="member-menu-panel" id="memberMenuPanel">
             <a href="#" data-profile>基本資料</a>
+            <a href="/account-coupons.html">我的優惠券</a>
             <a href="/account-orders.html">我的訂單</a>
             <a href="/account-store.html">門市預設</a>
             <a href="/admin/" data-admin-only data-admin-href="/admin/" style="display:none;">後台管理</a>
@@ -286,15 +287,16 @@
         <div id="cartTotal">NT$ 0</div>
       </div>
       <!-- Coupon input widget -->
-      <div class="cartCoupon" style="display:grid;gap:8px;margin:8px 0 0">
-        <label for="cartCouponInput" style="font-size:12px;color:#6b7280">優惠碼</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="cartCouponInput" type="text" inputmode="latin" placeholder="請輸入優惠碼"
-                 style="flex:1 1 auto;padding:10px;border:1px solid #e5e7eb;border-radius:10px">
-          <button id="cartApply" class="btn" style="flex:0 0 auto">套用</button>
-        </div>
-        <div id="cartCouponHint" style="display:none;font-size:12px;color:#6b7280;line-height:1.6"></div>
-      </div>
+          <div class="cartCoupon" style="display:grid;gap:8px;margin:8px 0 0">
+            <label for="cartCouponInput" style="font-size:12px;color:#6b7280">優惠碼</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="cartCouponInput" type="text" inputmode="latin" placeholder="請輸入優惠碼"
+                     style="flex:1 1 auto;padding:10px;border:1px solid #e5e7eb;border-radius:10px">
+              <button id="cartApply" class="btn" style="flex:0 0 auto">套用</button>
+              <button id="cartSelectSaved" class="btn" style="flex:0 0 auto;background:#eef2ff;color:#1d4ed8;">選用已儲存</button>
+            </div>
+            <div id="cartCouponHint" style="display:none;font-size:12px;color:#6b7280;line-height:1.6"></div>
+          </div>
 
       <!-- Discount row (hidden until a valid coupon is applied) -->
       <div class="cartSum cartDiscount" style="display:none;margin-top:6px">
@@ -3111,6 +3113,37 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     removeCartCoupon(code);
     updateCartTotals();
   });
+  // 選用已儲存的優惠券
+  (function(){
+    const btn = document.getElementById('cartSelectSaved');
+    if (!btn) return;
+    btn.addEventListener('click', async ()=>{
+      try{
+        const res = await fetch('/api/me/coupons', { credentials:'include', cache:'no-store' });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data || data.ok === false){
+          alert('讀取優惠券失敗，請先登入再試。');
+          return;
+        }
+        const items = Array.isArray(data.items) ? data.items.filter(c=>!c.used) : [];
+        if (!items.length){
+          alert('沒有可用的已儲存優惠券');
+          return;
+        }
+        const names = items.map((c,idx)=> `${idx+1}. ${c.code}（${c.deity||'守護神'}｜NT$${c.amount||0}）`).join('\\n');
+        const pick = prompt('選擇要套用的優惠券，輸入編號：\\n'+names);
+        const idx = Number((pick||'').trim()) - 1;
+        if (!Number.isFinite(idx) || idx<0 || idx>=items.length) return;
+        const chosen = items[idx];
+        const input = document.getElementById('cartCouponInput');
+        if (input){ input.value = chosen.code; }
+        // 直接觸發套用流程
+        document.getElementById('cartApply')?.click();
+      }catch(err){
+        alert('無法載入優惠券，請稍後再試');
+      }
+    });
+  })();
 
   // 將新版購物車合計函式對外公開，並定期刷新，避免被舊腳本覆蓋
   try{

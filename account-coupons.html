@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的優惠券｜unalomecodes</title>
+<style>
+  :root{--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--muted:#6b7280;--accent:#2563eb;--ok:#16a34a;--warn:#ef4444;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:#0f172a;font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;}
+  .wrap{max-width:920px;margin:0 auto;padding:20px;}
+  .backLink{margin-bottom:12px;}
+  .backBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:#0f172a;font-weight:700;text-decoration:none;}
+  h1{margin:6px 0 14px;font-size:24px;font-weight:800;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 12px 24px rgba(0,0,0,.06);}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .controls input{padding:10px 12px;border:1px solid var(--line);border-radius:10px;flex:1;min-width:220px;}
+  .controls button{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer;}
+  .list{display:grid;gap:10px;}
+  .coupon{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;display:grid;gap:6px;grid-template-columns:1fr;}
+  @media(min-width:640px){.coupon{grid-template-columns:1fr auto;align-items:center;}}
+  .coupon h3{margin:0;font-size:16px;font-weight:800;}
+  .muted{color:var(--muted);font-size:13px;}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;font-size:12px;color:#1d4ed8;font-weight:700;}
+  .chip.ok{background:#dcfce7;border-color:#16a34a;color:#166534;}
+  .chip.warn{background:#fee2e2;border-color:#fca5a5;color:#b91c1c;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .btn{border:1px solid var(--line);background:#fff;color:#0f172a;padding:8px 10px;border-radius:10px;font-weight:700;cursor:pointer;}
+  .btn.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1d4ed8;color:#fff;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="/shop.html">← 返回商品館</a></div>
+    <h1>我的優惠券</h1>
+    <div class="card">
+      <div class="controls">
+        <input id="q" placeholder="搜尋券碼 / 神祇">
+        <input id="addCode" placeholder="輸入券碼加入">
+        <button id="btnAdd">加入我的優惠券</button>
+        <button id="btnReload">重新整理</button>
+      </div>
+      <div id="list" class="list"><div class="muted">載入中…</div></div>
+    </div>
+  </div>
+<script>
+  const listEl = document.getElementById('list');
+  const q = document.getElementById('q');
+  const addCode = document.getElementById('addCode');
+  let items = [];
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c)); }
+
+  function render(){
+    const key = (q.value||'').trim().toLowerCase();
+    let list = items.slice();
+    if (key){ list = list.filter(x=> JSON.stringify(x).toLowerCase().includes(key)); }
+    if (!list.length){ listEl.innerHTML = '<div class="muted">目前沒有優惠券</div>'; return; }
+    listEl.innerHTML = list.map(c=>{
+      const used = !!c.used;
+      const chips = [`<span class="chip">守護神：${escapeHtml(c.deity||'')}</span>`];
+      chips.push(`<span class="chip ${used?'warn':'ok'}">${used?'已使用':'未使用'}</span>`);
+      return `<div class="coupon">
+        <div>
+          <h3>${escapeHtml(c.code||'')}</h3>
+          <div class="muted">折抵：NT$ ${Number(c.amount||0)}｜發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+          ${c.usedAt ? `<div class="muted">使用時間：${new Date(c.usedAt).toLocaleString('zh-TW')}</div>` : ''}
+          ${c.orderId ? `<div class="muted">使用訂單：${escapeHtml(c.orderId)}</div>` : ''}
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">${chips.join('')}</div>
+        </div>
+        <div class="actions">
+          <button class="btn" data-act="copy" data-code="${escapeHtml(c.code||'')}">複製</button>
+          ${used ? '' : `<button class="btn primary" data-act="apply" data-code="${escapeHtml(c.code||'')}" data-deity="${escapeHtml(c.deity||'')}" data-amount="${Number(c.amount||0)}">套用到購物車</button>`}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function load(){
+    listEl.innerHTML = '<div class="muted">載入中…</div>';
+    try{
+      const res = await fetch('/api/me/coupons',{credentials:'include',cache:'no-store'});
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok) throw new Error(data.error||('HTTP '+res.status));
+      items = Array.isArray(data.items) ? data.items : [];
+      render();
+    }catch(err){
+      listEl.innerHTML = `<div class="muted">讀取失敗：${escapeHtml(err.message||err)}</div>`;
+    }
+  }
+
+  async function add(){
+    const code = (addCode.value||'').trim();
+    if (!code){ addCode.focus(); return; }
+    try{
+      const res = await fetch('/api/me/coupons',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({code})});
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok) throw new Error(data.error||('HTTP '+res.status));
+      addCode.value='';
+      await load();
+    }catch(err){ alert('加入失敗：'+(err.message||err)); }
+  }
+
+  function applyToCart(code,deity,amount){
+    try{
+      const payload = { code:String(code||'').toUpperCase(), deity:String(deity||'').toUpperCase(), amount:Number(amount||0)||200 };
+      const coupons = [payload];
+      try{ localStorage.setItem('__cartCoupons__', JSON.stringify(coupons)); }catch(_){ }
+      try{ window.__cartCouponState = window.__cartCouponState || {}; window.__cartCouponState.coupons = coupons.slice(); }catch(_){ }
+      alert('已將優惠券套用到購物車，請回購物車查看金額。');
+    }catch(_){ alert('套用失敗，請回購物車重試。'); }
+  }
+
+  listEl.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    const code = btn.dataset.code;
+    if (act === 'copy'){
+      navigator.clipboard && navigator.clipboard.writeText(code).catch(()=>{});
+      btn.textContent = '已複製'; setTimeout(()=> btn.textContent='複製', 800);
+      return;
+    }
+    if (act === 'apply'){
+      applyToCart(code, btn.dataset.deity, btn.dataset.amount);
+      return;
+    }
+  });
+
+  document.getElementById('btnReload').addEventListener('click', load);
+  document.getElementById('btnAdd').addEventListener('click', add);
+  q.addEventListener('input', ()=>{ clearTimeout(q._t); q._t=setTimeout(render,200); });
+  load();
+</script>
+</body>
+</html>
