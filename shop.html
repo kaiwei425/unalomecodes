@@ -62,7 +62,7 @@
         <input id="fMin" type="number" placeholder="最低價">
         <input id="fMax" type="number" placeholder="最高價">
       </div>
-      <div class="top-actions-right">
+      <div class="top-actions-right" style="flex-wrap:wrap;align-content:center;gap:10px;">
         <div class="member-menu">
           <button type="button" id="memberMenuBtn">會員中心 ▾</button>
           <div class="member-menu-panel" id="memberMenuPanel">
@@ -73,12 +73,12 @@
             <a href="/admin/" data-admin-only data-admin-href="/admin/" style="display:none;">後台管理</a>
           </div>
         </div>
-      <div class="auth-widget" data-auth-widget>
-        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
-        <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+        <div class="auth-widget" data-auth-widget>
+          <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+          <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+        </div>
+        <div id="guardianBadge" style="display:none;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);align-self:flex-start;min-width:140px;text-align:center;"></div>
       </div>
-        <div id="guardianBadge" style="display:none;margin-top:6px;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);align-self:flex-start;"></div>
-    </div>
   </div>
   </div>
 
