@@ -73,12 +73,13 @@
             <a href="/admin/" data-admin-only data-admin-href="/admin/" style="display:none;">後台管理</a>
           </div>
         </div>
-        <div class="auth-widget" data-auth-widget>
-          <span class="auth-status" data-auth-status>登入狀態載入中…</span>
-          <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
-        </div>
+      <div class="auth-widget" data-auth-widget>
+        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+        <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
       </div>
+      <div id="guardianBadge" style="display:none;margin-top:6px;font-size:13px;color:#0f172a;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.08);"></div>
     </div>
+  </div>
   </div>
 
   <div class="store">
@@ -5917,7 +5918,39 @@ function escapeHtml(s) {
   }
   if (closeBtn){
     closeBtn.addEventListener('click', closePolicy);
+}
+})();
+
+// 守護神徽章（顯示最近測驗結果）
+(function(){
+  const badge = document.getElementById('guardianBadge');
+  const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
+  function readGuardian(){
+    try{
+      const raw = localStorage.getItem('__lastQuizGuardian__');
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.code) return null;
+      return obj;
+    }catch(_){ return null; }
   }
+  function render(){
+    if (!badge) return;
+    const g = readGuardian();
+    const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
+    if (!g || !loggedIn){
+      badge.style.display = 'none';
+      return;
+    }
+    const code = String(g.code||'').toUpperCase();
+    const name = map[code] || '守護神';
+    badge.textContent = `守護神：${name}（${code}）`;
+    badge.style.display = 'block';
+  }
+  if (window.authState && typeof window.authState.onProfile === 'function'){
+    window.authState.onProfile(()=>render());
+  }
+  render();
 })();
 </script>
 </body>
