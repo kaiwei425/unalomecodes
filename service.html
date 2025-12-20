@@ -502,7 +502,10 @@ dialog[data-fallback-open]{display:block;}
         const code = String(g.code||'').toUpperCase();
         const name = map[code] || '守護神';
         const icon = window.GUARDIAN_BADGE_ICON || '/img/guardian-emblem.png';
-        badge.innerHTML = `<img src="${icon}" alt="守護神" style="width:20px;height:20px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));">守護神：${name}`;
+        badge.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
+          <img src="${icon}" alt="守護神" style="width:22px;height:22px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));flex:0 0 auto;">
+          <span>守護神：${name}</span>
+        </div>`;
         badge.style.display = 'block';
         badge.style.color = '#b45309';
         badge.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
