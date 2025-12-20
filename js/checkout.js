@@ -49,7 +49,7 @@ const bfEmailInput = document.getElementById('bfEmail');
 const memberPerkHintEl = document.getElementById('memberPerkHint');
 const bfStoreInput = document.getElementById('bfStore');
 
-function applyBankProfile(profile){
+function applyBankProfile(profile, force){
   if (!profile) return;
   try{ console.debug && console.debug('[checkout] apply profile', profile); }catch(_){}
   const defaults = profile.defaultContact || {};
@@ -61,9 +61,9 @@ function applyBankProfile(profile){
     },
     defaults
   );
-  if (bfNameInput && !bfNameInput.value) bfNameInput.value = source.name || '';
-  if (bfPhoneInput && !bfPhoneInput.value && source.phone) bfPhoneInput.value = source.phone;
-  if (bfEmailInput && !bfEmailInput.value) bfEmailInput.value = source.email || '';
+  if (bfNameInput && (force || !bfNameInput.value)) bfNameInput.value = source.name || '';
+  if (bfPhoneInput && (force || !bfPhoneInput.value) && source.phone) bfPhoneInput.value = source.phone;
+  if (bfEmailInput && (force || !bfEmailInput.value)) bfEmailInput.value = source.email || '';
   updateMemberPerkHint(profile);
   if (bfStoreInput && profile.defaultStore){
     const st = profile.defaultStore || {};
@@ -500,14 +500,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         const auth = window.authState;
         if (auth && typeof auth.getProfile === 'function'){
           const p = auth.getProfile();
-          if (p) applyBankProfile(p);
+          if (p) applyBankProfile(p, true);
         }
         // 若仍未填入，直接打 API
         if ((!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value)){
           fetch(PROFILE_URL, { credentials:'include', cache:'no-store' })
             .then(r=>r.json().catch(()=>({})))
             .then(data=>{
-              if (data && data.profile) applyBankProfile(data.profile);
+              if (data && data.profile) applyBankProfile(data.profile, true);
             })
             .catch(()=>{});
           // 1 秒後再補一次，避免第一次延遲
@@ -516,7 +516,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           fetch(PROFILE_URL, { credentials:'include', cache:'no-store' })
             .then(r=>r.json().catch(()=>({})))
             .then(data=>{
-              if (data && data.profile) applyBankProfile(data.profile);
+              if (data && data.profile) applyBankProfile(data.profile, true);
             })
             .catch(()=>{});
             }

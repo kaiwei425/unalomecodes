@@ -88,6 +88,7 @@
   let checkoutContact = null;
   let checkoutReceipt = { url:'', name:'' };
   let checkoutRitualPhoto = { url:'', name:'' };
+  let lastProfile = null;
   let lastCartSnapshot = [];
   let lastOrderResult = null;
   let lastRemitLast5 = '';
@@ -251,7 +252,7 @@
     requestDateInput.min = iso;
   }
 
-  function fillContactFromProfile(profile){
+  function fillContactFromProfile(profile, force){
     if (!profile) return;
     const defaults = profile.defaultContact || {};
     const source = Object.assign(
@@ -262,13 +263,13 @@
       },
       defaults
     );
-    if (contactNameInput && !contactNameInput.value){
+    if (contactNameInput && (force || !contactNameInput.value)){
       contactNameInput.value = source.name || '';
     }
-    if (contactPhoneInput && !contactPhoneInput.value && source.phone){
+    if (contactPhoneInput && (force || !contactPhoneInput.value) && source.phone){
       contactPhoneInput.value = source.phone;
     }
-    if (contactEmailInput && !contactEmailInput.value){
+    if (contactEmailInput && (force || !contactEmailInput.value)){
       contactEmailInput.value = source.email || '';
     }
     updateMemberPerkHint(profile);
@@ -641,6 +642,17 @@
       return;
     }
     resetCheckoutFlow();
+    // 先用已知 profile 帶入，若無則嘗試抓取
+    if (lastProfile){
+      fillContactFromProfile(lastProfile, true);
+    }else{
+      fetch('/api/me/profile',{credentials:'include',cache:'no-store'}).then(r=>r.json().catch(()=>({}))).then(data=>{
+        if (data && data.profile){
+          lastProfile = data.profile;
+          fillContactFromProfile(lastProfile, true);
+        }
+      }).catch(()=>{});
+    }
     renderCheckoutSummary(cart);
     openDialog(checkoutDialog);
   }
@@ -825,12 +837,13 @@
   if (window.authState){
     window.authState.onProfile(profile=>{
       try{ console.debug && console.debug('[svc] onProfile', profile); }catch(_){}
+      lastProfile = profile;
       fillContactFromProfile(profile);
     });
     if (typeof window.authState.getProfile === 'function'){
       const existingProfile = window.authState.getProfile();
       try{ console.debug && console.debug('[svc] existing profile', existingProfile); }catch(_){}
-      if (existingProfile) fillContactFromProfile(existingProfile);
+      if (existingProfile){ lastProfile = existingProfile; fillContactFromProfile(existingProfile); }
     }
   }
 
