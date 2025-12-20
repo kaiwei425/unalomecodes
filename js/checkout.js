@@ -490,6 +490,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{
       const dlg = document.getElementById('dlgBank');
       if(!dlg) return alert('無法顯示匯款視窗');
+      // 先清表單，避免之後回填被 reset 掉
+      const f = document.getElementById('bankForm');
+      if (f) f.reset();
       // 確保在開啟前帶入會員基本資料
       (function ensureProfile(){
         const fieldsEmpty = (!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value);
@@ -525,9 +528,6 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       const noEl   = document.getElementById('bankNoVal');
       if (bankEl) bankEl.textContent = BANK.bank;
       if (noEl)   noEl.textContent   = BANK.no;
-      // 清表單
-      const f = document.getElementById('bankForm');
-      if (f) f.reset();
       // 同步 7-11 門市資訊到匯款視窗（若已在前一步選好）
       try{
         var storeFromDlg = document.getElementById('dlgStoreInput');
