@@ -512,9 +512,19 @@ async function showResult(){
         let coupon = (stored && stored.version === 'v2' && stored.issued) ? stored.code : '';
         try{
           if (!coupon){
-            const real = await issueCoupon(code, 200);
-            if (!real || typeof real !== 'string') throw new Error('NO_CODE');
-            coupon = real;
+            let attempts = 0;
+            while (!coupon && attempts < 2){
+              const real = await issueCoupon(code, 200);
+              if (!real || typeof real !== 'string') throw new Error('NO_CODE');
+              // 確認券碼內的守護神代碼與結果相符，若不符再重試一次
+              const seg = (real.split('-')[1]||'').toUpperCase();
+              if (seg && seg !== code && attempts === 0){
+                attempts++;
+                continue;
+              }
+              coupon = real;
+            }
+            if (!coupon) throw new Error('NO_CODE_MATCH');
             try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2' })); }catch(_){ }
           }
           // 顯示正式券碼（不再顯示任何臨時券提示）
