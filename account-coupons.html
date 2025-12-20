@@ -51,6 +51,18 @@
 
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c)); }
 
+  function typeLabel(c){
+    const t = (c.type||'DEITY').toUpperCase();
+    if (t === 'ALL') return '全館折扣券（全站適用，每次限用一張）';
+    if (t === 'SHIP') return '免運券（折抵運費，每次限用一張）';
+    return '神祇券';
+  }
+  function deityLabel(c){
+    const map = {FM:'四面神',GA:'象神',CD:'崇迪',KP:'坤平',HM:'哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神',WE:'五眼四耳',XZ:'徐祝老人',HP:'魂魄勇'};
+    const d = (c.deity||'').toUpperCase();
+    if (!d || d==='ALL' || d==='SHIP') return '';
+    return map[d] ? `${map[d]}（${d}）` : d;
+  }
   function render(){
     const key = (q.value||'').trim().toLowerCase();
     let list = items.slice();
@@ -59,14 +71,22 @@
     listEl.innerHTML = list.map(c=>{
       const used = !!c.used;
       const chips = [
-        `<span class="chip">類型：${escapeHtml(c.type||'DEITY')}</span>`,
-        `<span class="chip">守護神：${escapeHtml(c.deity||'')}</span>`
+        `<span class="chip">類型：${escapeHtml(typeLabel(c))}</span>`
       ];
+      const dLabel = deityLabel(c);
+      if (dLabel){
+        chips.push(`<span class="chip">守護神：${escapeHtml(dLabel)}</span>`);
+      }else if ((c.deity||'').toUpperCase()==='ALL'){
+        chips.push(`<span class="chip">適用範圍：全館</span>`);
+      }else if ((c.deity||'').toUpperCase()==='SHIP'){
+        chips.push(`<span class="chip">適用範圍：運費</span>`);
+      }
       chips.push(`<span class="chip ${used?'warn':'ok'}">${used?'已使用':'未使用'}</span>`);
       return `<div class="coupon">
         <div>
           <h3>${escapeHtml(c.code||'')}</h3>
-          <div class="muted">折抵：NT$ ${Number(c.amount||0)}｜發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+          <div class="muted">折抵：NT$ ${Number(c.amount||0)}｜${escapeHtml(typeLabel(c))}</div>
+          <div class="muted">發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
           ${c.startAt ? `<div class="muted">生效：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
           ${c.expireAt ? `<div class="muted">到期：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
           ${c.usedAt ? `<div class="muted">使用時間：${new Date(c.usedAt).toLocaleString('zh-TW')}</div>` : ''}

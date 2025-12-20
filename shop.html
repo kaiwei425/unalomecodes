@@ -3229,7 +3229,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             const deityCode = (c.deity || '').toUpperCase();
             const deityText = (deityCode && deityCode!=='ALL' && deityCode!=='SHIP')
               ? `${deityNames[deityCode] || deityCode}（${deityCode}）`
-              : (labelType === 'SHIP' ? '免運券' : (labelType === 'ALL' ? '全館券' : labelType));
+              : (labelType === 'SHIP' ? '免運券（運費折抵）' : (labelType === 'ALL' ? '全館折扣券（全站適用）' : labelType));
             opt.value = String(idx);
             opt.textContent = `${c.code}｜${deityText}｜${labelType}｜NT$${c.amount||0}`;
             select.appendChild(opt);

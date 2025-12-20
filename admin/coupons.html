@@ -141,6 +141,7 @@
         <option value="true">已使用</option>
       </select>
       <button class="btn-ghost" id="btnReload" type="button">重新整理</button>
+      <button class="btn-primary" id="btnShowGlobal" type="button" style="background:#111827;">全館/免運清單</button>
     </div>
     <table>
       <thead>
@@ -158,6 +159,32 @@
         </tr>
       </thead>
       <tbody id="cpnList"><tr><td colspan="10" class="muted">尚未載入</td></tr></tbody>
+    </table>
+  </div>
+
+  <div id="globalPanel" class="card" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+      <div>
+        <h3 style="margin:0;font-size:16px;font-weight:800;">全館/免運券發放列表</h3>
+        <p class="muted" style="margin:4px 0 0;">僅顯示類型為 ALL / SHIP 的券，方便查看發放與使用情形。</p>
+      </div>
+      <button id="btnCloseGlobal" class="btn-ghost" type="button">關閉</button>
+    </div>
+    <table style="margin-top:10px;">
+      <thead>
+        <tr>
+          <th style="width:200px">券碼</th>
+          <th style="width:80px">類型</th>
+          <th style="width:80px">金額</th>
+          <th style="width:140px">發放</th>
+          <th style="width:140px">生效</th>
+          <th style="width:140px">到期</th>
+          <th style="width:120px">狀態</th>
+          <th style="width:180px">使用訂單</th>
+          <th style="width:160px">使用時間</th>
+        </tr>
+      </thead>
+      <tbody id="globalList"><tr><td colspan="9" class="muted">載入中…</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -331,6 +358,9 @@
   const qInput = document.getElementById('q');
   const usedSel = document.getElementById('filterUsed');
   const listBody = document.getElementById('cpnList');
+  const globalPanel = document.getElementById('globalPanel');
+  const globalList = document.getElementById('globalList');
+  let lastFetched = [];
   async function loadList(){
     if (listBody) listBody.innerHTML = '<tr><td colspan="10" class="muted">載入中…</td></tr>';
     const q = (qInput.value||'').trim();
@@ -350,6 +380,7 @@
         throw new Error(data && data.error ? data.error : ('HTTP '+res.status));
       }
       const items = Array.isArray(data.items) ? data.items : [];
+      lastFetched = items;
       if (!items.length){
         listBody.innerHTML = '<tr><td colspan="10" class="muted">目前沒有符合條件的優惠券</td></tr>';
         return;
@@ -376,6 +407,37 @@
       if (listBody) listBody.innerHTML = `<tr><td colspan="10" class="error">讀取失敗：${err.message||err}</td></tr>`;
     }
   }
+  function renderGlobal(){
+    if (!globalList) return;
+    const src = Array.isArray(lastFetched) ? lastFetched : [];
+    const filtered = src.filter(c=> (c.type||'').toUpperCase()==='ALL' || (c.type||'').toUpperCase()==='SHIP');
+    if (!filtered.length){
+      globalList.innerHTML = '<tr><td colspan="9" class="muted">目前沒有全館或免運券</td></tr>';
+      return;
+    }
+    globalList.innerHTML = filtered.map(c=>{
+      const usedText = c.used ? '已使用' : '未使用';
+      const usedCls = c.used ? 'status-used' : 'status-new';
+      return `<tr>
+        <td style="font-weight:800;">${c.code||''}</td>
+        <td>${TYPE_LABELS[(c.type||'').toUpperCase()]||c.type||''}</td>
+        <td>NT$ ${Number(c.amount||0)}</td>
+        <td>${fmtDate(c.issuedAt)||''}</td>
+        <td>${fmtDate(c.startAt)||''}</td>
+        <td>${fmtDate(c.expireAt)||''}</td>
+        <td class="${usedCls}">${usedText}</td>
+        <td>${c.orderId||''}</td>
+        <td>${fmtDate(c.usedAt)||''}</td>
+      </tr>`;
+    }).join('');
+  }
+  function toggleGlobal(open){
+    if (!globalPanel) return;
+    globalPanel.style.display = open ? '' : 'none';
+    if (open) renderGlobal();
+  }
+  document.getElementById('btnShowGlobal').addEventListener('click', ()=> toggleGlobal(true));
+  document.getElementById('btnCloseGlobal').addEventListener('click', ()=> toggleGlobal(false));
   document.getElementById('btnReload').addEventListener('click', loadList);
   qInput.addEventListener('input', ()=>{ clearTimeout(qInput._t); qInput._t=setTimeout(loadList,300); });
   usedSel.addEventListener('change', loadList);
