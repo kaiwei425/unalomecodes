@@ -1,6 +1,10 @@
 const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
 const SHIPPING_FEE = (typeof window !== 'undefined' && Number(window.__shippingFee)) ? Number(window.__shippingFee) : 60;
 try{ if (typeof window !== 'undefined') window.__shippingFee = SHIPPING_FEE; }catch(_){}
+const PROFILE_URL = (function(){
+  try{ return (window.__SHOP_ORIGIN || window.location.origin || '') + '/api/me/profile'; }
+  catch(_){ return '/api/me/profile'; }
+})();
 
 function isCandleItemLike(obj){
   try{
@@ -47,6 +51,7 @@ const bfStoreInput = document.getElementById('bfStore');
 
 function applyBankProfile(profile){
   if (!profile) return;
+  try{ console.debug && console.debug('[checkout] apply profile', profile); }catch(_){}
   const defaults = profile.defaultContact || {};
   const source = Object.assign(
     {},
@@ -115,10 +120,12 @@ function maybeSaveDefaultStore(){
 
 if (window.authState){
   window.authState.onProfile(profile=>{
+    try{ console.debug && console.debug('[checkout] authState onProfile', profile); }catch(_){}
     applyBankProfile(profile);
   });
   if (typeof window.authState.getProfile === 'function'){
     const existing = window.authState.getProfile();
+    try{ console.debug && console.debug('[checkout] existing profile', existing); }catch(_){}
     if (existing) applyBankProfile(existing);
   }
 }
@@ -133,7 +140,7 @@ if (window.authState){
       return;
     }
     try{
-      const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
+      const res = await fetch(PROFILE_URL, { credentials:'include', cache:'no-store' });
       const data = await res.json().catch(()=>({}));
       if (data && data.profile){
         applyBankProfile(data.profile);
@@ -474,7 +481,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
         // 若仍未填入，直接打 API
         if ((!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value)){
-          fetch('/api/me/profile', { credentials:'include', cache:'no-store' })
+          fetch(PROFILE_URL, { credentials:'include', cache:'no-store' })
             .then(r=>r.json().catch(()=>({})))
             .then(data=>{
               if (data && data.profile) applyBankProfile(data.profile);
@@ -483,12 +490,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           // 1 秒後再補一次，避免第一次延遲
           setTimeout(()=>{
             if ((!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value)){
-              fetch('/api/me/profile', { credentials:'include', cache:'no-store' })
-                .then(r=>r.json().catch(()=>({})))
-                .then(data=>{
-                  if (data && data.profile) applyBankProfile(data.profile);
-                })
-                .catch(()=>{});
+          fetch(PROFILE_URL, { credentials:'include', cache:'no-store' })
+            .then(r=>r.json().catch(()=>({})))
+            .then(data=>{
+              if (data && data.profile) applyBankProfile(data.profile);
+            })
+            .catch(()=>{});
             }
           }, 1000);
         }
