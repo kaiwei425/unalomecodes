@@ -501,9 +501,12 @@ dialog[data-fallback-open]{display:block;}
         }
         const code = String(g.code||'').toUpperCase();
         const name = map[code] || '守護神';
-        badge.textContent = `守護神：${name}`;
+        const icon = window.GUARDIAN_BADGE_ICON || '/img/guardian-emblem.png';
+        badge.innerHTML = `<img src="${icon}" alt="守護神" style="width:20px;height:20px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));">守護神：${name}`;
         badge.style.display = 'block';
-        badge.style.color = '#1d4ed8';
+        badge.style.color = '#b45309';
+        badge.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
+        badge.style.borderColor = '#fbbf24';
       }
       if (window.authState && typeof window.authState.onProfile === 'function'){
         window.authState.onProfile(()=>render());
