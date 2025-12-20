@@ -123,6 +123,17 @@ if (window.authState){
   }
 }
 
+// 後備：若未透過 authState 取得資料，直接呼叫 /api/me/profile 帶入
+(async function preloadProfileForCheckout(){
+  try{
+    const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data && data.profile){
+      applyBankProfile(data.profile);
+    }
+  }catch(_){}
+})();
+
 if (typeof window.__scheduleOrderRefresh !== 'function'){
   window.__scheduleOrderRefresh = function(delay){
     try{
