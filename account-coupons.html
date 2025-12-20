@@ -63,6 +63,15 @@
     if (!d || d==='ALL' || d==='SHIP') return '';
     return map[d] ? `${map[d]}（${d}）` : d;
   }
+  function usageText(c){
+    const t = (c.type||'DEITY').toUpperCase();
+    const d = (c.deity||'').toUpperCase();
+    const map = {FM:'四面神',GA:'象神',CD:'崇迪',KP:'坤平',HM:'哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神',WE:'五眼四耳',XZ:'徐祝老人',HP:'魂魄勇'};
+    if (t === 'ALL') return '可用於全館任一商品；全館券與神祇券擇一使用（不可同時套用）。';
+    if (t === 'SHIP') return '折抵運費，可搭配折扣券使用。';
+    if (d && map[d]) return `可用於「${map[d]}」系列商品。`;
+    return '可用於指定守護神商品。';
+  }
   function render(){
     const key = (q.value||'').trim().toLowerCase();
     let list = items.slice();
@@ -87,6 +96,7 @@
           <h3>${escapeHtml(c.code||'')}</h3>
           <div class="muted">折抵：NT$ ${Number(c.amount||0)}｜${escapeHtml(typeLabel(c))}</div>
           <div class="muted">發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+          <div class="muted">${escapeHtml(usageText(c))}</div>
           ${c.startAt ? `<div class="muted">生效：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
           ${c.expireAt ? `<div class="muted">到期：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
           ${c.usedAt ? `<div class="muted">使用時間：${new Date(c.usedAt).toLocaleString('zh-TW')}</div>` : ''}
