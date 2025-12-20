@@ -545,29 +545,21 @@ async function showResult(){
       btn._bound = true;
       btn.addEventListener('click', async ()=>{
         const key = `coupon_${code}`;
-        const box = document.getElementById('couponWrap');
+          const box = document.getElementById('couponWrap');
         let stored = null; try{ stored = JSON.parse(localStorage.getItem(key)||'null'); }catch(_){ stored = null; }
         // 僅沿用新系統（v2）正式券；舊資料一律重發
         let coupon = (stored && stored.version === 'v2' && stored.issued) ? stored.code : '';
         try{
           if (!coupon){
-            let attempts = 0;
-            let lastCode = '';
-            while (!coupon && attempts < 3){
-              const real = await issueCoupon(code, 200);
-              lastCode = real;
-              if (!real || typeof real !== 'string') throw new Error('NO_CODE');
-              const seg = (real.split('-')[1]||'').toUpperCase();
-              if (seg && seg !== code){
-                attempts++;
-                continue;
-              }
+            // 單次向後端索取，若守護神代碼不符直接改用本地券碼，避免錯發
+            const real = await issueCoupon(code, 200);
+            if (!real || typeof real !== 'string') throw new Error('NO_CODE');
+            const seg = (real.split('-')[1]||'').toUpperCase();
+            if (seg && seg !== code){
+              console.warn('quiz coupon deity mismatch, using local coupon', { expected: code, got: seg, real });
+              coupon = generateCoupon(code); // 保證守護神正確
+            }else{
               coupon = real;
-            }
-            if (!coupon){
-              // 若後端一直回傳錯誤守護神，直接生成本地券碼（含正確守護神）
-              coupon = generateCoupon(code);
-              console.warn('quiz coupon deity mismatch, using local coupon', { expected: code, last: lastCode });
             }
             try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2' })); }catch(_){ }
           }
