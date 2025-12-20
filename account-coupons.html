@@ -58,19 +58,24 @@
     if (!list.length){ listEl.innerHTML = '<div class="muted">目前沒有優惠券</div>'; return; }
     listEl.innerHTML = list.map(c=>{
       const used = !!c.used;
-      const chips = [`<span class="chip">守護神：${escapeHtml(c.deity||'')}</span>`];
+      const chips = [
+        `<span class="chip">類型：${escapeHtml(c.type||'DEITY')}</span>`,
+        `<span class="chip">守護神：${escapeHtml(c.deity||'')}</span>`
+      ];
       chips.push(`<span class="chip ${used?'warn':'ok'}">${used?'已使用':'未使用'}</span>`);
       return `<div class="coupon">
         <div>
           <h3>${escapeHtml(c.code||'')}</h3>
           <div class="muted">折抵：NT$ ${Number(c.amount||0)}｜發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+          ${c.startAt ? `<div class="muted">生效：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
+          ${c.expireAt ? `<div class="muted">到期：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
           ${c.usedAt ? `<div class="muted">使用時間：${new Date(c.usedAt).toLocaleString('zh-TW')}</div>` : ''}
           ${c.orderId ? `<div class="muted">使用訂單：${escapeHtml(c.orderId)}</div>` : ''}
           <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">${chips.join('')}</div>
         </div>
         <div class="actions">
           <button class="btn" data-act="copy" data-code="${escapeHtml(c.code||'')}">複製</button>
-          ${used ? '' : `<button class="btn primary" data-act="apply" data-code="${escapeHtml(c.code||'')}" data-deity="${escapeHtml(c.deity||'')}" data-amount="${Number(c.amount||0)}">套用到購物車</button>`}
+          ${used ? '' : `<button class="btn primary" data-act="apply" data-code="${escapeHtml(c.code||'')}" data-deity="${escapeHtml(c.deity||'')}" data-amount="${Number(c.amount||0)}" data-type="${escapeHtml(c.type||'DEITY')}">套用到購物車</button>`}
         </div>
       </div>`;
     }).join('');
@@ -103,7 +108,12 @@
 
   function applyToCart(code,deity,amount){
     try{
-      const payload = { code:String(code||'').toUpperCase(), deity:String(deity||'').toUpperCase(), amount:Number(amount||0)||200 };
+      const payload = {
+        code:String(code||'').toUpperCase(),
+        deity:String(deity||'').toUpperCase(),
+        amount:Number(amount||0)||200,
+        type: (arguments[3]||'').toUpperCase() || 'DEITY'
+      };
       const coupons = [payload];
       try{ localStorage.setItem('__cartCoupons__', JSON.stringify(coupons)); }catch(_){ }
       try{ window.__cartCouponState = window.__cartCouponState || {}; window.__cartCouponState.coupons = coupons.slice(); }catch(_){ }
@@ -122,7 +132,7 @@
       return;
     }
     if (act === 'apply'){
-      applyToCart(code, btn.dataset.deity, btn.dataset.amount);
+      applyToCart(code, btn.dataset.deity, btn.dataset.amount, btn.dataset.type);
       return;
     }
   });

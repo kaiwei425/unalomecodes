@@ -2577,12 +2577,24 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     var discountedItemIdx = {};   // itemIndex -> true
     var lines = [];
     var total = 0;
+    var ship = null;
 
     for (var ci = 0; ci < coupons.length; ci++){
       var cpn = coupons[ci];
       if (!cpn || !cpn.code) continue;
+      var cType = String(cpn.type||'').toUpperCase();
+      var deityRaw = String(cpn.deity||'').toUpperCase();
+      if (!cType && deityRaw === 'SHIP') cType = 'SHIP';
+      if (!cType && deityRaw === 'ALL')  cType = 'ALL';
+      if (cType === 'SHIP'){
+        if (!ship) ship = cpn;
+        continue;
+      }
 
       var deity = normDeity(cpn.deity || '');
+      if (cType === 'ALL' || deity === 'ALL'){
+        deity = '';
+      }
       var bestIdx  = -1;
       var bestBase = 0;
 
@@ -2592,7 +2604,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         var it = items[i] || {};
         var itemDeity = itemDeityOf(it);
 
-        if (deity && itemDeity && itemDeity !== deity) continue;
+        if (deity && itemDeity && itemDeity !== deity) continue; // deity 券需守護神符合
 
         var base = baseAmountOfItem(it);
         if (base <= 0) continue;
@@ -2603,6 +2615,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
       }
 
+      if (bestIdx < 0){
+        // 無守護神限制的全館券可套到第一個未折抵商品
+        if (!deity){
+          for (var j=0;j<items.length;j++){
+            if (!discountedItemIdx[j] && baseAmountOfItem(items[j])>0){ bestIdx=j; bestBase=baseAmountOfItem(items[j]); break; }
+          }
+        }
+      }
       if (bestIdx < 0) continue; // 找不到適用商品
 
       var rawAmt   = (cpn.amount != null ? cpn.amount : (cpn.off != null ? cpn.off : cpn.discount));
@@ -2617,11 +2637,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         code:      String(cpn.code || ''),
         deity:     deity,
         amount:    discount,
-        itemIndex: bestIdx
+        itemIndex: bestIdx,
+        type: cType || (deity ? 'DEITY':'ALL')
       });
     }
 
-    return { total: total, lines: lines, usedItems: discountedItemIdx };
+    return { total: total, lines: lines, usedItems: discountedItemIdx, ship };
   }
 
   // ---------- 優惠券清單 UI（在購物車欄位下方） ----------
@@ -2820,6 +2841,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }
     var needsShipping = needsShippingForItems(items);
     var shippingFee = needsShipping ? (window.__shippingFee || 60) : 0;
+    var shipOff = 0;
+    if (needsShipping && assign && assign.ship){
+      shipOff = Math.min(shippingFee, Number(assign.ship.amount||shippingFee)||shippingFee);
+      shippingFee = Math.max(0, shippingFee - shipOff);
+      off += shipOff;
+    }
     var grand = Math.max(0, sub - off + shippingFee);
 
 
@@ -2828,6 +2855,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     window.__cartCouponState.assignment = assign;
     window.__cartCouponState.shipping = shippingFee;
     window.__cartCouponState.hasShipping = needsShipping;
+    window.__cartCouponState.shippingDiscount = shipOff;
 
     function setText(selList, val){
       selList.forEach(function(sel){
@@ -2973,8 +3001,25 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     return Array.from(set);
   }
 
+  function couponTypeOf(c){
+    var t = String((c && c.type) || '').toUpperCase();
+    var d = String((c && c.deity) || '').toUpperCase();
+    if (!t && d === 'SHIP') t = 'SHIP';
+    if (!t && d === 'ALL')  t = 'ALL';
+    return t || '';
+  }
+
   // 檢查新券加入後是否真的能分配到某個商品
   function canAssignCoupon(items, coupons, newCoupon){
+    var nType = couponTypeOf(newCoupon);
+    if (nType === 'SHIP'){
+      var existsShip = coupons.some(function(c){ return couponTypeOf(c)==='SHIP'; });
+      return !existsShip;
+    }
+    if (nType === 'ALL'){
+      var existsAll = coupons.some(function(c){ return couponTypeOf(c)==='ALL'; });
+      if (existsAll) return false;
+    }
     var currentAssign = assignCouponsToItems(items, coupons);
     var withNew = coupons.concat([newCoupon]);
     var assign2 = assignCouponsToItems(items, withNew);
@@ -3041,6 +3086,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         // 如果是在同一台裝置上重複輸入同一張券，或後端判定該券已使用過
         if (res && (res.reason === 'already_used' || res.reason === 'already_used_local')){
           msg = '此優惠券已使用過，無法再次使用';
+        }else if (res && res.reason === 'not_started'){
+          msg = '此優惠券尚未生效，開始時間：' + (res.startAt ? new Date(res.startAt).toLocaleString('zh-TW') : '');
+        }else if (res && res.reason === 'expired'){
+          msg = '此優惠券已過期';
         }else{
           // 其他情況（後端回傳無效、守護神不符等等）維持原本文案
           msg = '優惠碼無效、已使用，或不適用此守護神商品';
@@ -3063,7 +3112,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var newCoupon = {
         code:   res.code || code,
         deity:  res.deity || deity || '',
-        amount: Number(res.amount||200)||200
+        amount: Number(res.amount||200)||200,
+        type:   (res.type || '').toUpperCase() || (res.deity ? 'DEITY' : 'ALL'),
+        startAt: res.startAt || null,
+        expireAt: res.expireAt || null
       };
 
       // 確認這張券加入後，是否真的能套用到某個商品
@@ -3130,7 +3182,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           alert('沒有可用的已儲存優惠券');
           return;
         }
-        const names = items.map((c,idx)=> `${idx+1}. ${c.code}（${c.deity||'守護神'}｜NT$${c.amount||0}）`).join('\\n');
+        const names = items.map((c,idx)=>{
+          const labelType = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
+          const deityText = c.deity && c.deity!=='ALL' && c.deity!=='SHIP' ? c.deity : labelType;
+          return `${idx+1}. ${c.code}（${deityText}｜${labelType}｜NT$${c.amount||0})`;
+        }).join('\\n');
         const pick = prompt('選擇要套用的優惠券，輸入編號：\\n'+names);
         const idx = Number((pick||'').trim()) - 1;
         if (!Number.isFinite(idx) || idx<0 || idx>=items.length) return;
@@ -3170,6 +3226,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         return typeof window.isCandleItemLike === 'function' ? !window.isCandleItemLike(it) : !/蠟燭/.test(String((it&&it.category)||'') + String((it&&(it.name||it.title||''))||''));
       });
       var shipping = needsShipping ? (window.__shippingFee || 60) : 0;
+      var shipOff = 0;
+      if (needsShipping && assign && assign.ship){
+        shipOff = Math.min(shipping, Number(assign.ship.amount||shipping)||shipping);
+        shipping = Math.max(0, shipping - shipOff);
+        off += shipOff;
+      }
       var grand  = Math.max(0, sub - off + shipping);
       return {
         items:      items,
@@ -3178,7 +3240,8 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         sub:        sub,
         off:        off,
         grand:      grand,
-        shipping:   shipping
+        shipping:   shipping,
+        shippingDiscount: shipOff
       };
     };
 

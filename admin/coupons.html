@@ -51,7 +51,7 @@
   <div class="top">
     <div>
       <h1>優惠券工具</h1>
-      <p class="muted">產生單一神祇固定金額優惠碼（預設 NT$200）。</p>
+      <p class="muted">支援神祇券、全館券、免運券與批次發放。</p>
     </div>
     <div class="top-actions">
       <a class="pill-link" href="./index.html">← 返回後台首頁</a>
@@ -62,6 +62,14 @@
   <div class="card">
     <div class="grid">
       <div>
+        <label for="cpnType">券種</label>
+        <select id="cpnType">
+          <option value="DEITY">單一神祇券</option>
+          <option value="ALL">全館折扣券</option>
+          <option value="SHIP">免運券</option>
+        </select>
+      </div>
+      <div>
         <label for="cpnDeity">守護神代碼</label>
         <select id="cpnDeity">
           <option value="">載入守護神清單中...</option>
@@ -71,6 +79,14 @@
         <label for="cpnAmount">折抵金額（NT$）</label>
         <input id="cpnAmount" type="number" min="1" value="200">
       </div>
+      <div>
+        <label for="cpnStart">生效時間（選填）</label>
+        <input id="cpnStart" type="datetime-local">
+      </div>
+      <div>
+        <label for="cpnExpire">到期時間（選填）</label>
+        <input id="cpnExpire" type="datetime-local">
+      </div>
     </div>
     <div class="actions" style="margin-top:14px;">
       <button class="btn-primary" id="btnIssue">產生優惠券</button>
@@ -78,6 +94,42 @@
     </div>
     <div id="cpnResult" class="result" style="display:none;"></div>
     <div id="cpnError" class="error" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px;font-size:16px;font-weight:800;">批次發放（全館 / 免運券）</h3>
+    <div class="grid">
+      <div>
+        <label for="batchType">券種</label>
+        <select id="batchType">
+          <option value="ALL">全館折扣券（ALL）</option>
+          <option value="SHIP">免運券（SHIP）</option>
+        </select>
+      </div>
+      <div>
+        <label for="batchAmount">折抵金額（NT$）</label>
+        <input id="batchAmount" type="number" min="1" value="200">
+      </div>
+      <div>
+        <label for="batchStart">生效時間（選填）</label>
+        <input id="batchStart" type="datetime-local">
+      </div>
+      <div>
+        <label for="batchExpire">到期時間（選填）</label>
+        <input id="batchExpire" type="datetime-local">
+      </div>
+      <div>
+        <label for="batchTarget">發放對象</label>
+        <select id="batchTarget">
+          <option value="all">全部會員</option>
+          <option value="buyers">曾下單會員</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions" style="margin-top:14px;">
+      <button class="btn-primary" id="btnBatch">批次發放</button>
+      <div id="batchMsg" class="result" style="display:none;"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -93,16 +145,19 @@
     <table>
       <thead>
         <tr>
-          <th style="width:220px">券碼</th>
+          <th style="width:180px">券碼</th>
+          <th style="width:90px">類型</th>
           <th style="width:120px">守護神</th>
-          <th style="width:100px">金額</th>
+          <th style="width:90px">金額</th>
+          <th style="width:120px">生效</th>
+          <th style="width:120px">到期</th>
           <th>發放時間</th>
           <th style="width:120px">狀態</th>
           <th style="width:180px">使用於訂單</th>
           <th style="width:150px">使用時間</th>
         </tr>
       </thead>
-      <tbody id="cpnList"><tr><td colspan="7" class="muted">尚未載入</td></tr></tbody>
+      <tbody id="cpnList"><tr><td colspan="10" class="muted">尚未載入</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -126,7 +181,18 @@
     const plain = label.replace(/（.*?）/g,'').trim().replace(/\s+/g,'');
     NAME_TO_CODE[plain] = code;
   });
+  const TYPE_LABELS = { DEITY:'神祇券', ALL:'全館券', SHIP:'免運券' };
+  function toISO(val){
+    if (!val) return undefined;
+    const dt = new Date(val);
+    if (isNaN(dt.getTime())) return undefined;
+    return dt.toISOString();
+  }
   const FALLBACK_DEITIES = Object.keys(DEITY_LABELS);
+  function fmtDate(val){
+    if (!val) return '';
+    try{ return new Date(val).toLocaleString('zh-TW'); }catch(_){ return ''; }
+  }
   async function loadDeities(){
     const sel = document.getElementById('cpnDeity');
     sel.innerHTML = '<option value="">載入中...</option>';
@@ -167,9 +233,24 @@
       sel.innerHTML = '<option value="">無法載入守護神</option>';
     }
   }
+  const typeSelect = document.getElementById('cpnType');
+  const deitySelect = document.getElementById('cpnDeity');
+  function syncDeityDisabled(){
+    const t = (typeSelect.value||'DEITY').toUpperCase();
+    const disable = t !== 'DEITY';
+    deitySelect.disabled = disable;
+    if (disable){
+      deitySelect.value = '';
+    }
+  }
+  typeSelect.addEventListener('change', syncDeityDisabled);
   async function issue(){
-    const deity = (document.getElementById('cpnDeity').value||'').trim().toUpperCase();
+    const type = (typeSelect.value||'DEITY').toUpperCase();
+    const deityRaw = (document.getElementById('cpnDeity').value||'').trim().toUpperCase();
+    const deity = type === 'DEITY' ? deityRaw : type;
     const amount = Number(document.getElementById('cpnAmount').value||200)||200;
+    const startAtVal = document.getElementById('cpnStart').value;
+    const expireVal = document.getElementById('cpnExpire').value;
     const resBox = document.getElementById('cpnResult');
     const errBox = document.getElementById('cpnError');
     resBox.style.display='none'; errBox.style.display='none';
@@ -182,7 +263,13 @@
       const resp = await fetch('/api/coupons/issue', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ deity, amount }),
+        body: JSON.stringify({
+          deity,
+          type,
+          amount,
+          startAt: toISO(startAtVal),
+          expireAt: toISO(expireVal)
+        }),
         credentials:'include'
       });
       const data = await resp.json().catch(()=>({}));
@@ -190,7 +277,7 @@
         const msg = (data && (data.error || data.reason)) || ('HTTP '+resp.status);
         throw new Error(msg);
       }
-      resBox.innerHTML = `優惠碼：${data.code} <br>守護神：${data.deity || deity}｜折抵：NT$ ${Number(data.amount||amount)}`;
+      resBox.innerHTML = `優惠碼：${data.code} <br>類型：${TYPE_LABELS[type]||type}｜守護神：${data.deity || deity}｜折抵：NT$ ${Number(data.amount||amount)}`;
       resBox.style.display='block';
       try{ navigator.clipboard.writeText(data.code); }catch(_){}
     }catch(err){
@@ -203,12 +290,49 @@
     document.getElementById('cpnResult').style.display='none';
     document.getElementById('cpnError').style.display='none';
   });
+  async function issueBatch(){
+    const type = (document.getElementById('batchType').value||'ALL').toUpperCase();
+    const amount = Number(document.getElementById('batchAmount').value||0)||0;
+    const startAt = document.getElementById('batchStart').value;
+    const expireAt = document.getElementById('batchExpire').value;
+    const target = (document.getElementById('batchTarget').value||'all').toLowerCase();
+    const box = document.getElementById('batchMsg');
+    box.style.display='none';
+    if (amount<=0){
+      alert('請輸入折抵金額');
+      return;
+    }
+    try{
+      const resp = await fetch('/api/coupons/issue-batch', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({
+          type,
+          amount,
+          target,
+          startAt: toISO(startAt),
+          expireAt: toISO(expireAt)
+        })
+      });
+      const data = await resp.json().catch(()=>({}));
+      if (!resp.ok || !data.ok){
+        throw new Error(data.error || ('HTTP '+resp.status));
+      }
+      box.textContent = `已發放 ${data.issued || 0} / ${data.total || 0} 位會員。`;
+      box.style.display='block';
+      await loadList();
+    }catch(err){
+      alert('批次發放失敗：'+(err.message||err));
+    }
+  }
+  document.getElementById('btnBatch').addEventListener('click', issueBatch);
   // 列表
   const qInput = document.getElementById('q');
   const usedSel = document.getElementById('filterUsed');
   const listBody = document.getElementById('cpnList');
   async function loadList(){
-    if (listBody) listBody.innerHTML = '<tr><td colspan="7" class="muted">載入中…</td></tr>';
+    if (listBody) listBody.innerHTML = '<tr><td colspan="10" class="muted">載入中…</td></tr>';
     const q = (qInput.value||'').trim();
     const used = usedSel.value;
     const params = new URLSearchParams();
@@ -223,18 +347,21 @@
       }
       const items = Array.isArray(data.items) ? data.items : [];
       if (!items.length){
-        listBody.innerHTML = '<tr><td colspan="7" class="muted">目前沒有符合條件的優惠券</td></tr>';
+        listBody.innerHTML = '<tr><td colspan="10" class="muted">目前沒有符合條件的優惠券</td></tr>';
         return;
       }
       listBody.innerHTML = items.map(c=>{
         const usedText = c.used ? '已使用' : '未使用';
         const usedCls = c.used ? 'status-used' : 'status-new';
-        const issued = c.issuedAt ? new Date(c.issuedAt).toLocaleString() : '';
-        const usedAt = c.usedAt ? new Date(c.usedAt).toLocaleString() : '';
+        const issued = fmtDate(c.issuedAt);
+        const usedAt = fmtDate(c.usedAt);
         return `<tr>
           <td style="font-weight:800;">${c.code||''}</td>
+          <td>${TYPE_LABELS[(c.type||'DEITY').toUpperCase()] || (c.type||'DEITY')}</td>
           <td>${c.deity||''}</td>
           <td>NT$ ${Number(c.amount||0)}</td>
+          <td>${fmtDate(c.startAt)||''}</td>
+          <td>${fmtDate(c.expireAt)||''}</td>
           <td>${issued}</td>
           <td class="${usedCls}">${usedText}</td>
           <td>${c.orderId||''}</td>
@@ -242,13 +369,14 @@
         </tr>`;
       }).join('');
     }catch(err){
-      if (listBody) listBody.innerHTML = `<tr><td colspan="7" class="error">讀取失敗：${err.message||err}</td></tr>`;
+      if (listBody) listBody.innerHTML = `<tr><td colspan="10" class="error">讀取失敗：${err.message||err}</td></tr>`;
     }
   }
   document.getElementById('btnReload').addEventListener('click', loadList);
   qInput.addEventListener('input', ()=>{ clearTimeout(qInput._t); qInput._t=setTimeout(loadList,300); });
   usedSel.addEventListener('change', loadList);
   loadDeities();
+  syncDeityDisabled();
   loadList();
 </script>
 </body>

@@ -67,7 +67,7 @@ function inferCouponDeity(code, hint){
     const h = String(hint || '').trim().toUpperCase();
     if (h) return h;
     const c = String(code || '').trim().toUpperCase();
-    const m = c.match(/UC-([A-Z]{2})-/);
+    const m = c.match(/UC-([A-Z]{2,4})-/);
     if (m && m[1]) return m[1];
     return '';
   }catch(e){ return ''; }
@@ -100,10 +100,15 @@ async function redeemCoupon(env, { code, deity, orderId, lock }){
   const rec = await readCoupon(env, codeNorm);
   if (!rec) return { ok:false, reason:'not_found' };
   if (rec.used) return { ok:false, reason:'already_used' };
+   const nowTs = Date.now();
+   if (rec.startAt && nowTs < Date.parse(rec.startAt)) return { ok:false, reason:'not_started' };
+   if (rec.expireAt && nowTs > Date.parse(rec.expireAt)) return { ok:false, reason:'expired' };
   const targetDeity = String(rec.deity||'').toUpperCase();
   const want = String(deity||'').toUpperCase();
-  if (targetDeity && want && targetDeity !== want){
-    return { ok:false, reason:'deity_not_match' };
+  if (rec.type !== 'SHIP' && rec.type !== 'ALL'){
+    if (targetDeity && want && targetDeity !== want){
+      return { ok:false, reason:'deity_not_match' };
+    }
   }
   const amount = Number(rec.amount||200)||200;
   if (lock){
@@ -113,7 +118,7 @@ async function redeemCoupon(env, { code, deity, orderId, lock }){
     rec.orderId = orderId || rec.orderId || '';
     await saveCoupon(env, rec);
   }
-  return { ok:true, amount, deity: targetDeity || want || inferCouponDeity(codeNorm) };
+  return { ok:true, amount, deity: targetDeity || want || inferCouponDeity(codeNorm), type: rec.type||'DEITY', expireAt: rec.expireAt||null, startAt: rec.startAt||null };
 }
 
 async function generateOrderId(env){
@@ -358,6 +363,7 @@ async function ensureUserRecord(env, profile){
       id: profile.id,
       createdAt: now,
       wishlist: [],
+      coupons: [],
       memberPerks: {}
     };
   }
@@ -372,6 +378,9 @@ async function ensureUserRecord(env, profile){
       amount: Number(env.MEMBER_DISCOUNT || env.MEMBER_BONUS || 100),
       used: false
     };
+  }
+  if (!Array.isArray(record.coupons)){
+    record.coupons = [];
   }
   await saveUserRecord(env, record);
   return record;
@@ -1156,8 +1165,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           items.push({
             code: rec.code,
             deity: rec.deity || inferCouponDeity(rec.code),
+            type: rec.type || 'DEITY',
             amount: rec.amount || 0,
             issuedAt: rec.issuedAt || null,
+            startAt: rec.startAt || null,
+            expireAt: rec.expireAt || null,
             used: !!rec.used,
             usedAt: rec.usedAt || null,
             orderId: rec.orderId || ''
@@ -1949,8 +1961,15 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
     if (rec.used){
       return new Response(JSON.stringify({ ok:false, code, reason:'already_used', orderId: rec.orderId||'' }), { status:200, headers: jsonHeaders });
     }
+    const nowTs = Date.now();
+    if (rec.startAt && nowTs < Date.parse(rec.startAt)){
+      return new Response(JSON.stringify({ ok:false, code, reason:'not_started', startAt: rec.startAt }), { status:200, headers: jsonHeaders });
+    }
+    if (rec.expireAt && nowTs > Date.parse(rec.expireAt)){
+      return new Response(JSON.stringify({ ok:false, code, reason:'expired', expireAt: rec.expireAt }), { status:200, headers: jsonHeaders });
+    }
     const targetDeity = String(rec.deity||'').toUpperCase();
-    if (targetDeity && deity && targetDeity !== deity){
+    if (rec.type !== 'SHIP' && rec.type !== 'ALL' && targetDeity && deity && targetDeity !== deity){
       return new Response(JSON.stringify({ ok:false, code, reason:'deity_not_match', deity: targetDeity }), { status:200, headers: jsonHeaders });
     }
     const amount = Math.max(0, Number(rec.amount||200) || 200);
@@ -1960,7 +1979,10 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
         valid: true,
         code,
         deity: targetDeity || deity,
-        amount
+        amount,
+        type: rec.type || 'DEITY',
+        startAt: rec.startAt || null,
+        expireAt: rec.expireAt || null
       }),
       { status: 200, headers: jsonHeaders }
     );
@@ -1983,8 +2005,13 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
   }
   try {
     const body = await request.json().catch(() => ({}));
-    const deity  = String(body.deity || body.code || '').trim().toUpperCase();
+    const typeRaw = String(body.type||'').trim().toUpperCase();
+    const deityRaw  = String(body.deity || body.code || '').trim().toUpperCase();
+    const deity = typeRaw === 'ALL' ? 'ALL' : (typeRaw === 'SHIP' ? 'SHIP' : deityRaw);
+    const ctype = (typeRaw === 'ALL' || typeRaw === 'SHIP') ? typeRaw : 'DEITY';
     const amount = Number(body.amount || 200) || 200;
+    const startDt = body.startAt ? new Date(body.startAt) : null;
+    const expireDt = body.expireAt ? new Date(body.expireAt) : null;
     if (!deity) {
       return new Response(JSON.stringify({ ok:false, error:'Missing deity' }), { status:400, headers: jsonHeaders });
     }
@@ -1999,12 +2026,23 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
     const rec = {
       code,
       deity,
+      type: ctype,
       amount,
       issuedAt: now,
+      startAt: startDt && !isNaN(startDt.getTime()) ? startDt.toISOString() : undefined,
+      expireAt: expireDt && !isNaN(expireDt.getTime()) ? expireDt.toISOString() : undefined,
       used: false
     };
     await saveCoupon(env, rec);
-    return new Response(JSON.stringify({ ok:true, code, deity, amount }), { status:200, headers: jsonHeaders });
+    return new Response(JSON.stringify({
+      ok:true,
+      code,
+      deity,
+      type: ctype,
+      amount,
+      startAt: rec.startAt || null,
+      expireAt: rec.expireAt || null
+    }), { status:200, headers: jsonHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
@@ -2033,6 +2071,7 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
     const rec = {
       code,
       deity: deityRaw,
+      type: 'DEITY',
       amount,
       issuedAt: now,
       issuedFrom: 'quiz',
@@ -2046,12 +2085,89 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
 }
 
 // List coupons (admin)
-if (pathname === '/api/coupons/list' && request.method === 'GET') {
-  if (!(await isAdmin(request, env))){
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
-  }
+  if (pathname === '/api/coupons/list' && request.method === 'GET') {
+    if (!(await isAdmin(request, env))){
+      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    }
   if (!env.COUPONS){
     return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+  }
+
+  // 批次發放：全館券/免運券
+  if (pathname === '/api/coupons/issue-batch' && request.method === 'POST') {
+    if (!(await isAdmin(request, env))){
+      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    }
+    if (!env.COUPONS){
+      return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+    }
+    const store = getUserStore(env);
+    if (!store || !store.list){
+      return new Response(JSON.stringify({ ok:false, error:'USER_STORE list not supported' }), { status:500, headers: jsonHeaders });
+    }
+    try{
+      const body = await request.json().catch(()=>({}));
+      const type = String(body.type||'').trim().toUpperCase(); // ALL | SHIP
+      const amount = Number(body.amount||0) || 0;
+      const startDt = body.startAt ? new Date(body.startAt) : null;
+      const expireDt = body.expireAt ? new Date(body.expireAt) : null;
+      const startAt = startDt && !isNaN(startDt.getTime()) ? startDt.toISOString() : undefined;
+      const expireAt = expireDt && !isNaN(expireDt.getTime()) ? expireDt.toISOString() : undefined;
+      const target = String(body.target||'all').toLowerCase(); // all | buyers
+      if (!(type === 'ALL' || type === 'SHIP')){
+        return new Response(JSON.stringify({ ok:false, error:'type must be ALL or SHIP' }), { status:400, headers: jsonHeaders });
+      }
+      if (amount <=0){
+        return new Response(JSON.stringify({ ok:false, error:'amount must be > 0' }), { status:400, headers: jsonHeaders });
+      }
+      // 收集目標 user ids
+      const userIds = [];
+      const iter = await store.list({ prefix:'USER:' });
+      (iter.keys||[]).forEach(k=>{ if (k && k.name) userIds.push(k.name.replace(/^USER:/,'')); });
+      if (target === 'buyers'){
+        try{
+          const ordIdxRaw = await (env.ORDERS && env.ORDERS.get ? env.ORDERS.get(ORDER_INDEX_KEY) : null);
+          if (ordIdxRaw){ const ids = JSON.parse(ordIdxRaw)||[]; for (const oid of ids.slice(0,500)){ const raw=await env.ORDERS.get(oid); if(!raw) continue; try{ const o=JSON.parse(raw); if (o?.buyer?.uid) userIds.push(o.buyer.uid); }catch(_){}} }
+        }catch(_){}
+        try{
+          const svcIdxRaw = await (env.SERVICE_ORDERS && env.SERVICE_ORDERS.get ? env.SERVICE_ORDERS.get('SERVICE_ORDER_INDEX') : null);
+          if (svcIdxRaw){ const ids=JSON.parse(svcIdxRaw)||[]; for (const oid of ids.slice(0,500)){ const raw=await env.SERVICE_ORDERS.get(oid); if(!raw) continue; try{ const o=JSON.parse(raw); if (o?.buyer?.uid) userIds.push(o.buyer.uid); }catch(_){}} }
+        }catch(_){}
+      }
+      const uniqIds = Array.from(new Set(userIds.filter(Boolean)));
+      let issued = 0;
+      for (const uid of uniqIds){
+        const rec = await loadUserRecord(env, uid);
+        if (!rec) continue;
+        let code = '';
+        for (let i=0;i<5;i++){
+          const cand = makeCouponCode(type);
+          const exists = await env.COUPONS.get(couponKey(cand));
+          if (!exists){ code = cand; break; }
+        }
+        if (!code) code = makeCouponCode(type);
+        const now = new Date().toISOString();
+        const couponRec = {
+          code,
+          deity: type,
+          type,
+          amount,
+          issuedAt: now,
+          startAt,
+          expireAt,
+          used:false
+        };
+        await saveCoupon(env, couponRec);
+        const list = Array.isArray(rec.coupons) ? rec.coupons.slice() : [];
+        list.unshift(code);
+        rec.coupons = list.slice(0, 200);
+        await saveUserRecord(env, rec);
+        issued++;
+      }
+      return new Response(JSON.stringify({ ok:true, issued, total: uniqIds.length }), { status:200, headers: jsonHeaders });
+    }catch(e){
+      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    }
   }
   try{
     const q = (url.searchParams.get('q') || '').trim().toUpperCase();
