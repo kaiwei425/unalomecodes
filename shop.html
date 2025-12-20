@@ -2787,12 +2787,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var usage = describeCouponUsage(cpn, line, items);
 
       var left = document.createElement('div');
-      left.innerHTML = ''
-        + '<div style="font-weight:700">優惠碼：'+ String(cpn.code||'') +'</div>'
-        + '<div style="color:#6b7280">守護神：'
-        + (deity ? deity + (dName ? '｜'+dName : '') : '不限')
-        + '</div>'
-        + '<div style="color:'+ (usage.color || '#6b7280') +';font-size:12px">'
+      left.innerHTML = '';
+      left.innerHTML += '<div style="font-weight:700">優惠碼：'+ String(cpn.code||'') +'</div>';
+      if (couponTypeOf(cpn) !== 'SHIP'){
+        left.innerHTML += '<div style="color:#6b7280">守護神：'
+          + (deity ? deity + (dName ? '｜'+dName : '') : '不限')
+          + '</div>';
+      }
+      left.innerHTML += '<div style="color:'+ (usage.color || '#6b7280') +';font-size:12px">'
         + couponEscapeHtml(usage.message || '')
         + '</div>';
 
@@ -2838,7 +2840,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     window.__cartCouponState = window.__cartCouponState || {};
     window.__cartCouponState.coupons = coupons.slice();
     var assign = assignCouponsToItems(items, coupons);
-    var off   = assign.total || 0;
+    var off   = (assign && assign.total) ? assign.total : 0;
     function needsShippingForItems(arr){
       return arr.length && arr.some(function(it){
         if (typeof window.isCandleItemLike === 'function') return !window.isCandleItemLike(it);
@@ -2856,8 +2858,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     if (needsShipping && assign && assign.ship){
       shipOff = Math.min(shippingFee, Number(assign.ship.amount||shippingFee)||shippingFee);
       shippingFee = Math.max(0, shippingFee - shipOff);
-      off += shipOff;
+      // shipOff 只影響運費，不計入折扣欄位
     }
+    // 將 shipOff 傳遞給下游顯示
     var grand = Math.max(0, sub - off + shippingFee);
 
 
@@ -2910,7 +2913,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         shipRow.style.display = needsShipping ? '' : 'none';
         var shipVal = document.getElementById('cartShipping');
         if (shipVal){
-          shipVal.textContent = '+' + tw(shippingFee).replace(/^NT\$\s*/, 'NT$ ');
+          var labelFee = shippingFee;
+          if (shipOff > 0){
+            shipVal.textContent = '+NT$ ' + formatPrice(labelFee) + '（已折抵 NT$ ' + formatPrice(shipOff) + '）';
+          }else{
+            shipVal.textContent = '+' + tw(labelFee).replace(/^NT\$\s*/, 'NT$ ');
+          }
         }
       }
     }catch(_){}
@@ -2932,8 +2940,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var state = hint.getAttribute('data-state') || '';
       if (coupons && coupons.length){
         hint.style.display = '';
+        var effectiveOff = off;
         if (off > 0){
-          hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(off).replace(/^NT\$\s*/, 'NT$ ');
+          hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(effectiveOff).replace(/^NT\$\s*/, 'NT$ ');
           hint.style.color = '#059669';
           hint.setAttribute('data-state', 'ok');
         }else{
