@@ -3340,7 +3340,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       if (needsShipping && assign && assign.ship){
         shipOff = Math.min(shipping, Number(assign.ship.amount||shipping)||shipping);
         shipping = Math.max(0, shipping - shipOff);
-        off += shipOff;
+        // shipOff 僅影響運費，不計入商品折扣
       }
       var grand  = Math.max(0, sub - off + shipping);
       return {
@@ -4158,7 +4158,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         shippingEl.textContent = '+' + tw(shipVal).replace(/^NT\$\s*/, 'NT$ ');
       }
     }
-    if (shippingRow) shippingRow.style.display = (totals.shipping && totals.shipping>0) ? 'flex' : 'none';
+    if (shippingRow) shippingRow.style.display = ((totals.shipping && totals.shipping>0) || shipOff>0) ? 'flex' : 'none';
     if (grandEl)    grandEl.textContent    = tw(totals.grand || 0);
 
     if (hint){
