@@ -3012,28 +3012,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   // 檢查新券加入後是否真的能分配到某個商品
   function canAssignCoupon(items, coupons, newCoupon){
     var nType = couponTypeOf(newCoupon);
-    var existingNonShip = coupons.filter(function(c){ return couponTypeOf(c) !== 'SHIP'; });
-    var hasAll = existingNonShip.some(function(c){ return couponTypeOf(c) === 'ALL'; });
-    var hasDeity = existingNonShip.some(function(c){ return couponTypeOf(c) === 'DEITY'; });
-    if (nType !== 'SHIP'){
-      // 全館券與神祇券擇一，不可同時存在
-      if (hasAll || hasDeity){
-        return false;
-      }
-      if (nType === 'ALL' && existingNonShip.length){
-        return false;
-      }
-      if (nType === 'DEITY' && existingNonShip.length){
-        return false;
-      }
-    }
     if (nType === 'SHIP'){
       var existsShip = coupons.some(function(c){ return couponTypeOf(c)==='SHIP'; });
       return !existsShip;
-    }
-    if (nType === 'ALL'){
-      var existsAll = coupons.some(function(c){ return couponTypeOf(c)==='ALL'; });
-      if (existsAll) return false;
     }
     var currentAssign = assignCouponsToItems(items, coupons);
     var withNew = coupons.concat([newCoupon]);
