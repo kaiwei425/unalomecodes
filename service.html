@@ -496,8 +496,9 @@ dialog[data-fallback-open]{display:block;}
         }
         const code = String(g.code||'').toUpperCase();
         const name = map[code] || '守護神';
-        badge.textContent = `守護神：${name}（${code}）`;
+        badge.textContent = `守護神：${name}`;
         badge.style.display = 'block';
+        badge.style.color = '#1d4ed8';
       }
       if (window.authState && typeof window.authState.onProfile === 'function'){
         window.authState.onProfile(()=>render());
