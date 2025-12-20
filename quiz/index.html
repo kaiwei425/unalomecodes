@@ -458,6 +458,15 @@ async function showResult(){
   // 圖片覆蓋
   const finalImg = DEITY_IMG_OVERRIDES[code] || meta.img || '';
   try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Date.now() })); }catch(_){}
+  // 若已登入，同步到會員檔案
+  try{
+    await fetch('/api/me/profile', {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ guardian:{ code, name, ts: Date.now() } })
+    });
+  }catch(_){}
   // 顯示圖片
   const imgEl = document.getElementById('deityImg');
   if (finalImg) { imgEl.src = finalImg; imgEl.crossOrigin='anonymous'; imgEl.referrerPolicy='no-referrer'; imgEl.style.display = 'block'; }

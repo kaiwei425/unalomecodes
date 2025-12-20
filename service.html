@@ -480,10 +480,15 @@ dialog[data-fallback-open]{display:block;}
       function readGuardian(){
         try{
           const raw = localStorage.getItem('__lastQuizGuardian__');
-          if (!raw) return null;
-          const obj = JSON.parse(raw);
-          if (!obj || !obj.code) return null;
-          return obj;
+          if (raw){
+            const obj = JSON.parse(raw);
+            if (obj && obj.code) return obj;
+          }
+          if (window.authState && typeof window.authState.getProfile === 'function'){
+            const p = window.authState.getProfile();
+            if (p && p.guardian) return p.guardian;
+          }
+          return null;
         }catch(_){ return null; }
       }
       function render(){
@@ -503,6 +508,7 @@ dialog[data-fallback-open]{display:block;}
       if (window.authState && typeof window.authState.onProfile === 'function'){
         window.authState.onProfile(()=>render());
       }
+      setTimeout(render, 800);
       render();
     })();
   </script>

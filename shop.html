@@ -5928,29 +5928,41 @@ function escapeHtml(s) {
   function readGuardian(){
     try{
       const raw = localStorage.getItem('__lastQuizGuardian__');
-      if (!raw) return null;
-      const obj = JSON.parse(raw);
-      if (!obj || !obj.code) return null;
-      return obj;
+      if (raw){
+        const obj = JSON.parse(raw);
+        if (obj && obj.code) return obj;
+      }
+      // 從 profile 取（同步持久化）
+      if (window.authState && typeof window.authState.getProfile === 'function'){
+        const p = window.authState.getProfile();
+        if (p && p.guardian) return p.guardian;
+      }
+      return null;
     }catch(_){ return null; }
   }
   function render(){
     if (!badge) return;
-    const g = readGuardian();
     const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
-    if (!g || !loggedIn){
+    if (!loggedIn){
+      badge.style.display = 'none';
+      return;
+    }
+    const g = readGuardian();
+    if (!g){
       badge.style.display = 'none';
       return;
     }
     const code = String(g.code||'').toUpperCase();
     const name = map[code] || '守護神';
-      badge.textContent = `守護神：${name}`;
-      badge.style.display = 'block';
-      badge.style.color = '#1d4ed8';
+    badge.textContent = `守護神：${name}`;
+    badge.style.display = 'block';
+    badge.style.color = '#1d4ed8';
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
     window.authState.onProfile(()=>render());
   }
+  // 若剛登入後端尚未回傳 guardian，稍後再補一次
+  setTimeout(render, 800);
   render();
 })();
 </script>

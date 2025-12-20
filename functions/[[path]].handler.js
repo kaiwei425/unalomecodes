@@ -1018,7 +1018,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             defaultContact: refreshed.defaultContact || null,
             defaultStore: refreshed.defaultStore || null,
             memberPerks: refreshed.memberPerks || {},
-            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : []
+            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
+            guardian: refreshed.guardian || null
           }});
         }
         if (body && body.defaultStore){
@@ -1037,7 +1038,29 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             defaultContact: refreshed.defaultContact || null,
             defaultStore: refreshed.defaultStore || null,
             memberPerks: refreshed.memberPerks || {},
-            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : []
+            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
+            guardian: refreshed.guardian || null
+          }});
+        }
+        if (body && body.guardian){
+          const payload = {
+            code: String(body.guardian.code||'').trim().toUpperCase(),
+            name: String(body.guardian.name||'').trim(),
+            ts: body.guardian.ts ? new Date(body.guardian.ts).toISOString() : new Date().toISOString()
+          };
+          record.guardian = payload;
+          await saveUserRecord(env, record);
+          const refreshed = await loadUserRecord(env, record.id);
+          return json({ ok:true, profile: {
+            id: refreshed.id,
+            name: refreshed.name,
+            email: refreshed.email,
+            picture: refreshed.picture,
+            defaultContact: refreshed.defaultContact || null,
+            defaultStore: refreshed.defaultStore || null,
+            memberPerks: refreshed.memberPerks || {},
+            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
+            guardian: refreshed.guardian || null
           }});
         }
       }catch(_){}
@@ -1051,7 +1074,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       defaultContact: record.defaultContact || null,
       defaultStore: record.defaultStore || null,
       memberPerks: record.memberPerks || {},
-      wishlist: Array.isArray(record.wishlist) ? record.wishlist : []
+      wishlist: Array.isArray(record.wishlist) ? record.wishlist : [],
+      guardian: record.guardian || null
     }});
   }
 
