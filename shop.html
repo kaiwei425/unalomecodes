@@ -293,7 +293,7 @@
               <input id="cartCouponInput" type="text" inputmode="latin" placeholder="請輸入優惠碼"
                      style="flex:1 1 auto;padding:10px;border:1px solid #e5e7eb;border-radius:10px">
               <button id="cartApply" class="btn" style="flex:0 0 auto">套用</button>
-              <button id="cartSelectSaved" class="btn" style="flex:0 0 auto;background:#eef2ff;color:#1d4ed8;">選用已儲存</button>
+              <button id="cartSelectSaved" class="btn" style="flex:0 0 auto;background:#eef2ff;color:#1d4ed8;">我的優惠券</button>
             </div>
             <div id="cartCouponHint" style="display:none;font-size:12px;color:#6b7280;line-height:1.6"></div>
           </div>
@@ -3182,19 +3182,98 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           alert('沒有可用的已儲存優惠券');
           return;
         }
-        const names = items.map((c,idx)=>{
-          const labelType = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
-          const deityText = c.deity && c.deity!=='ALL' && c.deity!=='SHIP' ? c.deity : labelType;
-          return `${idx+1}. ${c.code}（${deityText}｜${labelType}｜NT$${c.amount||0})`;
-        }).join('\\n');
-        const pick = prompt('選擇要套用的優惠券，輸入編號：\\n'+names);
-        const idx = Number((pick||'').trim()) - 1;
-        if (!Number.isFinite(idx) || idx<0 || idx>=items.length) return;
-        const chosen = items[idx];
-        const input = document.getElementById('cartCouponInput');
-        if (input){ input.value = chosen.code; }
-        // 直接觸發套用流程
-        document.getElementById('cartApply')?.click();
+
+        // 建立輕量選單
+        function openPicker(list){
+          const overlay = document.createElement('div');
+          overlay.style.position = 'fixed';
+          overlay.style.inset = '0';
+          overlay.style.background = 'rgba(0,0,0,0.45)';
+          overlay.style.zIndex = '99999';
+          overlay.style.display = 'flex';
+          overlay.style.alignItems = 'center';
+          overlay.style.justifyContent = 'center';
+
+          const panel = document.createElement('div');
+          panel.style.background = '#fff';
+          panel.style.borderRadius = '14px';
+          panel.style.boxShadow = '0 20px 40px rgba(15,23,42,0.25)';
+          panel.style.padding = '16px';
+          panel.style.width = 'min(420px, 92vw)';
+          panel.style.maxWidth = '420px';
+          panel.style.display = 'grid';
+          panel.style.gap = '10px';
+
+          const title = document.createElement('div');
+          title.textContent = '選擇要套用的優惠券';
+          title.style.fontWeight = '800';
+          title.style.fontSize = '16px';
+
+          const select = document.createElement('select');
+          select.style.width = '100%';
+          select.style.padding = '10px 12px';
+          select.style.border = '1px solid #e5e7eb';
+          select.style.borderRadius = '10px';
+
+          list.forEach((c, idx)=>{
+            const opt = document.createElement('option');
+            const labelType = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
+            const deityText = (c.deity && c.deity!=='ALL' && c.deity!=='SHIP') ? c.deity : labelType;
+            opt.value = String(idx);
+            opt.textContent = `${c.code}｜${deityText}｜${labelType}｜NT$${c.amount||0}`;
+            select.appendChild(opt);
+          });
+
+          const actions = document.createElement('div');
+          actions.style.display = 'flex';
+          actions.style.gap = '8px';
+          actions.style.justifyContent = 'flex-end';
+
+          const cancel = document.createElement('button');
+          cancel.textContent = '取消';
+          cancel.style.padding = '8px 12px';
+          cancel.style.borderRadius = '10px';
+          cancel.style.border = '1px solid #e5e7eb';
+          cancel.style.background = '#fff';
+          cancel.style.cursor = 'pointer';
+
+          const ok = document.createElement('button');
+          ok.textContent = '套用';
+          ok.style.padding = '8px 12px';
+          ok.style.borderRadius = '10px';
+          ok.style.border = 'none';
+          ok.style.background = '#2563eb';
+          ok.style.color = '#fff';
+          ok.style.cursor = 'pointer';
+          ok.style.fontWeight = '700';
+
+          actions.appendChild(cancel);
+          actions.appendChild(ok);
+
+          panel.appendChild(title);
+          panel.appendChild(select);
+          panel.appendChild(actions);
+          overlay.appendChild(panel);
+
+          function close(){ overlay.remove(); }
+          cancel.onclick = close;
+          overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) close(); });
+
+          ok.onclick = ()=>{
+            const idx = Number(select.value);
+            if (!Number.isFinite(idx) || idx<0 || idx>=list.length){ close(); return; }
+            const chosen = list[idx];
+            const input = document.getElementById('cartCouponInput');
+            if (input){ input.value = chosen.code; }
+            close();
+            document.getElementById('cartApply')?.click();
+          };
+
+          document.body.appendChild(overlay);
+          select.focus();
+        }
+
+        openPicker(items);
       }catch(err){
         alert('無法載入優惠券，請稍後再試');
       }
