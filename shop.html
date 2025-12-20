@@ -3188,11 +3188,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           const overlay = document.createElement('div');
           overlay.style.position = 'fixed';
           overlay.style.inset = '0';
-          overlay.style.background = 'rgba(0,0,0,0.45)';
-          overlay.style.zIndex = '999999';
+          overlay.style.background = 'rgba(0,0,0,0.55)';
+          overlay.style.zIndex = '2147483000';
           overlay.style.display = 'flex';
           overlay.style.alignItems = 'center';
           overlay.style.justifyContent = 'center';
+          overlay.style.backdropFilter = 'blur(2px)';
 
           const panel = document.createElement('div');
           panel.style.background = '#fff';
@@ -3265,7 +3266,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           panel.appendChild(actions);
           overlay.appendChild(panel);
 
-          function close(){ overlay.remove(); }
+          function close(){
+            try{ overlay.remove(); }catch(_){}
+          }
           cancel.onclick = close;
           overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) close(); });
 
@@ -3279,7 +3282,8 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             document.getElementById('cartApply')?.click();
           };
 
-          document.body.appendChild(overlay);
+          const host = document.getElementById('dlgCart') || document.body;
+          host.appendChild(overlay);
           select.focus();
         }
 
