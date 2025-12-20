@@ -6,25 +6,36 @@
 <title>服務訂單管理</title>
 <style>
   :root{
-    --bg:#0b1022;--card:#111827;--line:#20283c;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8;
+    --bg:#0b1022;--card:#111827;--line:#20283c;--text:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8;--brand:#22c55e;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:linear-gradient(180deg,#050815,#0f172a);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
-  .wrap{max-width:1100px;margin:0 auto;padding:24px;}
-  .backLink{margin-bottom:14px;}
+  body{margin:0;background:radial-gradient(circle at 15% 10%, rgba(59,130,246,.08), transparent 30%), radial-gradient(circle at 85% 0%, rgba(34,197,94,.08), transparent 28%), #050815;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px;}
+  .backLink{margin-bottom:12px;}
   .backBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#0f172a;border:1px solid #1f2937;color:#e5e7eb;text-decoration:none;font-weight:700;}
-  h1{margin:0 0 16px;font-size:26px;font-weight:800;}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45);}
-  table{width:100%;border-collapse:collapse;font-size:14px;}
-  th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;vertical-align:top;}
-  th{color:var(--muted);font-weight:700;}
-  tbody tr:hover{background:rgba(255,255,255,.02);}
-  .btn{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;padding:6px 10px;border-radius:10px;font-size:13px;cursor:pointer;}
+  h1{margin:0 0 14px;font-size:24px;font-weight:800;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 16px 40px rgba(0,0,0,.45);}
+  .lookup{margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .lookup input{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;}
+  .lookup .btn{padding:10px 12px;border-radius:10px;}
+  .list{display:grid;gap:12px;}
+  .order-card{background:#0f172a;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 28px rgba(0,0,0,.3);display:grid;gap:10px;}
+  .order-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .order-id{font-weight:800;font-size:15px;}
+  .order-time{color:var(--muted);font-size:12px;}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:12px;background:#0b1224;border:1px solid #1f2a44;font-weight:700;font-size:12px;color:#e5e7eb;}
+  .pill.green{background:rgba(34,197,94,.12);border-color:#16a34a;color:#bbf7d0;}
+  .section{display:grid;gap:6px;font-size:13px;}
+  .section strong{font-size:13px;}
+  .grid-two{display:grid;grid-template-columns:1fr;gap:10px;}
+  @media(min-width:720px){.grid-two{grid-template-columns:1.2fr 1fr;}}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;}
+  .btn{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;padding:8px 10px;border-radius:10px;font-size:13px;cursor:pointer;}
   .btn.primary{background:linear-gradient(135deg,#34d399,#38bdf8);border:none;color:#0b1120;}
-  select{background:#0f172a;border:1px solid var(--line);color:#e5e7eb;border-radius:10px;padding:6px 10px;}
+  .btn.danger{border-color:#f43f5e;color:#fca5a5;}
+  select{background:#0f172a;border:1px solid var(--line);color:#e5e7eb;border-radius:10px;padding:8px 10px;}
   .muted{color:var(--muted);font-size:13px;}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#1e293b;}
-  .lookup{margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
   dialog{border:none;border-radius:16px;padding:0;background:#0f172a;color:#e5e7eb;border:1px solid #1f2937;max-width:520px;width:95%;}
   dialog .dlgHead{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;}
   dialog .dlgBody{padding:18px;display:grid;gap:12px;font-size:14px;}
@@ -43,18 +54,7 @@
       <button class="btn" id="btnExport">匯出 CSV</button>
     </div>
     <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>訂單</th>
-            <th>服務</th>
-            <th>聯絡資料</th>
-            <th>狀態</th>
-            <th style="width:180px">操作</th>
-          </tr>
-        </thead>
-        <tbody id="ordersBody"><tr><td colspan="5" class="muted">載入中…</td></tr></tbody>
-      </table>
+      <div id="ordersBody" class="list"><div class="muted">載入中…</div></div>
     </div>
   </div>
   <dialog id="svcOrderDetail">
@@ -140,60 +140,67 @@
       return [o.id, o.serviceName, o.buyer && o.buyer.phone].join(' ').toLowerCase().includes(q);
     });
     if (!view.length){
-      bodyEl.innerHTML = '<tr><td colspan="5" class="muted">沒有符合的訂單。</td></tr>';
+      bodyEl.innerHTML = '<div class="muted">沒有符合的訂單。</div>';
       return;
     }
     bodyEl.innerHTML = view.map(o=>{
       const transferLast5 = getTransferLast5(o);
       const transferDisplay = transferLast5 ? `<strong style="letter-spacing:1px;">${transferLast5}</strong>` : '—';
       return `
-        <tr data-id="${o.id}">
-          <td>
-            <div style="font-weight:700;">${o.id}</div>
-            <div class="muted">${fmt(o.createdAt)}</div>
-          </td>
-          <td>
-            <div style="font-weight:600;">${o.serviceName||''}</div>
-            <div class="muted">選項：${formatSelections(o)}</div>
-            <div class="muted">內容：${formatItems(o)}</div>
-            <div class="muted">備註：${o.note || '—'}</div>
-          </td>
-          <td>
-            <div>${o.buyer && o.buyer.name ? o.buyer.name : ''}</div>
-            ${o.buyer && o.buyer.nameEn ? `<div class="muted">英文：${escapeHtml(o.buyer.nameEn)}</div>` : ''}
-            <div class="muted">${o.buyer && o.buyer.phone ? o.buyer.phone : ''}</div>
-            <div class="muted">${o.buyer && o.buyer.email ? o.buyer.email : ''}</div>
-            <div class="muted">生日：${o.buyer && o.buyer.birth ? o.buyer.birth : '—'}</div>
-            <div class="muted">指定日期：${o.requestDate || '—'}</div>
-            <div class="muted">匯款末五碼：${transferDisplay}</div>
-          </td>
-          <td><span class="badge">${o.status || '待處理'}</span></td>
-          <td>
+        <div class="order-card" data-id="${o.id}">
+          <div class="order-header">
+            <div>
+              <div class="order-id">${o.id}</div>
+              <div class="order-time">${fmt(o.createdAt)}</div>
+            </div>
+            <div class="pill">${o.status || '待處理'}</div>
+          </div>
+          <div class="grid-two">
+            <div class="section">
+              <strong>服務</strong>
+              <div>${escapeHtml(o.serviceName||'')}</div>
+              <div class="muted">選項：${formatSelections(o)}</div>
+              <div class="muted">內容：${formatItems(o)}</div>
+              <div class="muted">備註：${escapeHtml(o.note||'—')}</div>
+              <div class="muted">匯款末五碼：${transferDisplay}</div>
+            </div>
+            <div class="section">
+              <strong>聯絡人</strong>
+              <div>${escapeHtml(o.buyer && o.buyer.name || '')}</div>
+              ${o.buyer && o.buyer.nameEn ? `<div class="muted">英文：${escapeHtml(o.buyer.nameEn)}</div>` : ''}
+              <div class="muted">${escapeHtml(o.buyer && o.buyer.phone || '')}</div>
+              <div class="muted">${escapeHtml(o.buyer && o.buyer.email || '')}</div>
+              <div class="muted">生日：${escapeHtml((o.buyer && o.buyer.birth) || '—')}</div>
+              <div class="muted">指定日期：${escapeHtml(o.requestDate || '—')}</div>
+            </div>
+          </div>
+          <div class="section">
+            <strong>狀態</strong>
             <select data-id="${o.id}" class="statusSel">
               ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
             </select>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
-              <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
-              <button class="btn" data-act="view" data-id="${o.id}">查看明細</button>
-              <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
-              <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
-              <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
-              <button class="btn" data-act="proof" data-id="${o.id}">查看憑證</button>
-              <button class="btn danger" data-act="delete" data-id="${o.id}">刪除</button>
-            </div>
-          </td>
-        </tr>
+          </div>
+          <div class="actions">
+            <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
+            <button class="btn" data-act="view" data-id="${o.id}">明細</button>
+            <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
+            <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
+            <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
+            <button class="btn" data-act="proof" data-id="${o.id}">匯款憑證</button>
+            <button class="btn danger" data-act="delete" data-id="${o.id}">刪除</button>
+          </div>
+        </div>
       `;
     }).join('');
   }
   async function loadOrders(){
-    bodyEl.innerHTML = '<tr><td colspan="5" class="muted">載入中…</td></tr>';
+    bodyEl.innerHTML = '<div class="muted">載入中…</div>';
     try{
       const data = await authedFetch('/api/service/orders');
       orders = Array.isArray(data.items) ? data.items : [];
       render();
     }catch(err){
-      bodyEl.innerHTML = `<tr><td colspan="5" class="muted">載入失敗：${err.message}</td></tr>`;
+      bodyEl.innerHTML = `<div class="muted">載入失敗：${err.message}</div>`;
     }
   }
   bodyEl.addEventListener('click', async (e)=>{
@@ -202,7 +209,7 @@
     const act = btn.getAttribute('data-act');
     const id = btn.getAttribute('data-id');
     if (act === 'apply'){
-      const row = btn.closest('tr');
+      const row = btn.closest('.order-card');
       const sel = row ? row.querySelector('select.statusSel') : null;
       if (!sel) return;
       const status = sel.value;
