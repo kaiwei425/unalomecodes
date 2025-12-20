@@ -275,6 +275,46 @@
     updateMemberPerkHint(profile);
   }
 
+  // 強制帶入會員資料（多次嘗試，避免其他腳本覆寫）
+  function ensureContactFromProfile(retries){
+    const tryFetch = ()=>{
+      fetch('/api/me/profile',{credentials:'include',cache:'no-store'})
+        .then(r=>r.json().catch(()=>({})))
+        .then(data=>{
+          const p = data && (data.profile || data);
+          if (p){
+            lastProfile = p;
+            fillContactFromProfile(p, true);
+          }
+        }).catch(()=>{});
+    };
+    // 先用現有 session profile
+    try{
+      if (window.authState && typeof window.authState.getProfile === 'function'){
+        const p = window.authState.getProfile();
+        if (p){
+          lastProfile = p;
+          fillContactFromProfile(p, true);
+        }
+      }
+    }catch(_){}
+    tryFetch();
+    let count = 0;
+    const timer = setInterval(()=>{
+      if ((contactNameInput && contactNameInput.value) &&
+          (contactPhoneInput && contactPhoneInput.value) &&
+          (contactEmailInput && contactEmailInput.value)){
+        clearInterval(timer);
+        return;
+      }
+      tryFetch();
+      count++;
+      if (count >= (retries||5)){
+        clearInterval(timer);
+      }
+    }, 600);
+  }
+
   function updateMemberPerkHint(profile){
     if (!memberPerkHintEl) return;
     // 暫不顯示會員優惠
@@ -642,17 +682,8 @@
       return;
     }
     resetCheckoutFlow();
-    // 先用已知 profile 帶入，若無則嘗試抓取
-    if (lastProfile){
-      fillContactFromProfile(lastProfile, true);
-    }else{
-      fetch('/api/me/profile',{credentials:'include',cache:'no-store'}).then(r=>r.json().catch(()=>({}))).then(data=>{
-        if (data && data.profile){
-          lastProfile = data.profile;
-          fillContactFromProfile(lastProfile, true);
-        }
-      }).catch(()=>{});
-    }
+    // 強制載入會員基本資料
+    ensureContactFromProfile(6);
     renderCheckoutSummary(cart);
     openDialog(checkoutDialog);
   }
