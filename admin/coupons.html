@@ -342,6 +342,10 @@
     try{
       const res = await fetch('/api/coupons/list?'+params.toString(), { credentials:'include' });
       const data = await res.json().catch(()=>({}));
+      if (res.status === 401){
+        listBody.innerHTML = `<tr><td colspan="10" class="error">請重新以管理員登入後台，再試一次。（需白名單 Google 帳號）</td></tr>`;
+        return;
+      }
       if (!res.ok || !data.ok){
         throw new Error(data && data.error ? data.error : ('HTTP '+res.status));
       }
