@@ -148,7 +148,7 @@
       </div>
       <div class="footer">
         <a id="deityLink" target="_blank" rel="noopener" class="btn">查看完整介紹</a>
-        <a id="shareLink" target="_blank" rel="noopener" class="btn ok">分享我的結果</a>
+        <a id="shareLink" class="btn ok">重新測驗一次</a>
         <a id="menuLink" target="_blank" rel="noopener" class="btn">瀏覽其他守護者</a>
         <a class="btn" href="/shop">前往選購專屬聖物</a>
       </div>
@@ -551,18 +551,23 @@ async function showResult(){
         try{
           if (!coupon){
             let attempts = 0;
-            while (!coupon && attempts < 2){
+            let lastCode = '';
+            while (!coupon && attempts < 3){
               const real = await issueCoupon(code, 200);
+              lastCode = real;
               if (!real || typeof real !== 'string') throw new Error('NO_CODE');
-              // 確認券碼內的守護神代碼與結果相符，若不符再重試一次
               const seg = (real.split('-')[1]||'').toUpperCase();
-              if (seg && seg !== code && attempts === 0){
+              if (seg && seg !== code){
                 attempts++;
                 continue;
               }
               coupon = real;
             }
-            if (!coupon) throw new Error('NO_CODE_MATCH');
+            if (!coupon){
+              // 若後端一直回傳錯誤守護神，直接生成本地券碼（含正確守護神）
+              coupon = generateCoupon(code);
+              console.warn('quiz coupon deity mismatch, using local coupon', { expected: code, last: lastCode });
+            }
             try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2' })); }catch(_){ }
           }
           // 顯示正式券碼（不再顯示任何臨時券提示）
@@ -651,6 +656,32 @@ async function showResult(){
   }catch(_){ }
 
   window.scrollTo({ top: 0, behavior:'smooth' });
+
+  // 重新測驗：回到初始狀態
+  try{
+    const reBtn = document.getElementById('shareLink');
+    if (reBtn){
+      reBtn.onclick = (ev)=>{
+        ev.preventDefault();
+        // 重置狀態
+        state.dow=''; state.zod=''; state.job=''; state.p2=''; state.p3=''; state.p4=''; state.p5=''; state.p6=''; state.p7='';
+        currentStep = 0; currentQuestion = 1;
+        // 清空卡片並還原 DOM
+        const main = document.querySelector('main');
+        if (main){
+          main.innerHTML = `
+            <div class="card step-card" id="stepDow"><h2>你是星期幾出生？</h2><div id="dowBox" class="chips" role="group" aria-label="weekday"></div></div>
+            <div class="card step-card" id="stepZod"><h2>你的星座？</h2><div id="zodiacBox" class="chips" role="group" aria-label="zodiac"></div></div>
+            <div class="card step-card" id="quizBox"><div id="qTitle" class="q"></div><div id="opts" class="grid"></div><div class="footer"><button id="prevBtn" class="btn">← 上一題</button><button id="nextBtn" class="btn primary">下一題 →</button></div></div>
+          `;
+          // 重新繫結元件與事件
+          setTimeout(()=>{ try{ location.reload(); }catch(_){ location.href = location.href; } }, 50);
+        }else{
+          try{ location.reload(); }catch(_){ location.href = location.href; }
+        }
+      };
+    }
+  }catch(_){}
 }
 </script>
 </body>
