@@ -125,6 +125,75 @@ document.getElementById('fSort').addEventListener('change', applyFilter);
 (function(){
   const toggle = document.getElementById('memberMenuBtn');
   const panel = document.getElementById('memberMenuPanel');
+  const profileLink = panel ? panel.querySelector('a[data-profile]') : null;
+  const dlg = document.getElementById('profileDialog');
+  const nameInput = document.getElementById('profileName');
+  const emailInput = document.getElementById('profileEmail');
+  const phoneInput = document.getElementById('profilePhone');
+  const saveBtn = document.getElementById('profileSave');
+  const closeBtn = document.getElementById('profileClose');
+  const statusEl = document.getElementById('profileStatus');
+
+  async function openProfile(){
+    if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+      if (window.authState && typeof window.authState.promptLogin === 'function'){
+        window.authState.promptLogin('請先登入再編輯基本資料');
+      }
+      return;
+    }
+    try{
+      const res = await fetch('/api/me/profile',{credentials:'include',cache:'no-store'});
+      const data = await res.json().catch(()=>({}));
+      const profile = data.profile || data || {};
+      if (nameInput) nameInput.value = profile.name || profile.defaultContact?.name || '';
+      if (emailInput) emailInput.value = profile.email || profile.defaultContact?.email || '';
+      if (phoneInput) phoneInput.value = profile.defaultContact?.phone || profile.phone || '';
+      if (statusEl) statusEl.textContent = '';
+      if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+      else if (dlg) dlg.setAttribute('open','');
+    }catch(e){
+      if (statusEl) statusEl.textContent = '讀取失敗，請稍後再試';
+    }
+  }
+  async function saveProfile(){
+    if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+      if (window.authState && typeof window.authState.promptLogin === 'function'){
+        window.authState.promptLogin('請先登入再儲存');
+      }
+      return;
+    }
+    if (statusEl) statusEl.style.color = '#ef4444';
+    try{
+      const body = {
+        defaultContact:{
+          name: nameInput ? nameInput.value.trim() : '',
+          email: emailInput ? emailInput.value.trim() : '',
+          phone: phoneInput ? phoneInput.value.trim() : ''
+        }
+      };
+      const res = await fetch('/api/me/profile',{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok){
+        throw new Error(data.error || ('HTTP '+res.status));
+      }
+      if (statusEl){
+        statusEl.style.color = '#16a34a';
+        statusEl.textContent = '已儲存，下次結帳自動帶入。';
+      }
+      if (window.authState && typeof window.authState.refreshProfile === 'function'){
+        window.authState.refreshProfile();
+      }
+      setTimeout(()=>{ if (closeBtn) closeBtn.click(); }, 800);
+    }catch(err){
+      if (statusEl) statusEl.textContent = err.message || '儲存失敗';
+    }
+  }
+
   if (toggle && panel){
     const close = ()=>{
       panel.style.display = 'none';
@@ -139,11 +208,28 @@ document.getElementById('fSort').addEventListener('change', applyFilter);
       const isOpen = panel.style.display === 'block';
       if (isOpen) close(); else open();
     });
+    if (profileLink){
+      profileLink.addEventListener('click', ev=>{
+        ev.preventDefault();
+        close();
+        openProfile();
+      });
+    }
     document.addEventListener('click', (ev)=>{
       if (!panel.contains(ev.target) && ev.target !== toggle){
         close();
       }
     });
+  }
+
+  if (closeBtn){
+    closeBtn.addEventListener('click', ()=>{
+      if (dlg && typeof dlg.close === 'function') dlg.close();
+      else if (dlg) dlg.removeAttribute('open');
+    });
+  }
+  if (saveBtn){
+    saveBtn.addEventListener('click', saveProfile);
   }
 })();
 

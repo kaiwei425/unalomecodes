@@ -126,6 +126,7 @@ dialog[data-fallback-open]{display:block;}
         <div class="member-menu">
           <button type="button" id="memberMenuBtnSvc">會員中心 ▾</button>
           <div class="member-menu-panel" id="memberMenuPanelSvc">
+            <a href="#" data-profile>基本資料</a>
             <a href="/account-orders.html">我的訂單</a>
             <a href="/account-store.html">門市預設</a>
           </div>
@@ -185,6 +186,24 @@ dialog[data-fallback-open]{display:block;}
     </div>
     <footer>
       <button type="button" class="btn" id="privacyClose">關閉</button>
+    </footer>
+  </dialog>
+
+  <dialog id="profileDialogSvc" class="policy-dialog">
+    <header>基本資料</header>
+    <div class="body">
+      <label>姓名</label>
+      <input id="profileNameSvc" type="text" readonly>
+      <label>Email</label>
+      <input id="profileEmailSvc" type="email" readonly>
+      <label>手機號碼</label>
+      <input id="profilePhoneSvc" type="tel" placeholder="請輸入手機號碼">
+      <p class="muted" style="font-size:12px;margin-top:8px;">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
+      <div id="profileStatusSvc" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="profileCloseSvc">取消</button>
+      <button type="button" class="btn primary" id="profileSaveSvc">儲存</button>
     </footer>
   </dialog>
 
