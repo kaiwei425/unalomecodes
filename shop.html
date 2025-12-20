@@ -3189,7 +3189,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           overlay.style.position = 'fixed';
           overlay.style.inset = '0';
           overlay.style.background = 'rgba(0,0,0,0.45)';
-          overlay.style.zIndex = '99999';
+          overlay.style.zIndex = '999999';
           overlay.style.display = 'flex';
           overlay.style.alignItems = 'center';
           overlay.style.justifyContent = 'center';
@@ -3211,14 +3211,24 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 
           const select = document.createElement('select');
           select.style.width = '100%';
-          select.style.padding = '10px 12px';
+          select.style.padding = '12px 12px';
           select.style.border = '1px solid #e5e7eb';
           select.style.borderRadius = '10px';
+          select.style.fontSize = '15px';
+
+          const deityNames = {
+            FM:'四面神', GA:'象神', CD:'崇迪', KP:'坤平', HM:'哈魯曼',
+            RH:'拉胡', JL:'迦樓羅', ZD:'澤度金', ZF:'招財女神',
+            WE:'五眼四耳', XZ:'徐祝老人', HP:'魂魄勇'
+          };
 
           list.forEach((c, idx)=>{
             const opt = document.createElement('option');
             const labelType = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
-            const deityText = (c.deity && c.deity!=='ALL' && c.deity!=='SHIP') ? c.deity : labelType;
+            const deityCode = (c.deity || '').toUpperCase();
+            const deityText = (deityCode && deityCode!=='ALL' && deityCode!=='SHIP')
+              ? `${deityNames[deityCode] || deityCode}（${deityCode}）`
+              : (labelType === 'SHIP' ? '免運券' : (labelType === 'ALL' ? '全館券' : labelType));
             opt.value = String(idx);
             opt.textContent = `${c.code}｜${deityText}｜${labelType}｜NT$${c.amount||0}`;
             select.appendChild(opt);
