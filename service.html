@@ -87,6 +87,18 @@ dialog[data-fallback-open]{display:block;}
 .svc-cart-remove{border:1px solid var(--line);background:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;}
 .svc-cart-actions{padding:0 18px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px;}
 .svc-cart-actions .btn{flex:1;min-width:120px;}
+.btn.loading{position:relative;pointer-events:none;}
+.btn.loading::after{
+  content:"";
+  position:absolute;
+  right:10px;
+  width:14px;height:14px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.6);
+  border-top-color:transparent;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media(max-width:560px){
   .svc-cart-item{flex-direction:column;align-items:flex-start;}
   .svc-cart-item .price{margin-right:0;}

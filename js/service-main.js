@@ -961,8 +961,18 @@
   }
   if (checkoutNextBtn){
     checkoutNextBtn.addEventListener('click', async ()=>{
+      // 顯示載入中狀態，避免使用者誤以為沒反應
+      checkoutNextBtn.disabled = true;
+      const oldText = checkoutNextBtn.textContent;
+      checkoutNextBtn.textContent = '處理中…';
+      checkoutNextBtn.classList.add('loading');
       const data = collectStepOneData();
-      if (!data) return;
+      if (!data){
+        checkoutNextBtn.disabled = false;
+        checkoutNextBtn.textContent = oldText;
+        checkoutNextBtn.classList.remove('loading');
+        return;
+      }
       checkoutContact = data;
       // 若尚未帶入會員基本資料，再嘗試一次（使用 profile）
       try{
@@ -979,9 +989,15 @@
         await ensureRitualPhotoUploaded();
       }catch(err){
         alert(err && err.message ? err.message : '上傳祈福照片失敗');
+        checkoutNextBtn.disabled = false;
+        checkoutNextBtn.textContent = oldText;
+        checkoutNextBtn.classList.remove('loading');
         return;
       }
       setCheckoutStep(2);
+      checkoutNextBtn.disabled = false;
+      checkoutNextBtn.textContent = oldText;
+      checkoutNextBtn.classList.remove('loading');
     });
   }
   if (bankBackBtn){
