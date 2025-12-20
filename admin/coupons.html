@@ -381,11 +381,15 @@
       }
       const items = Array.isArray(data.items) ? data.items : [];
       lastFetched = items;
-      if (!items.length){
-        listBody.innerHTML = '<tr><td colspan="10" class="muted">目前沒有符合條件的優惠券</td></tr>';
+      const deityOnly = items.filter(c=> {
+        const t = (c.type||'').toUpperCase();
+        return !(t === 'ALL' || t === 'SHIP');
+      });
+      if (!deityOnly.length){
+        listBody.innerHTML = '<tr><td colspan="10" class="muted">目前沒有符合條件的神祇券（此處僅顯示神祇券，ALL/SHIP 請點下方按鈕）</td></tr>';
         return;
       }
-      listBody.innerHTML = items.map(c=>{
+      listBody.innerHTML = deityOnly.map(c=>{
         const usedText = c.used ? '已使用' : '未使用';
         const usedCls = c.used ? 'status-used' : 'status-new';
         const issued = fmtDate(c.issuedAt);
