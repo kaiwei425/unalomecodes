@@ -135,18 +135,28 @@ if (window.authState){
     try{
       const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
       const data = await res.json().catch(()=>({}));
-      if (res.ok && data && data.profile){
+      if (data && data.profile){
         applyBankProfile(data.profile);
-        attempts = 99;
-        return;
       }
-    }catch(_){}
+      if (res && !res.ok && (!data || !data.profile)){
+        console.warn('profile preload failed', res.status);
+      }
+    }catch(e){
+      console.warn('profile preload error', e);
+    }
     attempts++;
-    if (attempts < 5){
+    if (attempts < 8){
       setTimeout(preloadProfileForCheckout, 800);
     }
   }
-  preloadProfileForCheckout();
+  // 等待 DOM 完成後再開始嘗試
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', preloadProfileForCheckout, { once:true });
+  }else{
+    preloadProfileForCheckout();
+  }
+  // 若 3 秒後仍空白，再強制補一次
+  setTimeout(()=>{ preloadProfileForCheckout(); }, 3000);
 })();
 
 if (typeof window.__scheduleOrderRefresh !== 'function'){
@@ -466,8 +476,21 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         if ((!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value)){
           fetch('/api/me/profile', { credentials:'include', cache:'no-store' })
             .then(r=>r.json().catch(()=>({})))
-            .then(data=>{ if (data && data.profile) applyBankProfile(data.profile); })
+            .then(data=>{
+              if (data && data.profile) applyBankProfile(data.profile);
+            })
             .catch(()=>{});
+          // 1 秒後再補一次，避免第一次延遲
+          setTimeout(()=>{
+            if ((!bfNameInput || !bfNameInput.value) && (!bfPhoneInput || !bfPhoneInput.value) && (!bfEmailInput || !bfEmailInput.value)){
+              fetch('/api/me/profile', { credentials:'include', cache:'no-store' })
+                .then(r=>r.json().catch(()=>({})))
+                .then(data=>{
+                  if (data && data.profile) applyBankProfile(data.profile);
+                })
+                .catch(()=>{});
+            }
+          }, 1000);
         }
       })();
       // 填入展示資訊
