@@ -55,7 +55,11 @@
           <div class="sub">精選 IG 影音＋地圖導航，快速找到你要的餐廳</div>
         </div>
       </div>
-      <a class="btn ghost" href="/shop.html" style="margin-left:auto;padding:10px 12px;font-size:13px;border-radius:999px;border:1px solid #cbd5e1;box-shadow:none;">回到商品館</a>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn ghost" id="btnBack" style="padding:8px 12px;font-size:12px;border-radius:999px;border:1px solid #cbd5e1;box-shadow:none;">← 返回上一頁</button>
+        <button class="btn ghost" id="btnFav" style="padding:8px 12px;font-size:12px;border-radius:999px;border:1px solid #cbd5e1;box-shadow:none;">收藏清單</button>
+        <button class="btn ghost" id="btnAdmin" style="padding:8px 12px;font-size:12px;border-radius:999px;border:1px solid #cbd5e1;box-shadow:none;">管理編輯</button>
+      </div>
     </div>
   </header>
 
@@ -202,6 +206,19 @@ function render(){
       openModal(id);
     };
   });
+}
+
+[btnBack, btnFav, btnAdmin].forEach(btn=>{
+  if (!btn) return;
+  if (btn.id === 'btnBack'){
+    btn.onclick = ()=> history.back();
+  }
+});
+if (btnFav){
+  btnFav.onclick = ()=> alert('收藏清單尚未串接，後續可接會員收藏列表。');
+}
+if (btnAdmin){
+  btnAdmin.onclick = ()=> alert('管理編輯入口待串接，暫請透過後台或直接更新資料檔。');
 }
 
 initFilters();
