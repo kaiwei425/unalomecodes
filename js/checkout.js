@@ -64,6 +64,15 @@ function applyBankProfile(profile, force){
   if (bfNameInput && (force || !bfNameInput.value)) bfNameInput.value = source.name || '';
   if (bfPhoneInput && (force || !bfPhoneInput.value) && source.phone) bfPhoneInput.value = source.phone;
   if (bfEmailInput && (force || !bfEmailInput.value)) bfEmailInput.value = source.email || '';
+  // 同步填入信用卡表單（不覆蓋使用者已輸入）
+  try{
+    const ccName = document.getElementById('ccName');
+    const ccPhone = document.getElementById('ccPhone');
+    const ccEmail = document.getElementById('ccEmail');
+    if (ccName && (force || !ccName.value)) ccName.value = source.name || '';
+    if (ccPhone && (force || !ccPhone.value) && source.phone) ccPhone.value = source.phone;
+    if (ccEmail && (force || !ccEmail.value)) ccEmail.value = source.email || '';
+  }catch(_){}
   updateMemberPerkHint(profile);
   if (bfStoreInput && profile.defaultStore){
     const st = profile.defaultStore || {};
