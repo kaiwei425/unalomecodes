@@ -1763,12 +1763,6 @@ function __cartPricing(includePendingDetail){
       const ctx = (dlg && dlg.__ctx) || computeAmount();
       const cart = Array.isArray(ctx.cart) ? ctx.cart.slice() : [];
       const totalOff = (ctx.off || 0) + (ctx.hasShipCoupon ? SHIPPING_FEE : 0);
-      // 將折扣直接灌回第一個商品單價，避免後端未套用折扣時金額跑掉
-      const adjCart = cart.map(it=>Object.assign({}, it));
-      if (adjCart.length){
-        const delta = totalOff;
-        adjCart[0].price = Math.max(0, Number(adjCart[0].price||0) - delta);
-      }
       const payload = {
         buyer:{
           name: (ccForm.querySelector('[name="name"]')?.value || '').trim(),
@@ -1791,7 +1785,7 @@ function __cartPricing(includePendingDetail){
         return;
       }
       if (cart.length){
-        payload.cart = adjCart;
+        payload.cart = cart;
         payload.mode = 'cart';
         payload.fromCart = '1';
         payload.useCart = '1';

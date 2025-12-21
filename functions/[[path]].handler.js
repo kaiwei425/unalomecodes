@@ -2382,6 +2382,7 @@ async function computeServerDiscount(env, items, couponInputs, orderId) {
   const usedIdx = new Set();
   const results = [];
   let total = 0;
+  let shippingDiscount = 0;
 
   for (const c of (couponInputs || [])) {
     const code = (c.code || '').toUpperCase();
@@ -2391,6 +2392,18 @@ async function computeServerDiscount(env, items, couponInputs, orderId) {
     try {
       const r = await redeemCoupon(env, { code, deity, orderId });
       if (!r.ok) continue;
+
+      const type = String(r.type || '').toUpperCase();
+      if (type === 'SHIP') {
+        shippingDiscount += Math.max(0, Number(r.amount || FIXED) || FIXED);
+        results.push({
+          code,
+          amount: 0,
+          productId: null,
+          type: 'SHIP'
+        });
+        continue;
+      }
 
       // 找出第一個還沒用過的商品
       const targetIdx = items.findIndex((it, i) => !usedIdx.has(i));
@@ -2412,7 +2425,7 @@ async function computeServerDiscount(env, items, couponInputs, orderId) {
     }
   }
 
-  return { total, lines: results };
+  return { total, lines: results, shippingDiscount };
 }
 
 // 共用：將前端傳入的訂單資料標準化，計算金額與優惠
@@ -2529,7 +2542,8 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
       try {
         const discInfo = await computeServerDiscount(env, items, couponInputs, newId);
         const totalDisc = Math.max(0, Number(discInfo?.total || 0));
-        if (totalDisc > 0) {
+        const shippingDisc = Math.max(0, Number(discInfo?.shippingDiscount || 0));
+        if (totalDisc > 0 || shippingDisc > 0) {
           let lockError = null;
           if (opts.lockCoupon) {
             const codesToLock = Array.from(new Set(
@@ -2553,6 +2567,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
               deity: firstCoupon?.deity || '',
               codes: couponInputs.map(c=>c.code),
               discount: totalDisc,
+              shippingDiscount: shippingDisc || undefined,
               redeemedAt: Date.now(),
               lines: Array.isArray(discInfo.lines) ? discInfo.lines : [],
               multi: couponInputs.length > 1,
@@ -2596,6 +2611,8 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   }
 
   const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
+  const shippingDiscountHint = Number(body.shipping_discount ?? body.shippingDiscount ?? 0) || 0;
+  const shippingOriginal = Number(body.shipping_original ?? body.shippingOriginal ?? 0) || 0;
   const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
   const shippingNeeded = needShippingFee(items, fallbackText);
   const baseShipping = resolveShippingFee(env);
@@ -2606,6 +2623,15 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     shippingFee = baseShipping;
   } else {
     shippingFee = 0;
+  }
+  if (shippingOriginal > 0 && shippingFee <= 0 && shippingNeeded){
+    shippingFee = shippingOriginal;
+  }
+  if (shippingDiscountHint > 0){
+    shippingFee = Math.max(0, Number(shippingFee || baseShipping) - shippingDiscountHint);
+  }
+  if (couponApplied && couponApplied.shippingDiscount){
+    shippingFee = Math.max(0, shippingFee - Number(couponApplied.shippingDiscount || 0));
   }
   amount = Math.max(0, Number(amount || 0)) + shippingFee;
 
