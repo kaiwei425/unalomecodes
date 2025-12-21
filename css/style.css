@@ -45,6 +45,29 @@ html,body{
 .auth-btn{border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 10px 20px rgba(16,149,214,.25);transition:transform .2s ease,filter .2s ease;}
 .auth-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
 .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
+.guardian-badge{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 16px;
+  min-width:150px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#fef3c7,#fde68a);
+  border:1px solid #fbbf24;
+  font-weight:800;
+  font-size:14px;
+  color:#b45309;
+  box-shadow:0 6px 18px rgba(249,115,22,0.18);
+  justify-content:center;
+  line-height:1.2;
+}
+.guardian-badge img{
+  width:22px;
+  height:22px;
+  object-fit:contain;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  flex:0 0 auto;
+}
 /* Order qty controls */
 .order-qty-box{
   display:inline-flex;

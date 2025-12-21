@@ -34,9 +34,9 @@
   }
   .top-actions-right .member-menu button,
   .top-actions-right .auth-widget,
-  #guardianBadge{
-    min-height:46px;
-    padding:0 14px;
+  .top-actions-right .guardian-badge{
+    min-height:48px;
+    padding:0 16px;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -45,17 +45,18 @@
   }
   .top-actions-right .auth-widget{gap:10px;}
   #filterBar{
-    display:flex;
+    display:flex !important;
     gap:10px;
-    flex-wrap:nowrap;
+    flex-wrap:nowrap !important;
     justify-content:flex-end;
     align-items:center;
     overflow-x:auto;
-    padding-bottom:4px;
+    padding:4px 0;
+    white-space:nowrap;
   }
   #filterBar select,
   #filterBar input{
-    width:auto!important;
+    width:150px !important;
     min-width:140px;
     height:44px;
     flex:0 0 auto;
@@ -99,7 +100,7 @@
         <span class="auth-status" data-auth-status>登入狀態載入中…</span>
         <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
       </div>
-      <div id="guardianBadge" style="display:none;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);min-width:170px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"></div>
+      <div id="guardianBadge" class="guardian-badge" style="display:none;"></div>
     </div>
   </div>
 
@@ -6001,14 +6002,8 @@ function escapeHtml(s) {
     }
     const code = String(g.code||'').toUpperCase();
     const name = map[code] || '守護神';
-    badge.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
-      <img src="${badgeIcon}" alt="守護神" style="width:22px;height:22px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));flex:0 0 auto;">
-      <span>守護神：${name}</span>
-    </div>`;
-    badge.style.display = 'block';
-    badge.style.color = '#b45309';
-    badge.style.background = 'linear-gradient(135deg,#fef3c7,#fde68a)';
-    badge.style.borderColor = '#fbbf24';
+    badge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><span>守護神：${name}</span>`;
+    badge.style.display = 'flex';
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
     window.authState.onProfile(()=>render());
