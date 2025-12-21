@@ -47,39 +47,23 @@
         <div class="t2">unalome象徵人生修行並通往覺悟的道路</div>
       </div>
     </div>
-    <div class="top-tools">
-      <div class="filters">
-        <select id="fDeity">
-          <option value="">全部神祇</option>
-        </select>
-        <select id="fSort">
-          <option value="">排序：預設</option>
-          <option value="sold-desc">已售出（多→少）</option>
-          <option value="price-asc">價格（低→高）</option>
-          <option value="price-desc">價格（高→低）</option>
-          <option value="newest">最新上架</option>
-        </select>
-        <input id="fMin" type="number" placeholder="最低價">
-        <input id="fMax" type="number" placeholder="最高價">
-      </div>
-      <div class="top-actions-right" style="flex-wrap:wrap;align-content:center;gap:10px;">
-        <div class="member-menu">
-          <button type="button" id="memberMenuBtn">會員中心 ▾</button>
-          <div class="member-menu-panel" id="memberMenuPanel">
-            <a href="#" data-profile>基本資料</a>
-            <a href="/account-coupons.html">我的優惠券</a>
-            <a href="/account-orders.html">我的訂單</a>
-            <a href="/account-store.html">門市預設</a>
-            <a href="/admin/" data-admin-only data-admin-href="/admin/" style="display:none;">後台管理</a>
-          </div>
+    <div class="top-actions-right" style="flex-wrap:wrap;align-content:center;gap:10px;">
+      <div class="member-menu">
+        <button type="button" id="memberMenuBtn">會員中心 ▾</button>
+        <div class="member-menu-panel" id="memberMenuPanel">
+          <a href="#" data-profile>基本資料</a>
+          <a href="/account-coupons.html">我的優惠券</a>
+          <a href="/account-orders.html">我的訂單</a>
+          <a href="/account-store.html">門市預設</a>
+          <a href="/admin/" data-admin-only data-admin-href="/admin/" style="display:none;">後台管理</a>
         </div>
-        <div class="auth-widget" data-auth-widget>
-          <span class="auth-status" data-auth-status>登入狀態載入中…</span>
-          <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
-        </div>
-        <div id="guardianBadge" style="display:none;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);align-self:flex-start;min-width:160px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"></div>
       </div>
-  </div>
+      <div class="auth-widget" data-auth-widget>
+        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+        <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
+      </div>
+      <div id="guardianBadge" style="display:none;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);align-self:flex-start;min-width:160px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"></div>
+    </div>
   </div>
 
   <div class="store">
@@ -100,6 +84,20 @@
     </div>
 </aside>
     <div class="main">
+      <div id="filterBar" style="display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 12px 0;">
+        <select id="fDeity">
+          <option value="">全部神祇</option>
+        </select>
+        <select id="fSort">
+          <option value="">排序：預設</option>
+          <option value="sold-desc">已售出（多→少）</option>
+          <option value="price-asc">價格（低→高）</option>
+          <option value="price-desc">價格（高→低）</option>
+          <option value="newest">最新上架</option>
+        </select>
+        <input id="fMin" type="number" placeholder="最低價" style="flex:1 1 140px;">
+        <input id="fMax" type="number" placeholder="最高價" style="flex:1 1 140px;">
+      </div>
       <div id="banner" class="empty" style="display:none"></div>
       <div id="skeleton" class="skeleton-grid"><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div></div>
       <div id="list" class="grid"></div>
