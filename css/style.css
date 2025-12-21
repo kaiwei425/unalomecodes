@@ -69,11 +69,22 @@ html,body{
   flex:0 0 auto;
 }
 @media(max-width:640px){
+  .top-actions-right{
+    flex-wrap:wrap;
+    width:100%;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .top-actions-right > *{
+    width:100%;
+    justify-content:flex-start;
+  }
   .guardian-badge{
     padding:7px 12px;
-    min-width:130px;
+    min-width:0;
     font-size:12px;
     gap:6px;
+    width:100%;
   }
   .guardian-badge img{
     width:16px;
