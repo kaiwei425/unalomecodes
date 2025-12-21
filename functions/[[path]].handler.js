@@ -2504,6 +2504,8 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
 
   const newId = await generateOrderId(env);
 
+  const shippingDiscountHint = Number(body.shipping_discount ?? body.shippingDiscount ?? 0) || 0;
+  const shippingOriginal = Number(body.shipping_original ?? body.shippingOriginal ?? 0) || 0;
   const couponCode  = String(body.coupon || body.couponCode || "").trim().toUpperCase();
   let couponDeity   = inferCouponDeity(couponCode, body.coupon_deity || body.deity || "");
   if (!couponDeity && items.length) {
@@ -2523,12 +2525,14 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   let couponApplied = null;
   function tryApplyClientCouponFallback(reason){
     if (!(clientCouponTotal > 0)) return false;
-    amount = Math.max(0, Number(amount || 0) - clientCouponTotal);
+    const couponOnly = Math.max(0, clientCouponTotal - shippingDiscountHint);
+    amount = Math.max(0, Number(amount || 0) - couponOnly);
     couponApplied = {
       code: (firstCoupon && firstCoupon.code) || '',
       deity: firstCoupon?.deity || '',
       codes: couponInputs.length ? couponInputs.map(c=>c.code) : undefined,
-      discount: clientCouponTotal,
+      discount: couponOnly,
+      shippingDiscount: shippingDiscountHint || undefined,
       redeemedAt: Date.now(),
       lines: clientAssignment && Array.isArray(clientAssignment.lines) ? clientAssignment.lines : undefined,
       clientProvided: true,
@@ -2611,8 +2615,6 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   }
 
   const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
-  const shippingDiscountHint = Number(body.shipping_discount ?? body.shippingDiscount ?? 0) || 0;
-  const shippingOriginal = Number(body.shipping_original ?? body.shippingOriginal ?? 0) || 0;
   const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
   const shippingNeeded = needShippingFee(items, fallbackText);
   const baseShipping = resolveShippingFee(env);
@@ -2627,11 +2629,12 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   if (shippingOriginal > 0 && shippingFee <= 0 && shippingNeeded){
     shippingFee = shippingOriginal;
   }
-  if (shippingDiscountHint > 0){
-    shippingFee = Math.max(0, Number(shippingFee || baseShipping) - shippingDiscountHint);
-  }
-  if (couponApplied && couponApplied.shippingDiscount){
-    shippingFee = Math.max(0, shippingFee - Number(couponApplied.shippingDiscount || 0));
+  const shippingDiscountApplied = Math.max(
+    shippingDiscountHint,
+    Number((couponApplied && couponApplied.shippingDiscount) || 0)
+  );
+  if (shippingDiscountApplied > 0){
+    shippingFee = Math.max(0, Number(shippingFee || baseShipping) - shippingDiscountApplied);
   }
   amount = Math.max(0, Number(amount || 0)) + shippingFee;
 

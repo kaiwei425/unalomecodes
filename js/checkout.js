@@ -1825,7 +1825,13 @@ function __cartPricing(includePendingDetail){
         if (c.amount) payload.coupon_amount = c.amount;
       }
       const btn = document.getElementById('ccSubmit');
-      if (btn) btn.disabled = true;
+      if (btn){
+        btn.disabled = true;
+        if (!btn.getAttribute('data-label')){
+          btn.setAttribute('data-label', btn.textContent || '');
+        }
+        btn.textContent = '送出中...';
+      }
       let pendingOverlay = document.getElementById('ccPendingOverlay');
       let pendingText = document.getElementById('ccPendingText');
       if (!pendingOverlay){
@@ -1896,6 +1902,9 @@ function __cartPricing(includePendingDetail){
         alert('刷卡請求失敗，請稍後再試。\n' + (err && err.message ? err.message : err));
       }finally{
         if (btn) btn.disabled = false;
+        if (btn && btn.getAttribute('data-label')){
+          btn.textContent = btn.getAttribute('data-label');
+        }
         if (pendingOverlay) pendingOverlay.style.display = 'none';
       }
     });
