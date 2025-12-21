@@ -203,7 +203,6 @@
 
       <div class="cta" style="margin-top:10px;flex-wrap:wrap">
         <button class="btn primary" id="btnAddCart">加入購物車</button>
-        <button class="btn link" id="btnCheckout">直接結帳</button>
       </div>
 
       <!-- 顧客評價 / 真實故事 -->
@@ -278,17 +277,6 @@
       </div>
       <div style="font-size:12px;color:#6b7280;line-height:1.6">提交後會跳轉至綠界安全刷卡頁面，刷卡成功會自動返回「付款結果」頁。</div>
     </form>
-  </dialog>
-
-  <!-- 小視窗：直接結帳 -->
-  <dialog id="dlgCheckout" style="border:none;border-radius:16px;padding:0;max-width:420px;width:90%;">
-    <div style="padding:18px 18px 8px;font-weight:800;font-size:18px">選擇結帳方式</div>
-    <div style="padding:0 18px 18px;color:#6b7280;font-size:14px">請選擇你想使用的結帳方式</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 18px">
-      <a id="pay711" class="btn primary" target="_blank" rel="noopener">轉帳匯款</a>
-      <button id="payCC" class="btn">信用卡付款</button>
-      <button id="payClose" class="btn link" style="margin-left:auto">關閉</button>
-    </div>
   </dialog>
 
   <!-- Cart dialog -->
@@ -4467,9 +4455,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     } catch(e) {}
   });
   // pay711 / cartGo711 / payCC 進入第一步：訂單確認
+  // 只保留購物車流程，不再有單品「直接結帳」
   document.addEventListener('click', function(e){
     var t = e.target;
-    var btn = t && t.closest && t.closest('#pay711,#cartGo711,#payCC,#cartPayCC');
+    var btn = t && t.closest && t.closest('#payCC,#cartPayCC');
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
@@ -4480,24 +4469,13 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     })();
     var candleOnly = cartItems.length>0 && cartItems.every(function(it){ return /蠟燭/.test(String(it.category||'') + String(it.name||'')); });
 
-    if (btn.id === 'payCC' || btn.id === 'cartPayCC') {
-      if (candleOnly){
-        alert('蠟燭祈福需單獨匯款結帳，已為你切換至匯款流程。');
-        checkoutChannel = 'bank';
-        openBankDialog('detail');
-        return;
-      }
-      checkoutChannel = 'cc';
-    } else {
-      checkoutChannel = 'bank';
-    }
-
-    // 蠟燭流程：直接匯款，不進入多步驟
+    checkoutChannel = 'cc';
     if (candleOnly){
+      alert('蠟燭祈福需單獨匯款結帳，已為你切換至匯款流程。');
+      checkoutChannel = 'bank';
       try{ openBankDialog('detail'); }catch(_){}
       return;
     }
-
     openOrderDialog();
   }, true);
 
@@ -5620,24 +5598,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 (function(){
   function bindCC(){
-    var btn = document.getElementById('payCC');
-    if (btn && !btn.__ccBound){
-      btn.__ccBound = true;
-      btn.addEventListener('click', function(ev){
-        ev.preventDefault();
-        if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
-          window.__checkoutChannelRef.set('cc');
-        }
-        try{ sessionStorage.setItem('__checkout_channel','cc'); }catch(_){}
-        if (typeof window.__openOrderConfirmDialogUnified === 'function'){
-          window.__openOrderConfirmDialogUnified();
-        } else if (typeof window.openCreditDialog === 'function'){
-          window.openCreditDialog('detail');
-        } else {
-          alert('信用卡付款模組尚未載入，請重新整理頁面後再試。');
-        }
-      });
-    }
     var cbtn = document.getElementById('cartPayCC');
     if (cbtn && !cbtn.__ccBound){
       cbtn.__ccBound = true;
