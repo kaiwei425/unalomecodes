@@ -817,24 +817,33 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           if (c){ fd.set('coupon', String(c.code||'')); fd.set('coupon_deity', String(c.deity||'')); }
         }catch(e){}
         try{
+          var pricing = __cartPricing(true);
           var couponState = window.__cartCouponState || {};
           var multiCoupons = Array.isArray(couponState.coupons) ? couponState.coupons : [];
           if (multiCoupons.length){
             fd.set('coupons', JSON.stringify(multiCoupons.map(function(item){
+              var amt = (item.amount != null ? Number(item.amount) : undefined);
+              var deity = String(item.deity||'').trim().toUpperCase();
+              if ((amt == null || isNaN(amt)) && deity === 'SHIP') amt = SHIPPING_FEE;
               return {
                 code: String(item.code||'').trim().toUpperCase(),
-                deity: String(item.deity||'').trim().toUpperCase(),
-                amount: (item.amount != null ? Number(item.amount) : undefined)
+                deity: deity,
+                amount: amt
               };
             })));
           }
           if (couponState.assignment){
+            var totalOffAssign = Number(couponState.assignment.total||0) + (pricing.hasShipCoupon ? SHIPPING_FEE : 0);
             fd.set('coupon_assignment', JSON.stringify(couponState.assignment));
-            fd.set('coupon_total', String(Number(couponState.assignment.total||0)));
-          }else if (off > 0){
-            fd.set('coupon_total', String(off));
+            fd.set('coupon_total', String(totalOffAssign));
+          }else{
+            var totalOff = (pricing.off || 0) + (pricing.hasShipCoupon ? SHIPPING_FEE : 0);
+            if (totalOff > 0) fd.set('coupon_total', String(totalOff));
           }
-          fd.set('shipping', String(shippingFee || 0));
+          fd.set('shipping', String(pricing.shipping || 0));
+          if (pricing.hasShipCoupon) fd.set('shipping_discount', String(SHIPPING_FEE));
+          fd.set('subtotal', String(pricing.subtotal||0));
+          fd.set('grand', String(pricing.grand||0));
         }catch(_){}
 
         const res = await fetch('/api/payment/bank',  { method:'POST', body: fd });
@@ -1743,6 +1752,7 @@ function __cartPricing(includePendingDetail){
       const dlg = document.getElementById('dlgCC');
       const ctx = (dlg && dlg.__ctx) || computeAmount();
       const cart = Array.isArray(ctx.cart) ? ctx.cart.slice() : [];
+      const totalOff = (ctx.off || 0) + (ctx.hasShipCoupon ? SHIPPING_FEE : 0);
       const payload = {
         buyer:{
           name: (ccForm.querySelector('[name="name"]')?.value || '').trim(),
@@ -1754,7 +1764,7 @@ function __cartPricing(includePendingDetail){
         shipping: ctx.shipping || 0,
         shipping_discount: ctx.hasShipCoupon ? SHIPPING_FEE : 0,
         subtotal: ctx.subtotal || 0,
-        discount: ctx.off || 0,
+        discount: totalOff,
         grand: ctx.grand || 0
       };
       if (!payload.store){
@@ -1783,18 +1793,18 @@ function __cartPricing(includePendingDetail){
           .map(c => ({
             code: String(c.code || '').trim().toUpperCase(),
             deity: String(c.deity || '').trim().toUpperCase() || '',
-            amount: Number(c.amount ?? c.off ?? c.discount ?? c.value) || undefined
+            amount: Number(c.amount ?? c.off ?? c.discount ?? c.value ?? (String(c.deity||'').toUpperCase()==='SHIP' ? SHIPPING_FEE : 0)) || undefined
           }))
           .filter(c => c.code);
       }
       if (couponState && couponState.assignment){
         payload.coupon_assignment = couponState.assignment;
         if (couponState.assignment && typeof couponState.assignment.total !== 'undefined'){
-          const totalOff = Number(couponState.assignment.total || 0);
-          if (totalOff > 0) payload.coupon_total = totalOff;
+          const totalOffAssign = Number(couponState.assignment.total || 0) + (ctx.hasShipCoupon ? SHIPPING_FEE : 0);
+          if (totalOffAssign > 0) payload.coupon_total = totalOffAssign;
         }
-      } else if (ctx.off > 0){
-        payload.coupon_total = ctx.off;
+      } else if (totalOff > 0){
+        payload.coupon_total = totalOff;
       }
       const c = ctx.coupon;
       if (c && c.code){
