@@ -1898,30 +1898,7 @@ function __cartPricing(includePendingDetail){
         try{ localStorage.removeItem('cart'); }catch(_){}
         if (dlg) dlg.close();
         var proceedPayment = function(){ submitECPayForm(data.action, data.params); };
-        var usedDialog = false;
-        if (typeof window.showOrderSuccessPanel === 'function'){
-          usedDialog = true;
-          try{ window.__orderSuccessWillOpen = true; }catch(_){}
-          window.showOrderSuccessPanel({
-            channel:'credit',
-            phone: payload.buyer.phone,
-            orderId: data.orderId,
-            orderLookupDigits: data.orderId,
-            items: ctx.items,
-            amount: ctx.grand,
-            shipping: ctx.shipping,
-            discount: ctx.off,
-            store: payload.store,
-            badge:'信用卡付款',
-            desc:'感謝您的訂購，請確認以下資訊後再前往綠界刷卡頁面。',
-            note:'建議先截圖保存訂單資訊，若需查詢可在左側「查詢訂單狀態」輸入手機號碼與訂單編號末五碼。',
-            continueLabel:'前往刷卡',
-            onContinue: proceedPayment
-          });
-        }
-        if (!usedDialog){
-          proceedPayment();
-        }
+        proceedPayment();
       }catch(err){
         console.error(err);
         alert('刷卡請求失敗，請稍後再試。\n' + (err && err.message ? err.message : err));
