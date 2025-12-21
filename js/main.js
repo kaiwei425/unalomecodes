@@ -122,6 +122,28 @@ document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
 
+// 後備：事件委派，避免按鈕未綁定時無法打開詳情
+document.addEventListener('click', function(e){
+  const btn = e.target && e.target.closest && e.target.closest('[data-open-detail]');
+  if (!btn) return;
+  e.preventDefault();
+  const card = btn.closest('[data-id]');
+  const pid = card ? card.getAttribute('data-id') : '';
+  let p = null;
+  try{
+    if (pid && Array.isArray(window.rawItems)){
+      p = window.rawItems.find(it => String(it.id) === pid);
+    }
+  }catch(_){}
+  if (!p && card){
+    // 嘗試從目前顯示的 viewItems 找
+    try{ p = viewItems.find(it=> String(it.id) === pid); }catch(_){}
+  }
+  if (p){
+    try{ openDetail(p); }catch(err){ console.error('openDetail failed', err); }
+  }
+}, true);
+
 // 會員中心頂部下拉
 (function(){
   const toggle = document.getElementById('memberMenuBtn');
