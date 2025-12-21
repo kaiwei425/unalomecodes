@@ -21,6 +21,7 @@ async function loadProducts(){
     const data = await res.json();
     if (data.ok === false){ throw new Error('API error'); }
     rawItems = Array.isArray(data.items) ? data.items : [];
+    try{ window.rawItems = rawItems; }catch(_){}
     populateDeityFilter(rawItems);
     applyFilter();
     banner.style.display = rawItems.length ? 'none' : 'block';
