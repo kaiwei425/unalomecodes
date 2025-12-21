@@ -78,14 +78,14 @@ html,body{
 }
 @media(max-width:640px){
   .top-actions-right{
-    flex-wrap:wrap;
+    flex-direction:column;
     width:100%;
     align-items:stretch;
     gap:10px;
   }
-  .top-actions-right .member-menu{flex:1 1 50%;}
-  .top-actions-right .guardian-badge{flex:1 1 50%; min-width:0;}
-  .top-actions-right .auth-widget{flex:1 0 100%;}
+  .top-actions-right .member-menu,
+  .top-actions-right .auth-widget,
+  .top-actions-right .guardian-badge{flex:1 0 100%;}
   .top-actions-right .member-menu button,
   .top-actions-right .guardian-badge,
   .top-actions-right .auth-widget{
@@ -95,9 +95,10 @@ html,body{
     height:58px;
   }
   .guardian-badge{
-    padding:10px 12px;
+    padding:10px 14px;
+    min-width:0;
     font-size:14px;
-    gap:6px;
+    gap:8px;
   }
   .guardian-badge img{width:20px;height:20px;}
 }
