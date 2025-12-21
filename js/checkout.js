@@ -1568,13 +1568,24 @@ function __cartPricing(includePendingDetail){
       coupon: pricing.coupon,
       coupons: pricing.coupons,
       shipping: pricing.shipping,
-      assignment: pricing.assignment
+      assignment: pricing.assignment,
+      hasShipCoupon: pricing.hasShipCoupon
     };
   }
 
   function setCouponHint(ctx){
     const hint = document.getElementById('ccCouponHint');
+    const shipHint = document.getElementById('ccShipDiscount');
     if (!hint) return;
+    if (shipHint){
+      if (ctx.hasShipCoupon){
+        shipHint.style.display = 'block';
+        shipHint.textContent = '已使用免運券，運費折抵 NT$ ' + formatPrice(SHIPPING_FEE) + '。';
+      }else{
+        shipHint.style.display = 'none';
+        shipHint.textContent = '';
+      }
+    }
     if (ctx.off > 0){
       hint.style.display = 'block';
       let codeText = '優惠折扣';
