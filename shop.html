@@ -24,24 +24,30 @@
   .dlgIg{margin-top:12px;}
   .dlgIg iframe{width:100%;border:none;border-radius:16px;min-height:420px;background:#fff;}
   /* Header row alignment */
+  .top{display:flex;align-items:center;gap:12px;}
   .top-actions-right{
     display:flex;
-    gap:12px;
+    gap:10px;
     align-items:center;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     margin-left:auto;
   }
   .top-actions-right .member-menu button,
   .top-actions-right .auth-widget .auth-btn,
-  .top-actions-right .auth-widget .auth-status,
-  #guardianBadge{
+  .top-actions-right .auth-widget .auth-status{
     min-height:44px;
+    padding:10px 14px;
     display:flex;
     align-items:center;
     justify-content:center;
+    white-space:nowrap;
   }
   #guardianBadge{
+    min-height:44px;
     min-width:170px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 </style>
 </head>
@@ -104,19 +110,19 @@
     </div>
 </aside>
     <div class="main">
-      <div id="filterBar" style="display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 12px 0;justify-content:flex-end;align-items:center;">
-        <select id="fDeity" style="min-width:140px;height:44px;">
+      <div id="filterBar" style="display:flex;flex-wrap:nowrap;gap:10px;margin:6px 0 12px 0;justify-content:flex-end;align-items:center;overflow-x:auto;padding-bottom:4px;">
+        <select id="fDeity" style="min-width:150px;height:44px;">
           <option value="">全部神祇</option>
         </select>
-        <select id="fSort" style="min-width:140px;height:44px;">
+        <select id="fSort" style="min-width:150px;height:44px;">
           <option value="">排序：預設</option>
           <option value="sold-desc">已售出（多→少）</option>
           <option value="price-asc">價格（低→高）</option>
           <option value="price-desc">價格（高→低）</option>
           <option value="newest">最新上架</option>
         </select>
-        <input id="fMin" type="number" placeholder="最低價" style="flex:1 1 120px;height:44px;">
-        <input id="fMax" type="number" placeholder="最高價" style="flex:1 1 120px;height:44px;">
+        <input id="fMin" type="number" placeholder="最低價" style="width:130px;height:44px;">
+        <input id="fMax" type="number" placeholder="最高價" style="width:130px;height:44px;">
       </div>
       <div id="banner" class="empty" style="display:none"></div>
       <div id="skeleton" class="skeleton-grid"><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div></div>
