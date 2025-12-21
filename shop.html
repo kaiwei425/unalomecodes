@@ -4458,7 +4458,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   // 只保留購物車流程，不再有單品「直接結帳」
   document.addEventListener('click', function(e){
     var t = e.target;
-    var btn = t && t.closest && t.closest('#payCC,#cartPayCC');
+    var btn = t && t.closest && t.closest('#payCC,#cartPayCC,#pay711,#cartGo711');
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
@@ -4469,12 +4469,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     })();
     var candleOnly = cartItems.length>0 && cartItems.every(function(it){ return /蠟燭/.test(String(it.category||'') + String(it.name||'')); });
 
-    checkoutChannel = 'cc';
-    if (candleOnly){
+    var isCard = btn.id === 'payCC' || btn.id === 'cartPayCC';
+    checkoutChannel = isCard ? 'cc' : 'bank';
+    if (isCard && candleOnly){
       alert('蠟燭祈福需單獨匯款結帳，已為你切換至匯款流程。');
       checkoutChannel = 'bank';
-      try{ openBankDialog('detail'); }catch(_){}
-      return;
     }
     openOrderDialog();
   }, true);

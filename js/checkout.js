@@ -1689,7 +1689,10 @@ function __cartPricing(includePendingDetail){
       });
       if (hasCandle){
         alert('此類商品僅提供轉帳匯款，請改用「轉帳匯款」完成訂單。');
-        if (typeof openBankDialog === 'function'){
+        if (typeof openOrderDialog === 'function'){
+          try{ window.__checkoutChannelRef && window.__checkoutChannelRef.set && window.__checkoutChannelRef.set('bank'); }catch(_){}
+          openOrderDialog();
+        } else if (typeof openBankDialog === 'function'){
           openBankDialog('detail');
         }
         return;
