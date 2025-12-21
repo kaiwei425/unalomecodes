@@ -382,58 +382,117 @@ async function removeFav(id){
 function openAdminEditor(){
   const dlg = document.getElementById('foodModal');
   const body = document.getElementById('foodModalBody');
-  const options = ['<option value=\"\">新增</option>'].concat(DATA.map(d=>`<option value=\"${d.id}\">${d.name}</option>`)).join('');
+  const options = ['<option value="">新增</option>'].concat(DATA.map(d=>`<option value="${d.id}">${d.name}</option>`)).join('');
   body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:10px;background:#fff;max-height:80vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:18px;font-weight:800;">管理編輯</div>
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:18px;font-weight:800;">管理編輯（預覽即編輯）</div>
         <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
       </div>
       <select id="admSelect">${options}</select>
-      <input id="admId" placeholder="ID（留空自動）">
-      <input id="admName" placeholder="店名">
-      <input id="admCategory" placeholder="分類">
-      <input id="admArea" placeholder="地區">
-      <input id="admPrice" placeholder="價位（$ / $$ / $$$）">
-      <input id="admAddress" placeholder="地址">
-      <input id="admMaps" placeholder="Google Maps 連結">
-      <input id="admIg" placeholder="IG 影片連結">
-      <input id="admCover" placeholder="封面圖 URL">
-      <textarea id="admHighlights" placeholder="亮點（以換行分隔）" style="min-height:80px;"></textarea>
-      <button class="btn primary" id="admSave" style="width:100%;">儲存</button>
-      <div style="font-size:12px;color:#ef4444;">需管理員登入，資料會直接寫入遠端資料庫（KV）。</div>
+      <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:flex-start;">
+        <div id="admPreview" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 16px 32px rgba(15,23,42,.08);padding:12px;display:grid;gap:10px;">
+          <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;height:160px;">
+            <img id="pvCover" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div id="pvName" style="font-weight:800;font-size:17px;">店名</div>
+            <div class="pill-inline">推薦</div>
+          </div>
+          <div class="tag-row" id="pvTags"></div>
+          <div class="info" id="pvAddr">地址</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="btn primary" style="flex:1;" id="pvMaps" target="_blank" rel="noopener">開啟 Google Maps</a>
+            <button class="btn ghost" style="flex:1;" disabled>加入收藏</button>
+          </div>
+        </div>
+        <div style="display:grid;gap:8px;">
+          <input id="admId" placeholder="ID（留空自動）">
+          <input id="admName" placeholder="店名">
+          <input id="admCategory" placeholder="分類">
+          <input id="admArea" placeholder="地區">
+          <input id="admPrice" placeholder="價位（$ / $$ / $$$）">
+          <input id="admAddress" placeholder="地址">
+          <input id="admMaps" placeholder="Google Maps 連結">
+          <input id="admIg" placeholder="IG 影片連結">
+          <input id="admCover" placeholder="封面圖 URL">
+          <textarea id="admHighlights" placeholder="亮點（以換行分隔）" style="min-height:80px;"></textarea>
+          <textarea id="admDishes" placeholder="餐點（每行：名稱｜價格）" style="min-height:80px;"></textarea>
+          <button class="btn primary" id="admSave" style="width:100%;">儲存</button>
+          <div style="font-size:12px;color:#ef4444;">需管理員登入，資料會直接寫入遠端資料庫（KV）。</div>
+        </div>
+      </div>
     </div>
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
   const sel = document.getElementById('admSelect');
+  const inputs = {
+    id: document.getElementById('admId'),
+    name: document.getElementById('admName'),
+    category: document.getElementById('admCategory'),
+    area: document.getElementById('admArea'),
+    price: document.getElementById('admPrice'),
+    address: document.getElementById('admAddress'),
+    maps: document.getElementById('admMaps'),
+    ig: document.getElementById('admIg'),
+    cover: document.getElementById('admCover'),
+    highlights: document.getElementById('admHighlights'),
+    dishes: document.getElementById('admDishes')
+  };
+  const pv = {
+    cover: document.getElementById('pvCover'),
+    name: document.getElementById('pvName'),
+    tags: document.getElementById('pvTags'),
+    addr: document.getElementById('pvAddr'),
+    maps: document.getElementById('pvMaps')
+  };
+  function renderPreview(){
+    pv.cover.src = inputs.cover.value || '';
+    pv.name.textContent = inputs.name.value || '店名';
+    pv.addr.textContent = inputs.address.value || '地址';
+    pv.maps.href = inputs.maps.value || '#';
+    pv.tags.innerHTML = [
+      inputs.category.value,
+      inputs.area.value,
+      inputs.price.value ? `價位：${inputs.price.value}` : ''
+    ].filter(Boolean).map(t=>`<span class="tag">${t}</span>`).join('');
+  }
   function fill(id){
     const it = DATA.find(x=>x.id===id) || {};
-    document.getElementById('admId').value = it.id || '';
-    document.getElementById('admName').value = it.name||'';
-    document.getElementById('admCategory').value = it.category||'';
-    document.getElementById('admArea').value = it.area||'';
-    document.getElementById('admPrice').value = it.price||'';
-    document.getElementById('admAddress').value = it.address||'';
-    document.getElementById('admMaps').value = it.maps||'';
-    document.getElementById('admIg').value = it.ig||'';
-    document.getElementById('admCover').value = it.cover||'';
-    document.getElementById('admHighlights').value = (it.highlights||[]).join('\\n');
+    inputs.id.value = it.id || '';
+    inputs.name.value = it.name||'';
+    inputs.category.value = it.category||'';
+    inputs.area.value = it.area||'';
+    inputs.price.value = it.price||'';
+    inputs.address.value = it.address||'';
+    inputs.maps.value = it.maps||'';
+    inputs.ig.value = it.ig||'';
+    inputs.cover.value = it.cover||'';
+    inputs.highlights.value = (it.highlights||[]).join('\n');
+    const dishLines = (it.dishes||[]).map(d=>`${d.name||''}｜${d.price||''}`).join('\n');
+    inputs.dishes.value = dishLines;
+    renderPreview();
   }
   fill(sel.value);
   sel.onchange = ()=> fill(sel.value);
+  Object.values(inputs).forEach(el=>{ if (el) el.addEventListener('input', renderPreview); });
   document.getElementById('admSave').onclick = async ()=>{
     const payload = {
-      id: document.getElementById('admId').value.trim() || undefined,
-      name: document.getElementById('admName').value.trim(),
-      category: document.getElementById('admCategory').value.trim(),
-      area: document.getElementById('admArea').value.trim(),
-      price: document.getElementById('admPrice').value.trim(),
-      address: document.getElementById('admAddress').value.trim(),
-      maps: document.getElementById('admMaps').value.trim(),
-      ig: document.getElementById('admIg').value.trim(),
-      cover: document.getElementById('admCover').value.trim(),
-      highlights: document.getElementById('admHighlights').value.split(/\\n+/).filter(Boolean)
+      id: inputs.id.value.trim() || undefined,
+      name: inputs.name.value.trim(),
+      category: inputs.category.value.trim(),
+      area: inputs.area.value.trim(),
+      price: inputs.price.value.trim(),
+      address: inputs.address.value.trim(),
+      maps: inputs.maps.value.trim(),
+      ig: inputs.ig.value.trim(),
+      cover: inputs.cover.value.trim(),
+      highlights: inputs.highlights.value.split(/\n+/).filter(Boolean),
+      dishes: inputs.dishes.value.split(/\n+/).filter(Boolean).map(line=>{
+        const parts = line.split(/\s*[|｜]\s*/);
+        return { name: parts[0]||'', price: parts[1]||'' };
+      })
     };
     try{
       const res = await fetch('/api/foods', {
