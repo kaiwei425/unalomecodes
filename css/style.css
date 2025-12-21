@@ -81,24 +81,23 @@ html,body{
     flex-wrap:wrap;
     width:100%;
     align-items:stretch;
-    gap:12px;
+    gap:10px;
   }
-  .top-actions-right .member-menu{flex:1 1 60%;}
-  .top-actions-right .guardian-badge{flex:1 1 40%;}
+  .top-actions-right .member-menu{flex:1 1 50%;}
+  .top-actions-right .guardian-badge{flex:1 1 50%; min-width:0;}
   .top-actions-right .auth-widget{flex:1 0 100%;}
   .top-actions-right .member-menu button,
   .top-actions-right .guardian-badge,
   .top-actions-right .auth-widget{
     width:100%;
     justify-content:center;
-    min-height:60px;
-    height:60px;
+    min-height:58px;
+    height:58px;
   }
   .guardian-badge{
-    padding:10px 14px;
-    min-width:0;
+    padding:10px 12px;
     font-size:14px;
-    gap:8px;
+    gap:6px;
   }
   .guardian-badge img{width:20px;height:20px;}
 }
