@@ -28,7 +28,7 @@
     select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:14px;}
     input[type="text"]{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:14px;width:100%;}
     .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:10px;}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px;display:grid;gap:10px;}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:12px;display:grid;gap:10px;position:relative;}
     .cover{position:relative;border-radius:12px;overflow:hidden;background:#000;height:160px;}
     .cover img{width:100%;height:100%;object-fit:cover;}
     .tag-row{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted);}
@@ -55,7 +55,7 @@
           <div class="sub">精選 IG 影音＋地圖導航，快速找到你要的餐廳</div>
         </div>
       </div>
-      <a class="btn ghost" href="/shop.html" style="margin-left:auto;">← 返回商品館</a>
+      <a class="btn ghost" href="/shop.html" style="margin-left:auto;padding:10px 12px;font-size:13px;border-radius:999px;border:1px solid #cbd5e1;box-shadow:none;">回到商品館</a>
     </div>
   </header>
 
@@ -78,6 +78,10 @@
 
     <div class="cards" id="cards"></div>
   </main>
+
+  <dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:720px;width:95%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
+    <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
+  </dialog>
 
 <script>
 const DATA = [
@@ -187,16 +191,58 @@ function render(){
       <div class="info">亮點：${(item.highlights||[]).join('｜')}</div>
       ${dishes ? `<div class="info">必點：${dishes}</div>` : ''}
       <div class="actions">
-        <a class="btn primary" href="${item.maps}" target="_blank" rel="noopener">開啟 Google Maps</a>
-        <a class="btn" href="${item.ig}" target="_blank" rel="noopener">觀看 IG 影片</a>
+        <button class="btn primary" data-open="${item.id}">查看店家資訊</button>
       </div>
     </div>`;
   }).join('');
+  // 綁定卡片按鈕
+  cardsEl.querySelectorAll('button[data-open]').forEach(btn=>{
+    btn.onclick = (ev)=>{
+      const id = btn.getAttribute('data-open');
+      openModal(id);
+    };
+  });
 }
 
 initFilters();
 render();
 [kwInput, fCat, fArea, fPrice].forEach(el=> el.addEventListener('input', render));
+
+// Modal：店家資訊
+function openModal(id){
+  const item = DATA.find(x=>x.id===id);
+  if (!item) return;
+  const body = document.getElementById('foodModalBody');
+  const dlg = document.getElementById('foodModal');
+  const dishes = item.dishes?.map(d=>`<li>${d.name}｜฿${d.price}</li>`).join('') || '';
+  const highlights = (item.highlights||[]).map(h=>`<li>${h}</li>`).join('');
+  const iframe = item.ig ? `<iframe src="${item.ig.replace('https://www.instagram.com/p/','https://www.instagram.com/p/') }embed" style="width:100%;min-height:420px;border:none;"></iframe>` : '';
+  body.innerHTML = `
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div style="font-size:18px;font-weight:800;">${item.name}</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+      </div>
+      <div style="border-radius:12px;overflow:hidden;background:#f8fafc;">${iframe || '<div style="padding:20px;color:#94a3b8;">無 IG 影片</div>'}</div>
+      <div style="font-size:14px;color:#0f172a;line-height:1.7;">
+        <div><strong>地址：</strong>${item.address}</div>
+        <div><strong>分類：</strong>${item.category}｜${item.area}｜價位：${item.price}</div>
+      </div>
+      ${highlights ? `<div><strong>簡介：</strong><ul style="margin:6px 0 0 18px;color:#475569;">${highlights}</ul></div>` : ''}
+      ${dishes ? `<div><strong>餐點：</strong><ul style="margin:6px 0 0 18px;color:#475569;">${dishes}</ul></div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="btn primary" style="flex:1;" href="${item.maps}" target="_blank" rel="noopener">開啟 Google Maps</a>
+        <button class="btn ghost" style="flex:1;" data-fav="${item.id}">加入收藏</button>
+      </div>
+    </div>
+  `;
+  dlg.showModal();
+  document.getElementById('foodClose').onclick = ()=> dlg.close();
+  const favBtn = body.querySelector('button[data-fav]');
+  if (favBtn){
+    favBtn.onclick = ()=> alert('收藏功能待串接會員資料');
+  }
+}
 </script>
 </body>
 </html>
