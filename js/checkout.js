@@ -616,59 +616,16 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
       }catch(e){}
       // 自動帶入金額：購物車合計優先，否則詳情價
-      let amount = 0;
-      try{
-        const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-        if (Array.isArray(cart) && cart.length){
-          amount = cart.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
-        }
-      }catch{}
-      if (!amount){
-        try{
-          const priceNode = document.getElementById('dlgPrice');
-          const p = priceNode ? Number(priceNode.getAttribute('data-price')||0) : 0;
-          if (p>0) amount = p;
-        }catch{}
-      }
-      // apply active coupon (fixed NT$200) only if deity matches any item
-      function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
-      function getActiveCoupon(){
-        try{ if (window.__coupon && typeof window.__coupon.getActiveCoupon==='function') return window.__coupon.getActiveCoupon(); }catch(e){}
-        try{ var raw = localStorage.getItem('__activeCoupon__'); if (raw) return JSON.parse(raw); }catch(e){}
-        return null;
-      }
-
-      function sumEligible(items, deity){
-        if (!deity) return 0;
-        var want = toDeityCode(deity);
-        if (!want) return 0;
-        try{
-          return items.reduce(function(s,it){
-            var itemCode = toDeityCode( (it && (it.deity || it.name || it.title || it.productName)) || '' );
-            var ok = (itemCode && itemCode === want);
-            return s + (ok ? Number(it.price||0)*Math.max(1, Number(it.qty||1)) : 0);
-          }, 0);
-        }catch(e){ return 0; }
-      }
-      function collectItems(){
-        var list = readCart().slice();
-        try{
-          var _pend = JSON.parse(sessionStorage.getItem('__pendingDetail__')||'null');
-          if (_pend) list.push(_pend);
-        }catch(_){}
-        return list;
-      }
-      var items = collectItems();
-      var coupon = getActiveCoupon();
-      var off = 0;
-      if (coupon && coupon.code){
-        var elig = sumEligible(items, coupon.deity);
-        if (elig > 0){ off = Number(coupon.amount||200) || 200; }
-      }
-      var shippingFee = (items.length && items.some(function(it){ return !isCandleItemLike(it); })) ? SHIPPING_FEE : 0;
-      var grand = Math.max(0, Math.round(amount - off + shippingFee));
+      const pricing = __cartPricing(true);
+      var amount = pricing.subtotal;
+      var off = pricing.off;
+      var shippingFee = pricing.shipping;
+      var grand = pricing.grand;
       const amtEl = document.getElementById('bfAmount');
-      if (amtEl) amtEl.value = grand;
+      if (amtEl){
+        amtEl.value = grand;
+        amtEl.dataset.amount = grand;
+      }
       // show small line under amount to indicate coupon state
       (function(){
         var hint = document.getElementById('bfAmtHint');
@@ -678,7 +635,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           baseText = '含 7-11 店到店運費 NT$' + SHIPPING_FEE + '，請確認金額後再送出';
         }
         if (off > 0){
-          hint.textContent = '已套用優惠碼 '+ (coupon && coupon.code || '') +' 折抵 NT$' + (Number(coupon.amount||200)||200) + (shippingFee>0 ? '；' + baseText : '');
+          hint.textContent = '已套用優惠折抵 NT$' + (Number(off)||0) + (shippingFee>0 ? '；' + baseText : '');
           hint.style.color = '#059669';
         }else{
           hint.textContent = baseText;
@@ -956,6 +913,86 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     });
   }
 })();
+
+// 統一的購物車計算（實體商品/信用卡/轉帳共用）
+function __cartPricing(includePendingDetail){
+  function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
+  function activeCoupon(){
+    try{ if (window.__coupon && typeof window.__coupon.getActiveCoupon==='function') return window.__coupon.getActiveCoupon(); }catch(e){}
+    try{ const raw = localStorage.getItem('__activeCoupon__'); if (raw) return JSON.parse(raw); }catch(_){}
+    return null;
+  }
+  function capturePendingDetail(){
+    try{
+      const cached = sessionStorage.getItem('__pendingDetail__');
+      if (cached) return JSON.parse(cached);
+    }catch(_){}
+    return null;
+  }
+  const items = [];
+  const cart = readCart();
+  if (Array.isArray(cart)) items.push(...cart);
+  if (includePendingDetail !== false){
+    const pending = capturePendingDetail();
+    if (pending) items.push(pending);
+  }
+  const subtotal = items.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
+  const hasCandle = items.length && items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
+  let couponFromState = null;
+  let assignmentFromState = null;
+  let couponsFromState = [];
+  let off = 0;
+  let shipping = 0;
+  let hasShipCoupon = false;
+  try{
+    const state = window.__cartCouponState;
+    if (state){
+      if (Array.isArray(state.coupons)){
+        couponsFromState = state.coupons.slice();
+        couponFromState = couponsFromState[0] || null;
+        hasShipCoupon = couponsFromState.some(c=>{
+          const d = String(c.deity||c.type||'').toUpperCase();
+          return d === 'SHIP';
+        });
+      }
+      if (state.assignment){
+        off = Number(state.assignment.total || 0) || 0;
+        assignmentFromState = state.assignment;
+      }
+      if (typeof state.shipping === 'number'){
+        shipping = Number(state.shipping)||0;
+      }
+    }
+  }catch(_){}
+  const coupon = hasCandle ? null : (couponFromState || activeCoupon());
+  if (!off && coupon && coupon.code){
+    const want = toDeityCode(coupon.deity || coupon.code || '');
+    if (want){
+      const elig = items.some(it => toDeityCode(it.deity || it.name || it.productName) === want);
+      if (elig) off = Number(coupon.amount || 200) || 200;
+    }
+  }
+  if (!shipping && !hasCandle){
+    const hasPhysical = items.some(it => !isCandleItemLike(it));
+    if (hasShipCoupon){
+      shipping = 0;
+    }else if (hasPhysical){
+      shipping = SHIPPING_FEE;
+    }
+  }
+  const grand = Math.max(0, Math.round(subtotal - off + shipping));
+  return {
+    items,
+    subtotal,
+    off,
+    shipping,
+    grand,
+    coupons: couponsFromState,
+    coupon,
+    assignment: assignmentFromState,
+    hasShipCoupon
+  };
+}
 
 /* ==== order-lookup script ==== */
 (function(){
@@ -1520,69 +1557,18 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }catch(_){ return null; }
   }
   function computeAmount(){
-    const cart = readCart();
-    const items = Array.isArray(cart) && cart.length ? cart.slice() : [];
-    let pending = null;
-    if (!items.length){
-      pending = capturePendingDetail();
-      if (pending) items.push(pending);
-    } else {
-      try{
-        const cached = capturePendingDetail();
-        if (cached) pending = cached;
-      }catch(_){}
-    }
-    const subtotal = items.reduce((s,it)=> s + Number(it.price||0)*Math.max(1, Number(it.qty||1)), 0);
-    const hasCandle = items.every(it=> /蠟燭/.test(String(it.category||'') + String(it.name||'')));
-    let couponFromState = null;
-    let assignmentFromState = null;
-    let couponsFromState = [];
-    let off = 0;
-    let shipping = 0;
-    if (!hasCandle){
-      try{
-        const state = window.__cartCouponState;
-        if (state){
-          if (Array.isArray(state.coupons)){
-            couponsFromState = state.coupons.slice();
-            if (!couponFromState && couponsFromState.length){
-              couponFromState = couponsFromState[0];
-            }
-          }
-          if (state.assignment){
-            off = Number(state.assignment.total || 0) || 0;
-            assignmentFromState = state.assignment;
-          }
-          if (typeof state.shipping === 'number'){
-            shipping = Number(state.shipping)||0;
-          }
-        }
-      }catch(_){}
-    }
-    const coupon = hasCandle ? null : (couponFromState || activeCoupon());
-    if (!off && coupon && coupon.code){
-      const want = toDeityCode(coupon.deity || coupon.code || '');
-      if (want){
-        const elig = items.some(it => toDeityCode(it.deity || it.name || it.productName) === want);
-        if (elig) off = Number(coupon.amount || 200) || 200;
-      }
-    }
-    if (!shipping && !hasCandle){
-      const hasPhysical = items.some(it => !isCandleItemLike(it));
-      if (hasPhysical) shipping = SHIPPING_FEE;
-    }
-    const grand = Math.max(0, Math.round(subtotal - off + shipping));
+    const pricing = __cartPricing(true);
     return {
-      cart,
-      pending,
-      items,
-      subtotal,
-      off,
-      grand,
-      coupon,
-      coupons: couponsFromState,
-      shipping,
-      assignment: assignmentFromState
+      cart: readCart(),
+      pending: capturePendingDetail(),
+      items: pricing.items,
+      subtotal: pricing.subtotal,
+      off: pricing.off,
+      grand: pricing.grand,
+      coupon: pricing.coupon,
+      coupons: pricing.coupons,
+      shipping: pricing.shipping,
+      assignment: pricing.assignment
     };
   }
 
