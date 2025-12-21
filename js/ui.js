@@ -103,6 +103,24 @@ function openDetail(p){
     } catch(e) {}
     
 }
+
+// 後備：若按鈕未綁定，使用事件委派
+document.addEventListener('click', function(e){
+  const btn = e.target && e.target.closest && e.target.closest('[data-open-detail]');
+  if (!btn) return;
+  e.preventDefault();
+  try{
+    const card = btn.closest('[data-id]');
+    const pid = card ? card.getAttribute('data-id') : '';
+    let p = null;
+    if (pid && typeof window.rawItems !== 'undefined' && Array.isArray(window.rawItems)){
+      p = window.rawItems.find(it=> String(it.id) === pid);
+    }
+    if (p) openDetail(p);
+  }catch(err){
+    console.error('fallback openDetail error', err);
+  }
+}, true);
   sel.onchange = refreshPrice;
   qty.oninput = refreshPrice;
   refreshPrice();
