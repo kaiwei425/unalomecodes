@@ -127,6 +127,15 @@ if (window.authState){
     const existing = window.authState.getProfile();
     try{ console.debug && console.debug('[checkout] existing profile', existing); }catch(_){}
     if (existing) applyBankProfile(existing);
+    // 同步帶入信用卡表單
+    try{
+      const ccName = document.getElementById('ccName');
+      const ccPhone = document.getElementById('ccPhone');
+      const ccEmail = document.getElementById('ccEmail');
+      if (existing && ccName && !ccName.value) ccName.value = existing.name || '';
+      if (existing && ccPhone && !ccPhone.value) ccPhone.value = (existing.defaultContact && existing.defaultContact.phone) || existing.phone || '';
+      if (existing && ccEmail && !ccEmail.value) ccEmail.value = existing.email || '';
+    }catch(_){}
   }
 }
 
@@ -137,6 +146,15 @@ if (window.authState){
   function tryFillCached(){
     if (cachedProfile){
       applyBankProfile(cachedProfile);
+      // 信用卡表單也補上
+      try{
+        const ccName = document.getElementById('ccName');
+        const ccPhone = document.getElementById('ccPhone');
+        const ccEmail = document.getElementById('ccEmail');
+        if (ccName && !ccName.value) ccName.value = cachedProfile.name || '';
+        if (ccPhone && !ccPhone.value) ccPhone.value = (cachedProfile.defaultContact && cachedProfile.defaultContact.phone) || cachedProfile.phone || '';
+        if (ccEmail && !ccEmail.value) ccEmail.value = cachedProfile.email || '';
+      }catch(_){}
     }
   }
   async function preloadProfileForCheckout(){
