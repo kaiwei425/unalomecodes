@@ -33,21 +33,32 @@
     margin-left:auto;
   }
   .top-actions-right .member-menu button,
-  .top-actions-right .auth-widget .auth-btn,
-  .top-actions-right .auth-widget .auth-status{
-    min-height:44px;
-    padding:10px 14px;
+  .top-actions-right .auth-widget,
+  #guardianBadge{
+    min-height:46px;
+    padding:0 14px;
     display:flex;
     align-items:center;
     justify-content:center;
     white-space:nowrap;
+    border-radius:999px;
   }
-  #guardianBadge{
-    min-height:44px;
-    min-width:170px;
+  .top-actions-right .auth-widget{gap:10px;}
+  #filterBar{
     display:flex;
+    gap:10px;
+    flex-wrap:nowrap;
+    justify-content:flex-end;
     align-items:center;
-    justify-content:center;
+    overflow-x:auto;
+    padding-bottom:4px;
+  }
+  #filterBar select,
+  #filterBar input{
+    width:auto!important;
+    min-width:140px;
+    height:44px;
+    flex:0 0 auto;
   }
 </style>
 </head>
@@ -88,7 +99,7 @@
         <span class="auth-status" data-auth-status>登入狀態載入中…</span>
         <button type="button" class="auth-btn" data-auth-btn>使用 Google 登入</button>
       </div>
-      <div id="guardianBadge" style="display:none;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);align-self:flex-start;min-width:170px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"></div>
+      <div id="guardianBadge" style="display:none;font-size:13px;color:#b45309;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:999px;padding:8px 12px;font-weight:800;box-shadow:0 6px 18px rgba(249,115,22,0.18);min-width:170px;text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;"></div>
     </div>
   </div>
 
@@ -102,7 +113,6 @@
       <a href="#" id="linkOrderLookup">查詢訂單狀態</a>
       <a href="https://unalomecodes.pages.dev/share?view=deity-menu&amp;api=https%3A%2F%2Fproud-boat-794c.kaiwei425.workers.dev" target="_blank" rel="noopener">神祇介紹</a>
       <a href="https://myship.7-11.com.tw/general/detail/GM2509114839878" target="_blank" rel="noopener">7-11賣貨便</a>
-      <a href="/food-map.html">泰國美食地圖</a>
     </div>
     <div class="tools-box">
       <h4>泰國旅遊 / 寺廟小工具</h4>
@@ -110,19 +120,19 @@
     </div>
 </aside>
     <div class="main">
-      <div id="filterBar" style="display:flex;flex-wrap:nowrap;gap:10px;margin:6px 0 12px 0;justify-content:flex-end;align-items:center;overflow-x:auto;padding-bottom:4px;">
-        <select id="fDeity" style="min-width:150px;height:44px;">
+      <div id="filterBar" style="margin:6px 0 12px 0;">
+        <select id="fDeity" style="min-width:150px;">
           <option value="">全部神祇</option>
         </select>
-        <select id="fSort" style="min-width:150px;height:44px;">
+        <select id="fSort" style="min-width:150px;">
           <option value="">排序：預設</option>
           <option value="sold-desc">已售出（多→少）</option>
           <option value="price-asc">價格（低→高）</option>
           <option value="price-desc">價格（高→低）</option>
           <option value="newest">最新上架</option>
         </select>
-        <input id="fMin" type="number" placeholder="最低價" style="width:130px;height:44px;">
-        <input id="fMax" type="number" placeholder="最高價" style="width:130px;height:44px;">
+        <input id="fMin" type="number" placeholder="最低價" style="width:130px;">
+        <input id="fMax" type="number" placeholder="最高價" style="width:130px;">
       </div>
       <div id="banner" class="empty" style="display:none"></div>
       <div id="skeleton" class="skeleton-grid"><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div></div>

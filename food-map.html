@@ -88,7 +88,7 @@
   </dialog>
 
 <script>
-const DATA = [
+const BASE_DATA = [
   {
     id:'bkk-brunch-001',
     name:'After You Ari',
@@ -161,6 +161,41 @@ const fCat = document.getElementById('fCat');
 const fArea = document.getElementById('fArea');
 const fPrice = document.getElementById('fPrice');
 const kwInput = document.getElementById('kw');
+const btnBack = document.getElementById('btnBack');
+const btnFav = document.getElementById('btnFav');
+const btnAdmin = document.getElementById('btnAdmin');
+
+// --- data helpers (support local overrides for簡易管理編輯) ---
+const OVERRIDE_KEY = '__food_map_data__';
+function loadData(){
+  try{
+    const raw = localStorage.getItem(OVERRIDE_KEY);
+    if (raw){
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+  }catch(_){}
+  return BASE_DATA.slice();
+}
+function saveDataOverride(arr){
+  try{
+    localStorage.setItem(OVERRIDE_KEY, JSON.stringify(arr||[]));
+  }catch(_){}
+}
+let DATA = loadData();
+
+// --- favorites (localStorage) ---
+const FAV_KEY = '__food_map_favs__';
+function loadFavs(){
+  try{
+    const arr = JSON.parse(localStorage.getItem(FAV_KEY)||'[]');
+    return Array.isArray(arr) ? arr : [];
+  }catch(_){ return []; }
+}
+function saveFavs(list){
+  try{ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }catch(_){}
+}
+let favs = loadFavs();
 
 function initFilters(){
   const cats = Array.from(new Set(DATA.map(d=>d.category))).sort();
@@ -184,16 +219,16 @@ function render(){
   cardsEl.innerHTML = list.map(item=>{
     const dishes = item.dishes?.slice(0,3).map(d=>`${d.name}｜฿${d.price}`).join('、') || '';
     const tags = [item.category, item.area, `價位：${item.price}`].map(t=>`<span class="tag">${t}</span>`).join('');
+    const liked = favs.includes(item.id);
     return `<div class="card">
+      <button class="btn ghost" data-fav="${item.id}" title="收藏" style="position:absolute;top:10px;right:10px;width:34px;height:34px;padding:0;justify-content:center;">${liked?'★':'☆'}</button>
       <div class="cover">${item.cover ? `<img src="${item.cover}" alt="${item.name}">` : ''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
         <div style="font-weight:800;font-size:17px;">${item.name}</div>
-        <div class="pill-inline">★ 推薦</div>
+        <div class="pill-inline">推薦</div>
       </div>
       <div class="tag-row">${tags}</div>
       <div class="info">${item.address}</div>
-      <div class="info">亮點：${(item.highlights||[]).join('｜')}</div>
-      ${dishes ? `<div class="info">必點：${dishes}</div>` : ''}
       <div class="actions">
         <button class="btn primary" data-open="${item.id}">查看店家資訊</button>
       </div>
@@ -206,6 +241,18 @@ function render(){
       openModal(id);
     };
   });
+  cardsEl.querySelectorAll('button[data-fav]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-fav');
+      if (favs.includes(id)){
+        favs = favs.filter(x=>x!==id);
+      }else{
+        favs.push(id);
+      }
+      saveFavs(favs);
+      render();
+    };
+  });
 }
 
 [btnBack, btnFav, btnAdmin].forEach(btn=>{
@@ -214,11 +261,17 @@ function render(){
     btn.onclick = ()=> history.back();
   }
 });
+[btnBack, btnFav, btnAdmin].forEach(btn=>{
+  if (!btn) return;
+  if (btn.id === 'btnBack'){
+    btn.onclick = ()=> history.back();
+  }
+});
 if (btnFav){
-  btnFav.onclick = ()=> alert('收藏清單尚未串接，後續可接會員收藏列表。');
+  btnFav.onclick = ()=> openFavList();
 }
 if (btnAdmin){
-  btnAdmin.onclick = ()=> alert('管理編輯入口待串接，暫請透過後台或直接更新資料檔。');
+  btnAdmin.onclick = ()=> openAdminEditor();
 }
 
 initFilters();
@@ -263,3 +316,105 @@ function openModal(id){
 </script>
 </body>
 </html>
+// 收藏清單列表（dialog 共用）
+function openFavList(){
+  const dlg = document.getElementById('foodModal');
+  const body = document.getElementById('foodModalBody');
+  const list = DATA.filter(it=> favs.includes(it.id));
+  body.innerHTML = `
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:18px;font-weight:800;">收藏清單</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+      </div>
+      ${!list.length ? '<div style="color:#94a3b8;">目前沒有收藏。</div>' : `
+        <div style="display:grid;gap:8px;">
+          ${list.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
+            <div>
+              <div style="font-weight:700;">${it.name}</div>
+              <div style="color:#64748b;font-size:12px;">${it.category}｜${it.area}</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn ghost" style="padding:6px 10px;font-size:12px;" onclick="openModal('${it.id}')">查看</button>
+              <button class="btn" style="padding:6px 10px;font-size:12px;" onclick="removeFav('${it.id}')">移除</button>
+            </div>
+          </div>`).join('')}
+        </div>
+      `}
+    </div>
+  `;
+  dlg.showModal();
+  document.getElementById('foodClose').onclick = ()=> dlg.close();
+}
+function removeFav(id){
+  favs = favs.filter(x=>x!==id);
+  saveFavs(favs);
+  render();
+  const dlg = document.getElementById('foodModal');
+  if (dlg.open) openFavList();
+}
+
+// 管理編輯（localStorage 覆寫）
+function openAdminEditor(){
+  const dlg = document.getElementById('foodModal');
+  const body = document.getElementById('foodModalBody');
+  const options = DATA.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  body.innerHTML = `
+    <div style="padding:16px;display:grid;gap:10px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:18px;font-weight:800;">管理編輯（本機暫存）</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+      </div>
+      <select id="admSelect">${options}</select>
+      <input id="admName" placeholder="店名">
+      <input id="admCategory" placeholder="分類">
+      <input id="admArea" placeholder="地區">
+      <input id="admPrice" placeholder="價位（$ / $$ / $$$）">
+      <input id="admAddress" placeholder="地址">
+      <input id="admMaps" placeholder="Google Maps 連結">
+      <input id="admIg" placeholder="IG 影片連結">
+      <input id="admCover" placeholder="封面圖 URL">
+      <textarea id="admHighlights" placeholder="亮點（以換行分隔）" style="min-height:80px;"></textarea>
+      <button class="btn primary" id="admSave" style="width:100%;">儲存</button>
+      <div style="font-size:12px;color:#ef4444;">說明：僅存本機 localStorage，重新整理仍會存在；要清空可清除瀏覽器儲存。</div>
+    </div>
+  `;
+  dlg.showModal();
+  document.getElementById('foodClose').onclick = ()=> dlg.close();
+  const sel = document.getElementById('admSelect');
+  function fill(id){
+    const it = DATA.find(x=>x.id===id);
+    if (!it) return;
+    document.getElementById('admName').value = it.name||'';
+    document.getElementById('admCategory').value = it.category||'';
+    document.getElementById('admArea').value = it.area||'';
+    document.getElementById('admPrice').value = it.price||'';
+    document.getElementById('admAddress').value = it.address||'';
+    document.getElementById('admMaps').value = it.maps||'';
+    document.getElementById('admIg').value = it.ig||'';
+    document.getElementById('admCover').value = it.cover||'';
+    document.getElementById('admHighlights').value = (it.highlights||[]).join('\\n');
+  }
+  fill(sel.value);
+  sel.onchange = ()=> fill(sel.value);
+  document.getElementById('admSave').onclick = ()=>{
+    const id = sel.value;
+    const idx = DATA.findIndex(x=>x.id===id);
+    if (idx === -1) return;
+    DATA[idx] = Object.assign({}, DATA[idx], {
+      name: document.getElementById('admName').value.trim(),
+      category: document.getElementById('admCategory').value.trim(),
+      area: document.getElementById('admArea').value.trim(),
+      price: document.getElementById('admPrice').value.trim(),
+      address: document.getElementById('admAddress').value.trim(),
+      maps: document.getElementById('admMaps').value.trim(),
+      ig: document.getElementById('admIg').value.trim(),
+      cover: document.getElementById('admCover').value.trim(),
+      highlights: document.getElementById('admHighlights').value.split(/\\n+/).filter(Boolean)
+    });
+    saveDataOverride(DATA);
+    render();
+    alert('已儲存（本機暫存）');
+    dlg.close();
+  };
+}
