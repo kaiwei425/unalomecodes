@@ -514,6 +514,28 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 
   window.openBankDialog = function(from){
     window.__checkoutSource = (from === 'cart') ? 'cart' : 'direct';
+    // 若需要門市且尚未選擇，先跳到門市步驟（避免直接落到 Step3）
+    try{
+      const pricing = __cartPricing(true);
+      const needStore = Array.isArray(pricing.items) ? pricing.items.some(it=>!isCandleItemLike(it)) : true;
+      const storeVal = (
+        (document.getElementById('bfStore') && document.getElementById('bfStore').value) ||
+        (document.getElementById('dlgStoreInput') && document.getElementById('dlgStoreInput').value) ||
+        ''
+      ).trim();
+      if (needStore && (!storeVal || /尚未選擇/.test(storeVal))){
+        try{ sessionStorage.setItem('__checkout_channel', 'bank'); }catch(_){}
+        const dlgStore = document.getElementById('dlgStore');
+        if (dlgStore){
+          dlgStore.setAttribute('data-channel', 'bank');
+          if (typeof renderStepBar === 'function') renderStepBar('dlgStore', 2, ['確認訂單','選擇門市','填寫付款資料']);
+          if (typeof dlgStore.showModal === 'function'){
+            dlgStore.showModal();
+            return;
+          }
+        }
+      }
+    }catch(_){}
     try{
       const dlg = document.getElementById('dlgBank');
       if(!dlg) return alert('無法顯示匯款視窗');
@@ -1839,12 +1861,13 @@ function __cartPricing(includePendingDetail){
         pendingOverlay.id = 'ccPendingOverlay';
         pendingOverlay.style.position = 'fixed';
         pendingOverlay.style.inset = '0';
-        pendingOverlay.style.zIndex = '9999';
+        pendingOverlay.style.zIndex = '2147483647';
         pendingOverlay.style.display = 'none';
         pendingOverlay.style.alignItems = 'center';
         pendingOverlay.style.justifyContent = 'center';
         pendingOverlay.style.background = 'rgba(15,23,42,0.45)';
         pendingOverlay.style.backdropFilter = 'blur(2px)';
+        pendingOverlay.style.pointerEvents = 'all';
         pendingOverlay.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:#ffffff;box-shadow:0 10px 25px rgba(15,23,42,0.35);font-size:14px;color:#374151;"><div style="width:18px;height:18px;border-radius:999px;border:2px solid #e5e7eb;border-top-color:#4b5563;animation:ccSpin 0.8s linear infinite;"></div><div id="ccPendingText">送出訂單中，請稍候...</div></div>';
         document.body.appendChild(pendingOverlay);
         if (!document.getElementById('ccSpinStyle')){
