@@ -3,6 +3,14 @@ const banner = document.getElementById('banner');
 
 let rawItems = [];
 let viewItems = [];
+// 安全補丁：避免呼叫未定義
+function refreshWishlistButtons() {
+  try{
+    if (window.wishlist && typeof window.wishlist.subscribe === 'function'){
+      // 未來可在此綁定收藏按鈕狀態
+    }
+  }catch(_){}
+}
 // 目前不在列表卡顯示
 const DEITY_PAGE = 'https://unalomecodes.pages.dev/deity.html';
 
