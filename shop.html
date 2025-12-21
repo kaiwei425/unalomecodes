@@ -4463,18 +4463,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     e.preventDefault();
     e.stopPropagation();
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-    // 判斷購物車內容是否全為蠟燭
-    var cartItems = (function(){
-      try{ var c = JSON.parse(localStorage.getItem('cart')||'[]'); return Array.isArray(c)?c:[]; }catch(_){ return []; }
-    })();
-    var candleOnly = cartItems.length>0 && cartItems.every(function(it){ return /蠟燭/.test(String(it.category||'') + String(it.name||'')); });
-
+    try{ sessionStorage.setItem('__candle_flow',''); }catch(_){}
     var isCard = btn.id === 'payCC' || btn.id === 'cartPayCC';
     checkoutChannel = isCard ? 'cc' : 'bank';
-    if (isCard && candleOnly){
-      alert('蠟燭祈福需單獨匯款結帳，已為你切換至匯款流程。');
-      checkoutChannel = 'bank';
-    }
     openOrderDialog();
   }, true);
 
