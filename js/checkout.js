@@ -1751,7 +1751,11 @@ function __cartPricing(includePendingDetail){
         },
         store: (ccForm.querySelector('[name="store"]')?.value || '').trim(),
         note: (ccForm.querySelector('[name="note"]')?.value || '').trim(),
-        shipping: ctx.shipping || 0
+        shipping: ctx.shipping || 0,
+        shipping_discount: ctx.hasShipCoupon ? SHIPPING_FEE : 0,
+        subtotal: ctx.subtotal || 0,
+        discount: ctx.off || 0,
+        grand: ctx.grand || 0
       };
       if (!payload.store){
         alert('請先在上一步選擇 7-11 門市，再進行刷卡。');
