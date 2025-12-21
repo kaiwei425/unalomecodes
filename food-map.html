@@ -240,24 +240,13 @@ function render(){
   });
 }
 
+// 按鈕事件
 [btnBack, btnFav, btnAdmin].forEach(btn=>{
   if (!btn) return;
-  if (btn.id === 'btnBack'){
-    btn.onclick = ()=> history.back();
-  }
+  if (btn.id === 'btnBack') btn.onclick = ()=> history.back();
 });
-[btnBack, btnFav, btnAdmin].forEach(btn=>{
-  if (!btn) return;
-  if (btn.id === 'btnBack'){
-    btn.onclick = ()=> history.back();
-  }
-});
-if (btnFav){
-  btnFav.onclick = ()=> openFavList();
-}
-if (btnAdmin){
-  btnAdmin.onclick = ()=> openAdminEditor();
-}
+if (btnFav) btnFav.onclick = ()=> openFavList();
+if (btnAdmin) btnAdmin.onclick = ()=> openAdminEditor();
 
 initFilters();
 render();
@@ -268,17 +257,9 @@ async function loadRemote(){
   try{
     const res = await fetch('/api/foods',{cache:'no-store'});
     const data = await res.json().catch(()=>({}));
-    if (res.ok && data.items){
-      DATA = data.items;
-    }
+    if (res.ok && data.items){ DATA = data.items; }
   }catch(_){}
-  try{
-    const r2 = await fetch('/api/me/food-favs',{credentials:'include',cache:'no-store'});
-    const j2 = await r2.json().catch(()=>({}));
-    if (r2.ok && j2.favorites){
-      favs = j2.favorites;
-    }
-  }catch(_){}
+  await refreshFavorites();
   initFilters();
   render();
 }
@@ -294,7 +275,7 @@ function openModal(id){
   const highlights = (item.highlights||[]).map(h=>`<li>${h}</li>`).join('');
   const iframe = item.ig ? `<iframe src="${item.ig.replace('https://www.instagram.com/p/','https://www.instagram.com/p/') }embed" style="width:100%;min-height:420px;border:none;"></iframe>` : '';
   body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;">
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
         <div style="font-size:18px;font-weight:800;">${item.name}</div>
         <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
@@ -315,20 +296,45 @@ function openModal(id){
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
   const favBtn = body.querySelector('button[data-fav]');
-  if (favBtn){
-    favBtn.onclick = ()=> alert('收藏功能待串接會員資料');
+  if (favBtn){ favBtn.onclick = ()=> toggleFav(item.id); }
+}
+
+// 收藏清單與收藏 API
+async function refreshFavorites(){
+  try{
+    const r = await fetch('/api/me/food-favs',{credentials:'include',cache:'no-store'});
+    const j = await r.json().catch(()=>({}));
+    if (r.ok && Array.isArray(j.favorites)){
+      favs = j.favorites;
+      render();
+    }
+    return r.ok;
+  }catch(_){ return false; }
+}
+async function toggleFav(id){
+  try{
+    const action = favs.includes(id) ? 'remove' : 'add';
+    const res = await fetch('/api/me/food-favs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ id, action })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (res.status === 401){ alert('請先登入後再收藏'); return; }
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+    favs = data.favorites || [];
+    render();
+  }catch(err){
+    alert('收藏失敗：' + (err.message||err));
   }
 }
-</script>
-</body>
-</html>
-// 收藏清單列表（dialog 共用）
 function openFavList(){
   const dlg = document.getElementById('foodModal');
   const body = document.getElementById('foodModalBody');
   const list = DATA.filter(it=> favs.includes(it.id));
   body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;">
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:18px;font-weight:800;">收藏清單</div>
         <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
@@ -352,34 +358,39 @@ function openFavList(){
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
 }
-function removeFav(id){
-  fetch('/api/me/food-favs', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    credentials:'include',
-    body: JSON.stringify({ id, action:'remove' })
-  }).then(r=>r.json().catch(()=>({}))).then(data=>{
-    if (data && data.favorites){
-      favs = data.favorites;
-      render();
-      const dlg = document.getElementById('foodModal');
-      if (dlg.open) openFavList();
-    }
-  }).catch(()=>{});
+async function removeFav(id){
+  try{
+    const res = await fetch('/api/me/food-favs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ id, action:'remove' })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (res.status === 401){ alert('請先登入後再操作'); return; }
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+    favs = data.favorites || [];
+    render();
+    const dlg = document.getElementById('foodModal');
+    if (dlg.open) openFavList();
+  }catch(err){
+    alert('移除失敗：' + (err.message||err));
+  }
 }
 
-// 管理編輯（localStorage 覆寫）
+// 管理編輯（後端）
 function openAdminEditor(){
   const dlg = document.getElementById('foodModal');
   const body = document.getElementById('foodModalBody');
-  const options = DATA.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const options = ['<option value=\"\">新增</option>'].concat(DATA.map(d=>`<option value=\"${d.id}\">${d.name}</option>`)).join('');
   body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:10px;background:#fff;">
+    <div style="padding:16px;display:grid;gap:10px;background:#fff;max-height:80vh;overflow:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:18px;font-weight:800;">管理編輯（本機暫存）</div>
+        <div style="font-size:18px;font-weight:800;">管理編輯</div>
         <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
       </div>
       <select id="admSelect">${options}</select>
+      <input id="admId" placeholder="ID（留空自動）">
       <input id="admName" placeholder="店名">
       <input id="admCategory" placeholder="分類">
       <input id="admArea" placeholder="地區">
@@ -390,15 +401,15 @@ function openAdminEditor(){
       <input id="admCover" placeholder="封面圖 URL">
       <textarea id="admHighlights" placeholder="亮點（以換行分隔）" style="min-height:80px;"></textarea>
       <button class="btn primary" id="admSave" style="width:100%;">儲存</button>
-      <div style="font-size:12px;color:#ef4444;">說明：僅存本機 localStorage，重新整理仍會存在；要清空可清除瀏覽器儲存。</div>
+      <div style="font-size:12px;color:#ef4444;">需管理員登入，資料會直接寫入遠端資料庫（KV）。</div>
     </div>
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
   const sel = document.getElementById('admSelect');
   function fill(id){
-    const it = DATA.find(x=>x.id===id);
-    if (!it) return;
+    const it = DATA.find(x=>x.id===id) || {};
+    document.getElementById('admId').value = it.id || '';
     document.getElementById('admName').value = it.name||'';
     document.getElementById('admCategory').value = it.category||'';
     document.getElementById('admArea').value = it.area||'';
@@ -412,9 +423,8 @@ function openAdminEditor(){
   fill(sel.value);
   sel.onchange = ()=> fill(sel.value);
   document.getElementById('admSave').onclick = async ()=>{
-    const id = sel.value;
     const payload = {
-      id,
+      id: document.getElementById('admId').value.trim() || undefined,
       name: document.getElementById('admName').value.trim(),
       category: document.getElementById('admCategory').value.trim(),
       area: document.getElementById('admArea').value.trim(),
@@ -440,9 +450,12 @@ function openAdminEditor(){
       if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
       alert('已儲存');
       dlg.close();
-      loadRemote();
+      await loadRemote();
     }catch(err){
       alert('儲存失敗：' + (err.message||err));
     }
   };
 }
+</script>
+</body>
+</html>
