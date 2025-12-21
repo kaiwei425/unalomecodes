@@ -517,7 +517,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     // 若需要門市且尚未選擇，先跳到門市步驟（避免直接落到 Step3）
     try{
       const pricing = __cartPricing(true);
-      const needStore = Array.isArray(pricing.items) ? pricing.items.some(it=>!isCandleItemLike(it)) : true;
+      const needStore = (!Array.isArray(pricing.items) || pricing.items.length === 0)
+        ? true
+        : pricing.items.some(it=>!isCandleItemLike(it));
       const storeVal = (
         (document.getElementById('bfStore') && document.getElementById('bfStore').value) ||
         (document.getElementById('dlgStoreInput') && document.getElementById('dlgStoreInput').value) ||
