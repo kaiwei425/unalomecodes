@@ -1832,6 +1832,32 @@ function __cartPricing(includePendingDetail){
       }
       const btn = document.getElementById('ccSubmit');
       if (btn) btn.disabled = true;
+      let pendingOverlay = document.getElementById('ccPendingOverlay');
+      let pendingText = document.getElementById('ccPendingText');
+      if (!pendingOverlay){
+        pendingOverlay = document.createElement('div');
+        pendingOverlay.id = 'ccPendingOverlay';
+        pendingOverlay.style.position = 'fixed';
+        pendingOverlay.style.inset = '0';
+        pendingOverlay.style.zIndex = '9999';
+        pendingOverlay.style.display = 'none';
+        pendingOverlay.style.alignItems = 'center';
+        pendingOverlay.style.justifyContent = 'center';
+        pendingOverlay.style.background = 'rgba(15,23,42,0.45)';
+        pendingOverlay.style.backdropFilter = 'blur(2px)';
+        pendingOverlay.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:#ffffff;box-shadow:0 10px 25px rgba(15,23,42,0.35);font-size:14px;color:#374151;"><div style="width:18px;height:18px;border-radius:999px;border:2px solid #e5e7eb;border-top-color:#4b5563;animation:ccSpin 0.8s linear infinite;"></div><div id="ccPendingText">送出訂單中，請稍候...</div></div>';
+        document.body.appendChild(pendingOverlay);
+        if (!document.getElementById('ccSpinStyle')){
+          const st = document.createElement('style');
+          st.id = 'ccSpinStyle';
+          st.textContent = '@keyframes ccSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}';
+          document.head.appendChild(st);
+        }
+      }
+      if (pendingOverlay){
+        pendingOverlay.style.display = 'flex';
+        if (pendingText) pendingText.textContent = '送出訂單中，請稍候...';
+      }
       try{
         const res = await fetch('/api/payment/ecpay/create', {
           method:'POST',
@@ -1876,6 +1902,7 @@ function __cartPricing(includePendingDetail){
         alert('刷卡請求失敗，請稍後再試。\n' + (err && err.message ? err.message : err));
       }finally{
         if (btn) btn.disabled = false;
+        if (pendingOverlay) pendingOverlay.style.display = 'none';
       }
     });
   }
