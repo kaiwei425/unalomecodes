@@ -967,8 +967,9 @@ function __cartPricing(includePendingDetail){
   }
   const items = [];
   const cart = readCart();
-  if (Array.isArray(cart)) items.push(...cart);
-  if (includePendingDetail !== false){
+  const hasCart = Array.isArray(cart) && cart.length > 0;
+  if (hasCart) items.push(...cart);
+  if (includePendingDetail !== false && !hasCart){
     const pending = capturePendingDetail();
     if (pending) items.push(pending);
   }
