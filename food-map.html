@@ -165,39 +165,12 @@ const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
 const btnAdmin = document.getElementById('btnAdmin');
 
-// --- data helpers (support local overrides for簡易管理編輯) ---
-const OVERRIDE_KEY = '__food_map_data__';
-function loadData(){
-  try{
-    const raw = localStorage.getItem(OVERRIDE_KEY);
-    if (raw){
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length) return arr;
-    }
-  }catch(_){}
-  return BASE_DATA.slice();
-}
-function saveDataOverride(arr){
-  try{
-    localStorage.setItem(OVERRIDE_KEY, JSON.stringify(arr||[]));
-  }catch(_){}
-}
-let DATA = loadData();
-
-// --- favorites (localStorage) ---
-const FAV_KEY = '__food_map_favs__';
-function loadFavs(){
-  try{
-    const arr = JSON.parse(localStorage.getItem(FAV_KEY)||'[]');
-    return Array.isArray(arr) ? arr : [];
-  }catch(_){ return []; }
-}
-function saveFavs(list){
-  try{ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }catch(_){}
-}
-let favs = loadFavs();
+let DATA = BASE_DATA.slice();
+let favs = [];
 
 function initFilters(){
+  fCat.innerHTML = '<option value=\"\">全部分類</option>';
+  fArea.innerHTML= '<option value=\"\">全部地區</option>';
   const cats = Array.from(new Set(DATA.map(d=>d.category))).sort();
   cats.forEach(c=>{ const opt=document.createElement('option');opt.value=c;opt.textContent=c;fCat.appendChild(opt); });
   const areas = Array.from(new Set(DATA.map(d=>d.area))).sort();
@@ -242,15 +215,27 @@ function render(){
     };
   });
   cardsEl.querySelectorAll('button[data-fav]').forEach(btn=>{
-    btn.onclick = ()=>{
+    btn.onclick = async ()=>{
       const id = btn.getAttribute('data-fav');
-      if (favs.includes(id)){
-        favs = favs.filter(x=>x!==id);
-      }else{
-        favs.push(id);
+      try{
+        const action = favs.includes(id) ? 'remove' : 'add';
+        const res = await fetch('/api/me/food-favs', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ id, action })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (res.status === 401){
+          alert('請先登入後再收藏');
+          return;
+        }
+        if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        favs = data.favorites || [];
+        render();
+      }catch(err){
+        alert('收藏失敗：'+ (err.message||err));
       }
-      saveFavs(favs);
-      render();
     };
   });
 }
@@ -277,6 +262,27 @@ if (btnAdmin){
 initFilters();
 render();
 [kwInput, fCat, fArea, fPrice].forEach(el=> el.addEventListener('input', render));
+
+// 讀取遠端資料與收藏
+async function loadRemote(){
+  try{
+    const res = await fetch('/api/foods',{cache:'no-store'});
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data.items){
+      DATA = data.items;
+    }
+  }catch(_){}
+  try{
+    const r2 = await fetch('/api/me/food-favs',{credentials:'include',cache:'no-store'});
+    const j2 = await r2.json().catch(()=>({}));
+    if (r2.ok && j2.favorites){
+      favs = j2.favorites;
+    }
+  }catch(_){}
+  initFilters();
+  render();
+}
+loadRemote();
 
 // Modal：店家資訊
 function openModal(id){
@@ -347,11 +353,19 @@ function openFavList(){
   document.getElementById('foodClose').onclick = ()=> dlg.close();
 }
 function removeFav(id){
-  favs = favs.filter(x=>x!==id);
-  saveFavs(favs);
-  render();
-  const dlg = document.getElementById('foodModal');
-  if (dlg.open) openFavList();
+  fetch('/api/me/food-favs', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'include',
+    body: JSON.stringify({ id, action:'remove' })
+  }).then(r=>r.json().catch(()=>({}))).then(data=>{
+    if (data && data.favorites){
+      favs = data.favorites;
+      render();
+      const dlg = document.getElementById('foodModal');
+      if (dlg.open) openFavList();
+    }
+  }).catch(()=>{});
 }
 
 // 管理編輯（localStorage 覆寫）
@@ -397,11 +411,10 @@ function openAdminEditor(){
   }
   fill(sel.value);
   sel.onchange = ()=> fill(sel.value);
-  document.getElementById('admSave').onclick = ()=>{
+  document.getElementById('admSave').onclick = async ()=>{
     const id = sel.value;
-    const idx = DATA.findIndex(x=>x.id===id);
-    if (idx === -1) return;
-    DATA[idx] = Object.assign({}, DATA[idx], {
+    const payload = {
+      id,
       name: document.getElementById('admName').value.trim(),
       category: document.getElementById('admCategory').value.trim(),
       area: document.getElementById('admArea').value.trim(),
@@ -411,10 +424,25 @@ function openAdminEditor(){
       ig: document.getElementById('admIg').value.trim(),
       cover: document.getElementById('admCover').value.trim(),
       highlights: document.getElementById('admHighlights').value.split(/\\n+/).filter(Boolean)
-    });
-    saveDataOverride(DATA);
-    render();
-    alert('已儲存（本機暫存）');
-    dlg.close();
+    };
+    try{
+      const res = await fetch('/api/foods', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(()=>({}));
+      if (res.status === 401){
+        alert('需要管理員權限才能編輯。');
+        return;
+      }
+      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+      alert('已儲存');
+      dlg.close();
+      loadRemote();
+    }catch(err){
+      alert('儲存失敗：' + (err.message||err));
+    }
   };
 }

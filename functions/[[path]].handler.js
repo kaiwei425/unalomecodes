@@ -78,6 +78,36 @@ function makeCouponCode(deity){
   const rand = makeToken(6).toUpperCase();
   return `UC-${d}-${rand}`;
 }
+
+// Foods helpers (for food map)
+function foodKey(id){ return `FOOD:${id}`; }
+async function readFood(env, id){
+  if (!env.FOODS) return null;
+  try{
+    const raw = await env.FOODS.get(foodKey(id));
+    return raw ? JSON.parse(raw) : null;
+  }catch(_){ return null; }
+}
+async function saveFood(env, obj){
+  if (!env.FOODS || !obj || !obj.id) return null;
+  await env.FOODS.put(foodKey(obj.id), JSON.stringify(obj));
+  return obj;
+}
+async function listFoods(env, limit){
+  const out = [];
+  if (!env.FOODS || !env.FOODS.list) return out;
+  const iter = await env.FOODS.list({ prefix:'FOOD:' });
+  const keys = Array.isArray(iter.keys) ? iter.keys.slice(0, limit||200) : [];
+  for (const k of keys){
+    const raw = await env.FOODS.get(k.name);
+    if (!raw) continue;
+    try{
+      const obj = JSON.parse(raw);
+      if (obj && obj.id) out.push(obj);
+    }catch(_){}
+  }
+  return out;
+}
 async function readCoupon(env, code){
   if (!env.COUPONS) return null;
   if (!code) return null;
@@ -363,6 +393,7 @@ async function ensureUserRecord(env, profile){
       id: profile.id,
       createdAt: now,
       wishlist: [],
+      favoritesFoods: [],
       coupons: [],
       memberPerks: {}
     };
@@ -381,6 +412,9 @@ async function ensureUserRecord(env, profile){
   }
   if (!Array.isArray(record.coupons)){
     record.coupons = [];
+  }
+  if (!Array.isArray(record.favoritesFoods)){
+    record.favoritesFoods = [];
   }
   await saveUserRecord(env, record);
   return record;
@@ -1077,6 +1111,74 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       wishlist: Array.isArray(record.wishlist) ? record.wishlist : [],
       guardian: record.guardian || null
     }});
+  }
+
+  // Food map favorites (member)
+  if (pathname === '/api/me/food-favs') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (request.method === 'GET'){
+      return json({ ok:true, favorites: Array.isArray(record.favoritesFoods) ? record.favoritesFoods : [] });
+    }
+    if (request.method === 'POST'){
+      try{
+        const body = await request.json().catch(()=>({}));
+        const id = String(body.id||'').trim();
+        if (!id) return json({ ok:false, error:'missing id' }, 400);
+        const action = (body.action || 'toggle').toLowerCase();
+        const list = Array.isArray(record.favoritesFoods) ? record.favoritesFoods.slice() : [];
+        const idx = list.indexOf(id);
+        if (action === 'remove'){ if (idx!==-1) list.splice(idx,1); }
+        else if (action === 'add'){ if (idx===-1) list.unshift(id); }
+        else { if (idx===-1) list.unshift(id); else list.splice(idx,1); }
+        record.favoritesFoods = list.slice(0, 500);
+        await saveUserRecord(env, record);
+        return json({ ok:true, favorites: record.favoritesFoods });
+      }catch(_){
+        return json({ ok:false, error:'invalid payload' }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  // Food map data (list / admin upsert)
+  if (pathname === '/api/foods') {
+    if (request.method === 'GET'){
+      if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+      const items = await listFoods(env, 300);
+      return json({ ok:true, items });
+    }
+    if (request.method === 'POST'){
+      if (!(await isAdmin(request, env))){
+        return json({ ok:false, error:'Unauthorized' }, 401);
+      }
+      if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+      try{
+        const body = await request.json().catch(()=>({}));
+        const id = String(body.id || `food-${Date.now()}`).trim();
+        if (!id) return json({ ok:false, error:'missing id' }, 400);
+        const now = new Date().toISOString();
+        const obj = {
+          id,
+          name: String(body.name||'').trim(),
+          category: String(body.category||'').trim(),
+          area: String(body.area||'').trim(),
+          price: String(body.price||'').trim(),
+          address: String(body.address||'').trim(),
+          maps: String(body.maps||'').trim(),
+          ig: String(body.ig||'').trim(),
+          cover: String(body.cover||'').trim(),
+          highlights: Array.isArray(body.highlights) ? body.highlights : [],
+          dishes: Array.isArray(body.dishes) ? body.dishes : [],
+          updatedAt: now
+        };
+        await saveFood(env, obj);
+        return json({ ok:true, item: obj });
+      }catch(e){
+        return json({ ok:false, error:String(e) }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
   }
 
   if (pathname === '/api/me/orders' && request.method === 'GET') {
