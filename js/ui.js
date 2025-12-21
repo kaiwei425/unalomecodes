@@ -127,9 +127,7 @@ document.addEventListener('click', function(e){
 
   // CTA
   const btnAdd = document.getElementById('btnAddCart');
-  const btnCheckout = document.getElementById('btnCheckout');
-  const payBtn711 = document.getElementById('pay711');
-  const payBtnCC = document.getElementById('payCC');
+  // 直接結帳功能已移除，僅保留加入購物車
 
   function isCandleItem(obj){
     try{
@@ -229,50 +227,7 @@ function stashPendingDetail(){
     }catch(_){}
   }
 
-  // 直接結帳：彈出兩種方式
-  btnCheckout.onclick = ()=>{
-    stashPendingDetail();
-    const dlgPay = document.getElementById('dlgCheckout');
-    const a711 = payBtn711;
-    const btnCC = payBtnCC;
-    const btnClose = document.getElementById('payClose');
-    const isCandle = isCandleItem(p);
-    // 蠟燭商品：隱藏信用卡按鈕，並在匯款按鈕加上提示
-    if (a711){
-      a711.textContent = isCandle ? '轉帳匯款（蠟燭專用）' : '轉帳匯款';
-    }
-    if (btnCC){
-      btnCC.style.display = isCandle ? 'none' : 'inline-flex';
-    }
-    if (a711){ a711.href = '#'; a711.onclick = (ev)=>{ ev.preventDefault(); openBankDialog('detail'); }; }
-    if (btnCC) btnCC.onclick = ()=> {
-      if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.set==='function'){
-        window.__checkoutChannelRef.set('cc');
-      }
-      if (dlgPay && typeof dlgPay.close==='function') dlgPay.close();
-      if (typeof window.__openOrderConfirmDialogUnified === 'function'){
-        window.__openOrderConfirmDialogUnified();
-      } else {
-        openCreditDialog('detail');
-      }
-    };
-    if (btnClose) btnClose.onclick = ()=> dlgPay.close();
-    if (isCandle){
-      // 蠟燭：仍顯示訂單確認步驟（在 order dialog 會直接跳到匯款資料，跳過門市）
-      if (typeof window.__openOrderConfirmDialogUnified === 'function'){
-        window.__openOrderConfirmDialogUnified();
-        return;
-      }
-      openBankDialog('detail');
-    } else {
-      if (dlgPay && typeof dlgPay.showModal === 'function'){
-        try{ var need = (typeof needCandleExtras==='function') ? needCandleExtras() : false; if (typeof ensureCandleFields==='function') ensureCandleFields(need); }catch(_){}
-        dlgPay.showModal();
-      } else {
-        openBankDialog('detail');
-      }
-    }
-  };
+  // 直接結帳已移除
 
   // 評價：立即用神祇代碼讀取雲端留言
   const rvCode = storyCodeFromProduct(p);
