@@ -449,17 +449,25 @@
     return Promise.reject(new Error('login_required'));
   }
 
-  document.addEventListener('click', ev=>{
+  document.addEventListener('click', async ev=>{
     const btn = ev.target.closest('[data-auth-btn]');
     if (!btn) return;
     ev.preventDefault();
     if (btn.disabled) return;
     if (state.user){
       btn.disabled = true;
-      logout();
+      try{
+        await logout();
+      }finally{
+        btn.disabled = false;
+      }
     }else{
       btn.disabled = true;
-      login();
+      try{
+        await login();
+      }finally{
+        btn.disabled = false;
+      }
     }
   });
 
