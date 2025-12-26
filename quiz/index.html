@@ -272,6 +272,41 @@ function taipeiDateKey(ts){
 function encodeState(st){
   return [st.dow||'', st.zod||'', st.job||'', st.p2||'', st.p3||'', st.p4||'', st.p5||'', st.p6||'', st.p7||''].join('|');
 }
+const BALANCE_TOP_N = 8;
+const BALANCE_WEIGHTS = (function(){
+  const weights = Object.fromEntries(GODS.map(g=>[g,0]));
+  Object.values(DOW).forEach(info=>{
+    (info.weight || []).forEach(g=>{ if (g in weights) weights[g] += 1; });
+  });
+  Object.values(MAP).forEach(opts=>{
+    Object.values(opts).forEach(arr=>{
+      let w = 4;
+      for (const g of arr){
+        if (g in weights) weights[g] += w;
+        w--;
+        if (w <= 0) break;
+      }
+    });
+  });
+  return weights;
+})();
+function pickBalancedDeity(ranked, seedStr){
+  const top = ranked.slice(0, BALANCE_TOP_N);
+  let total = 0;
+  const weights = top.map(([g])=>{
+    const base = BALANCE_WEIGHTS[g] || 1;
+    const w = 1 / base;
+    total += w;
+    return w;
+  });
+  const r = (stableHash(seedStr) % 1000000) / 1000000;
+  let acc = 0;
+  for (let i=0;i<top.length;i++){
+    acc += weights[i] / total;
+    if (r <= acc) return top[i][0];
+  }
+  return top[top.length - 1][0];
+}
 function compileScore(st){
   const score = Object.fromEntries(GODS.map(g=>[g,0]));
   // 星期加權
@@ -288,18 +323,9 @@ function compileScore(st){
 }
 function decideWinner(st){
   const score = compileScore(st);
-  let max=-Infinity, second=-Infinity, winner='';
-  for (const [g,v] of Object.entries(score)){
-    if (v>max){ second=max; max=v; winner=g; }
-    else if (v>second){ second=v; }
-  }
-  const gap = Math.max(0, max - (second===-Infinity?0:second));
-  if (gap <= 1){
-    const picks = [st.p2,st.p3,st.p4,st.p5,st.p6,st.p7].map(p=>String(p||'')).join('');
-    const tiebreak = stableHash(picks) % GODS.length;
-    winner = GODS[tiebreak];
-  }
-  return winner;
+  const ranked = Object.entries(score).sort((a,b)=> (b[1]-a[1]) || a[0].localeCompare(b[0]));
+  const seed = encodeState(st);
+  return pickBalancedDeity(ranked, seed);
 }
 function calcAffinityPercent(st, winner){
   const score = compileScore(st);
