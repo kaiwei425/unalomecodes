@@ -95,6 +95,9 @@ html,body{
     height:50px;
     border-radius:16px;
   }
+  .top-actions-right .auth-widget{
+    height:auto;
+  }
   .auth-widget{gap:8px;padding:10px 12px;}
   .auth-btn{font-size:13px;}
   .guardian-badge{
