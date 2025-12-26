@@ -57,6 +57,58 @@
     });
   }
 
+  let bindingGuardian = false;
+  function readLocalQuizPayload(){
+    let guardian = null;
+    let quiz = null;
+    try{
+      const raw = localStorage.getItem('__lastQuizGuardian__');
+      if (raw){
+        const obj = JSON.parse(raw);
+        const code = String(obj.code || '').trim().toUpperCase();
+        const name = String(obj.name || '').trim();
+        if (/^[A-Z]{2}$/.test(code)){
+          guardian = { code, name: name || code, ts: obj.ts ? new Date(obj.ts).toISOString() : new Date().toISOString() };
+        }
+      }
+    }catch(_){}
+    try{
+      const raw = localStorage.getItem('__lastQuizProfile__');
+      if (raw){
+        const obj = JSON.parse(raw);
+        if (obj && (obj.dow || obj.zod || obj.job)){
+          quiz = obj;
+        }
+      }
+    }catch(_){}
+    if (!guardian) return null;
+    return { guardian, quiz };
+  }
+  async function bindLocalGuardianIfNeeded(profile){
+    if (bindingGuardian) return;
+    if (!profile || profile.guardian) return;
+    const local = readLocalQuizPayload();
+    if (!local || !local.guardian) return;
+    bindingGuardian = true;
+    try{
+      await fetch('/api/me/profile', {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({
+          guardian: local.guardian,
+          quiz: local.quiz || undefined
+        })
+      });
+      try{
+        localStorage.removeItem('__lastQuizGuardian__');
+        localStorage.removeItem('__lastQuizProfile__');
+      }catch(_){}
+      await refreshProfile();
+    }catch(_){}
+    bindingGuardian = false;
+  }
+
   async function refreshProfile(){
     if (!state.user){
       state.profile = null;
@@ -75,6 +127,7 @@
       state.profile = null;
     }
     notifyProfile();
+    bindLocalGuardianIfNeeded(state.profile);
   }
 
   async function refreshAdmin(){
