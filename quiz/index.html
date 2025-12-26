@@ -40,10 +40,16 @@
       box-shadow:0 12px 26px rgba(0,0,0,.32);
     }
     .wrap{max-width:980px;margin:0 auto;padding:20px 16px 32px}
-    .brand{display:flex;gap:14px;align-items:center}
+    .brand{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
     .brand img{width:46px;height:46px;border-radius:14px;box-shadow:0 0 0 4px rgba(245,158,11,.35)}
     .brand h1{font-size:22px;margin:0;color:#fff;letter-spacing:.35px;font-weight:800;}
     .tagline{margin:2px 0 0;color:rgba(255,255,255,0.78);font-size:13px;}
+    .brand-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+    .brand-actions .btn{font-size:13px;padding:10px 14px;min-height:40px}
+    @media(max-width:720px){
+      .brand-actions{width:100%;justify-content:flex-end}
+      .brand-actions .btn{flex:1 1 48%}
+    }
     .card{
       background:var(--card);
       border:1px solid rgba(255,255,255,0.55);
@@ -81,6 +87,8 @@
     .step{margin:10px 0 2px;font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
     .q{font-size:20px;font-weight:800;margin:6px 0 16px}
     .footer{display:grid;gap:10px;margin-top:14px;grid-template-columns:1fr 1fr;}
+    #resultBox .footer{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+    #resultBox .footer .btn{min-height:54px;font-size:14px;padding:12px 10px;text-align:center;white-space:normal}
     .result{padding:16px;border-radius:14px;background:#f9fafb;border:1px dashed rgba(0,0,0,0.08);white-space:pre-wrap;line-height:1.8;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
     code.k{background:#111827;padding:2px 6px;border-radius:6px;border:1px solid #1f2937;color:#facc15;}
     .note{font-size:12px;color:var(--muted)}
@@ -126,7 +134,10 @@
         <h1>測驗與您有緣的守護神</h1>
         <p class="tagline">7 題 1 分鐘，找出守護神，解鎖專屬優惠與配戴建議</p>
       </div>
-      <a class="btn primary" href="/shop" style="margin-left:auto;font-size:13px;padding:10px 14px;">回到商品頁</a>
+      <div class="brand-actions">
+        <button type="button" class="btn primary" data-fortune-btn>領取日籤</button>
+        <a class="btn primary" href="/shop">回到首頁</a>
+      </div>
     </div>
   </header>
 
@@ -181,7 +192,6 @@
         </div>
       </div>
       <div class="footer">
-        <button type="button" class="btn primary" data-fortune-btn>領取日籤</button>
         <a id="deityLink" target="_blank" rel="noopener" class="btn">查看完整介紹</a>
         <a id="shareLink" class="btn ok">重新測驗一次</a>
         <a id="menuLink" target="_blank" rel="noopener" class="btn">瀏覽其他守護者</a>
