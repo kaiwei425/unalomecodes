@@ -35,6 +35,7 @@ const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
+const FORTUNE_FORMAT_VERSION = 2;
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -516,9 +517,22 @@ function isTooSimilar(fortune, history){
   }
   return false;
 }
+const FORTUNE_THEMES = ['穩定聚焦','重新整理','小幅突破','順勢前行','修復節奏','溫和推進'];
+const FORTUNE_FOCUSES = ['整理手邊任務','與人溝通協調','身心平衡','財務細節','學習精進','斷捨離'];
+function buildStarText(seed){
+  const stars = (seed % 4) + 2;
+  return '★★★★★'.slice(0, stars) + '☆☆☆☆☆'.slice(0, 5 - stars);
+}
+function buildAdviceLine(seed){
+  const theme = pickBySeed(FORTUNE_THEMES, seed);
+  const focus = pickBySeed(FORTUNE_FOCUSES, seed + 7);
+  return {
+    theme,
+    focus,
+    line: `今日運勢偏向「${theme}」，把重點放在${focus}會更順。`
+  };
+}
 function buildLocalFortune(ctx, seed){
-  const themes = ['穩定聚焦','重新整理','小幅突破','順勢前行','修復節奏','溫和推進'];
-  const focuses = ['整理手邊任務','與人溝通協調','身心平衡','財務細節','學習精進','斷捨離'];
   const advices = [
     '把最重要的一件事先完成，效率自然拉高。',
     '今天適合把界線說清楚，避免情緒耗損。',
@@ -526,24 +540,52 @@ function buildLocalFortune(ctx, seed){
     '用 20 分鐘整理空間，運勢會跟著回正。',
     '重要決定先寫下利弊，再做最後確認。'
   ];
+  const loveNotes = [
+    '有伴侶的人與異性朋友互動要拿捏分寸，避免誤會。',
+    '單身者適合保持自然交流，慢慢累積好感。',
+    '人際互動容易放大情緒，先聽再說會更順。',
+    '適合安排短暫的交流與分享，對感情有加分。'
+  ];
+  const workNotes = [
+    '精力旺盛，雖然難以完美，但會明顯感受到能力提升。',
+    '工作步調穩定，適合收斂目標、逐步推進。',
+    '今天適合專注學習與修正流程，小幅調整就有成果。',
+    '需要多一點耐心處理細節，成果會更扎實。'
+  ];
+  const moneyNotes = [
+    '財運偏保守，投資不宜過度冒進，選擇穩健標的較佳。',
+    '收支需留意細節，小額支出容易累積。',
+    '財運有波動，短線投資風險較高，宜保守。',
+    '偏財運一般，先穩住現金流更安心。'
+  ];
   const rituals = [
     '閉上眼睛誠心祈願三次，想像守護神在你身旁。',
     '對自己說一句肯定的話，今天會更有力量。',
     '用一分鐘深呼吸，讓心安定後再做決定。'
   ];
-  const theme = pickBySeed(themes, seed);
-  const focus = pickBySeed(focuses, seed + 7);
+  const adviceLine = buildAdviceLine(seed);
   const advice = pickBySeed(advices, seed + 13);
+  const love = pickBySeed(loveNotes, seed + 19);
+  const work = pickBySeed(workNotes, seed + 23);
+  const money = pickBySeed(moneyNotes, seed + 29);
+  const starText = buildStarText(seed);
   const thaiColor = ctx.meta && ctx.meta.thaiDayColor ? String(ctx.meta.thaiDayColor) : '';
   const thaiHint = thaiColor ? `泰國星期色是${thaiColor}，可用小配件或穿搭呼應。` : '';
-  const ritualBase = GUARDIAN_MESSAGES[ctx.guardianCode] || pickBySeed(rituals, seed + 19);
+  const ritualBase = GUARDIAN_MESSAGES[ctx.guardianCode] || pickBySeed(rituals, seed + 37);
   return {
     date: ctx.dateText,
-    summary: `今日運勢偏向「${theme}」，把重點放在${focus}會更順。`,
-    advice: thaiHint ? `${advice} ${thaiHint}` : advice,
+    summary: `${starText} ${love}${work}${money}`,
+    advice: [adviceLine.line, advice, thaiHint].filter(Boolean).join(''),
     ritual: ritualBase,
     meta: ctx.meta || {}
   };
+}
+function normalizeSummaryStars(summary, starText){
+  const text = String(summary || '').trim();
+  if (!text) return '';
+  const clean = text.replace(/^[★☆]{5}\s*/, '');
+  if (!clean) return starText;
+  return `${starText} ${clean}`;
 }
 function normalizeFortunePayload(obj, ctx){
   if (!obj || typeof obj !== 'object') return null;
@@ -1486,7 +1528,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         try{ parsed = JSON.parse(cached); }catch(_){ parsed = null; }
         const cachedCode = String(parsed?.fortune?.meta?.guardianCode || '').toUpperCase();
         const currentCode = String(record?.guardian?.code || '').toUpperCase();
-        if (cachedCode && currentCode && cachedCode === currentCode){
+        const cachedVersion = Number(parsed?.version || 0);
+        if (cachedCode && currentCode && cachedCode === currentCode && cachedVersion === FORTUNE_FORMAT_VERSION){
           return new Response(cached, { status:200, headers });
         }
       }
@@ -1549,6 +1592,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       (quiz.answers && Object.values(quiz.answers).join('')) || ''
     ].join('|');
     const seed = fnv1aHash(seedStr);
+    const adviceLine = buildAdviceLine(seed);
+    const starText = buildStarText(seed);
     const avoidSummaries = history.map(h=>h.summary).filter(Boolean).slice(0, 5);
     const avoidAdvice = history.map(h=>h.advice).filter(Boolean).slice(0, 5);
     const prompt = [
@@ -1561,7 +1606,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
       `個人性格關鍵詞：${traitList.join('、') || '—'}`,
       `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
-      `summary 為一句話總結（20~30 字），advice 為生活小建議（1~2 句）。`,
+      `summary 需以星等開頭（例如 ★★★★☆，總共五顆），後面用 2~3 句描述感情/人際、工作/學習、財運，語氣像每日運勢解析。`,
+      `advice 為生活小建議（1~2 句），且請包含這句話作為開頭：${adviceLine.line}`,
       `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
       `只使用以上提供的天象/日期/泰國元素資訊，不要捏造其他星體或數據。`,
       avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
@@ -1584,6 +1630,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       fortune = buildLocalFortune(ctx, seed + 17);
       source = 'local';
     }
+    if (fortune && fortune.summary){
+      fortune.summary = normalizeSummaryStars(fortune.summary, starText);
+    }
+    if (fortune && fortune.advice && adviceLine && adviceLine.line){
+      if (!fortune.advice.startsWith(adviceLine.line)){
+        fortune.advice = `${adviceLine.line}${fortune.advice}`;
+      }
+    }
     if (fortune && fortune.ritual){
       fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
     }
@@ -1595,6 +1649,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       ok:true,
       fortune,
       dateKey: todayKey,
+      version: FORTUNE_FORMAT_VERSION,
       source,
       createdAt: new Date().toISOString()
     };
