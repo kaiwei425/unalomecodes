@@ -112,14 +112,24 @@
   function getRitualPhotoUrl(order){
     return order?.ritualPhotoUrl || order?.transfer?.ritualPhotoUrl || order?.ritual_photo || order?.ritualPhoto || '';
   }
+  function normalizeResultUrl(raw){
+    const val = String(raw || '').trim();
+    if (!val) return '';
+    if (/^https?:\/\//i.test(val) || val.startsWith('data:')) return val;
+    if (val.startsWith('/api/')) return val;
+    return '/api/proof/' + encodeURIComponent(val);
+  }
   function getResultPhoto(order){
     if (!order) return '';
-    if (order.resultPhotoUrl) return order.resultPhotoUrl;
+    const direct = order.resultPhotoUrl || order.resultPhoto || order.result_photo_url || order.resultPhotoURL || '';
+    const directUrl = normalizeResultUrl(direct);
+    if (directUrl) return directUrl;
     const list = Array.isArray(order.results) ? order.results : [];
     for (const item of list){
       if (!item) continue;
-      const url = item.url || item.image || item.imageUrl;
-      if (url) return url;
+      const url = item.url || item.image || item.imageUrl || '';
+      const normalized = normalizeResultUrl(url);
+      if (normalized) return normalized;
     }
     return '';
   }

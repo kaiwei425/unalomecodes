@@ -4552,6 +4552,17 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
     if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
     const order = JSON.parse(raw);
     order.resultPhotoUrl = photo;
+    const now = new Date().toISOString();
+    const results = Array.isArray(order.results) ? order.results : [];
+    const hasSame = results.some(r=>{
+      if (!r) return false;
+      const u = r.url || r.imageUrl || r.image || '';
+      return u === photo;
+    });
+    if (!hasSame) {
+      results.push({ type:'image', url: photo, ts: now });
+    }
+    order.results = results;
     order.updatedAt = new Date().toISOString();
     await store.put(id, JSON.stringify(order));
     return new Response(JSON.stringify({ ok:true, photo }), { status:200, headers: jsonHeaders });

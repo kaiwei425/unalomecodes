@@ -184,15 +184,24 @@
       reviewListEl.innerHTML = `<div style="color:#ef4444;padding:10px;">${escapeHtml(err.message || '讀取失敗')}</div>`;
     }
   }
+  function normalizeResultUrl(raw){
+    const val = String(raw || '').trim();
+    if (!val) return '';
+    if (/^https?:\/\//i.test(val) || val.startsWith('data:')) return val;
+    if (val.startsWith('/api/')) return val;
+    return '/api/proof/' + encodeURIComponent(val);
+  }
   function resolveResultPhoto(order){
     if (!order) return '';
-    if (order.resultPhotoUrl) return order.resultPhotoUrl;
+    const direct = order.resultPhotoUrl || order.resultPhoto || order.result_photo_url || order.resultPhotoURL || '';
+    const directUrl = normalizeResultUrl(direct);
+    if (directUrl) return directUrl;
     const list = Array.isArray(order.results) ? order.results : [];
     for (const item of list){
       if (!item) continue;
-      if (item.url) return item.url;
-      if (item.imageUrl) return item.imageUrl;
-      if (item.image) return item.image;
+      const candidate = item.url || item.imageUrl || item.image || '';
+      const candidateUrl = normalizeResultUrl(candidate);
+      if (candidateUrl) return candidateUrl;
     }
     return '';
   }
