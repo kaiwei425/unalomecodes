@@ -1319,6 +1319,29 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return json({ ok:false, error:String(e) }, 500);
     }
   }
+  if (pathname === '/api/admin/users/reset-guardian' && request.method === 'POST') {
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    const store = getUserStore(env);
+    if (!store){
+      return json({ ok:false, error:'USERS KV not bound' }, 500);
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const id = String(body.id || body.userId || '').trim();
+    if (!id){
+      return json({ ok:false, error:'missing_user_id' }, 400);
+    }
+    const record = await loadUserRecord(env, id);
+    if (!record){
+      return json({ ok:false, error:'user_not_found' }, 404);
+    }
+    delete record.guardian;
+    delete record.quiz;
+    await saveUserRecord(env, record);
+    return json({ ok:true, id });
+  }
 
   if (pathname === '/api/me/store') {
     const record = await getSessionUserRecord(request, env);
