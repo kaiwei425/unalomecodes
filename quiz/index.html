@@ -88,6 +88,25 @@
     .fill{height:100%;background:linear-gradient(90deg,#f59e0b,#2563eb);width:0%}
     #resultBox{border:1px solid rgba(0,0,0,0.05);}
     #resultBox img{border-radius:16px;box-shadow:0 14px 28px rgba(0,0,0,.16);}
+    .fortune-dialog{border:none;border-radius:18px;padding:0;max-width:560px;width:92%;background:#0b1022;color:#e5e7eb;box-shadow:0 24px 60px rgba(0,0,0,.45);}
+    .fortune-shell{padding:20px;display:grid;gap:16px;background:
+      radial-gradient(circle at 20% 10%, rgba(253,224,71,.08), transparent 38%),
+      radial-gradient(circle at 80% 0%, rgba(56,189,248,.12), transparent 40%),
+      #0b1022;border-radius:18px;border:1px solid rgba(148,163,184,0.2);}
+    .fortune-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .fortune-title{font-size:18px;font-weight:800;letter-spacing:.5px;}
+    .fortune-date{font-size:12px;color:#94a3b8;}
+    .fortune-close{border:none;background:rgba(255,255,255,.1);color:#e2e8f0;border-radius:999px;width:28px;height:28px;cursor:pointer;}
+    .fortune-loading{padding:16px;border-radius:14px;border:1px dashed rgba(148,163,184,.3);background:rgba(15,23,42,.55);color:#cbd5f5;font-size:13px;text-align:center;}
+    .fortune-error{padding:12px;border-radius:12px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.4);color:#fecaca;font-size:13px;}
+    .fortune-card{padding:16px;border-radius:16px;background:linear-gradient(135deg,#111827,#0f172a);border:1px solid rgba(94,234,212,.25);box-shadow:0 16px 36px rgba(0,0,0,.35);}
+    .fortune-stars{font-size:16px;letter-spacing:2px;color:#fbbf24;margin-bottom:6px;}
+    .fortune-summary{font-size:16px;font-weight:800;color:#f8fafc;margin-bottom:10px;}
+    .fortune-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(148,163,184,.18);}
+    .fortune-label{font-size:12px;letter-spacing:1px;color:#94a3b8;margin-bottom:6px;}
+    .fortune-text{font-size:14px;line-height:1.7;color:#e2e8f0;}
+    .fortune-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:#cbd5f5;}
+    .fortune-meta span{padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.6);}
     .loading-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:9999;}
     .loading-card{background:#fff;border-radius:16px;padding:18px 22px;min-width:220px;text-align:center;box-shadow:0 18px 40px rgba(15,23,42,.25);}
     .loading-spinner{width:34px;height:34px;border-radius:50%;border:3px solid rgba(37,99,235,.2);border-top-color:#f59e0b;animation:quizSpin .8s linear infinite;margin:0 auto 10px;}
@@ -131,11 +150,19 @@
       </div>
     </div>
 
+    <div class="card" id="lineFortuneEntry" style="display:none">
+      <h2>已完成守護神測驗</h2>
+      <div class="result" id="lineFortuneDesc">你可以直接領取日籤。</div>
+      <div class="footer">
+        <button type="button" class="btn primary" data-fortune-btn>領取日籤</button>
+        <button type="button" class="btn" id="lineRetakeBtn">重新測驗守護神</button>
+      </div>
+    </div>
+
     <div class="card" id="resultBox" style="display:none">
       <h2>你的守護者</h2>
       <img id="deityImg" alt="守護神" crossorigin="anonymous" referrerpolicy="no-referrer" style="display:none;width:100%;max-height:300px;object-fit:contain;border:1px solid var(--border);border-radius:12px;background:#fff;margin-bottom:12px;" />
       <div class="result" id="resultText">尚未完成作答</div>
-      <div class="note" style="margin-top:8px;">登入 Google 帳號即可領取每日日籤（建議用 Google Chrome 或 Safari 開啟）</div>
       <div style="margin:12px 0">
         <div class="step">緣分值</div>
         <div class="bar"><div id="affBar" class="fill"></div></div>
@@ -154,12 +181,42 @@
         </div>
       </div>
       <div class="footer">
+        <button type="button" class="btn primary" data-fortune-btn>領取日籤</button>
         <a id="deityLink" target="_blank" rel="noopener" class="btn">查看完整介紹</a>
         <a id="shareLink" class="btn ok">重新測驗一次</a>
         <a id="menuLink" target="_blank" rel="noopener" class="btn">瀏覽其他守護者</a>
         <a class="btn" href="/shop">前往選購專屬聖物</a>
       </div>
     </div>
+
+    <dialog id="fortuneDialogQuiz" class="fortune-dialog">
+      <div class="fortune-shell">
+        <div class="fortune-head">
+          <div>
+            <div class="fortune-title">今日專屬日籤</div>
+            <div class="fortune-date" id="fortuneDateQuiz">—</div>
+          </div>
+          <button type="button" class="fortune-close" id="fortuneCloseQuiz">✕</button>
+        </div>
+        <div class="fortune-body">
+          <div id="fortuneLoadingQuiz" class="fortune-loading">正在翻牌中…</div>
+          <div id="fortuneErrorQuiz" class="fortune-error" style="display:none;"></div>
+          <div id="fortuneCardQuiz" class="fortune-card" style="display:none;">
+            <div class="fortune-stars" id="fortuneStarsQuiz"></div>
+            <div class="fortune-summary" id="fortuneSummaryQuiz"></div>
+            <div class="fortune-section">
+              <div class="fortune-label">生活小建議</div>
+              <div class="fortune-text" id="fortuneAdviceQuiz"></div>
+            </div>
+            <div class="fortune-section">
+              <div class="fortune-label" id="fortuneRitualLabelQuiz">守護神想對你說</div>
+              <div class="fortune-text" id="fortuneRitualQuiz"></div>
+            </div>
+            <div class="fortune-meta" id="fortuneMetaQuiz"></div>
+          </div>
+        </div>
+      </div>
+    </dialog>
   </main>
   <script>window.LIFF_ID = '2008307812-RVDkHkD5';</script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -369,6 +426,43 @@ function setResultLoading(on){
   if (!resultLoading) return;
   resultLoading.style.display = on ? 'flex' : 'none';
 }
+const lineEntry = document.getElementById('lineFortuneEntry');
+const lineFortuneDesc = document.getElementById('lineFortuneDesc');
+const lineRetakeBtn = document.getElementById('lineRetakeBtn');
+let forceQuiz = false;
+function isLineClient(){
+  return !!(window.liff && window.liff.isInClient && window.liff.isInClient());
+}
+function setQuizVisible(show){
+  const ids = ['stepDow','stepZod','quizBox'];
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+  });
+}
+function showLineEntry(profile){
+  if (!lineEntry) return;
+  if (!profile || !profile.guardian || forceQuiz){
+    lineEntry.style.display = 'none';
+    setQuizVisible(true);
+    renderStep();
+    return;
+  }
+  const name = profile.guardian.name || profile.guardian.code || '守護神';
+  if (lineFortuneDesc){
+    lineFortuneDesc.textContent = `守護神：${name}。你可以直接領取日籤，或重新測驗。`;
+  }
+  lineEntry.style.display = '';
+  setQuizVisible(false);
+}
+if (lineRetakeBtn){
+  lineRetakeBtn.addEventListener('click', ()=>{
+    forceQuiz = true;
+    if (lineEntry) lineEntry.style.display = 'none';
+    setQuizVisible(true);
+    renderStep();
+  });
+}
 
 // render weekday
 const dowBox = document.getElementById('dowBox');
@@ -450,6 +544,19 @@ function nextStep(){
 }
 
 renderStep();
+if (window.authState && typeof window.authState.onProfile === 'function'){
+  window.authState.onProfile(profile=>{
+    if (isLineClient() && profile && profile.guardian && profile.quiz){
+      showLineEntry(profile);
+    }else{
+      if (!forceQuiz){
+        if (lineEntry) lineEntry.style.display = 'none';
+        setQuizVisible(true);
+        renderStep();
+      }
+    }
+  });
+}
 
 /* =====================
    結果
@@ -782,6 +889,112 @@ async function showResult(){
     setResultLoading(false);
   }
 }
+
+(function(){
+  const fortuneDialog = document.getElementById('fortuneDialogQuiz');
+  const fortuneClose = document.getElementById('fortuneCloseQuiz');
+  const fortuneLoading = document.getElementById('fortuneLoadingQuiz');
+  const fortuneError = document.getElementById('fortuneErrorQuiz');
+  const fortuneCard = document.getElementById('fortuneCardQuiz');
+  const fortuneDate = document.getElementById('fortuneDateQuiz');
+  const fortuneStars = document.getElementById('fortuneStarsQuiz');
+  const fortuneSummary = document.getElementById('fortuneSummaryQuiz');
+  const fortuneAdvice = document.getElementById('fortuneAdviceQuiz');
+  const fortuneRitual = document.getElementById('fortuneRitualQuiz');
+  const fortuneMeta = document.getElementById('fortuneMetaQuiz');
+  const fortuneRitualLabel = document.getElementById('fortuneRitualLabelQuiz');
+
+  function showDialog(dlg){
+    if (!dlg) return;
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.setAttribute('open','open');
+  }
+  function closeDialog(dlg){
+    if (!dlg) return;
+    if (typeof dlg.close === 'function') dlg.close();
+    else dlg.removeAttribute('open');
+  }
+  function setFortuneLoading(){
+    if (fortuneLoading) fortuneLoading.style.display = '';
+    if (fortuneError) fortuneError.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = 'none';
+  }
+  function setFortuneError(message){
+    if (fortuneError){
+      fortuneError.textContent = message || '暫時無法取得日籤，請稍後再試。';
+      fortuneError.style.display = '';
+    }
+    if (fortuneLoading) fortuneLoading.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = 'none';
+  }
+  function renderFortune(fortune){
+    if (!fortune) return;
+    if (fortuneDate) fortuneDate.textContent = fortune.date || '';
+    if (fortuneStars){
+      const stars = fortune.stars || '';
+      fortuneStars.textContent = stars;
+      fortuneStars.style.display = stars ? '' : 'none';
+    }
+    if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
+    if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
+    if (fortuneMeta){
+      const meta = fortune.meta || {};
+      const tags = [];
+      if (meta.userZodiac){
+        const zodiacLabel = meta.userZodiacElement ? `${meta.userZodiac}（${meta.userZodiacElement}象）` : meta.userZodiac;
+        tags.push(`星座 ${zodiacLabel}`);
+      }
+      if (meta.moonPhase) tags.push(`月相 ${meta.moonPhase}`);
+      if (meta.iching) tags.push(`易經 ${meta.iching}`);
+      if (meta.todayDow) tags.push(`今日星期${meta.todayDow}`);
+      if (meta.thaiDayColor) tags.push(`泰國星期色 ${meta.thaiDayColor}`);
+      if (meta.buddhistYear) tags.push(`佛曆 ${meta.buddhistYear}`);
+      fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+    }
+    if (fortuneRitualLabel){
+      const gName = (fortune.meta && fortune.meta.guardianName) || '';
+      fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
+    }
+    if (fortuneLoading) fortuneLoading.style.display = 'none';
+    if (fortuneError) fortuneError.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = '';
+  }
+  async function fetchFortune(){
+    setFortuneLoading();
+    try{
+      const res = await fetch('/api/fortune', { cache:'no-store', credentials:'include' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取日籤。');
+        throw new Error((data && data.error) || '取得日籤失敗');
+      }
+      renderFortune(data.fortune || null);
+    }catch(err){
+      setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
+    }
+  }
+  async function openFortuneDialog(){
+    const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
+    if (!loggedIn){
+      if (window.authState && typeof window.authState.promptLogin === 'function'){
+        window.authState.promptLogin('請先登入後再領取日籤。');
+      }
+      return;
+    }
+    showDialog(fortuneDialog);
+    await fetchFortune();
+  }
+  document.addEventListener('click', ev=>{
+    const btn = ev.target.closest('[data-fortune-btn]');
+    if (!btn) return;
+    ev.preventDefault();
+    openFortuneDialog();
+  });
+  if (fortuneClose){
+    fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
+  }
+})();
 </script>
 </body>
 </html>
