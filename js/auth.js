@@ -361,22 +361,26 @@
   }
 
   async function login(){
-    if (await initLiff()){
+    const liffOk = await initLiff();
+    if (liffOk){
       try{
-        if (!window.liff.isLoggedIn()){
-          window.liff.login({ redirectUri: window.location.href });
-          return;
-        }
-        const idToken = window.liff.getIDToken ? window.liff.getIDToken() : '';
-        if (idToken){
-          await fetch('/api/auth/line/liff', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json' },
-            credentials:'include',
-            body: JSON.stringify({ id_token: idToken })
-          });
-          window.location.reload();
-          return;
+        const inClient = window.liff && window.liff.isInClient && window.liff.isInClient();
+        if (inClient){
+          if (!window.liff.isLoggedIn()){
+            window.liff.login({ redirectUri: window.location.href });
+            return;
+          }
+          const idToken = window.liff.getIDToken ? window.liff.getIDToken() : '';
+          if (idToken){
+            await fetch('/api/auth/line/liff', {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json' },
+              credentials:'include',
+              body: JSON.stringify({ id_token: idToken })
+            });
+            window.location.reload();
+            return;
+          }
         }
       }catch(_){}
     }
