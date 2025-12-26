@@ -697,13 +697,32 @@ const items = Array.isArray(o.items) ? o.items : [{
   }, 0);
 }
 
-// init
-document.addEventListener('DOMContentLoaded', ()=>{
-  try{ loadOrders(); }catch(e){ console.error('init loadOrders error', e); }
-});
+async function ensureAdminSession(){
+  const gate = document.getElementById('loginGate');
+  if (!gate) return true;
+  try{
+    const res = await authedFetch('/api/auth/admin/me', { cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data && data.ok){
+      gate.style.display = 'none';
+      return true;
+    }
+  }catch(_){}
+  gate.style.display = 'flex';
+  return false;
+}
 
-// 保險措施：若 DOMContentLoaded 已經觸發過，仍直接嘗試載入一次
-try{ loadOrders(); }catch(e){ console.error('inline loadOrders error', e); }
+// init
+async function boot(){
+  try{
+    if (await ensureAdminSession()) loadOrders();
+  }catch(e){ console.error('init loadOrders error', e); }
+}
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', boot);
+}else{
+  boot();
+}
 
 // sort change
 const sortSel = document.getElementById('sortSel');
@@ -716,21 +735,23 @@ let __autoTimer = setInterval(()=>{
   loadOrders();
 }, 60000);
 
-// simple login gate using sessionStorage
+// login gate (admin OAuth)
 (function(){
   const gate = document.getElementById('loginGate');
   if (!gate) return;
-  const key = 'adminAuth';
-  if (sessionStorage.getItem(key) === '1'){ gate.style.display='none'; return; }
-  gate.style.display = 'flex';
-  document.getElementById('loginOk').addEventListener('click', ()=>{
-    const v = (document.getElementById('loginPwd').value||'').trim();
-    if (v === '123'){ sessionStorage.setItem(key,'1'); gate.style.display='none'; loadOrders(); }
-    else { alert('密碼錯誤'); }
-  });
-  document.getElementById('loginCancel').addEventListener('click', ()=>{
-    gate.style.display='none'; // 允許查看但不載入資料
-  });
+  const btnGo = document.getElementById('loginGo');
+  if (btnGo){
+    btnGo.addEventListener('click', ()=>{
+      const redirect = encodeURIComponent('/admin/orders.html');
+      window.location.href = `${API_BASE}/api/auth/google/admin/start?redirect=${redirect}`;
+    });
+  }
+  const btnCancel = document.getElementById('loginCancel');
+  if (btnCancel){
+    btnCancel.addEventListener('click', ()=>{
+      gate.style.display='none'; // 允許查看但不載入資料
+    });
+  }
 })();
 
 </script>
@@ -751,10 +772,9 @@ let __autoTimer = setInterval(()=>{
   <div id="loginCard">
     <h2>後台登入</h2>
     <div class="muted">請輸入密碼以查看訂單</div>
-    <input id="loginPwd" type="password" placeholder="輸入密碼">
-    <div class="hint">預設密碼：123（之後可改為你的自訂密碼）</div>
+    <div class="hint">請使用管理員 Google 帳號登入</div>
     <div class="row">
-      <button class="btn gold" id="loginOk">登入</button>
+      <button class="btn gold" id="loginGo">登入管理員</button>
       <button class="btn" id="loginCancel">取消</button>
     </div>
   </div>

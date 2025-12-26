@@ -628,7 +628,23 @@ if (url.pathname === '/payment-result' && request.method === 'POST') {
         form.get('customfield1') ||
         form.get('orderId') ||
         form.get('order_id') || '';
-      const target = new URL(url.origin + '/payment-result' + (oid ? ('?orderId=' + encodeURIComponent(oid)) : ''));
+      let token = '';
+      if (env.ORDERS && oid) {
+        try {
+          const raw = await env.ORDERS.get(String(oid));
+          if (raw) {
+            const order = JSON.parse(raw);
+            if (!order.resultToken) {
+              order.resultToken = makeToken(32);
+              await env.ORDERS.put(String(oid), JSON.stringify(order));
+            }
+            token = String(order.resultToken || '');
+          }
+        } catch (_) {}
+      }
+      const target = new URL(url.origin + '/payment-result');
+      if (oid) target.searchParams.set('orderId', String(oid));
+      if (token) target.searchParams.set('token', token);
       return Response.redirect(target.toString(), 302);
     } catch (e) {
       return Response.redirect(url.origin + '/payment-result', 302);
@@ -1817,6 +1833,9 @@ if (pathname === '/api/order/confirm-transfer' && request.method === 'POST') {
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: __headersJSON__() });
   }
+  if (!(await isAdmin(request, env))) {
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: __headersJSON__() });
+  }
   try {
     const body = await request.json();
     const id = String(body.id || '');
@@ -1923,6 +1942,7 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       ? order.items.map(it => `${it.productName||''}x${Math.max(1, Number(it.qty||1))}`).join('#')
       : `${order.productName || '訂單'}x${Math.max(1, Number(order.qty||1))}`;
 
+    const tokenParam = order.resultToken ? `&token=${encodeURIComponent(order.resultToken)}` : '';
     const params = {
       MerchantID: merchantId,
       MerchantTradeNo: tradeNo,
@@ -1932,8 +1952,8 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       TradeDesc: '聖物訂單',
       ItemName: itemsStr,
       ReturnURL: `${origin}/api/payment/ecpay/notify`,
-      OrderResultURL: `${origin}/payment-result`,
-      ClientBackURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}`,
+      OrderResultURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}${tokenParam}`,
+      ClientBackURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}${tokenParam}`,
       ChoosePayment: 'Credit',
       EncryptType: 1,
       CustomField1: order.id
@@ -3245,17 +3265,26 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
   }
+  const admin = await isAdmin(request, env);
   const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
   const qOrdRaw  = getAny(url.searchParams, ['order','orderId','order_id','oid','qOrder']);
   const qPhone = normalizePhone(qPhoneRaw);
   const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
-  const qOrd   = (String(qOrdRaw||'').replace(/\D/g, '') || '').slice(-5);
-  const needFilter = !!((qPhone && qLast5) || qOrd);
-  const isPartialLookup = (!qOrd) && (!!(qPhone || qLast5) && !(qPhone && qLast5));
+  const qOrdFull = (String(qOrdRaw||'').replace(/\D/g, '') || '');
+  const qOrd   = qOrdFull.slice(-5);
+  const hasOrderLookup = !!(qOrd && qPhone);
+  const hasBankLookup = !!(qPhone && qLast5);
+  const hasLookup = hasOrderLookup || hasBankLookup;
+  const hasAnyLookup = !!(qPhone || qLast5 || qOrd);
+  const needFilter = hasLookup;
+  const isPartialLookup = !hasLookup && hasAnyLookup;
 
   if (isPartialLookup) {
     return new Response(JSON.stringify({ ok:true, orders: [] }), { status:200, headers: jsonHeaders });
+  }
+  if (!admin && !hasLookup) {
+    return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers: jsonHeaders });
   }
   try {
     const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
@@ -3376,6 +3405,9 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
 if (pathname === '/api/orders/export' && request.method === 'GET') {
   if (!env.ORDERS) {
     return new Response('ORDERS KV not bound', { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
+  }
+  if (!(await isAdmin(request, env))) {
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
   }
   try {
     const origin = new URL(request.url).origin;
@@ -3576,15 +3608,11 @@ ${renderLineBanner()}
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
         const adminKey = request.headers.get("x-admin-key") || request.headers.get("X-Admin-Key") || url.searchParams.get("admin_key");
-        if (env.ADMIN_KEY) {
-          if (adminKey !== env.ADMIN_KEY) {
-            return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
-          }
-        } else {
-          // Dev fallback: require a non-empty adminKey
-          if (!adminKey) {
-            return new Response(JSON.stringify({ ok:false, error:'Unauthorized (missing admin_key and no ADMIN_KEY set)' }), { status:401, headers: jsonHeaders });
-          }
+        if (!env.ADMIN_KEY) {
+          return new Response(JSON.stringify({ ok:false, error:'Unauthorized (ADMIN_KEY not set)' }), { status:401, headers: jsonHeaders });
+        }
+        if (adminKey !== env.ADMIN_KEY) {
+          return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
         }
         try{
           const id = decodeURIComponent(m[1]);
@@ -3624,14 +3652,11 @@ ${renderLineBanner()}
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
         const adminKey = request.headers.get("x-admin-key") || request.headers.get("X-Admin-Key") || url.searchParams.get("admin_key");
-        if (env.ADMIN_KEY) {
-          if (adminKey !== env.ADMIN_KEY) {
-            return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
-          }
-        } else {
-          if (!adminKey) {
-            return new Response(JSON.stringify({ ok:false, error:'Unauthorized (missing admin_key and no ADMIN_KEY set)' }), { status:401, headers: jsonHeaders });
-          }
+        if (!env.ADMIN_KEY) {
+          return new Response(JSON.stringify({ ok:false, error:'Unauthorized (ADMIN_KEY not set)' }), { status:401, headers: jsonHeaders });
+        }
+        if (adminKey !== env.ADMIN_KEY) {
+          return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
         }
         try{
           const id = decodeURIComponent(m[1]);
@@ -3680,14 +3705,11 @@ ${renderLineBanner()}
         return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
       }
       const adminKey = request.headers.get("x-admin-key") || request.headers.get("X-Admin-Key") || url.searchParams.get("admin_key");
-      if (env.ADMIN_KEY) {
-        if (adminKey !== env.ADMIN_KEY) {
-          return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
-        }
-      } else {
-        if (!adminKey) {
-          return new Response(JSON.stringify({ ok:false, error:'Unauthorized (missing admin_key and no ADMIN_KEY set)' }), { status:401, headers: jsonHeaders });
-        }
+      if (!env.ADMIN_KEY) {
+        return new Response(JSON.stringify({ ok:false, error:'Unauthorized (ADMIN_KEY not set)' }), { status:401, headers: jsonHeaders });
+      }
+      if (adminKey !== env.ADMIN_KEY) {
+        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       }
       try {
         const ct = (request.headers.get('content-type') || '').toLowerCase();
@@ -3888,11 +3910,36 @@ if (pathname === '/api/order') {
 
   if (request.method === 'GET') {
     try {
+      const admin = await isAdmin(request, env);
       const id = url.searchParams.get('id');
+      const token = String(url.searchParams.get('token') || '').trim();
+      const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
+      const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
+      const qPhone = normalizePhone(qPhoneRaw);
+      const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
       if (id) {
         const raw = await env.ORDERS.get(id);
         if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
         const one = JSON.parse(raw);
+        if (!admin) {
+          let allowed = false;
+          if (token && token === one.resultToken) {
+            allowed = true;
+          } else if (qPhone && qLast5) {
+            const phoneCandidates = [
+              one?.buyer?.phone, one?.buyer?.contact, one?.phone, one?.contact, one?.recipientPhone
+            ].filter(Boolean);
+            const last5Candidates = [
+              one?.transferLast5, one?.last5, one?.payment?.last5, one?.bank?.last5
+            ].filter(Boolean);
+            const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
+            const lOK = last5Candidates.some(l => matchLast5(l, qLast5));
+            allowed = pOK && lOK;
+          }
+          if (!allowed) {
+            return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+          }
+        }
         const rec = normalizeReceiptUrl(one, origin);
         const ritualUrl =
           one.ritualPhotoUrl ||
@@ -3905,6 +3952,9 @@ if (pathname === '/api/order') {
           ritualPhoto: ritualUrl || ""
         });
         return new Response(JSON.stringify({ ok:true, order: merged }), { status:200, headers: jsonHeaders });
+      }
+      if (!admin) {
+        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       }
       const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
       const ids = idxRaw ? JSON.parse(idxRaw) : [];
@@ -5228,7 +5278,34 @@ async function resizeImage(url, env, origin){
     }
     if (!target) return withCORS(json({ok:false, error:"Missing u or key"}, 400));
 
-    const req = new Request(target, {
+    let targetUrl;
+    try {
+      targetUrl = new URL(target, origin);
+    } catch (_) {
+      return withCORS(json({ ok:false, error:"Invalid target url" }, 400));
+    }
+    if (!/^https?:$/.test(targetUrl.protocol)) {
+      return withCORS(json({ ok:false, error:"Invalid target protocol" }, 400));
+    }
+    const allowHosts = new Set();
+    const addHost = (val)=>{
+      if (!val) return;
+      try{
+        const u0 = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
+        if (u0.host) allowHosts.add(u0.host);
+      }catch(_){}
+    };
+    addHost(origin);
+    addHost(env.FILE_HOST);
+    addHost(env.PUBLIC_FILE_HOST);
+    addHost(env.SITE_URL);
+    const extraHosts = (env.IMG_PROXY_HOSTS || env.IMG_PROXY_ALLOWLIST || '').split(',').map(s=>s.trim()).filter(Boolean);
+    extraHosts.forEach(addHost);
+    if (allowHosts.size && !allowHosts.has(targetUrl.host)) {
+      return withCORS(json({ ok:false, error:"Target host not allowed" }, 400));
+    }
+
+    const req = new Request(targetUrl.toString(), {
       headers: { 'Accept': 'image/*' },
       cf: { image: { width: w, quality: q, fit: 'scale-down', format: fmt } }
     });

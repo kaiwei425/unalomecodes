@@ -1375,32 +1375,12 @@ function __cartPricing(includePendingDetail){
       usp1.set('last5', l5);
       usp1.set('lookupOnly','1');
 
-      var usp2 = new URLSearchParams();
-      usp2.set('lookup','1');
-      usp2.set('phone', phone);
-      usp2.set('last5', l5);
-
       // --- Tier 1: filtered GET endpoints (preferred, zero side effects) ---
       pushArr(await fetchJsonSafe('/api/orders/lookup?'+usp1.toString(), {headers:headersRO}));
       pushArr(await fetchJsonSafe('/api/orders?'+usp1.toString(), {headers:headersRO}));
-      pushArr(await fetchJsonSafe('/api/payment/bank?'+usp2.toString(), {headers:headersRO}));
     }
 
-    // --- Tier 2: plain reads (backend may ignore filters), capped by limit param if supported ---
-    if (all.length === 0){
-      pushArr(await fetchJsonSafe('/api/orders?limit=200', {headers:headersRO}));
-      if (!usingOrder){
-        pushArr(await fetchJsonSafe('/api/payment/bank?limit=200', {headers:headersRO}));
-      }
-    }
-
-    // --- Tier 3: ultimate fallback to bare endpoints (no params) ---
-    if (all.length === 0){
-      pushArr(await fetchJsonSafe('/api/orders', {headers:headersRO}));
-      if (!usingOrder){
-        pushArr(await fetchJsonSafe('/api/payment/bank', {headers:headersRO}));
-      }
-    }
+    // No unfiltered fallbacks: avoid leaking other customers' orders
 
     // De-dup (by id + amount)
     var seen = new Set();
