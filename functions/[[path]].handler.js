@@ -35,6 +35,60 @@ const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
+function resolveCorsOrigin(request, env){
+  const originHeader = (request.headers.get('Origin') || '').trim();
+  let selfOrigin = '';
+  try{ selfOrigin = new URL(request.url).origin; }catch(_){}
+  const allow = new Set();
+  const addOrigin = (val)=>{
+    if (!val) return;
+    try{
+      const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
+      allow.add(u.origin);
+    }catch(_){}
+  };
+  if (selfOrigin) allow.add(selfOrigin);
+  addOrigin(env.SITE_URL);
+  addOrigin(env.PUBLIC_SITE_URL);
+  addOrigin(env.PUBLIC_ORIGIN);
+  const extra = (env.CORS_ORIGINS || env.ALLOWED_ORIGINS || '').split(',').map(s=>s.trim()).filter(Boolean);
+  extra.forEach(addOrigin);
+  if (originHeader && allow.has(originHeader)) return originHeader;
+  return selfOrigin || '';
+}
+function jsonHeadersFor(request, env){
+  const h = Object.assign({}, jsonHeaders);
+  const origin = resolveCorsOrigin(request, env);
+  if (origin) {
+    h['Access-Control-Allow-Origin'] = origin;
+    h['Vary'] = 'Origin';
+  } else {
+    delete h['Access-Control-Allow-Origin'];
+  }
+  return h;
+}
+function isAllowedOrigin(request, env, extraOriginsRaw){
+  const originHeader = (request.headers.get('Origin') || '').trim();
+  if (!originHeader) return true;
+  let selfOrigin = '';
+  try{ selfOrigin = new URL(request.url).origin; }catch(_){}
+  const allow = new Set();
+  const addOrigin = (val)=>{
+    if (!val) return;
+    try{
+      const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
+      allow.add(u.origin);
+    }catch(_){}
+  };
+  if (selfOrigin) allow.add(selfOrigin);
+  addOrigin(env.SITE_URL);
+  addOrigin(env.PUBLIC_SITE_URL);
+  addOrigin(env.PUBLIC_ORIGIN);
+  const extra = (env.CORS_ORIGINS || env.ALLOWED_ORIGINS || extraOriginsRaw || '')
+    .split(',').map(s=>s.trim()).filter(Boolean);
+  extra.forEach(addOrigin);
+  return allow.has(originHeader);
+}
 function parseAdminEmails(env){
   try{
     const raw = env.ADMIN_ALLOWED_EMAILS || '';
@@ -3271,27 +3325,33 @@ if (pathname === '/cvs_callback' && request.method === 'GET') {
 // Back-compat alias: GET /api/orders and /api/orders/lookup -> { ok:true, orders:[...] }
 if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request.method === 'GET') {
   if (!env.ORDERS) {
-    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeadersFor(request, env) });
   }
+  const orderHeaders = jsonHeadersFor(request, env);
   const admin = await isAdmin(request, env);
   const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
   const qOrdRaw  = getAny(url.searchParams, ['order','orderId','order_id','oid','qOrder']);
   const qPhone = normalizePhone(qPhoneRaw);
   const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
+  const qOrdInput = String(qOrdRaw || '').trim();
   const qOrd   = normalizeOrderSuffix(qOrdRaw, 5);
-  const hasOrderLookup = !!(qOrd && qPhone);
+  const qOrdValid = qOrd.length === 5;
+  if (qOrdInput && !qOrdValid) {
+    return new Response(JSON.stringify({ ok:false, error:'訂單編號末五碼需為 5 位英數' }), { status:400, headers: orderHeaders });
+  }
+  const hasOrderLookup = !!(qOrdValid && qPhone);
   const hasBankLookup = !!(qPhone && qLast5);
   const hasLookup = hasOrderLookup || hasBankLookup;
-  const hasAnyLookup = !!(qPhone || qLast5 || qOrd);
+  const hasAnyLookup = !!(qPhone || qLast5 || qOrdInput);
   const needFilter = hasLookup;
   const isPartialLookup = !hasLookup && hasAnyLookup;
 
   if (isPartialLookup) {
-    return new Response(JSON.stringify({ ok:true, orders: [] }), { status:200, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:true, orders: [] }), { status:200, headers: orderHeaders });
   }
   if (!admin && !hasLookup) {
-    return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers: orderHeaders });
   }
   try {
     const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
@@ -3408,18 +3468,18 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
         }
       } catch {}
     }
-    return new Response(JSON.stringify({ ok:true, orders: out }), { status:200, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:true, orders: out }), { status:200, headers: orderHeaders });
   } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: orderHeaders });
   }
 }
 /* --- Export selected orders to CSV: GET /api/orders/export --- */
 if (pathname === '/api/orders/export' && request.method === 'GET') {
   if (!env.ORDERS) {
-    return new Response('ORDERS KV not bound', { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
+    return new Response('ORDERS KV not bound', { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': resolveCorsOrigin(request, env) } });
   }
   if (!(await isAdmin(request, env))) {
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
   }
   try {
     const origin = new URL(request.url).origin;
@@ -3502,10 +3562,10 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
     h.set('Content-Type', 'text/csv; charset=utf-8');
     h.set('Content-Disposition', `attachment; filename="orders_${Date.now()}.csv"`);
     h.set('Cache-Control', 'no-store');
-    h.set('Access-Control-Allow-Origin', '*');
+    h.set('Access-Control-Allow-Origin', resolveCorsOrigin(request, env));
     return new Response(csv, { status: 200, headers: h });
   } catch (e) {
-    return new Response(String(e), { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
+    return new Response(String(e), { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': resolveCorsOrigin(request, env) } });
   }
 }
     /* --- Public: get ritual results with token
@@ -3806,13 +3866,14 @@ ${renderLineBanner()}
 
 if (pathname === '/api/order') {
   if (!env.ORDERS) {
-    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeadersFor(request, env) });
   }
+  const orderHeaders = jsonHeadersFor(request, env);
 
   if (request.method === 'POST') {
     const orderUser = await getSessionUser(request, env);
     if (!orderUser) {
-      return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: orderHeaders });
     }
     try {
       const body = await request.json();
@@ -3827,7 +3888,7 @@ if (pathname === '/api/order') {
         line:  String(body?.buyer?.line  || '')
       };
       if (!productId || !productName || !(price >= 0)) {
-        return new Response(JSON.stringify({ ok:false, error:'Missing product info' }), { status:400, headers: jsonHeaders });
+        return new Response(JSON.stringify({ ok:false, error:'Missing product info' }), { status:400, headers: orderHeaders });
       }
       // Optional coupon from simple order flow (one-time usage)
       const couponCode  = String(body.coupon || body.couponCode || "").trim().toUpperCase();
@@ -3902,9 +3963,9 @@ if (pathname === '/api/order') {
       // Decrement inventory for this order (variant-aware if provided)
       try { await decStockSingle(env, productId, body.variantName || body.variant || '', qty); } catch(_){}
 
-      return new Response(JSON.stringify({ ok:true, id }), { status:200, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:true, id }), { status:200, headers: orderHeaders });
     } catch (e) {
-      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: orderHeaders });
     }
   }
 
@@ -3919,7 +3980,7 @@ if (pathname === '/api/order') {
       const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
       if (id) {
         const raw = await env.ORDERS.get(id);
-        if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+        if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: orderHeaders });
         const one = JSON.parse(raw);
         if (!admin) {
           let allowed = false;
@@ -3937,7 +3998,7 @@ if (pathname === '/api/order') {
             allowed = pOK && lOK;
           }
           if (!allowed) {
-            return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+            return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: orderHeaders });
           }
         }
         const rec = normalizeReceiptUrl(one, origin);
@@ -3951,10 +4012,10 @@ if (pathname === '/api/order') {
           ritualPhotoUrl: ritualUrl || "",
           ritualPhoto: ritualUrl || ""
         });
-        return new Response(JSON.stringify({ ok:true, order: merged }), { status:200, headers: jsonHeaders });
+        return new Response(JSON.stringify({ ok:true, order: merged }), { status:200, headers: orderHeaders });
       }
       if (!admin) {
-        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: orderHeaders });
       }
       const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
       const ids = idxRaw ? JSON.parse(idxRaw) : [];
@@ -3965,39 +4026,39 @@ if (pathname === '/api/order') {
         if (!raw) continue;
         try { out.push(JSON.parse(raw)); } catch {}
       }
-      return new Response(JSON.stringify({ ok:true, items: out }), { status:200, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:true, items: out }), { status:200, headers: orderHeaders });
     } catch (e) {
-      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: orderHeaders });
     }
   }
 
   if (request.method === 'DELETE') {
     if (!(await isAdmin(request, env))) {
-      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: orderHeaders });
     }
     try {
       const id = url.searchParams.get('id');
-      if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
+      if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: orderHeaders });
       await env.ORDERS.delete(id);
       const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
       const ids = idxRaw ? JSON.parse(idxRaw) : [];
       const next = ids.filter(x => x !== id);
       await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(next));
-      return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:true }), { status:200, headers: orderHeaders });
     } catch (e) {
-      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: orderHeaders });
     }
   }
 
-  return new Response(JSON.stringify({ ok:false, error:'Method Not Allowed' }), { status:405, headers: jsonHeaders });
+  return new Response(JSON.stringify({ ok:false, error:'Method Not Allowed' }), { status:405, headers: orderHeaders });
 }
 
 if (pathname === '/api/order/status' && request.method === 'POST') {
   if (!env.ORDERS) {
-    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeadersFor(request, env) });
   }
   if (!(await isAdmin(request, env))) {
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
   }
   try {
     
@@ -4005,22 +4066,22 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     const id = String(body.id || '');
     const action = String(body.action || '').toLowerCase();
     const status = String(body.status || '');
-    if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeaders });
+    if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeadersFor(request, env) });
 
     if (action === 'delete') {
       const raw0 = await env.ORDERS.get(id);
-      if (!raw0) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+      if (!raw0) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeadersFor(request, env) });
       await env.ORDERS.delete(id);
       const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
       const ids = idxRaw ? JSON.parse(idxRaw) : [];
       const next = ids.filter(x => x !== id);
       await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(next));
-      return new Response(JSON.stringify({ ok:true, deleted:1 }), { status:200, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:true, deleted:1 }), { status:200, headers: jsonHeadersFor(request, env) });
     }
 
     if (action === 'set' || (!action && status)) {
       const raw = await env.ORDERS.get(id);
-      if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
+      if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeadersFor(request, env) });
       const obj = JSON.parse(raw);
       const prevStatus = obj.status || '';
       let statusChanged = false;
@@ -4039,12 +4100,12 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
           console.error('status update email error', err);
         }
       }
-      return new Response(JSON.stringify({ ok:true, status: obj.status, notified: emailNotified }), { status:200, headers: jsonHeaders });
+      return new Response(JSON.stringify({ ok:true, status: obj.status, notified: emailNotified }), { status:200, headers: jsonHeadersFor(request, env) });
     }
 
-    return new Response(JSON.stringify({ ok:false, error:'Missing action/status' }), { status:400, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'Missing action/status' }), { status:400, headers: jsonHeadersFor(request, env) });
     } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeadersFor(request, env) });
   }
 }
 
@@ -4501,14 +4562,18 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
 
 if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
   const phone = normalizeTWPhoneStrict(url.searchParams.get('phone')||'');
-  const orderDigits = normalizeOrderSuffix(url.searchParams.get('order')||'', 5);
+  const orderRaw = String(url.searchParams.get('order')||'').trim();
+  const orderDigits = normalizeOrderSuffix(orderRaw, 5);
   const bankDigits = lastDigits(url.searchParams.get('bank')||'', 5);
+  if (orderRaw && orderDigits.length !== 5){
+    return new Response(JSON.stringify({ ok:false, error:'訂單編號末五碼需為 5 位英數' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
   if (!phone || (!orderDigits && !bankDigits)){
-    return new Response(JSON.stringify({ ok:false, error:'缺少查詢條件' }), { status:400, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'缺少查詢條件' }), { status:400, headers: jsonHeadersFor(request, env) });
   }
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
-    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeadersFor(request, env) });
   }
   let list = [];
   try{
@@ -4529,7 +4594,7 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
       matches.push(order);
     }
   }
-  return new Response(JSON.stringify({ ok:true, orders: matches }), { status:200, headers: jsonHeaders });
+  return new Response(JSON.stringify({ ok:true, orders: matches }), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
     // 圖片上傳
@@ -4697,11 +4762,40 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
 /* ========== /api/upload ========== */
 async function handleUpload(request, env, origin) {
   try {
+    if (!env.R2_BUCKET) return withCORS(json({ ok:false, error:"R2 bucket not bound" }, 500));
+    if (!isAllowedOrigin(request, env, env.UPLOAD_ORIGINS || '')) {
+      return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
+    }
     const form = await request.formData();
     let files = form.getAll("files[]");
     if (!files.length) files = form.getAll("file");
     if (!files.length) return json({ ok:false, error:"No files provided" }, 400);
 
+    const allowedMimes = new Set([
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+      "image/heic",
+      "image/heif",
+      "application/pdf"
+    ]);
+    const allowedExts = new Set([
+      "jpg","jpeg","png","webp","gif","avif","heic","heif","pdf"
+    ]);
+    const extMimeMap = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+      gif: "image/gif",
+      avif: "image/avif",
+      heic: "image/heic",
+      heif: "image/heif",
+      pdf: "application/pdf"
+    };
     const out = [];
     const day = new Date();
     const y = day.getFullYear();
@@ -4713,12 +4807,24 @@ async function handleUpload(request, env, origin) {
       if (f.size && f.size > 3 * 1024 * 1024) {
         return json({ ok:false, error:"File too large (>3MB)" }, 413);
       }
-      const ext = guessExt(f.type) || safeExt(f.name) || "bin";
+      const mime = String(f.type || "").toLowerCase();
+      const extGuess = (guessExt(mime) || safeExt(f.name) || "").toLowerCase();
+      const isGenericMime = !mime || mime === "application/octet-stream";
+      const mimeAllowed = mime && allowedMimes.has(mime);
+      const extAllowed = extGuess && allowedExts.has(extGuess);
+      if (!isGenericMime && !mimeAllowed) {
+        return json({ ok:false, error:"Unsupported file type" }, 415);
+      }
+      if (!extAllowed && !mimeAllowed) {
+        return json({ ok:false, error:"Unsupported file type" }, 415);
+      }
+      const ext = extGuess || "bin";
       const key = `uploads/${y}${m}${d}/${crypto.randomUUID()}.${ext}`;
 
+      const contentType = mimeAllowed ? mime : (extMimeMap[ext] || mime || "application/octet-stream");
       await env.R2_BUCKET.put(key, f.stream(), {
         httpMetadata: {
-          contentType: f.type || "application/octet-stream",
+          contentType,
           contentDisposition: "inline"
         }
       });

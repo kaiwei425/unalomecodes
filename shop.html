@@ -836,6 +836,9 @@ function ensureCandleFields(required){
       }
     }catch(_){}
   }
+  function normalizeOrderSuffix(val){
+    return String(val||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-5);
+  }
   window.showOrderSuccessPanel = function(payload, legacyLast5){
     var opts = (payload && typeof payload === 'object' && !Array.isArray(payload))
       ? payload
@@ -854,7 +857,7 @@ function ensureCandleFields(required){
       }catch(_){}
       var order = (opts.order && typeof opts.order === 'object') ? opts.order : {};
       var id = opts.orderId || order.id || opts.id || '';
-      var digitsId = id ? String(id).replace(/\D+/g,'') : '';
+      var suffixId = id ? normalizeOrderSuffix(id) : '';
       var amount = (typeof opts.amount === 'number') ? opts.amount : Number(order.amount || 0) || 0;
       var shipping = (typeof opts.shipping === 'number') ? opts.shipping : Number(order.shippingFee || order.shipping || 0) || 0;
       var discount = (typeof opts.discount === 'number')
@@ -875,7 +878,7 @@ function ensureCandleFields(required){
       var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
       var note = opts.note || '請截圖保存本頁資訊，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
       var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : '轉帳匯款');
-      var lookupDigits = opts.orderLookupDigits || digitsId.slice(-5);
+      var lookupDigits = opts.orderLookupDigits || suffixId;
       var phone = opts.phone || '';
       var last5 = opts.last5 || (order.transferLast5 || '');
       var continueBtn = document.getElementById('successContinue');

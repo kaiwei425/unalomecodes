@@ -31,6 +31,11 @@
   </div>
 <script>
 (function(){
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
   const params = new URLSearchParams(location.search);
   const orderId = params.get('orderId') || params.get('id') || '';
   const token = params.get('token') || '';
@@ -66,11 +71,11 @@
       statusEl.textContent = (o.status === '已付款待出貨') ? '付款成功，已為您安排出貨' : (o.status || '處理中');
       statusEl.className = 'status ' + (o.status === '已付款待出貨' ? 'ok' : 'warn');
       const html = [
-        `訂單編號：${o.id}`,
+        `訂單編號：${escapeHtml(o.id || '')}`,
         `金額：NT$ ${Number(o.amount||0).toLocaleString('zh-TW')}`,
-        `付款方式：${o.method || '信用卡'}`,
-        `狀態：${o.status || '處理中'}`,
-        o.buyer ? `聯絡人：${o.buyer.name || ''}（${o.buyer.phone || ''}）` : ''
+        `付款方式：${escapeHtml(o.method || '信用卡')}`,
+        `狀態：${escapeHtml(o.status || '處理中')}`,
+        o.buyer ? `聯絡人：${escapeHtml(o.buyer.name || '')}（${escapeHtml(o.buyer.phone || '')}）` : ''
       ].filter(Boolean).join('<br>');
       detailEl.style.display = 'block';
       detailEl.innerHTML = html;
