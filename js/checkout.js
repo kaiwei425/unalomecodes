@@ -1315,9 +1315,6 @@ function __cartPricing(includePendingDetail){
         + contactHtml
         + '<div class="ok-row" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;margin-top:8px">'
         +   '<div class="ok-status">'+ statusBadge(o.status) +'</div>'
-        +   ( (o && o.resultToken)
-              ? ('<div class="ok-actions"><a class="btn" style="padding:6px 10px;font-size:13px" target="_blank" rel="noopener" href="/o/'+ encodeURIComponent(String(id||'')) +'?token='+ encodeURIComponent(String(o.resultToken||'')) +'">查看祈福成果</a></div>')
-              : '' )
         + '</div>';
       box.appendChild(div);
     });
