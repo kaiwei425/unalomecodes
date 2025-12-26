@@ -4,6 +4,10 @@
   const profileListeners = [];
   const adminListeners = [];
   const loginUrl = '/api/auth/google/login';
+  const lineLoginUrl = '/api/auth/line/login';
+  const lineLoginEnabled = typeof window.LINE_LOGIN_ENABLED === 'boolean'
+    ? window.LINE_LOGIN_ENABLED
+    : true;
   const liffId = window.LIFF_ID || '';
   let liffReady = false;
   let liffInitPromise = null;
@@ -37,9 +41,13 @@
         btn.textContent = '登出';
         btn.dataset.authAction = 'logout';
       }else{
-        btn.textContent = (liffReady && window.liff && window.liff.isInClient && window.liff.isInClient())
-          ? '使用 LINE 登入'
-          : '使用 Google 登入';
+        if ((liffReady && window.liff && window.liff.isInClient && window.liff.isInClient()) || isLineWebView()){
+          btn.textContent = '使用 LINE 登入';
+        }else if (lineLoginEnabled){
+          btn.textContent = '使用 LINE / Google 登入';
+        }else{
+          btn.textContent = '使用 Google 登入';
+        }
         btn.dataset.authAction = 'login';
       }
       if (!state.loading || state.ready){
@@ -170,7 +178,7 @@
     const local = readLocalQuizPayload();
     if (!local || !local.guardian) return;
     const guardianName = local.guardian.name || local.guardian.code || '守護神';
-    const shouldBind = window.confirm(`您剛才的測驗結果為守護神 ${guardianName}，是否要自動帶入此 Google 帳號？`);
+    const shouldBind = window.confirm(`您剛才的測驗結果為守護神 ${guardianName}，是否要自動帶入此帳號？`);
     if (!shouldBind){
       clearLocalQuizCache();
       return;
@@ -262,6 +270,16 @@
     refreshAdmin();
   }
 
+  function lineLogin(){
+    try{
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      const redirectParam = encodeURIComponent(path || '/shop.html');
+      window.location.href = `${lineLoginUrl}?redirect=${redirectParam}`;
+    }catch(_){
+      window.location.href = `${lineLoginUrl}?redirect=%2Fshop.html`;
+    }
+  }
+
   async function login(){
     if (await initLiff()){
       try{
@@ -269,11 +287,33 @@
           window.liff.login({ redirectUri: window.location.href });
           return;
         }
+        const idToken = window.liff.getIDToken ? window.liff.getIDToken() : '';
+        if (idToken){
+          await fetch('/api/auth/line/liff', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            credentials:'include',
+            body: JSON.stringify({ id_token: idToken })
+          });
+          window.location.reload();
+          return;
+        }
       }catch(_){}
     }
     if (isLineWebView()){
-      alert('LINE 內建瀏覽器無法使用 Google 登入，請使用 LINE 登入或改用外部瀏覽器開啟。');
+      if (lineLoginEnabled){
+        lineLogin();
+      }else{
+        alert('LINE 內建瀏覽器無法使用 Google 登入，請改用外部瀏覽器開啟。');
+      }
       return;
+    }
+    if (lineLoginEnabled){
+      const useLine = window.confirm('使用 LINE 登入？按「確定」使用 LINE，按「取消」使用 Google。');
+      if (useLine){
+        lineLogin();
+        return;
+      }
     }
     try{
       const path = window.location.pathname + window.location.search + window.location.hash;

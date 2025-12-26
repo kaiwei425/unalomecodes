@@ -1117,6 +1117,117 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return new Response(null, { status:302, headers });
   }
 
+  if (pathname === '/api/auth/line/login') {
+    if (!env.LINE_CHANNEL_ID || !env.LINE_CHANNEL_SECRET) {
+      return new Response('LINE OAuth not configured', { status:500 });
+    }
+    const state = makeToken(24);
+    const redirectRaw = url.searchParams.get('redirect') || '';
+    let redirectPath = '/shop.html';
+    if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
+      redirectPath = redirectRaw;
+    }
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: String(env.LINE_CHANNEL_ID || ''),
+      redirect_uri: `${origin}/api/auth/line/callback`,
+      state,
+      scope: 'openid profile email'
+    });
+    const headers = new Headers({
+      Location: `https://access.line.me/oauth2/v2.1/authorize?${params.toString()}`
+    });
+    headers.append('Set-Cookie', `line_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`);
+    headers.append('Set-Cookie', `line_oauth_redirect=${encodeURIComponent(redirectPath)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
+    return new Response(null, { status:302, headers });
+  }
+
+  if (pathname === '/api/auth/line/callback') {
+    const code = url.searchParams.get('code') || '';
+    const state = url.searchParams.get('state') || '';
+    const cookies = parseCookies(request);
+    const expectedState = cookies.line_oauth_state || '';
+    const clearStateCookie = 'line_oauth_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const clearRedirectCookie = 'line_oauth_redirect=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const redirectPath = (()=> {
+      const raw = cookies.line_oauth_redirect || '';
+      if (raw) {
+        try{
+          const decoded = decodeURIComponent(raw);
+          if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
+        }catch(_){}
+      }
+      return '/shop.html';
+    })();
+    if (!code || !state || !expectedState || state !== expectedState) {
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('Invalid OAuth state', { status:400, headers: h });
+    }
+    if (!env.LINE_CHANNEL_ID || !env.LINE_CHANNEL_SECRET) {
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('LINE OAuth not configured', { status:500, headers: h });
+    }
+    try{
+      const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: `${origin}/api/auth/line/callback`,
+          client_id: String(env.LINE_CHANNEL_ID || ''),
+          client_secret: String(env.LINE_CHANNEL_SECRET || '')
+        })
+      });
+      const tokenText = await tokenRes.text();
+      let tokens = null;
+      try{ tokens = JSON.parse(tokenText); }catch(_){}
+      if (!tokenRes.ok || !tokens || !tokens.id_token){
+        console.error('line token error', tokenRes.status, tokenText);
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('LINE OAuth error', { status:500, headers: h });
+      }
+      const info = await verifyLineIdToken(tokens.id_token, env);
+      if (!info){
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('LINE ID token invalid', { status:401, headers: h });
+      }
+      const sub = String(info.sub || '').trim();
+      const user = {
+        id: `line:${sub}`,
+        email: info.email || '',
+        name: info.name || info.email || 'LINE 使用者',
+        picture: info.picture || '',
+        provider: 'line',
+        exp: Date.now() + 30 * 24 * 60 * 60 * 1000
+      };
+      await ensureUserRecord(env, user);
+      const token = await signSession(user, env.SESSION_SECRET || '');
+      const headers = new Headers({
+        'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`
+      });
+      headers.append('Set-Cookie', clearStateCookie);
+      headers.append('Set-Cookie', clearRedirectCookie);
+      headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
+      headers.append('Location', `${origin}${redirectPath}`);
+      return new Response(null, { status:302, headers });
+    }catch(err){
+      console.error('LINE OAuth error', err);
+      const h = new Headers();
+      h.append('Set-Cookie', clearStateCookie);
+      h.append('Set-Cookie', clearRedirectCookie);
+      return new Response('OAuth error', { status:500, headers: h });
+    }
+  }
+
   if (pathname === '/api/auth/line/liff' && request.method === 'POST') {
     const headers = jsonHeadersFor(request, env);
     if (!env.LINE_CHANNEL_ID){
