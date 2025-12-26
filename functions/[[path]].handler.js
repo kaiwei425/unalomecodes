@@ -1340,6 +1340,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     delete record.guardian;
     delete record.quiz;
     await saveUserRecord(env, record);
+    if (env.FORTUNES){
+      try{
+        await env.FORTUNES.delete(`FORTUNE:${record.id}:${taipeiDateKey()}`);
+      }catch(_){}
+    }
     return json({ ok:true, id });
   }
 
@@ -1390,6 +1395,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       try{
         const body = await request.json();
         let changed = false;
+        const prevGuardianCode = String(record.guardian?.code || '').toUpperCase();
         if (body && body.defaultContact){
           record.defaultContact = Object.assign({}, record.defaultContact || {}, {
             name: String(body.defaultContact.name || '').trim(),
@@ -1426,6 +1432,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (changed){
           await saveUserRecord(env, record);
           const refreshed = await loadUserRecord(env, record.id);
+          const nextGuardianCode = String(refreshed?.guardian?.code || '').toUpperCase();
+          if (env.FORTUNES && prevGuardianCode !== nextGuardianCode){
+            try{
+              await env.FORTUNES.delete(`FORTUNE:${record.id}:${taipeiDateKey()}`);
+            }catch(_){}
+          }
           return json({ ok:true, profile: {
             id: refreshed.id,
             name: refreshed.name,
@@ -1470,13 +1482,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     try{
       const cached = await env.FORTUNES.get(cacheKey);
       if (cached){
-        try{
-          const parsed = JSON.parse(cached);
-          const cachedCode = parsed?.fortune?.meta?.guardianCode || '';
-          if (!cachedCode || String(cachedCode).toUpperCase() === String(record?.guardian?.code || '').toUpperCase()){
-            return new Response(cached, { status:200, headers });
-          }
-        }catch(_){
+        let parsed = null;
+        try{ parsed = JSON.parse(cached); }catch(_){ parsed = null; }
+        const cachedCode = String(parsed?.fortune?.meta?.guardianCode || '').toUpperCase();
+        const currentCode = String(record?.guardian?.code || '').toUpperCase();
+        if (cachedCode && currentCode && cachedCode === currentCode){
           return new Response(cached, { status:200, headers });
         }
       }
