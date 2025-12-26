@@ -1336,7 +1336,7 @@ export async function onRequest(context) {
   }catch(e){ /* ignore and continue */ }
   
   
-if (url.pathname === '/payment-result' && request.method === 'POST') {
+  if (url.pathname === '/payment-result' && request.method === 'POST') {
     try {
       const form = await request.formData();
       const oid =
@@ -1364,6 +1364,15 @@ if (url.pathname === '/payment-result' && request.method === 'POST') {
       return Response.redirect(target.toString(), 302);
     } catch (e) {
       return Response.redirect(url.origin + '/payment-result', 302);
+    }
+  }
+
+  if ((pathname === '/admin' || pathname.startsWith('/admin/')) && (request.method === 'GET' || request.method === 'HEAD')) {
+    const admin = await isAdmin(request, env);
+    if (!admin) {
+      const redirectPath = pathname + url.search;
+      const target = `${origin}/api/auth/google/admin/start?redirect=${encodeURIComponent(redirectPath)}`;
+      return Response.redirect(target, 302);
     }
   }
 
