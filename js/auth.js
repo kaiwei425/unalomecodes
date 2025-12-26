@@ -13,7 +13,12 @@
   let liffInitPromise = null;
   function isLineWebView(){
     const ua = (navigator.userAgent || '').toLowerCase();
-    return ua.includes('line');
+    if (ua.includes('line')) return true;
+    try{
+      return !!(window.liff && window.liff.isInClient && window.liff.isInClient());
+    }catch(_){
+      return false;
+    }
   }
 
   function notify(){
@@ -41,13 +46,7 @@
         btn.textContent = '登出';
         btn.dataset.authAction = 'logout';
       }else{
-        if ((liffReady && window.liff && window.liff.isInClient && window.liff.isInClient()) || isLineWebView()){
-          btn.textContent = '使用 LINE 登入';
-        }else if (lineLoginEnabled){
-          btn.textContent = '使用 LINE / Google 登入';
-        }else{
-          btn.textContent = '使用 Google 登入';
-        }
+        btn.textContent = '登入會員';
         btn.dataset.authAction = 'login';
       }
       if (!state.loading || state.ready){
@@ -280,6 +279,74 @@
     }
   }
 
+  let loginDialog = null;
+  let loginDialogResolve = null;
+  function ensureLoginDialog(){
+    if (loginDialog) return loginDialog;
+    const style = document.createElement('style');
+    style.textContent = `
+      .auth-login-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;}
+      .auth-login-backdrop{position:absolute;inset:0;background:rgba(2,6,23,.55);}
+      .auth-login-panel{position:relative;background:#fff;color:#0f172a;border-radius:16px;padding:18px 16px;min-width:260px;width:min(320px,92%);box-shadow:0 24px 60px rgba(0,0,0,.35);}
+      .auth-login-title{font-size:16px;font-weight:700;margin-bottom:10px;}
+      .auth-login-desc{font-size:13px;color:#64748b;margin-bottom:14px;line-height:1.5;}
+      .auth-login-actions{display:grid;gap:10px;}
+      .auth-login-btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;}
+      .auth-login-btn.line{background:#00b900;color:#fff;}
+      .auth-login-btn.google{background:#0f172a;color:#fff;}
+      .auth-login-cancel{margin-top:8px;font-size:12px;color:#94a3b8;text-align:center;cursor:pointer;}
+    `;
+    document.head.appendChild(style);
+    const modal = document.createElement('div');
+    modal.className = 'auth-login-modal';
+    modal.innerHTML = `
+      <div class="auth-login-backdrop" data-auth-login-close></div>
+      <div class="auth-login-panel" role="dialog" aria-modal="true">
+        <div class="auth-login-title">登入會員</div>
+        <div class="auth-login-desc">請選擇登入方式</div>
+        <div class="auth-login-actions">
+          <button type="button" class="auth-login-btn line" data-auth-login-provider="line">LINE 登入</button>
+          <button type="button" class="auth-login-btn google" data-auth-login-provider="google">Google 登入</button>
+        </div>
+        <div class="auth-login-cancel" data-auth-login-close>取消</div>
+      </div>
+    `;
+    modal.addEventListener('click', ev=>{
+      const providerBtn = ev.target.closest('[data-auth-login-provider]');
+      if (providerBtn){
+        const provider = providerBtn.getAttribute('data-auth-login-provider') || '';
+        closeLoginDialog(provider);
+        return;
+      }
+      if (ev.target.closest('[data-auth-login-close]')){
+        closeLoginDialog('');
+      }
+    });
+    document.body.appendChild(modal);
+    loginDialog = modal;
+    return loginDialog;
+  }
+  function openLoginDialog(){
+    return new Promise(resolve=>{
+      if (!lineLoginEnabled){
+        resolve('google');
+        return;
+      }
+      const dlg = ensureLoginDialog();
+      loginDialogResolve = resolve;
+      dlg.style.display = 'flex';
+    });
+  }
+  function closeLoginDialog(provider){
+    if (loginDialog){
+      loginDialog.style.display = 'none';
+    }
+    if (loginDialogResolve){
+      loginDialogResolve(provider || '');
+      loginDialogResolve = null;
+    }
+  }
+
   async function login(){
     if (await initLiff()){
       try{
@@ -309,9 +376,14 @@
       return;
     }
     if (lineLoginEnabled){
-      const useLine = window.confirm('使用 LINE 登入？按「確定」使用 LINE，按「取消」使用 Google。');
-      if (useLine){
+      const choice = await openLoginDialog();
+      if (choice === 'line'){
         lineLogin();
+        return;
+      }
+      if (choice === 'google'){
+        // fall through to google
+      }else{
         return;
       }
     }
