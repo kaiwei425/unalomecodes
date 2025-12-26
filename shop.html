@@ -6038,32 +6038,20 @@ function escapeHtml(s) {
     showDialog(fortuneDialog);
     fetchFortune();
   }
-  function syncQuizProfile(profile){
-    if (!profile || profile.quiz) return;
-    let raw = null;
-    try{ raw = localStorage.getItem('__lastQuizProfile__'); }catch(_){}
-    if (!raw) return;
-    let quiz = null;
-    try{ quiz = JSON.parse(raw); }catch(_){}
-    if (!quiz || !quiz.dow) return;
-    fetch('/api/me/profile', {
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      credentials:'include',
-      body: JSON.stringify({ quiz })
-    }).catch(()=>{});
-  }
   function readGuardian(){
     try{
+      const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+        ? window.authState.isLoggedIn()
+        : false;
+      if (loggedIn && window.authState && typeof window.authState.getProfile === 'function'){
+        const p = window.authState.getProfile();
+        if (p && p.guardian) return p.guardian;
+        return null;
+      }
       const raw = localStorage.getItem('__lastQuizGuardian__');
       if (raw){
         const obj = JSON.parse(raw);
         if (obj && obj.code) return obj;
-      }
-      // 從 profile 取（同步持久化）
-      if (window.authState && typeof window.authState.getProfile === 'function'){
-        const p = window.authState.getProfile();
-        if (p && p.guardian) return p.guardian;
       }
       return null;
     }catch(_){ return null; }
@@ -6090,10 +6078,7 @@ function escapeHtml(s) {
     }
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
-    window.authState.onProfile((profile)=>{
-      syncQuizProfile(profile);
-      render();
-    });
+    window.authState.onProfile(()=>render());
   }
   // 若剛登入後端尚未回傳 guardian，稍後再補一次
   setTimeout(render, 800);
