@@ -95,32 +95,12 @@ function openDetail(p){
     const diff = (idx>=0 && variants[idx]) ? Number(variants[idx].priceDiff||0) : 0;
     const q = Math.max(1, Number(qty.value||1));
     priceEl.textContent = formatPrice((base + diff) * q);
-  
 
     try {
       var priceNode = document.getElementById('dlgPrice');
       if (priceNode) { priceNode.setAttribute('data-price', String((base + diff) * q)); }
     } catch(e) {}
-    
-}
-
-// 後備：若按鈕未綁定，使用事件委派
-document.addEventListener('click', function(e){
-  const btn = e.target && e.target.closest && e.target.closest('[data-open-detail]');
-  if (!btn) return;
-  e.preventDefault();
-  try{
-    const card = btn.closest('[data-id]');
-    const pid = card ? card.getAttribute('data-id') : '';
-    let p = null;
-    if (pid && typeof window.rawItems !== 'undefined' && Array.isArray(window.rawItems)){
-      p = window.rawItems.find(it=> String(it.id) === pid);
-    }
-    if (p) openDetail(p);
-  }catch(err){
-    console.error('fallback openDetail error', err);
   }
-}, true);
   sel.onchange = refreshPrice;
   qty.oninput = refreshPrice;
   refreshPrice();

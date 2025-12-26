@@ -4899,6 +4899,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   }
   function matchesOrder(o, phone, last5, orderDigits){
     try{
+      if (o && o.publicView) return true;
       var pUser = normalizeTWPhone(phone);
       if (!pUser) return false;
       var ordUser = normalizeOrderSuffix(orderDigits);

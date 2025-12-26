@@ -1091,6 +1091,7 @@ function __cartPricing(includePendingDetail){
   }
   function matchesOrder(o, phone, last5, orderDigits){
     try{
+      if (o && o.publicView) return true;
       var pUser = normalizeTWPhone(phone);
       if (!pUser) return false;
       var ordUser = normalizeOrderSuffix(orderDigits);
@@ -1755,6 +1756,12 @@ function __cartPricing(includePendingDetail){
     if (cancelBtn) cancelBtn.onclick = ()=>{ const dlg = document.getElementById('dlgCC'); if (dlg) dlg.close(); };
     ccForm.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
+      if (window.authState && typeof window.authState.isLoggedIn === 'function' && !window.authState.isLoggedIn()){
+        if (typeof window.authState.promptLogin === 'function'){
+          window.authState.promptLogin('請先登入後再刷卡。');
+          return;
+        }
+      }
       const dlg = document.getElementById('dlgCC');
       const ctx = (dlg && dlg.__ctx) || computeAmount();
       const cart = Array.isArray(ctx.cart) ? ctx.cart.slice() : [];

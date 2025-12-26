@@ -38,6 +38,7 @@ const SERVICE_ORDER_ID_LEN = 10;
 const FORTUNE_FORMAT_VERSION = 5;
 const FORTUNE_STATS_PREFIX = 'FORTUNE_STATS:';
 const FORTUNE_STATS_SEEN_PREFIX = 'FORTUNE_STATS:SEEN:';
+const RATE_LIMIT_CACHE = new Map();
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -91,6 +92,119 @@ function isAllowedOrigin(request, env, extraOriginsRaw){
     .split(',').map(s=>s.trim()).filter(Boolean);
   extra.forEach(addOrigin);
   return allow.has(originHeader);
+}
+function getClientIp(request){
+  const raw = request.headers.get('CF-Connecting-IP')
+    || request.headers.get('x-forwarded-for')
+    || request.headers.get('x-real-ip')
+    || '';
+  return String(raw).split(',')[0].trim();
+}
+async function checkRateLimit(env, key, limit, windowSec){
+  const now = Date.now();
+  const store = env.RATE_LIMIT || env.RATE_LIMITS || env.RATELIMIT || null;
+  if (store && typeof store.get === 'function'){
+    try{
+      const raw = await store.get(key);
+      let data = raw ? JSON.parse(raw) : null;
+      if (!data || !data.ts || (now - data.ts) > windowSec * 1000){
+        data = { count: 0, ts: now };
+      }
+      data.count += 1;
+      await store.put(key, JSON.stringify(data), { expirationTtl: windowSec });
+      return data.count <= limit;
+    }catch(_){
+      return true;
+    }
+  }
+  const prev = RATE_LIMIT_CACHE.get(key);
+  let next = prev;
+  if (!next || (now - next.ts) > windowSec * 1000){
+    next = { count: 0, ts: now };
+  }
+  next.count += 1;
+  RATE_LIMIT_CACHE.set(key, next);
+  return next.count <= limit;
+}
+function maskName(val){
+  const s = String(val || '').trim();
+  if (!s) return '';
+  if (s.length === 1) return s + '*';
+  if (s.length === 2) return s[0] + '*';
+  return s[0] + '*'.repeat(Math.min(2, s.length - 2)) + s.slice(-1);
+}
+function maskPhone(val){
+  const digits = String(val || '').replace(/\D+/g,'');
+  if (!digits) return '';
+  if (digits.length <= 4) return '*'.repeat(digits.length);
+  const head = digits.slice(0, 3);
+  const tail = digits.slice(-2);
+  return head + '*'.repeat(Math.max(3, digits.length - 5)) + tail;
+}
+function maskEmail(val){
+  const s = String(val || '').trim();
+  const idx = s.indexOf('@');
+  if (idx <= 1) return s ? s[0] + '***' : '';
+  const head = s.slice(0, 1);
+  const domain = s.slice(idx);
+  return head + '***' + domain;
+}
+function redactOrderForPublic(order){
+  const out = Object.assign({}, order || {});
+  if (out.buyer){
+    out.buyer = Object.assign({}, out.buyer, {
+      name: maskName(out.buyer.name),
+      phone: maskPhone(out.buyer.phone),
+      email: maskEmail(out.buyer.email),
+      store: '',
+      line: '',
+      uid: ''
+    });
+  }
+  delete out.receiptUrl;
+  delete out.receipt;
+  delete out.proofUrl;
+  delete out.transfer;
+  delete out.transferLast5;
+  delete out.payment;
+  delete out.resultToken;
+  delete out.adminNote;
+  delete out.couponAssignment;
+  if (out.coupon){
+    const coupon = {};
+    if (out.coupon.discount != null) coupon.discount = out.coupon.discount;
+    if (out.coupon.amount != null) coupon.amount = out.coupon.amount;
+    if (out.coupon.shippingDiscount != null) coupon.shippingDiscount = out.coupon.shippingDiscount;
+    if (out.coupon.failed === true) coupon.failed = true;
+    out.coupon = Object.keys(coupon).length ? coupon : undefined;
+  }
+  out.publicView = true;
+  return out;
+}
+async function attachSignedProofs(order, env){
+  const out = Object.assign({}, order || {});
+  if (out.ritualPhotoUrl){
+    out.ritualPhotoUrl = await signProofUrl(env, out.ritualPhotoUrl);
+  }
+  if (out.ritual_photo_url){
+    out.ritual_photo_url = await signProofUrl(env, out.ritual_photo_url);
+  }
+  if (out.ritualPhoto){
+    out.ritualPhoto = await signProofUrl(env, out.ritualPhoto);
+  }
+  if (Array.isArray(out.results)){
+    const next = [];
+    for (const r of out.results){
+      if (!r) continue;
+      const item = Object.assign({}, r);
+      if (item.url) item.url = await signProofUrl(env, item.url);
+      if (item.imageUrl) item.imageUrl = await signProofUrl(env, item.imageUrl);
+      if (item.image) item.image = await signProofUrl(env, item.image);
+      next.push(item);
+    }
+    out.results = next;
+  }
+  return out;
 }
 function parseAdminEmails(env){
   try{
@@ -753,6 +867,77 @@ async function verifySessionToken(token, secret){
     return null;
   }
 }
+function proofSecret(env){
+  return String(env?.PROOF_TOKEN_SECRET || env?.SESSION_SECRET || '').trim();
+}
+async function signProofToken(env, key, ttlSec=900){
+  const secret = proofSecret(env);
+  if (!secret || !key) return '';
+  const payload = { key: String(key), exp: Date.now() + (ttlSec * 1000) };
+  return await signSession(payload, secret);
+}
+async function verifyProofToken(env, key, token){
+  const secret = proofSecret(env);
+  if (!secret || !key || !token) return false;
+  const payload = await verifySessionToken(token, secret);
+  if (!payload || payload.key !== String(key)) return false;
+  return true;
+}
+function extractProofKey(val){
+  const raw = String(val || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('/api/proof/')) return raw.replace('/api/proof/','').replace(/\?.*$/,'');
+  if (raw.startsWith('/api/proof.view/')) return raw.replace('/api/proof.view/','').replace(/\?.*$/,'');
+  if (raw.startsWith('/api/proof.data/')) return raw.replace('/api/proof.data/','').replace(/\?.*$/,'');
+  if (raw.startsWith('/api/proof.inline/')) return raw.replace('/api/proof.inline/','').replace(/\?.*$/,'');
+  if (raw.startsWith('/api/file/')) return raw.replace('/api/file/','').replace(/\?.*$/,'');
+  if (/^https?:\/\//i.test(raw)){
+    try{
+      const u = new URL(raw);
+      const path = u.pathname || '';
+      if (path.startsWith('/api/proof/')) return path.replace('/api/proof/','');
+      if (path.startsWith('/api/proof.view/')) return path.replace('/api/proof.view/','');
+      if (path.startsWith('/api/proof.data/')) return path.replace('/api/proof.data/','');
+      if (path.startsWith('/api/proof.inline/')) return path.replace('/api/proof.inline/','');
+      if (path.startsWith('/api/file/')) return path.replace('/api/file/','');
+    }catch(_){}
+    return '';
+  }
+  if (raw.startsWith('/')) return raw.replace(/^\/+/,'');
+  return raw;
+}
+async function signProofUrl(env, val, ttlSec=900){
+  const key = extractProofKey(val);
+  if (!key) return String(val || '');
+  const token = await signProofToken(env, key, ttlSec);
+  if (!token) return String(val || '');
+  return `/api/proof/${encodeURIComponent(key)}?token=${encodeURIComponent(token)}`;
+}
+function isAllowedFileUrl(raw, env, origin){
+  if (!raw) return false;
+  if (raw.startsWith('/')) return true;
+  if (!/^https?:\/\//i.test(raw)) return true;
+  try{
+    const url = new URL(raw);
+    const allow = new Set();
+    const addHost = (val)=>{
+      if (!val) return;
+      try{
+        const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
+        allow.add(u.host);
+      }catch(_){}
+    };
+    addHost(origin);
+    addHost(env?.SITE_URL);
+    addHost(env?.PUBLIC_SITE_URL);
+    addHost(env?.PUBLIC_ORIGIN);
+    addHost(env?.FILE_HOST);
+    addHost(env?.PUBLIC_FILE_HOST);
+    return allow.has(url.host);
+  }catch(_){
+    return false;
+  }
+}
 
 function parseCookies(request){
   const header = request.headers.get('cookie') || request.headers.get('Cookie') || '';
@@ -943,6 +1128,109 @@ function parseCouponAssignment(raw){
   }catch(_){}
   return null;
 }
+async function readProductById(env, id){
+  if (!env || !env.PRODUCTS || !id) return null;
+  try{
+    const raw = await env.PRODUCTS.get(`PRODUCT:${id}`);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (p && !p.deityCode && p.deity) p.deityCode = getDeityCodeFromName(p.deity);
+    if (p) p.category = inferCategory(p);
+    return p;
+  }catch(_){
+    return null;
+  }
+}
+function resolveVariant(product, variantName){
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (!variants.length){
+    return { ok:true, name:'', priceDiff:0 };
+  }
+  const vn = cleanVariantName(variantName || '');
+  let idx = -1;
+  if (vn){
+    idx = variants.findIndex(v => cleanVariantName(v?.name) === vn);
+  }
+  if (idx < 0 && variants.length === 1){
+    idx = 0;
+  }
+  if (idx < 0) return { ok:false, error:'invalid_variant' };
+  const v = variants[idx] || {};
+  return { ok:true, name: String(v.name || vn || ''), priceDiff: Number(v.priceDiff || 0) || 0 };
+}
+async function buildItemFromProduct(env, productId, variantName, qty){
+  const pid = String(productId || '').trim();
+  if (!pid) return { ok:false, error:'missing_product_id' };
+  const product = await readProductById(env, pid);
+  if (!product) return { ok:false, error:'product_not_found' };
+  if (product.active === false) return { ok:false, error:'product_inactive' };
+  const variantInfo = resolveVariant(product, variantName);
+  if (!variantInfo.ok) return { ok:false, error:variantInfo.error || 'invalid_variant' };
+  const base = Number(product.basePrice || 0) || 0;
+  const unit = Math.max(0, base + Number(variantInfo.priceDiff || 0));
+  const count = Math.max(1, Number(qty || 1));
+  const item = {
+    productId: pid,
+    productName: String(product.name || ''),
+    name: String(product.name || ''),
+    deity: String(product.deity || ''),
+    deityCode: String(product.deityCode || ''),
+    variantName: String(variantInfo.name || ''),
+    price: unit,
+    unitPrice: unit,
+    qty: count,
+    image: (Array.isArray(product.images) && product.images[0]) ? String(product.images[0]) : '',
+    category: String(product.category || '')
+  };
+  return { ok:true, item };
+}
+async function resolveOrderSelection(env, body){
+  function isTruthy(x){ return x === true || x === 1 || x === '1' || String(x).toLowerCase() === 'true' || String(x).toLowerCase() === 'yes' || x === 'on'; }
+  const hintMode   = (body.mode || '').toLowerCase();
+  const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
+  const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
+  const cartHint   = hasCart && (isTruthy(body.fromCart) || isTruthy(body.useCart) || hintMode === 'cart');
+  const preferDirect = (hintMode !== 'cart') && (directHint || !!body.productId);
+  let useCartOnly = !preferDirect && cartHint;
+  let items = [];
+  if (useCartOnly){
+    const cartArr = Array.isArray(body.cart) ? body.cart : [];
+    for (const it of cartArr){
+      const res = await buildItemFromProduct(env, it.id || it.productId || '', it.variantName || it.variant || '', it.qty || it.quantity || 1);
+      if (!res.ok) return { ok:false, error: res.error || 'invalid_item' };
+      items.push(res.item);
+    }
+  } else {
+    const res = await buildItemFromProduct(env, body.productId || '', body.variantName || body.variant || '', body.qty || 1);
+    if (!res.ok){
+      if (hasCart){
+        useCartOnly = true;
+        items = [];
+        const cartArr = Array.isArray(body.cart) ? body.cart : [];
+        for (const it of cartArr){
+          const r = await buildItemFromProduct(env, it.id || it.productId || '', it.variantName || it.variant || '', it.qty || it.quantity || 1);
+          if (!r.ok) return { ok:false, error: r.error || 'invalid_item' };
+          items.push(r.item);
+        }
+      } else {
+        return { ok:false, error: res.error || 'missing_product' };
+      }
+    } else {
+      items = [res.item];
+    }
+  }
+  if (!items.length) return { ok:false, error:'missing_items' };
+  const total = items.reduce((s, it)=> s + (Number(it.price || 0) * Math.max(1, Number(it.qty || 1))), 0);
+  const totalQty = items.reduce((s, it)=> s + Math.max(1, Number(it.qty || 1)), 0);
+  const first = items[0];
+  const productId = useCartOnly ? (first.productId || 'CART') : first.productId;
+  const productName = useCartOnly ? `購物車共 ${items.length} 項` : (first.productName || first.name || '');
+  const price = useCartOnly ? total : Number(first.price || 0);
+  const qty = useCartOnly ? totalQty : Math.max(1, Number(first.qty || 1));
+  const deity = String(first.deity || '');
+  const variantName = useCartOnly ? String(first.variantName || '') : String(first.variantName || '');
+  return { ok:true, useCartOnly, items, productId, productName, price, qty, deity, variantName };
+}
 
 // === Helper: unified proof retriever (R2 first, then KV) ===
 async function getProofFromStore(env, rawKey) {
@@ -979,6 +1267,13 @@ async function getProofFromStore(env, rawKey) {
   }
 
   return null;
+}
+async function canAccessProof(request, env, key){
+  if (await isAdmin(request, env)) return true;
+  const url = new URL(request.url);
+  const token = String(url.searchParams.get('token') || '').trim();
+  if (!token) return false;
+  return await verifyProofToken(env, key, token);
 }
 
 export async function onRequest(context) {
@@ -2023,7 +2318,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           try{
             const order = JSON.parse(raw);
             if (matchOrder(order)){
-              out.physical.push(Object.assign({ id }, order));
+              const merged = Object.assign({ id }, order);
+              out.physical.push(await attachSignedProofs(merged, env));
             }
           }catch(_){}
         }
@@ -2039,7 +2335,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           try{
             const order = JSON.parse(raw);
             if (matchOrder(order)){
-              out.service.push(Object.assign({ id }, order));
+              const merged = Object.assign({ id }, order);
+              out.service.push(await attachSignedProofs(merged, env));
             }
           }catch(_){}
         }
@@ -2308,54 +2605,23 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       if (!body.transferLast5 && body.last5) body.transferLast5 = String(body.last5);
     }
 
-    // ---- source detection: cart vs direct-buy (do not mix) ----
-    function isTruthy(x){ return x === true || x === 1 || x === '1' || x === 'true' || x === 'yes' || x === 'on'; }
-    const hintMode   = (body.mode || '').toLowerCase();           // 'cart' | 'direct' (if provided)
-    const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
-    const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
-    const cartHint   = hasCart && (isTruthy(body.fromCart) || isTruthy(body.useCart) || hintMode === 'cart');
-
-    // 一律直購優先（只要有 productId 就當 direct），除非明確宣告 mode='cart'
-    const preferDirect = (hintMode !== 'cart') && (directHint || !!body.productId);
-    const useCartOnly  = !preferDirect && cartHint;
-
-    // Build items strictly from cart if we are in cart-mode；直購模式強制忽略 cart
-    let items = [];
-    if (useCartOnly) {
-      const cartArr = Array.isArray(body.cart) ? body.cart : [];
-      items = cartArr.map(it => ({
-        productId:   String(it.id || it.productId || ''),
-        productName: String(it.name || it.title || it.productName || '商品'),
-        deity:       String(it.deity || ''),
-        variantName: String(it.variantName || it.variant || ''),
-        price:       Number(it.price ?? it.unitPrice ?? 0),
-        qty:         Math.max(1, Number(it.qty ?? it.quantity ?? 1)),
-        image:       String(it.image || '')
-      }));
-    } else {
-      // 直購模式不使用 cart 內容，但也不要去清空 body.cart，避免影響其他邏輯
-      items = [];
+    const selection = await resolveOrderSelection(env, body);
+    if (!selection.ok){
+      const reason = selection.error || 'invalid_product';
+      const msg = reason === 'product_not_found' ? '找不到商品'
+        : reason === 'product_inactive' ? '商品已下架'
+        : reason === 'invalid_variant' ? '商品規格無效'
+        : '缺少商品資訊';
+      return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: jsonHeaders });
     }
-
-    // Fallback single-product fields（direct-buy 用）；cart 模式下不套用單品欄位
-    let productId   = useCartOnly ? '' : String(body.productId || '');
-    let productName = useCartOnly ? '' : String(body.productName || '');
-    let price       = useCartOnly ? 0  : Number(body.price ?? 0);
-    let qty         = useCartOnly ? 0  : Number(body.qty   ?? 1);
-    let deity       = useCartOnly ? '' : String(body.deity || '');
-    let variantName = useCartOnly ? '' : String(body.variantName || '');
-
-    // 若是 cart 模式，單品欄位由購物車彙總；若是 direct 模式，保持單品不動
-    if (useCartOnly && items.length) {
-      const total = items.reduce((s, it) => s + (Number(it.price||0) * Math.max(1, Number(it.qty||1))), 0);
-      const totalQty = items.reduce((s, it) => s + Math.max(1, Number(it.qty||1)), 0);
-      productId   = items[0].productId || 'CART';
-      productName = items[0].productName || `購物車共 ${items.length} 項`;
-      price = total;
-      qty = totalQty;
-      deity = items[0].deity || '';
-      variantName = items[0].variantName || '';
-    }
+    const useCartOnly = selection.useCartOnly;
+    const items = selection.items;
+    const productId = selection.productId;
+    const productName = selection.productName;
+    const price = selection.price;
+    const qty = selection.qty;
+    const deity = selection.deity;
+    const variantName = selection.variantName;
 
     const buyer = {
       name:  String((body?.buyer?.name)  || body?.name  || body?.buyer_name  || body?.bfName    || ''),
@@ -2376,8 +2642,13 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     }
     const transferLast5 = String(body?.transferLast5 || body?.last5 || body?.bfLast5 || '').trim();
     const receiptUrl = (() => {
-      let u = body?.receiptUrl || body?.receipt || body?.proof || body?.proofUrl || body?.screenshot || body?.upload || '';
-      if (u && !/^https?:\/\//i.test(u) && !u.startsWith(origin)) u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      let u = String(body?.receiptUrl || body?.receipt || body?.proof || body?.proofUrl || body?.screenshot || body?.upload || '').trim();
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+        u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      }
+      if (!isAllowedFileUrl(u, env, origin)) return '';
+      if (!/^https?:\/\//i.test(u) && u.startsWith('/')) u = `${origin}${u}`;
       return String(u);
     })();
     const noteVal = String(
@@ -2388,30 +2659,17 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       body?.bfNote ??
       ''
     ).trim();
-    if ((!productId || !productName) && !items.length) {
-      // Graceful fallback: create a minimal bank transfer order
-      productId = 'BANK';
-      productName = '匯款通知';
-      price = Number(body.amount ?? 0);
-      qty = 1;
+    if (!receiptUrl) {
+      return new Response(JSON.stringify({ ok:false, error:'缺少匯款憑證' }), { status:400, headers: jsonHeaders });
     }
-
-    // Compute order amount (server-trust: always從商品金額重新計算，只有在沒有商品資訊時才吃 body.amount)
-    let amount = 0;
-    if (Array.isArray(items) && items.length) {
-      // 購物車模式：所有品項小計相加
-      amount = items.reduce((s, it) => {
-        const unit = Number(it.price ?? it.unitPrice ?? 0) || 0;
-        const q    = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
-        return s + unit * q;
-      }, 0);
-    } else if (productId || productName) {
-      // 單品模式：單價 * 數量
-      amount = Number(price || 0) * Math.max(1, Number(qty || 1));
-    } else {
-      // 純匯款通知或無商品資訊時，才使用前端傳入的 amount
-      amount = Number(body.amount || 0) || 0;
+    if (!/^\d{5}$/.test(transferLast5)) {
+      return new Response(JSON.stringify({ ok:false, error:'請輸入匯款末五碼' }), { status:400, headers: jsonHeaders });
     }
+    let amount = items.reduce((s, it) => {
+      const unit = Number(it.price ?? it.unitPrice ?? 0) || 0;
+      const q    = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+      return s + unit * q;
+    }, 0);
 
     // New order id (random alphanumeric) – generated early so coupon redeem can bind to this order
     const newId = await generateOrderId(env);
@@ -2432,31 +2690,15 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     }).filter(c => c.code);
     const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
     const firstCoupon = couponInputs[0] || null;
-    const clientAssignment = parseCouponAssignment(body.coupon_assignment || body.couponAssignment);
-    const clientCouponTotal = Number(body.coupon_total ?? body.couponTotal ?? 0) || 0;
     let couponApplied = null;
-    function tryApplyClientCouponFallback(reason){
-      if (!(clientCouponTotal > 0)) return false;
-      amount = Math.max(0, Number(amount || 0) - clientCouponTotal);
-      couponApplied = {
-        code: (firstCoupon && firstCoupon.code) || '',
-        deity: firstCoupon?.deity || '',
-        codes: couponInputs.length ? couponInputs.map(c=>c.code) : undefined,
-        discount: clientCouponTotal,
-        redeemedAt: Date.now(),
-        lines: clientAssignment && Array.isArray(clientAssignment.lines) ? clientAssignment.lines : undefined,
-        clientProvided: true,
-        reason: reason || undefined
-      };
-      return true;
-    }
 
     if (couponInputs.length) {
       if (Array.isArray(items) && items.length) {
         try {
           const discInfo = await computeServerDiscount(env, items, couponInputs, newId);
           const totalDisc = Math.max(0, Number(discInfo?.total || 0));
-          if (totalDisc > 0) {
+          const shippingDisc = Math.max(0, Number(discInfo?.shippingDiscount || 0));
+          if (totalDisc > 0 || shippingDisc > 0) {
             const codesToLock = Array.from(new Set(
               (discInfo.lines || []).map(l => String(l.code||'').toUpperCase()).filter(Boolean)
             ));
@@ -2484,19 +2726,18 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
                 deity: firstCoupon?.deity || '',
                 codes: couponInputs.map(c=>c.code),
                 discount: totalDisc,
+                shippingDiscount: shippingDisc || undefined,
                 redeemedAt: Date.now(),
                 lines: Array.isArray(discInfo.lines) ? discInfo.lines : [],
                 multi: couponInputs.length > 1
               };
             }
-          } else if (!tryApplyClientCouponFallback('client_fallback_no_server_discount')) {
+          } else {
             couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'invalid_or_not_applicable' };
           }
         } catch (e) {
           console.error('computeServerDiscount error', e);
-          if (!tryApplyClientCouponFallback('client_fallback_error')) {
-            couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
-          }
+          couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
         }
       } else if (firstCoupon && firstCoupon.code) {
         try {
@@ -2515,38 +2756,39 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
               amount = Math.max(0, Number(amount || 0) - disc);
               couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now() };
             }
-          } else if (!tryApplyClientCouponFallback('client_fallback_invalid')) {
+          } else {
             couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
           }
         } catch (e) {
           console.error('redeemCoupon error', e);
-          if (!tryApplyClientCouponFallback('client_fallback_error')) {
-            couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
-          }
+          couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
         }
       }
-    } else if (!couponApplied) {
-      tryApplyClientCouponFallback('client_fallback_no_coupon_inputs');
     }
 
     // Optional candle ritual metadata
-    const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
     const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
     const shippingNeeded = needShippingFee(items, fallbackText);
     const baseShipping = resolveShippingFee(env);
-    let shippingFee = 0;
-    if (shippingHint > 0){
-      shippingFee = shippingHint;
-    } else if (shippingNeeded){
-      shippingFee = baseShipping;
-    } else {
-      shippingFee = 0;
+    let shippingFee = shippingNeeded ? baseShipping : 0;
+    const shippingDiscount = Math.max(0, Number((couponApplied && couponApplied.shippingDiscount) || 0));
+    if (shippingDiscount > 0){
+      shippingFee = Math.max(0, shippingFee - shippingDiscount);
     }
     amount = Math.max(0, Number(amount || 0)) + shippingFee;
 
     const ritualNameEn   = String(body.ritual_name_en || body.ritualNameEn || body.candle_name_en || '').trim();
     const ritualBirthday = String(body.ritual_birthday || body.ritualBirthday || body.candle_birthday || '').trim();
-    const ritualPhotoUrl = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
+    const ritualPhotoUrl = (() => {
+      let u = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+        u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      }
+      if (!isAllowedFileUrl(u, env, origin)) return '';
+      if (!/^https?:\/\//i.test(u) && u.startsWith('/')) u = `${origin}${u}`;
+      return u;
+    })();
     const extra = {};
     if (ritualNameEn || ritualBirthday || ritualPhotoUrl) {
       extra.candle = {
@@ -2569,7 +2811,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       method: '轉帳匯款',
       buyer, transferLast5, receiptUrl,
       note: noteVal,
-      amount,
+      amount: Math.max(0, Math.round(amount || 0)),
       shippingFee: shippingFee || 0,
       shipping: shippingFee || 0,
       status: 'pending',
@@ -2579,7 +2821,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       resultToken: makeToken(32),
       results: [],
       coupon: couponApplied || undefined,
-      couponAssignment: clientAssignment || undefined,
+      couponAssignment: (couponApplied && couponApplied.lines) ? couponApplied.lines : undefined,
       // memberDiscount: 暫不使用
       ...(Object.keys(extra).length ? { extra } : {})
     };
@@ -2642,8 +2884,17 @@ if (pathname === '/api/order/confirm-transfer' && request.method === 'POST') {
     obj.transferLast5 = String(body.transferLast5 || obj.transferLast5 || '');
     
     obj.receiptUrl = String(body.receipt || body.receiptUrl || body.proof || body.proofUrl || body.screenshot || body.upload || obj.receiptUrl || '');
-    if (obj.receiptUrl && !/^https?:\/\//i.test(obj.receiptUrl) && !obj.receiptUrl.startsWith(origin)) {
-      obj.receiptUrl = `${origin}/api/proof/${encodeURIComponent(obj.receiptUrl)}`;
+    if (obj.receiptUrl) {
+      let u = obj.receiptUrl;
+      if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+        u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      }
+      if (!isAllowedFileUrl(u, env, origin)) {
+        u = '';
+      } else if (!/^https?:\/\//i.test(u) && u.startsWith('/')) {
+        u = `${origin}${u}`;
+      }
+      obj.receiptUrl = u;
     }
     // Update note/remark if provided
     {
@@ -2664,7 +2915,16 @@ if (pathname === '/api/order/confirm-transfer' && request.method === 'POST') {
     // Patch candle ritual metadata
     const rName = String(body.ritual_name_en || body.ritualNameEn || '').trim();
     const rBirth = String(body.ritual_birthday || body.ritualBirthday || '').trim();
-    const rPhoto = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
+    const rPhoto = (() => {
+      let u = String(body.ritual_photo_url || body.ritualPhotoUrl || '').trim();
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+        u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      }
+      if (!isAllowedFileUrl(u, env, origin)) return '';
+      if (!/^https?:\/\//i.test(u) && u.startsWith('/')) u = `${origin}${u}`;
+      return u;
+    })();
     if (rName || rBirth || rPhoto) {
       obj.extra = obj.extra || {};
       obj.extra.candle = Object.assign({}, obj.extra.candle || {}, {
@@ -2713,14 +2973,42 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
     if (!env.ORDERS) {
       return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
     }
+    const orderUser = await getSessionUser(request, env);
+    if (!orderUser) {
+      return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+    }
     if (!env.ECPAY_MERCHANT_ID || !env.ECPAY_HASH_KEY || !env.ECPAY_HASH_IV) {
       return new Response(JSON.stringify({ ok:false, error:'Missing ECPay config' }), { status:500, headers: jsonHeaders });
     }
     const ct = (request.headers.get('content-type') || '').toLowerCase();
     const body = ct.includes('application/json') ? (await request.json()) : {};
 
-    const draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', lockCoupon:true });
+    let draft;
+    try{
+      draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', lockCoupon:true });
+    }catch(e){
+      const reason = e && e.code ? String(e.code) : 'invalid_product';
+      const msg = reason === 'product_not_found' ? '找不到商品'
+        : reason === 'product_inactive' ? '商品已下架'
+        : reason === 'invalid_variant' ? '商品規格無效'
+        : '缺少商品資訊';
+      return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: jsonHeaders });
+    }
     const order = draft.order;
+    try{
+      const orderUserRecord = await ensureUserRecord(env, orderUser);
+      if (orderUser){
+        order.buyer = order.buyer || {};
+        order.buyer.uid = orderUser.id || order.buyer.uid || '';
+        if (!order.buyer.name) order.buyer.name = orderUser.name || '';
+        if (!order.buyer.email) order.buyer.email = orderUser.email || '';
+        if (orderUserRecord && orderUserRecord.defaultContact){
+          if (!order.buyer.name) order.buyer.name = orderUserRecord.defaultContact.name || '';
+          if (!order.buyer.phone) order.buyer.phone = orderUserRecord.defaultContact.phone || '';
+          if (!order.buyer.email) order.buyer.email = orderUserRecord.defaultContact.email || '';
+        }
+      }
+    }catch(_){}
     const totalAmount = Math.max(1, Math.round(order.amount || 0));
 
     const gateway = ecpayEndpoint(env);
@@ -2830,6 +3118,8 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
       return new Response('0|ORDER_NOT_FOUND', { status:404, headers:{'Content-Type':'text/plain'} });
     }
     const order = JSON.parse(raw);
+    const paidAmount = Number(formObj.TradeAmt || formObj.TotalAmount || 0);
+    const orderAmount = Number(order.amount || 0);
     if (!order.payment) order.payment = {};
     order.payment.gateway = 'ecpay';
     order.payment.tradeNo = String(formObj.TradeNo || order.payment.tradeNo || '');
@@ -2837,7 +3127,14 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     order.payment.rtnCode = rtnCode;
     order.payment.message = String(formObj.RtnMsg || formObj.rtnmsg || '');
     order.payment.paidAt = new Date().toISOString();
-    order.payment.amount = Number(formObj.TradeAmt || formObj.TotalAmount || order.payment.amount || order.amount || 0);
+    order.payment.amount = paidAmount || Number(order.payment.amount || order.amount || 0);
+    if (rtnCode === 1 && orderAmount && Math.round(paidAmount) !== Math.round(orderAmount)) {
+      order.status = '付款金額不符';
+      order.payment.status = 'AMOUNT_MISMATCH';
+      order.updatedAt = new Date().toISOString();
+      await env.ORDERS.put(orderId, JSON.stringify(order));
+      return new Response('0|AMOUNT_MISMATCH', { status:400, headers:{'Content-Type':'text/plain'} });
+    }
     order.status = rtnCode === 1 ? '已付款待出貨' : '付款失敗';
     order.updatedAt = new Date().toISOString();
 
@@ -3246,47 +3543,20 @@ async function computeServerDiscount(env, items, couponInputs, orderId) {
 
 // 共用：將前端傳入的訂單資料標準化，計算金額與優惠
 async function buildOrderDraft(env, body, origin, opts = {}) {
-  function isTruthy(x){ return x === true || x === 1 || x === '1' || String(x).toLowerCase() === 'true' || String(x).toLowerCase() === 'yes' || x === 'on'; }
-  const hintMode   = (body.mode || '').toLowerCase();
-  const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
-  const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
-  const cartHint   = hasCart && (isTruthy(body.fromCart) || isTruthy(body.useCart) || hintMode === 'cart');
-
-  const preferDirect = (hintMode !== 'cart') && (directHint || !!body.productId);
-  const useCartOnly  = !preferDirect && cartHint;
-
-  let items = [];
-  if (useCartOnly) {
-    const cartArr = Array.isArray(body.cart) ? body.cart : [];
-    items = cartArr.map(it => ({
-      productId:   String(it.id || it.productId || ''),
-      productName: String(it.name || it.title || it.productName || '商品'),
-      category:    String(it.category || it.cat || ''),
-      deity:       String(it.deity || ''),
-      variantName: String(it.variantName || it.variant || ''),
-      price:       Number(it.price ?? it.unitPrice ?? 0),
-      qty:         Math.max(1, Number(it.qty ?? it.quantity ?? 1)),
-      image:       String(it.image || '')
-    }));
+  const selection = await resolveOrderSelection(env, body);
+  if (!selection.ok){
+    const err = new Error(selection.error || 'invalid_product');
+    err.code = selection.error || 'invalid_product';
+    throw err;
   }
-
-  let productId   = useCartOnly ? '' : String(body.productId || '');
-  let productName = useCartOnly ? '' : String(body.productName || '');
-  let price       = useCartOnly ? 0  : Number(body.price ?? 0);
-  let qty         = useCartOnly ? 0  : Number(body.qty   ?? 1);
-  let deity       = useCartOnly ? '' : String(body.deity || '');
-  let variantName = useCartOnly ? '' : String(body.variantName || '');
-
-  if (useCartOnly && items.length) {
-    const total = items.reduce((s, it) => s + (Number(it.price||0) * Math.max(1, Number(it.qty||1))), 0);
-    const totalQty = items.reduce((s, it) => s + Math.max(1, Number(it.qty||1)), 0);
-    productId   = items[0].productId || 'CART';
-    productName = items[0].productName || `購物車共 ${items.length} 項`;
-    price = total;
-    qty = totalQty;
-    deity = items[0].deity || '';
-    variantName = items[0].variantName || '';
-  }
+  const useCartOnly = selection.useCartOnly;
+  const items = selection.items;
+  const productId = selection.productId;
+  const productName = selection.productName;
+  const price = selection.price;
+  const qty = selection.qty;
+  const deity = selection.deity;
+  const variantName = selection.variantName;
 
   const buyer = {
     name:  String((body?.buyer?.name)  || body?.name  || body?.buyer_name  || body?.bfName    || ''),
@@ -3305,23 +3575,14 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     ''
   ).trim();
 
-  let amount = 0;
-  if (Array.isArray(items) && items.length) {
-    amount = items.reduce((s, it) => {
-      const unit = Number(it.price ?? it.unitPrice ?? 0) || 0;
-      const q    = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
-      return s + unit * q;
-    }, 0);
-  } else if (productId || productName) {
-    amount = Number(price || 0) * Math.max(1, Number(qty || 1));
-  } else {
-    amount = Number(body.amount || 0) || 0;
-  }
+  let amount = items.reduce((s, it) => {
+    const unit = Number(it.price ?? it.unitPrice ?? 0) || 0;
+    const q    = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+    return s + unit * q;
+  }, 0);
 
   const newId = await generateOrderId(env);
 
-  const shippingDiscountHint = Number(body.shipping_discount ?? body.shippingDiscount ?? 0) || 0;
-  const shippingOriginal = Number(body.shipping_original ?? body.shippingOriginal ?? 0) || 0;
   const couponCode  = String(body.coupon || body.couponCode || "").trim().toUpperCase();
   let couponDeity   = inferCouponDeity(couponCode, body.coupon_deity || body.deity || "");
   if (!couponDeity && items.length) {
@@ -3336,26 +3597,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   }).filter(c => c.code);
   const couponInputs = normalizedCoupons.length ? normalizedCoupons : (couponCode ? [{ code: couponCode, deity: couponDeity }] : []);
   const firstCoupon = couponInputs[0] || null;
-  const clientAssignment = parseCouponAssignment(body.coupon_assignment || body.couponAssignment);
-  const clientCouponTotal = Number(body.coupon_total ?? body.couponTotal ?? 0) || 0;
   let couponApplied = null;
-  function tryApplyClientCouponFallback(reason){
-    if (!(clientCouponTotal > 0)) return false;
-    const couponOnly = Math.max(0, clientCouponTotal - shippingDiscountHint);
-    amount = Math.max(0, Number(amount || 0) - couponOnly);
-    couponApplied = {
-      code: (firstCoupon && firstCoupon.code) || '',
-      deity: firstCoupon?.deity || '',
-      codes: couponInputs.length ? couponInputs.map(c=>c.code) : undefined,
-      discount: couponOnly,
-      shippingDiscount: shippingDiscountHint || undefined,
-      redeemedAt: Date.now(),
-      lines: clientAssignment && Array.isArray(clientAssignment.lines) ? clientAssignment.lines : undefined,
-      clientProvided: true,
-      reason: reason || undefined
-    };
-    return true;
-  }
 
   if (couponInputs.length) {
     if (Array.isArray(items) && items.length) {
@@ -3394,14 +3636,12 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
               locked: !!opts.lockCoupon
             };
           }
-        } else if (!tryApplyClientCouponFallback('client_fallback_no_server_discount')) {
+        } else {
           couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'invalid_or_not_applicable' };
         }
       } catch (e) {
         console.error('computeServerDiscount error', e);
-        if (!tryApplyClientCouponFallback('client_fallback_error')) {
-          couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
-        }
+        couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: 'error' };
       }
     } else if (firstCoupon && firstCoupon.code) {
       try {
@@ -3416,37 +3656,22 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
             amount = Math.max(0, Number(amount || 0) - disc);
             couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon };
           }
-        } else if (!tryApplyClientCouponFallback('client_fallback_invalid')) {
-          couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
-        }
-      } catch (e) {
-        console.error('redeemCoupon error', e);
-        if (!tryApplyClientCouponFallback('client_fallback_error')) {
-          couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
-        }
+      } else {
+        couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
       }
+    } catch (e) {
+      console.error('redeemCoupon error', e);
+      couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
     }
-  } else if (!couponApplied) {
-    tryApplyClientCouponFallback('client_fallback_no_coupon_inputs');
   }
+}
 
-  const shippingHint = Number(body.shipping ?? body.shippingFee ?? body.shipping_fee ?? body.shippingAmount ?? 0) || 0;
   const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
   const shippingNeeded = needShippingFee(items, fallbackText);
   const baseShipping = resolveShippingFee(env);
-  let shippingFee = 0;
-  if (shippingHint > 0){
-    shippingFee = shippingHint;
-  } else if (shippingNeeded){
-    shippingFee = baseShipping;
-  } else {
-    shippingFee = 0;
-  }
-  if (shippingOriginal > 0 && shippingFee <= 0 && shippingNeeded){
-    shippingFee = shippingOriginal;
-  }
+  let shippingFee = shippingNeeded ? baseShipping : 0;
   const shippingDiscountApplied = Math.max(
-    shippingDiscountHint,
+    0,
     Number((couponApplied && couponApplied.shippingDiscount) || 0)
   );
   if (shippingDiscountApplied > 0){
@@ -3485,7 +3710,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     resultToken: makeToken(32),
     results: [],
     coupon: couponApplied || undefined,
-    couponAssignment: clientAssignment || undefined,
+    couponAssignment: (couponApplied && couponApplied.lines) ? couponApplied.lines : undefined,
     ...(Object.keys(extra).length ? { extra } : {})
   };
 
@@ -3910,12 +4135,15 @@ function orderItemsSummary(o){
   const q = Math.max(1, Number(o?.qty||1));
   return `${name}${vn}×${q}`;
 }
-function normalizeReceiptUrl(o, origin){
+function normalizeReceiptUrl(o, origin, env){
   let u = o?.receiptUrl || o?.receipt || "";
   if (!u) return "";
-  if (/^https?:\/\//i.test(u)) return u;
-  if (u.startsWith(origin)) return u;
-  return `${origin}/api/proof/${encodeURIComponent(u)}`;
+  if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+    u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+  }
+  if (!isAllowedFileUrl(u, env, origin)) return "";
+  if (!/^https?:\/\//i.test(u) && u.startsWith('/')) u = `${origin}${u}`;
+  return u;
 }
 // --- 訂單 API：/api/order /api/order/status ---
 // CORS/預檢
@@ -4065,6 +4293,13 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
   }
   const orderHeaders = jsonHeadersFor(request, env);
   const admin = await isAdmin(request, env);
+  if (!admin){
+    const ip = getClientIp(request) || 'unknown';
+    const ok = await checkRateLimit(env, `rl:orders:${ip}`, 30, 300);
+    if (!ok){
+      return new Response(JSON.stringify({ ok:false, error:'Too many requests' }), { status:429, headers: orderHeaders });
+    }
+  }
   const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
   const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
   const qOrdRaw  = getAny(url.searchParams, ['order','orderId','order_id','oid','qOrder']);
@@ -4119,20 +4354,23 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
             if (!pOK || !lOK) continue;
           }
         }
-        (()=>{
-          const rec = normalizeReceiptUrl(obj, origin);
-          const ritualUrl =
-            obj.ritualPhotoUrl ||
-            obj.ritual_photo_url ||
-            (obj?.extra?.candle?.photoUrl || "");
-          const merged = Object.assign({ id: oid }, obj, {
-            receiptUrl: rec || "",
-            proofUrl: rec || "",
-            ritualPhotoUrl: ritualUrl || "",
-            ritualPhoto: ritualUrl || ""
-          });
+        const rec = normalizeReceiptUrl(obj, origin, env);
+        const ritualUrl =
+          obj.ritualPhotoUrl ||
+          obj.ritual_photo_url ||
+          (obj?.extra?.candle?.photoUrl || "");
+        const merged = Object.assign({ id: oid }, obj, {
+          receiptUrl: rec || "",
+          proofUrl: rec || "",
+          ritualPhotoUrl: ritualUrl || "",
+          ritualPhoto: ritualUrl || ""
+        });
+        if (admin){
           out.push(merged);
-        })();
+        } else {
+          const pub = redactOrderForPublic(merged);
+          out.push(await attachSignedProofs(pub, env));
+        }
       } catch {}
     }
     // Fallback: rebuild from KV if INDEX empty (scan ORDERS KV)
@@ -4176,7 +4414,7 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
                 }
               }
             }
-            const rec2 = normalizeReceiptUrl(obj2, origin);
+            const rec2 = normalizeReceiptUrl(obj2, origin, env);
             const ritualUrl2 =
               obj2.ritualPhotoUrl ||
               obj2.ritual_photo_url ||
@@ -4187,7 +4425,8 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
               ritualPhotoUrl: ritualUrl2 || "",
               ritualPhoto: ritualUrl2 || ""
             });
-            fallbackItems.push({ id: oid, createdAt: obj2.createdAt || '', item: merged2 });
+            const finalItem = admin ? merged2 : await attachSignedProofs(redactOrderForPublic(merged2), env);
+            fallbackItems.push({ id: oid, createdAt: obj2.createdAt || '', item: finalItem });
           } catch {}
         }
         fallbackItems.sort((a,b)=> {
@@ -4273,7 +4512,7 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
     for (const o of candidates){
       const amt = orderAmount(o);
       const items = orderItemsSummary(o);
-      const rec = normalizeReceiptUrl(o, origin);
+      const rec = normalizeReceiptUrl(o, origin, env);
       const line = [
         o.id || '',
         o.createdAt || '',
@@ -4321,7 +4560,8 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
         if (!token || token !== order.resultToken){
           return new Response(JSON.stringify({ ok:false, error:'Forbidden' }), { status:403, headers: jsonHeaders });
         }
-        return new Response(JSON.stringify({ ok:true, results: Array.isArray(order.results)? order.results: [] }), { status:200, headers: jsonHeaders });
+        const signed = await attachSignedProofs(order, env);
+        return new Response(JSON.stringify({ ok:true, results: Array.isArray(signed.results)? signed.results: [] }), { status:200, headers: jsonHeaders });
       }
     }
 
@@ -4342,7 +4582,8 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
         if (!token || token !== order.resultToken){
           return new Response("Forbidden", { status:403, headers: { "Content-Type":"text/plain; charset=utf-8", "Access-Control-Allow-Origin":"*" } });
         }
-        const resultsAll = Array.isArray(order.results) ? order.results : [];
+        const signed = await attachSignedProofs(order, env);
+        const resultsAll = Array.isArray(signed.results) ? signed.results : [];
         const results = resultsAll.filter(r => {
           const t = (r && r.type || '').toString().toLowerCase();
           const u = (r && r.url  || '').toString();
@@ -4578,6 +4819,9 @@ ${renderLineBanner()}
     if (pathname === '/api/proof' && request.method === 'GET') {
       const key = decodeURIComponent(url.searchParams.get('key') || '').trim();
       if (!key) return new Response(JSON.stringify({ ok:false, error:'Missing key' }), { status:400 });
+      if (!(await canAccessProof(request, env, key))) {
+        return new Response(JSON.stringify({ ok:false, error:'Forbidden' }), { status:403, headers: jsonHeaders });
+      }
       try {
         const found = await getProofFromStore(env, key);
         if (found && found.bin) {
@@ -4613,17 +4857,27 @@ if (pathname === '/api/order') {
     }
     try {
       const body = await request.json();
-      const productId   = String(body.productId || '');
-      const productName = String(body.productName || '');
-      const price       = Number(body.price ?? 0);
-      const qty         = Number(body.qty ?? 1);
+      const itemRes = await buildItemFromProduct(env, body.productId || '', body.variantName || body.variant || '', body.qty || 1);
+      if (!itemRes.ok){
+        const reason = itemRes.error || 'invalid_product';
+        const msg = reason === 'product_not_found' ? '找不到商品'
+          : reason === 'product_inactive' ? '商品已下架'
+          : reason === 'invalid_variant' ? '商品規格無效'
+          : '缺少商品資訊';
+        return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: orderHeaders });
+      }
+      const item = itemRes.item;
+      const productId   = String(item.productId || '');
+      const productName = String(item.productName || item.name || '');
+      const price       = Number(item.price ?? 0);
+      const qty         = Number(item.qty ?? 1);
       const method      = String(body.method || '7-11賣貨便');
       const buyer = {
         name:  String(body?.buyer?.name  || '訪客'),
         email: String(body?.buyer?.email || ''),
         line:  String(body?.buyer?.line  || '')
       };
-      if (!productId || !productName || !(price >= 0)) {
+      if (!productId || !productName) {
         return new Response(JSON.stringify({ ok:false, error:'Missing product info' }), { status:400, headers: orderHeaders });
       }
       // Optional coupon from simple order flow (one-time usage)
@@ -4708,6 +4962,13 @@ if (pathname === '/api/order') {
   if (request.method === 'GET') {
     try {
       const admin = await isAdmin(request, env);
+      if (!admin){
+        const ip = getClientIp(request) || 'unknown';
+        const ok = await checkRateLimit(env, `rl:order:${ip}`, 30, 300);
+        if (!ok){
+          return new Response(JSON.stringify({ ok:false, error:'Too many requests' }), { status:429, headers: orderHeaders });
+        }
+      }
       const id = url.searchParams.get('id');
       const token = String(url.searchParams.get('token') || '').trim();
       const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
@@ -4737,7 +4998,7 @@ if (pathname === '/api/order') {
             return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: orderHeaders });
           }
         }
-        const rec = normalizeReceiptUrl(one, origin);
+        const rec = normalizeReceiptUrl(one, origin, env);
         const ritualUrl =
           one.ritualPhotoUrl ||
           one.ritual_photo_url ||
@@ -4748,7 +5009,11 @@ if (pathname === '/api/order') {
           ritualPhotoUrl: ritualUrl || "",
           ritualPhoto: ritualUrl || ""
         });
-        return new Response(JSON.stringify({ ok:true, order: merged }), { status:200, headers: orderHeaders });
+        if (admin){
+          return new Response(JSON.stringify({ ok:true, order: merged }), { status:200, headers: orderHeaders });
+        }
+        const pub = await attachSignedProofs(redactOrderForPublic(merged), env);
+        return new Response(JSON.stringify({ ok:true, order: pub }), { status:200, headers: orderHeaders });
       }
       if (!admin) {
         return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: orderHeaders });
@@ -4980,8 +5245,26 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }
     if (!svc) return new Response(JSON.stringify({ ok:false, error:'找不到服務項目' }), { status:404, headers: jsonHeaders });
     const transferLast5 = String(body.transferLast5||'').trim();
-    const transferReceiptUrl = String(body.transferReceiptUrl||'').trim();
-    const ritualPhotoUrl = String(body.ritualPhotoUrl||'').trim();
+    const transferReceiptUrl = (() => {
+      let u = String(body.transferReceiptUrl || '').trim();
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+        u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      }
+      if (!isAllowedFileUrl(u, env, origin)) return '';
+      if (!/^https?:\/\//i.test(u) && u.startsWith('/')) u = `${origin}${u}`;
+      return u;
+    })();
+    const ritualPhotoUrl = (() => {
+      let u = String(body.ritualPhotoUrl || '').trim();
+      if (!u) return '';
+      if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) {
+        u = `${origin}/api/proof/${encodeURIComponent(u)}`;
+      }
+      if (!isAllowedFileUrl(u, env, origin)) return '';
+      if (!/^https?:\/\//i.test(u) && u.startsWith('/')) u = `${origin}${u}`;
+      return u;
+    })();
     if (!/^\d{5}$/.test(transferLast5) || !transferReceiptUrl){
       return new Response(JSON.stringify({ ok:false, error:'缺少匯款資訊' }), { status:400, headers: jsonHeaders });
     }
@@ -5054,7 +5337,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }
     let finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
     const transfer = {
-      amount: Number(body.transferAmount || finalPrice) || finalPrice,
+      amount: finalPrice,
       last5: transferLast5,
       receiptUrl: transferReceiptUrl,
       memo: transferMemo,
@@ -5318,6 +5601,13 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
   if (!phone || (!orderDigits && !bankDigits)){
     return new Response(JSON.stringify({ ok:false, error:'缺少查詢條件' }), { status:400, headers: jsonHeadersFor(request, env) });
   }
+  {
+    const ip = getClientIp(request) || 'unknown';
+    const ok = await checkRateLimit(env, `rl:svc_lookup:${ip}`, 20, 300);
+    if (!ok){
+      return new Response(JSON.stringify({ ok:false, error:'Too many requests' }), { status:429, headers: jsonHeadersFor(request, env) });
+    }
+  }
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeadersFor(request, env) });
@@ -5341,7 +5631,12 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
       matches.push(order);
     }
   }
-  return new Response(JSON.stringify({ ok:true, orders: matches }), { status:200, headers: jsonHeadersFor(request, env) });
+  const out = [];
+  for (const order of matches){
+    const pub = redactOrderForPublic(order);
+    out.push(await attachSignedProofs(pub, env));
+  }
+  return new Response(JSON.stringify({ ok:true, orders: out }), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
     // 圖片上傳
@@ -5376,6 +5671,9 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     if (pathname.startsWith('/api/proof/') && request.method === 'GET') {
       const key = decodeURIComponent(pathname.replace('/api/proof/', '').trim());
       if (!key) return new Response(JSON.stringify({ ok:false, error:'Missing key' }), { status:400 });
+      if (!(await canAccessProof(request, env, key))) {
+        return new Response(JSON.stringify({ ok:false, error:'Forbidden' }), { status:403, headers: jsonHeaders });
+      }
       try {
         // 使用 getProofFromStore 取得圖片，避免遞迴呼叫
         const found = await getProofFromStore(env, key);
@@ -5400,7 +5698,11 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     if (pathname.startsWith("/api/proof.data/") && request.method === "GET") {
       try {
         const rawKey = pathname.replace("/api/proof.data/", "");
-        const found = await getProofFromStore(env, decodeURIComponent(rawKey));
+        const accessKey = decodeURIComponent(rawKey);
+        if (!(await canAccessProof(request, env, accessKey))) {
+          return new Response('Forbidden', { status: 403 });
+        }
+        const found = await getProofFromStore(env, accessKey);
         if (!found) return new Response('Not found', { status: 404 });
         const { bin, metadata } = found;
         let ctype = (metadata && (metadata.contentType || metadata['content-type'])) || 'image/jpeg';
@@ -5425,6 +5727,9 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     if (pathname.startsWith("/api/proof.view/") && request.method === "GET") {
       const rawKey = pathname.replace("/api/proof.view/", "");
       const key = decodeURIComponent(rawKey);
+      if (!(await canAccessProof(request, env, key))) {
+        return new Response('Forbidden', { status: 403 });
+      }
       // 直接從 store 取得圖片
       const found = await getProofFromStore(env, key);
       if (!found || !found.bin) return new Response('Not found', { status: 404 });
@@ -5447,7 +5752,11 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     if (pathname.startsWith("/api/proof.inline/") && request.method === "GET") {
       try {
         const rawKey = pathname.replace("/api/proof.inline/", "");
-        const found = await getProofFromStore(env, decodeURIComponent(rawKey));
+        const accessKey = decodeURIComponent(rawKey);
+        if (!(await canAccessProof(request, env, accessKey))) {
+          return new Response('Forbidden', { status: 403 });
+        }
+        const found = await getProofFromStore(env, accessKey);
         if (!found) return new Response('Not found', { status: 404 });
         const { key: realKey, bin, metadata } = found;
         let ctype = (metadata && (metadata.contentType || metadata['content-type'])) || 'image/jpeg';
@@ -5513,6 +5822,13 @@ async function handleUpload(request, env, origin) {
     if (!isAllowedOrigin(request, env, env.UPLOAD_ORIGINS || '')) {
       return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
     }
+    const uploader = await getSessionUser(request, env);
+    const isAuthed = !!uploader;
+    const ip = getClientIp(request) || 'unknown';
+    const ok = await checkRateLimit(env, `rl:upload:${isAuthed ? 'auth' : 'anon'}:${ip}`, isAuthed ? 60 : 20, 300);
+    if (!ok){
+      return withCORS(json({ ok:false, error:"Too many requests" }, 429));
+    }
     const form = await request.formData();
     let files = form.getAll("files[]");
     if (!files.length) files = form.getAll("file");
@@ -5549,10 +5865,16 @@ async function handleUpload(request, env, origin) {
     const m = String(day.getMonth() + 1).padStart(2, "0");
     const d = String(day.getDate()).padStart(2, "0");
 
+    if (!isAuthed){
+      allowedMimes.delete("application/pdf");
+      allowedExts.delete("pdf");
+    }
+    const maxBytes = isAuthed ? (20 * 1024 * 1024) : (3 * 1024 * 1024);
     for (const f of files) {
       if (typeof f.stream !== "function") continue;
-      if (f.size && f.size > 3 * 1024 * 1024) {
-        return json({ ok:false, error:"File too large (>3MB)" }, 413);
+      if (f.size && f.size > maxBytes) {
+        const limitMb = Math.round(maxBytes / (1024 * 1024));
+        return json({ ok:false, error:`File too large (>${limitMb}MB)` }, 413);
       }
       const mime = String(f.type || "").toLowerCase();
       const extGuess = (guessExt(mime) || safeExt(f.name) || "").toLowerCase();
