@@ -22,7 +22,7 @@
   <div class="card">
     <h1>付款結果</h1>
     <div id="status" class="status">確認中…</div>
-    <div class="muted">如果剛完成刷卡，狀態可能需要數秒更新，可稍後重新整理。也可以回到商品頁左側「查詢訂單狀態」，輸入手機號碼與訂單編號末五碼查看最新進度。</div>
+    <div class="muted">如果剛完成刷卡，狀態可能需要數秒更新，可稍後重新整理。也可以回到商品頁左側「查詢訂單狀態」，輸入手機號碼與訂單編號末五碼（英數）查看最新進度。</div>
     <div id="detail" class="list" style="display:none"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
       <a class="btn" href="/shop">回到商品頁</a>
@@ -53,7 +53,7 @@
       const r = await fetch(`/api/order?${qs.toString()}`, { cache:'no-store' });
       const j = await r.json().catch(()=>({}));
       if (r.status === 401) {
-        statusEl.textContent = '需要驗證才能查看訂單狀態，請回商品頁以手機與訂單末五碼查詢。';
+        statusEl.textContent = '需要驗證才能查看訂單狀態，請回商品頁以手機與訂單末五碼（英數）查詢。';
         statusEl.className = 'status warn';
         return;
       }

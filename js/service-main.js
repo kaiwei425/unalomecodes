@@ -200,6 +200,9 @@
   function escapeHtml(str){
     return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
   }
+  function normalizeOrderSuffix(val){
+    return String(val||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-5);
+  }
 
   function formatTWD(num){
     const n = Number(num || 0);
@@ -734,14 +737,19 @@
         ev.preventDefault();
         const formData = new FormData(lookupForm);
         const phone = String(formData.get('phone')||'').trim();
-        const orderDigits = String(formData.get('orderDigits')||'').trim();
+        const orderDigitsRaw = String(formData.get('orderDigits')||'').trim();
+        const orderDigits = normalizeOrderSuffix(orderDigitsRaw);
         const bankDigits = String(formData.get('bankDigits')||'').trim();
         if (!phone){
           alert('請輸入手機號碼');
           return;
         }
         if (!orderDigits && !bankDigits){
-          alert('請輸入訂單末五碼或匯款帳號末五碼');
+          alert('請輸入訂單末五碼（英數）或匯款帳號末五碼');
+          return;
+        }
+        if (orderDigitsRaw && orderDigits.length !== 5){
+          alert('訂單編號末五碼需為 5 位英數');
           return;
         }
         try{

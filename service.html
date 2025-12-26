@@ -225,7 +225,7 @@ dialog[data-fallback-open]{display:block;}
   <dialog id="svcLookup">
     <header>
       <div style="font-weight:800;font-size:18px;">祈福進度查詢</div>
-      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">輸入手機並搭配訂單編號末五碼或匯款帳號末五碼，即可查看服務最新狀態。</p>
+      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">輸入手機並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看服務最新狀態。</p>
     </header>
     <form id="svcLookupForm">
       <label>
@@ -233,8 +233,8 @@ dialog[data-fallback-open]{display:block;}
         <input type="tel" name="phone" required placeholder="請輸入下單時的電話" pattern="09\d{8}">
       </label>
       <label>
-        訂單編號末五碼
-        <input type="text" name="orderDigits" inputmode="numeric" pattern="\d{5}" placeholder="12345">
+        訂單編號末五碼（英數）
+        <input type="text" name="orderDigits" inputmode="text" pattern="[A-Za-z0-9]{5}" placeholder="A1B2C">
       </label>
       <label>
         匯款帳號末五碼
@@ -437,13 +437,13 @@ dialog[data-fallback-open]{display:block;}
           <p class="svc-bank-hint">我們已收到匯款資料並建立祈福訂單，請保留以下資訊或截圖備查。</p>
         </div>
         <div class="svc-step3-card">
-          <div><span style="font-size:12px;color:#6b7280;">訂單編號</span><strong id="svcStep3OrderId">SV000000</strong></div>
+          <div><span style="font-size:12px;color:#6b7280;">訂單編號</span><strong id="svcStep3OrderId">SVXXXXXX</strong></div>
           <div>服務內容：<span id="svcStep3Service">—</span></div>
           <div>應付金額：<span id="svcStep3Amount">NT$ 0</span></div>
           <div>匯款末五碼：<span id="svcStep3Last5">—</span></div>
           <div>聯絡人：<span id="svcStep3Buyer">—</span></div>
         </div>
-        <div class="svc-bank-hint">之後可透過左側「祈福進度查詢」輸入手機與訂單末五碼查詢最新進度。</div>
+        <div class="svc-bank-hint">之後可透過左側「祈福進度查詢」輸入手機與訂單末五碼（英數）查詢最新進度。</div>
         <div class="svc-step-actions">
           <button type="button" class="btn" id="svcStep3Lookup">查詢進度</button>
           <button type="button" class="btn primary" id="svcStep3Close">完成</button>
@@ -460,7 +460,7 @@ dialog[data-fallback-open]{display:block;}
     <div class="svc-success-body">
       <div>
         <div style="color:#6b7280;font-size:13px;">訂單編號</div>
-        <div id="svcSuccessId" class="order-id">SV000000</div>
+        <div id="svcSuccessId" class="order-id">SVXXXXXX</div>
       </div>
       <div id="svcSuccessHint" style="font-size:14px;color:#374151;line-height:1.7;">
         我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。

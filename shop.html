@@ -4719,7 +4719,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     <div style="padding:18px 18px 10px;">
       <div style="font-weight:800;font-size:18px;">查詢訂單狀態</div>
       <div style="color:#6b7280;font-size:14px;margin-top:4px">
-        查詢需輸入 <b>手機號碼</b>，並搭配 <b>匯款末五碼</b> 或 <b>訂單編號末五碼</b>（信用卡）。
+        查詢需輸入 <b>手機號碼</b>，並搭配 <b>匯款末五碼</b> 或 <b>訂單編號末五碼（英數）</b>（信用卡）。
       </div>
     </div>
     <form id="lookupForm" style="padding:0 18px 16px;display:grid;gap:10px">
@@ -4739,9 +4739,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">訂單編號末五碼（信用卡）</label>
-        <input id="qOrder" name="order" type="text" inputmode="numeric" pattern="\d{5,}"
-               placeholder="輸入訂單編號末 5 位" title="請輸入訂單編號末 5 位數字"
+        <label style="font-size:12px;color:#6b7280">訂單編號末五碼（英數，信用卡）</label>
+        <input id="qOrder" name="order" type="text" inputmode="text" pattern="[A-Za-z0-9]{5,}"
+               placeholder="輸入訂單編號末 5 位（英數）" title="請輸入訂單編號末 5 位（英數）"
                autocomplete="one-time-code"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
@@ -4750,7 +4750,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         <button type="submit" id="lookupSubmit" class="btn primary">查詢</button>
       </div>
       <div id="lookupHint" style="font-size:12px;color:#6b7280;line-height:1.6">
-        每筆查詢皆需輸入手機號碼，並搭配匯款末五碼或訂單編號末五碼（信用卡）。
+        每筆查詢皆需輸入手機號碼，並搭配匯款末五碼或訂單編號末五碼（英數，信用卡）。
       </div>
     </form>
 
@@ -4850,6 +4850,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     if (d.length > 10) return d.slice(-10);
     return d;
   }
+  function normalizeOrderSuffix(s){
+    return String(s||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-5);
+  }
   function phonesEqualLoose(a, b){
     var A = normalizeTWPhone(a);
     var B = normalizeTWPhone(b);
@@ -4862,7 +4865,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{
       var pUser = normalizeTWPhone(phone);
       if (!pUser) return false;
-      var ordUser = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+      var ordUser = normalizeOrderSuffix(orderDigits);
       var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
       var wantL5 = (l5User.length === 5);
 
@@ -4899,9 +4902,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           o && o.payment && (o.payment.orderId || o.payment.order_id || o.payment.MerchantTradeNo || o.payment.merchantTradeNo)
         ].filter(Boolean);
         var ordMatch = ordCandidates.some(function(val){
-          var digits = String(val||'').replace(/\D+/g,'');
-          if (!digits) return false;
-          return digits.slice(-5) === ordUser;
+          var suffix = normalizeOrderSuffix(val);
+          if (!suffix) return false;
+          return suffix === ordUser;
         });
         if (ordMatch) return true;
       }
@@ -5037,7 +5040,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     var pNorm = normalizeTWPhone(phone);
     if (!pNorm) return [];
     var l5 = String(last5||'').replace(/\D+/g,'').slice(-5);
-    var ord = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+    var ord = normalizeOrderSuffix(orderDigits);
     var usingOrder = !!ord;
     var usingBank = (l5.length === 5);
     if (!usingOrder && !usingBank) return [];
@@ -5132,7 +5135,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var phone = (document.getElementById('qPhone').value||'').trim();
       var last5Raw = (document.getElementById('qLast5').value||'').trim();
       var orderRaw = (document.getElementById('qOrder').value||'').trim();
-      var orderDigits = String(orderRaw).replace(/\D+/g,'').slice(-5);
+      var orderDigits = normalizeOrderSuffix(orderRaw);
       var last5 = String(last5Raw).replace(/\D+/g,'').slice(-5);
       if (!phone){
         alert('請輸入手機號碼');
@@ -5141,11 +5144,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var hasOrder = orderDigits.length === 5;
       var hasLast5 = last5.length === 5;
       if (!hasOrder && !hasLast5){
-        alert('請輸入匯款末五碼或訂單編號末五碼');
+        alert('請輸入匯款末五碼或訂單編號末五碼（英數）');
         return;
       }
       if (hasLast5 === false && last5Raw){
         alert('匯款末五碼需為 5 位數字');
+        return;
+      }
+      if (!hasOrder && orderRaw){
+        alert('訂單編號末五碼需為 5 位英數');
         return;
       }
       var box = document.getElementById('lookupList');
@@ -5175,7 +5182,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           if (p && typeof phone === 'string' && phone) p.value = phone;
           if (l && typeof last5 === 'string' && last5) l.value = String(last5).replace(/\D+/g,'').slice(-5);
           if (o && typeof orderDigits === 'string' && orderDigits){
-            o.value = String(orderDigits).replace(/\D+/g,'').slice(-5);
+            o.value = normalizeOrderSuffix(orderDigits);
           }
           // focus on the next empty field，沒有空白時若有訂單末碼則聚焦於它
           var focusTarget = null;
@@ -5196,7 +5203,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           if (focusTarget) focusTarget.focus();
 
           var wantsAuto = !!(opts && opts.autoSubmit);
-          var ordVal = (o && o.value) ? String(o.value).replace(/\D+/g,'').slice(-5) : '';
+          var ordVal = (o && o.value) ? normalizeOrderSuffix(o.value) : '';
           if (wantsAuto && ordVal.length === 5){
             var form = document.getElementById('lookupForm');
             setTimeout(function(){
@@ -5219,9 +5226,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{
       var raw = '';
       try{ raw = decodeURIComponent(m[1]); }catch(_){ raw = m[1]; }
-      var digits = String(raw||'').replace(/\D+/g,'');
-      if (digits){
-        window.openOrderLookup('', '', digits.slice(-5), { focusPhone:true });
+      var suffix = normalizeOrderSuffix(raw);
+      if (suffix){
+        window.openOrderLookup('', '', suffix, { focusPhone:true });
       }else{
         openLookup();
       }

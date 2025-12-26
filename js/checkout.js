@@ -16,6 +16,10 @@ function isCandleItemLike(obj){
   }catch(_){ return false; }
 }
 
+function normalizeOrderSuffix(val){
+  return String(val||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-5);
+}
+
 if (typeof window.__clearCouponState !== 'function'){
   window.__clearCouponState = function(){
     try{
@@ -321,7 +325,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       }catch(_){}
       var order = (opts.order && typeof opts.order === 'object') ? opts.order : {};
       var id = opts.orderId || order.id || opts.id || '';
-      var digitsId = id ? String(id).replace(/\D+/g,'') : '';
+      var suffixId = id ? normalizeOrderSuffix(id) : '';
       var amount = (typeof opts.amount === 'number') ? opts.amount : Number(order.amount || 0) || 0;
       var shipping = (typeof opts.shipping === 'number') ? opts.shipping : Number(order.shippingFee || order.shipping || 0) || 0;
       var discount = (typeof opts.discount === 'number')
@@ -342,7 +346,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
       var note = opts.note || '請截圖保存本頁資訊，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
       var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : '轉帳匯款');
-      var lookupDigits = opts.orderLookupDigits || digitsId.slice(-5);
+      var lookupDigits = opts.orderLookupDigits || suffixId;
       var phone = opts.phone || '';
       var last5 = opts.last5 || (order.transferLast5 || '');
       var continueBtn = document.getElementById('successContinue');
@@ -1089,7 +1093,7 @@ function __cartPricing(includePendingDetail){
     try{
       var pUser = normalizeTWPhone(phone);
       if (!pUser) return false;
-      var ordUser = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+      var ordUser = normalizeOrderSuffix(orderDigits);
       var l5User = String(last5||'').replace(/\D+/g,'').slice(-5);
       var wantL5 = (l5User.length === 5);
 
@@ -1126,9 +1130,9 @@ function __cartPricing(includePendingDetail){
           o && o.payment && (o.payment.orderId || o.payment.order_id || o.payment.MerchantTradeNo || o.payment.merchantTradeNo)
         ].filter(Boolean);
         var ordMatch = ordCandidates.some(function(val){
-          var digits = String(val||'').replace(/\D+/g,'');
-          if (!digits) return false;
-          return digits.slice(-5) === ordUser;
+          var suffix = normalizeOrderSuffix(val);
+          if (!suffix) return false;
+          return suffix === ordUser;
         });
         if (ordMatch) return phoneOk;
       }
@@ -1340,7 +1344,7 @@ function __cartPricing(includePendingDetail){
     var pNorm = normalizeTWPhone(phone);
     if (!pNorm) return [];
     var l5 = String(last5||'').replace(/\D+/g,'').slice(-5);
-    var ord = String(orderDigits||'').replace(/\D+/g,'').slice(-5);
+    var ord = normalizeOrderSuffix(orderDigits);
     var usingOrder = !!ord;
     var usingBank = (l5.length === 5);
     if (!usingOrder && !usingBank) return [];
@@ -1435,7 +1439,7 @@ function __cartPricing(includePendingDetail){
       var phone = (document.getElementById('qPhone').value||'').trim();
       var last5Raw = (document.getElementById('qLast5').value||'').trim();
       var orderRaw = (document.getElementById('qOrder').value||'').trim();
-      var orderDigits = String(orderRaw).replace(/\D+/g,'').slice(-5);
+      var orderDigits = normalizeOrderSuffix(orderRaw);
       var last5 = String(last5Raw).replace(/\D+/g,'').slice(-5);
       if (!phone){
         alert('請輸入手機號碼');
@@ -1444,11 +1448,15 @@ function __cartPricing(includePendingDetail){
       var hasOrder = orderDigits.length === 5;
       var hasLast5 = last5.length === 5;
       if (!hasOrder && !hasLast5){
-        alert('請輸入匯款末五碼或訂單編號末五碼');
+        alert('請輸入匯款末五碼或訂單編號末五碼（英數）');
         return;
       }
       if (hasLast5 === false && last5Raw){
         alert('匯款末五碼需為 5 位數字');
+        return;
+      }
+      if (!hasOrder && orderRaw){
+        alert('訂單編號末五碼需為 5 位英數');
         return;
       }
       var box = document.getElementById('lookupList');
@@ -1478,7 +1486,7 @@ function __cartPricing(includePendingDetail){
           if (p && typeof phone === 'string' && phone) p.value = phone;
           if (l && typeof last5 === 'string' && last5) l.value = String(last5).replace(/\D+/g,'').slice(-5);
           if (o && typeof orderDigits === 'string' && orderDigits){
-            o.value = String(orderDigits).replace(/\D+/g,'').slice(-5);
+            o.value = normalizeOrderSuffix(orderDigits);
           }
           // focus on the next empty field
           var focusTarget = null;
@@ -1499,7 +1507,7 @@ function __cartPricing(includePendingDetail){
           if (focusTarget) focusTarget.focus();
 
           var wantsAuto = !!(opts && opts.autoSubmit);
-          var ordVal = (o && o.value) ? String(o.value).replace(/\D+/g,'').slice(-5) : '';
+          var ordVal = (o && o.value) ? normalizeOrderSuffix(o.value) : '';
           if (wantsAuto && ordVal.length === 5){
             var form = document.getElementById('lookupForm');
             setTimeout(function(){
@@ -1522,9 +1530,9 @@ function __cartPricing(includePendingDetail){
     try{
       var raw = '';
       try{ raw = decodeURIComponent(m[1]); }catch(_){ raw = m[1]; }
-      var digits = String(raw||'').replace(/\D+/g,'');
-      if (digits){
-        window.openOrderLookup('', '', digits.slice(-5), { focusPhone:true });
+      var suffix = normalizeOrderSuffix(raw);
+      if (suffix){
+        window.openOrderLookup('', '', suffix, { focusPhone:true });
       }else{
         openLookup();
       }

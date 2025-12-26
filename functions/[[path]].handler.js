@@ -31,6 +31,10 @@ const jsonHeaders = {
 };
 
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
+const ORDER_ID_PREFIX = 'OD';
+const ORDER_ID_LEN = 10;
+const SERVICE_ORDER_ID_PREFIX = 'SV';
+const SERVICE_ORDER_ID_LEN = 10;
 function parseAdminEmails(env){
   try{
     const raw = env.ADMIN_ALLOWED_EMAILS || '';
@@ -152,39 +156,25 @@ async function redeemCoupon(env, { code, deity, orderId, lock }){
 }
 
 async function generateOrderId(env){
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth()+1).padStart(2,'0');
-  const d = String(now.getDate()).padStart(2,'0');
-  const prefix = `${y}${m}${d}`;
-  const seqKey = `ORDER_SEQ_${prefix}`;
-  let seqRaw = await env.ORDERS.get(seqKey);
-  let seq = Number(seqRaw || 0) || 0;
-  seq += 1;
-  await env.ORDERS.put(seqKey, String(seq));
-  const tail = String(seq).padStart(5,'0'); // 00001
-  return prefix + tail; // e.g. 2025103000001
+  const store = env && env.ORDERS;
+  for (let i=0;i<6;i++){
+    const id = ORDER_ID_PREFIX + makeOrderCode(ORDER_ID_LEN);
+    if (!store) return id;
+    const hit = await store.get(id);
+    if (!hit) return id;
+  }
+  return ORDER_ID_PREFIX + makeOrderCode(ORDER_ID_LEN + 2);
 }
 
 async function generateServiceOrderId(env){
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth()+1).padStart(2,'0');
-  const d = String(now.getDate()).padStart(2,'0');
-  const prefix = `${y}${m}${d}`;
-  const seqKey = `SERVICE_ORDER_SEQ_${prefix}`;
   const store = env.SERVICE_ORDERS || env.ORDERS;
-  let seq = 0;
-  if (store){
-    const raw = await store.get(seqKey);
-    seq = Number(raw||0) || 0;
-    seq += 1;
-    await store.put(seqKey, String(seq));
-  } else {
-    seq = Math.floor(Math.random()*99999);
+  for (let i=0;i<6;i++){
+    const id = SERVICE_ORDER_ID_PREFIX + makeOrderCode(SERVICE_ORDER_ID_LEN);
+    if (!store) return id;
+    const hit = await store.get(id);
+    if (!hit) return id;
   }
-  const tail = String(seq).padStart(4,'0');
-  return `SV${prefix}${tail}`;
+  return SERVICE_ORDER_ID_PREFIX + makeOrderCode(SERVICE_ORDER_ID_LEN + 2);
 }
 
 const DEFAULT_SERVICE_PRODUCTS = [
@@ -234,10 +224,26 @@ function normalizeTWPhoneStrict(raw){
 function lastDigits(str, count=5){
   return String(str||'').replace(/\D+/g,'').slice(-count);
 }
+function normalizeOrderSuffix(str, count=5){
+  return String(str||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-count);
+}
 
 // Generate a public-share token for ritual results
 function makeToken(len=32){
   const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  if (typeof crypto !== "undefined" && crypto.getRandomValues){
+    const buf = new Uint8Array(len);
+    crypto.getRandomValues(buf);
+    for (let i=0;i<len;i++) s += abc[buf[i] % abc.length];
+    return s;
+  }
+  for (let i=0;i<len;i++) s += abc[Math.floor(Math.random()*abc.length)];
+  return s;
+}
+
+function makeOrderCode(len=10){
+  const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let s = "";
   if (typeof crypto !== "undefined" && crypto.getRandomValues){
     const buf = new Uint8Array(len);
@@ -1617,7 +1623,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       amount = Number(body.amount || 0) || 0;
     }
 
-    // New order id (YYYYMMDD + 5-digit sequence) – generated early so coupon redeem can bind to this order
+    // New order id (random alphanumeric) – generated early so coupon redeem can bind to this order
     const newId = await generateOrderId(env);
 
     // === Coupon (optional): server-verified discount, bound to this order ===
@@ -2873,8 +2879,8 @@ function composeOrderEmail(order, opts = {}) {
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const lookupLine = opts.lookupUrl
-      ? `請至 <a href="${esc(opts.lookupUrl)}" target="_blank" rel="noopener">查詢祈福進度</a> 輸入手機號碼，並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。`
-      : '請至查詢祈福進度輸入手機號碼，並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。';
+      ? `請至 <a href="${esc(opts.lookupUrl)}" target="_blank" rel="noopener">查詢祈福進度</a> 輸入手機號碼，並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。`
+      : '請至查詢祈福進度輸入手機號碼，並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。';
     customerIntro += `<p>${lookupLine}</p>`;
   }
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
@@ -2947,8 +2953,8 @@ function composeOrderEmail(order, opts = {}) {
     textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或 LINE ID：${lineLabel} 聯繫。`);
     if (isBlessingDone){
       const lookupText = opts.lookupUrl
-        ? `請至 ${opts.lookupUrl} 查詢祈福進度，輸入手機號碼並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。`
-        : '請至查詢祈福進度輸入手機號碼並搭配訂單編號末五碼或匯款帳號末五碼，即可查看祈福完成的照片。';
+        ? `請至 ${opts.lookupUrl} 查詢祈福進度，輸入手機號碼並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。`
+        : '請至查詢祈福進度輸入手機號碼並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。';
       textParts.push(lookupText);
     }
   } else {
@@ -3273,8 +3279,7 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
   const qOrdRaw  = getAny(url.searchParams, ['order','orderId','order_id','oid','qOrder']);
   const qPhone = normalizePhone(qPhoneRaw);
   const qLast5 = (String(qLast5Raw).replace(/\D/g, '') || '').slice(-5);
-  const qOrdFull = (String(qOrdRaw||'').replace(/\D/g, '') || '');
-  const qOrd   = qOrdFull.slice(-5);
+  const qOrd   = normalizeOrderSuffix(qOrdRaw, 5);
   const hasOrderLookup = !!(qOrd && qPhone);
   const hasBankLookup = !!(qPhone && qLast5);
   const hasLookup = hasOrderLookup || hasBankLookup;
@@ -3307,7 +3312,7 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
         ].filter(Boolean);
         if (needFilter) {
           if (qOrd){
-            if (!String(oid||'').endsWith(qOrd)) continue;
+            if (!String(oid||'').toUpperCase().endsWith(qOrd)) continue;
             if (qPhone){
               const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
               if (!pOK) continue;
@@ -3339,13 +3344,13 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
       try {
         const l = await env.ORDERS.list(); // list ALL keys
         const allKeys = Array.isArray(l.keys) ? l.keys.map(k => k.name) : [];
-        // Keep only 13-digit numeric IDs, exclude INDEX / ORDER_SEQ_*
-        const discovered = allKeys.filter(name => /^\d{13}$/.test(name));
-        // newest first (IDs are YYYYMMDD + seq)
-        discovered.sort().reverse();
+        // Keep only known order-id patterns, exclude INDEX / ORDER_SEQ_*
+        const orderIdRe = new RegExp(`^${ORDER_ID_PREFIX}[A-Z0-9]{${ORDER_ID_LEN}}$`);
+        const discovered = allKeys.filter(name => /^\d{13}$/.test(name) || orderIdRe.test(String(name||'').toUpperCase()));
+        const fallbackItems = [];
 
-        // Build response
-        for (const oid of discovered.slice(0, limit)) {
+        // Build response (collect then sort by createdAt if possible)
+        for (const oid of discovered) {
           const raw2 = await env.ORDERS.get(oid);
           if (!raw2) continue;
           try {
@@ -3359,7 +3364,7 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
 
             if (needFilter) {
               if (qOrd){
-                if (!String(oid||'').endsWith(qOrd)) continue;
+                if (!String(oid||'').toUpperCase().endsWith(qOrd)) continue;
                 if (qPhone) {
                   const pOK = phoneCandidates.some(p => matchPhone(p, qPhone));
                   if (!pOK) continue;
@@ -3375,26 +3380,31 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
                 }
               }
             }
-            (()=>{
-              const rec2 = normalizeReceiptUrl(obj2, origin);
-              const ritualUrl2 =
-                obj2.ritualPhotoUrl ||
-                obj2.ritual_photo_url ||
-                (obj2?.extra?.candle?.photoUrl || "");
-              const merged2 = Object.assign({ id: oid }, obj2, {
-                receiptUrl: rec2 || "",
-                proofUrl: rec2 || "",
-                ritualPhotoUrl: ritualUrl2 || "",
-                ritualPhoto: ritualUrl2 || ""
-              });
-              out.push(merged2);
-            })();
+            const rec2 = normalizeReceiptUrl(obj2, origin);
+            const ritualUrl2 =
+              obj2.ritualPhotoUrl ||
+              obj2.ritual_photo_url ||
+              (obj2?.extra?.candle?.photoUrl || "");
+            const merged2 = Object.assign({ id: oid }, obj2, {
+              receiptUrl: rec2 || "",
+              proofUrl: rec2 || "",
+              ritualPhotoUrl: ritualUrl2 || "",
+              ritualPhoto: ritualUrl2 || ""
+            });
+            fallbackItems.push({ id: oid, createdAt: obj2.createdAt || '', item: merged2 });
           } catch {}
         }
+        fallbackItems.sort((a,b)=> {
+          const ta = Date.parse(a.createdAt || '') || 0;
+          const tb = Date.parse(b.createdAt || '') || 0;
+          return tb - ta;
+        });
+        fallbackItems.slice(0, limit).forEach(it => out.push(it.item));
 
         // Rebuild INDEX for future fast loads
-        if (!idxRaw && discovered.length) {
-          await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(discovered.slice(0, 1000)));
+        if (!idxRaw && fallbackItems.length) {
+          const rebuilt = fallbackItems.map(it => it.id).slice(0, 1000);
+          await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(rebuilt));
         }
       } catch {}
     }
@@ -4491,7 +4501,7 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
 
 if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
   const phone = normalizeTWPhoneStrict(url.searchParams.get('phone')||'');
-  const orderDigits = lastDigits(url.searchParams.get('order')||'', 5);
+  const orderDigits = normalizeOrderSuffix(url.searchParams.get('order')||'', 5);
   const bankDigits = lastDigits(url.searchParams.get('bank')||'', 5);
   if (!phone || (!orderDigits && !bankDigits)){
     return new Response(JSON.stringify({ ok:false, error:'缺少查詢條件' }), { status:400, headers: jsonHeaders });
@@ -4513,7 +4523,7 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     try{ order = JSON.parse(raw); }catch(_){}
     if (!order) continue;
     const buyerPhone = normalizeTWPhoneStrict(order?.buyer?.phone || '');
-    const orderLast5 = lastDigits(order.id || '', 5);
+    const orderLast5 = normalizeOrderSuffix(order.id || '', 5);
     const transferLast5 = lastDigits(order?.transfer?.last5 || order?.transferLast5 || '', 5);
     if (buyerPhone && buyerPhone.endsWith(phone.slice(-9)) && ((orderDigits && orderLast5 === orderDigits) || (bankDigits && transferLast5 === bankDigits))){
       matches.push(order);
