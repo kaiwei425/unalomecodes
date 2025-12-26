@@ -602,7 +602,10 @@ dialog[data-fallback-open]{display:block;}
         if (fortuneMeta){
           const meta = fortune.meta || {};
           const tags = [];
-          if (meta.sunSign) tags.push(`太陽星座 ${meta.sunSign}`);
+          if (meta.userZodiac){
+            const zodiacLabel = meta.userZodiacElement ? `${meta.userZodiac}（${meta.userZodiacElement}象）` : meta.userZodiac;
+            tags.push(`星座 ${zodiacLabel}`);
+          }
           if (meta.moonPhase) tags.push(`月相 ${meta.moonPhase}`);
           if (meta.iching) tags.push(`易經 ${meta.iching}`);
           if (meta.todayDow) tags.push(`今日星期${meta.todayDow}`);

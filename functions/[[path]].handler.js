@@ -35,7 +35,7 @@ const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
-const FORTUNE_FORMAT_VERSION = 4;
+const FORTUNE_FORMAT_VERSION = 5;
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -415,22 +415,22 @@ function pickBySeed(list, seed){
   const idx = Math.abs(seed) % list.length;
   return list[idx];
 }
+const ZODIAC_TABLE = [
+  { key:'Capricorn', name:'魔羯座', element:'土', from:[12,22], to:[1,19] },
+  { key:'Aquarius', name:'水瓶座', element:'風', from:[1,20], to:[2,18] },
+  { key:'Pisces', name:'雙魚座', element:'水', from:[2,19], to:[3,20] },
+  { key:'Aries', name:'牡羊座', element:'火', from:[3,21], to:[4,19] },
+  { key:'Taurus', name:'金牛座', element:'土', from:[4,20], to:[5,20] },
+  { key:'Gemini', name:'雙子座', element:'風', from:[5,21], to:[6,20] },
+  { key:'Cancer', name:'巨蟹座', element:'水', from:[6,21], to:[7,22] },
+  { key:'Leo', name:'獅子座', element:'火', from:[7,23], to:[8,22] },
+  { key:'Virgo', name:'處女座', element:'土', from:[8,23], to:[9,22] },
+  { key:'Libra', name:'天秤座', element:'風', from:[9,23], to:[10,22] },
+  { key:'Scorpio', name:'天蠍座', element:'水', from:[10,23], to:[11,21] },
+  { key:'Sagittarius', name:'射手座', element:'火', from:[11,22], to:[12,21] }
+];
 function sunSignByDate(month, day){
-  const table = [
-    { key:'Capricorn', name:'魔羯座', element:'土', from:[12,22], to:[1,19] },
-    { key:'Aquarius', name:'水瓶座', element:'風', from:[1,20], to:[2,18] },
-    { key:'Pisces', name:'雙魚座', element:'水', from:[2,19], to:[3,20] },
-    { key:'Aries', name:'牡羊座', element:'火', from:[3,21], to:[4,19] },
-    { key:'Taurus', name:'金牛座', element:'土', from:[4,20], to:[5,20] },
-    { key:'Gemini', name:'雙子座', element:'風', from:[5,21], to:[6,20] },
-    { key:'Cancer', name:'巨蟹座', element:'水', from:[6,21], to:[7,22] },
-    { key:'Leo', name:'獅子座', element:'火', from:[7,23], to:[8,22] },
-    { key:'Virgo', name:'處女座', element:'土', from:[8,23], to:[9,22] },
-    { key:'Libra', name:'天秤座', element:'風', from:[9,23], to:[10,22] },
-    { key:'Scorpio', name:'天蠍座', element:'水', from:[10,23], to:[11,21] },
-    { key:'Sagittarius', name:'射手座', element:'火', from:[11,22], to:[12,21] }
-  ];
-  for (const item of table){
+  for (const item of ZODIAC_TABLE){
     const [fm, fd] = item.from;
     const [tm, td] = item.to;
     if (fm <= tm){
@@ -439,7 +439,22 @@ function sunSignByDate(month, day){
       if ((month === fm && day >= fd) || (month === tm && day <= td) || (month > fm || month < tm)) return item;
     }
   }
-  return table[0];
+  return ZODIAC_TABLE[0];
+}
+function zodiacInfoByKey(raw){
+  const val = String(raw || '').trim();
+  if (!val) return null;
+  const cleaned = val.replace(/[^\u4e00-\u9fffA-Za-z]/g, '');
+  const lower = val.toLowerCase();
+  const lowerClean = cleaned.toLowerCase();
+  for (const item of ZODIAC_TABLE){
+    if (item.key.toLowerCase() === lower || item.key.toLowerCase() === lowerClean) return item;
+    if (item.name === val || item.name === cleaned) return item;
+  }
+  for (const item of ZODIAC_TABLE){
+    if (val.includes(item.name) || cleaned.includes(item.name)) return item;
+  }
+  return null;
 }
 function moonPhaseInfo(ts=Date.now()){
   const synodic = 29.530588853;
@@ -1556,7 +1571,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const parts = taipeiDateParts();
     const dateText = formatTaipeiDate();
-    const sunSign = sunSignByDate(parts.month, parts.day);
+    const zodiacInfo = zodiacInfoByKey((quiz && (quiz.zodLabel || quiz.zod)) || '') || sunSignByDate(parts.month, parts.day);
+    const userZodiac = (zodiacInfo && zodiacInfo.name) || (quiz && (quiz.zodLabel || quiz.zod)) || '';
+    const userZodiacElement = (zodiacInfo && zodiacInfo.element) || '';
     const moon = moonPhaseInfo(Date.now());
     const ichSeed = fnv1aHash(`${todayKey}`);
     const iching = ICHING_NAMES[ichSeed % ICHING_NAMES.length];
@@ -1565,8 +1582,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
     const meta = {
       dateKey: todayKey,
-      sunSign: sunSign.name,
-      sunElement: sunSign.element,
+      userZodiac,
+      userZodiacElement,
       moonPhase: moon.name,
       iching,
       todayDow: ['日','一','二','三','四','五','六'][parts.dow] || '',
@@ -1610,11 +1627,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const avoidAdvice = history.map(h=>h.advice).filter(Boolean).slice(0, 5);
     const prompt = [
       `今天日期：${dateText}（台灣時間）`,
-      `當日天象：太陽星座 ${sunSign.name}（${sunSign.element}），月相 ${moon.name}，易經 ${iching}`,
+      `當日天象：月相 ${moon.name}，易經 ${iching}`,
       `泰國元素：今日星期色 ${thaiColor || '—'}，佛曆 ${buddhistYear} 年`,
       `使用者資料：守護神 ${ctx.guardianName}（${ctx.guardianCode}）`,
       `出生星期：${quiz.dowLabel || quiz.dow || '—'}${quiz.color ? `（幸運色：${quiz.color}）` : ''}`,
-      `星座：${quiz.zodLabel || quiz.zod || '—'}`,
+      `使用者星座：${userZodiac || '—'}${userZodiacElement ? `（${userZodiacElement}象）` : ''}`,
       `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
       `個人性格關鍵詞：${traitList.join('、') || '—'}`,
       `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
