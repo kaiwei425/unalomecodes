@@ -298,8 +298,8 @@
       .auth-login-btn{border:none;border-radius:999px;width:68px;height:68px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(15,23,42,.18);transition:transform .16s ease, box-shadow .16s ease;}
       .auth-login-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(15,23,42,.22);}
       .auth-login-icon{width:36px;height:36px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
-      .auth-login-icon.line{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%2300B900'/><path d='M32 18c-9.39 0-17 6.12-17 13.68 0 6.77 6.05 12.4 14.22 13.46.55.12 1.3.37 1.49.85.17.44.11 1.12.05 1.56l-.23 1.44c-.06.42-.3 1.64 1.44.9 1.74-.75 9.38-5.52 12.78-9.46 2.34-2.57 3.47-5.12 3.47-8.75C49 24.12 41.39 18 32 18z' fill='%23fff'/></svg>\");}
-      .auth-login-icon.google{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%23fff'/><path d='M32 16a16 16 0 0 1 11.32 4.69l-4.27 4.27A10 10 0 0 0 32 22c-4.29 0-7.9 2.77-9.28 6.61l-4.98-3.84A15.97 15.97 0 0 1 32 16z' fill='%23EA4335'/><path d='M18.47 26.98A16.16 16.16 0 0 0 17.33 32c0 2.08.39 4.07 1.14 5.89l5.04-3.89A9.99 9.99 0 0 1 23 32c0-1.4.28-2.72.79-3.93l-5.32-1.09z' fill='%23FBBC05'/><path d='M32 48a16 16 0 0 0 10.93-4.27l-5.2-4.03A10 10 0 0 1 32 42c-3.92 0-7.25-2.24-8.89-5.47l-4.96 3.83A16 16 0 0 0 32 48z' fill='%2334A853'/><path d='M48.67 32c0-1.11-.13-2.16-.36-3.16H32v6.32h8.88A7.65 7.65 0 0 1 37.07 40l5.2 4.03A15.95 15.95 0 0 0 48.67 32z' fill='%234285F4'/></svg>\");}
+      .auth-login-icon.line{background-image:url(\"/img/LINE.png\");}
+      .auth-login-icon.google{background-image:url(\"/img/GOOGLE.png\");}
       .auth-login-btn.line{background:#fff;border:1px solid rgba(0,185,0,.25);}
       .auth-login-btn.google{background:#fff;border:1px solid rgba(59,130,246,.18);}
       .auth-login-cancel{margin-top:10px;font-size:12px;color:#94a3b8;text-align:center;cursor:pointer;}
