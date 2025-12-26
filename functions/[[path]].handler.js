@@ -35,7 +35,7 @@ const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
-const FORTUNE_FORMAT_VERSION = 2;
+const FORTUNE_FORMAT_VERSION = 3;
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -531,6 +531,18 @@ function buildAdviceLine(seed){
     focus,
     line: `今日運勢偏向「${theme}」，把重點放在${focus}會更順。`
   };
+}
+function stripAdviceLine(text){
+  const raw = String(text || '');
+  let cleaned = raw.replace(/今日運勢偏向[^。！？!?]*[。！？!?]?/g, '');
+  cleaned = cleaned.replace(/^[\s。！？!?、，]+/g, '').replace(/\s+/g, ' ');
+  return cleaned.trim();
+}
+function normalizeAdviceWithLine(advice, line){
+  const cleaned = stripAdviceLine(advice);
+  if (!line) return cleaned;
+  if (!cleaned) return line;
+  return `${line}${cleaned}`;
 }
 function buildLocalFortune(ctx, seed){
   const advices = [
@@ -1607,7 +1619,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       `個人性格關鍵詞：${traitList.join('、') || '—'}`,
       `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
       `summary 需以星等開頭（例如 ★★★★☆，總共五顆），後面用 2~3 句描述感情/人際、工作/學習、財運，語氣像每日運勢解析。`,
-      `advice 為生活小建議（1~2 句），且請包含這句話作為開頭：${adviceLine.line}`,
+      `advice 為生活小建議（1~2 句），請不要再寫「今日運勢偏向...」這句，系統會自動加在前面。`,
       `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
       `只使用以上提供的天象/日期/泰國元素資訊，不要捏造其他星體或數據。`,
       avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
@@ -1633,10 +1645,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (fortune && fortune.summary){
       fortune.summary = normalizeSummaryStars(fortune.summary, starText);
     }
-    if (fortune && fortune.advice && adviceLine && adviceLine.line){
-      if (!fortune.advice.startsWith(adviceLine.line)){
-        fortune.advice = `${adviceLine.line}${fortune.advice}`;
-      }
+    if (fortune && adviceLine && adviceLine.line){
+      fortune.advice = normalizeAdviceWithLine(fortune.advice || '', adviceLine.line);
     }
     if (fortune && fortune.ritual){
       fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
