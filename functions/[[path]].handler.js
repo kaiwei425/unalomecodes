@@ -3179,8 +3179,9 @@ if (pathname === '/cvs_callback' && request.method === 'POST') {
     (function(){
       try{
         var data = ${dataJson};
+        var targetOrigin = ${JSON.stringify(origin)};
         if (window.opener && !window.opener.closed){
-          window.opener.postMessage(data, "*");
+          window.opener.postMessage(data, targetOrigin);
         }
       }catch(e){}
       try{ window.close(); }catch(e){}
@@ -3241,8 +3242,9 @@ if (pathname === '/cvs_callback' && request.method === 'GET') {
     (function(){
       try{
         var data = ${dataJson};
+        var targetOrigin = ${JSON.stringify(origin)};
         if (window.opener && !window.opener.closed){
-          window.opener.postMessage(data, "*");
+          window.opener.postMessage(data, targetOrigin);
         }
       }catch(e){}
       try{ window.close(); }catch(e){}
@@ -3607,11 +3609,7 @@ ${renderLineBanner()}
         if (!env.ORDERS) {
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
-        const adminKey = request.headers.get("x-admin-key") || request.headers.get("X-Admin-Key") || url.searchParams.get("admin_key");
-        if (!env.ADMIN_KEY) {
-          return new Response(JSON.stringify({ ok:false, error:'Unauthorized (ADMIN_KEY not set)' }), { status:401, headers: jsonHeaders });
-        }
-        if (adminKey !== env.ADMIN_KEY) {
+        if (!(await isAdmin(request, env))) {
           return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
         }
         try{
@@ -3651,11 +3649,7 @@ ${renderLineBanner()}
         if (!env.ORDERS) {
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
-        const adminKey = request.headers.get("x-admin-key") || request.headers.get("X-Admin-Key") || url.searchParams.get("admin_key");
-        if (!env.ADMIN_KEY) {
-          return new Response(JSON.stringify({ ok:false, error:'Unauthorized (ADMIN_KEY not set)' }), { status:401, headers: jsonHeaders });
-        }
-        if (adminKey !== env.ADMIN_KEY) {
+        if (!(await isAdmin(request, env))) {
           return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
         }
         try{
@@ -3688,7 +3682,7 @@ ${renderLineBanner()}
 
     /* --- Admin: simple ritual result uploader (single endpoint)
        POST /api/ritual_result
-       Headers: X-Admin-Key: <env.ADMIN_KEY>  OR  ?admin_key=...
+       Headers: X-Admin-Key: <env.ADMIN_KEY>
        Body (Content-Type: application/json OR text/plain OR form-data):
          {
            orderId: "2025103000001",
@@ -3704,11 +3698,7 @@ ${renderLineBanner()}
       if (!env.ORDERS) {
         return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
       }
-      const adminKey = request.headers.get("x-admin-key") || request.headers.get("X-Admin-Key") || url.searchParams.get("admin_key");
-      if (!env.ADMIN_KEY) {
-        return new Response(JSON.stringify({ ok:false, error:'Unauthorized (ADMIN_KEY not set)' }), { status:401, headers: jsonHeaders });
-      }
-      if (adminKey !== env.ADMIN_KEY) {
+      if (!(await isAdmin(request, env))) {
         return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
       }
       try {
@@ -5204,6 +5194,24 @@ async function listStories(url, env){
 
 async function createStory(request, env){
   try{
+    const reqUrl = new URL(request.url);
+    const originHeader = (request.headers.get('Origin') || '').trim();
+    if (originHeader){
+      const allow = new Set([reqUrl.origin]);
+      const addOrigin = (val)=>{
+        if (!val) return;
+        try{
+          const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
+          allow.add(u.origin);
+        }catch(_){}
+      };
+      addOrigin(env.SITE_URL);
+      const extraOrigins = (env.STORY_ORIGINS || '').split(',').map(s=>s.trim()).filter(Boolean);
+      extraOrigins.forEach(addOrigin);
+      if (!allow.has(originHeader)) {
+        return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
+      }
+    }
     const body = await request.json();
     const code = String((body.code||"").toUpperCase());
     const nick = String(body.nick||"訪客").slice(0, 20);
@@ -5212,6 +5220,20 @@ async function createStory(request, env){
     if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
     if (!msg || msg.length < 2) return withCORS(json({ok:false, error:"Message too short"}, 400));
     if (msg.length > 800) return withCORS(json({ok:false, error:"Message too long"}, 400));
+    try{
+      const ipRaw = (request.headers.get('CF-Connecting-IP') || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '').toString();
+      const ip = ipRaw.split(',')[0].trim();
+      if (ip){
+        const rlKey = `RL:${code}:${ip}`;
+        const lastRaw = await env.STORIES.get(rlKey);
+        const nowTs = Date.now();
+        const lastTs = Number(lastRaw || 0) || 0;
+        if (nowTs - lastTs < 15000){
+          return withCORS(json({ ok:false, error:"Too many requests" }, 429));
+        }
+        await env.STORIES.put(rlKey, String(nowTs), { expirationTtl: 120 });
+      }
+    }catch(_){}
     const now = new Date().toISOString();
     const id = `${code}:${now}:${crypto.randomUUID()}`;
     const item = { id, code, nick, msg, ts: now, imageUrl: imageUrl || undefined };
