@@ -297,8 +297,8 @@
       .auth-login-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 4px;}
       .auth-login-btn{border:none;border-radius:999px;width:68px;height:68px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(15,23,42,.18);transition:transform .16s ease, box-shadow .16s ease;}
       .auth-login-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(15,23,42,.22);}
-      .auth-login-icon{width:36px;height:36px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
-      .auth-login-icon.line{background-image:url(\"https://vos.line-scdn.net/strapi-cluster-instance-bucket-84/appicon_01_f9ed1cf01f.jpeg\");}
+      .auth-login-icon{width:40px;height:40px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
+      .auth-login-icon.line{background-image:url(\"https://vos.line-scdn.net/strapi-cluster-instance-bucket-84/appicon_01_f9ed1cf01f.jpeg\");background-size:cover;}
       .auth-login-icon.google{background-image:url(\"/img/google-logo.png\");}
       .auth-login-btn.line{background:#fff;border:1px solid rgba(0,185,0,.25);}
       .auth-login-btn.google{background:#fff;border:1px solid rgba(59,130,246,.18);}
