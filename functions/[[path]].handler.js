@@ -35,7 +35,7 @@ const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
-const FORTUNE_FORMAT_VERSION = 3;
+const FORTUNE_FORMAT_VERSION = 4;
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -521,7 +521,7 @@ const FORTUNE_THEMES = ['穩定聚焦','重新整理','小幅突破','順勢前�
 const FORTUNE_FOCUSES = ['整理手邊任務','與人溝通協調','身心平衡','財務細節','學習精進','斷捨離'];
 function buildStarText(seed){
   const stars = (seed % 4) + 2;
-  return '★★★★★'.slice(0, stars) + '☆☆☆☆☆'.slice(0, 5 - stars);
+  return '🌟'.repeat(stars) + '☆'.repeat(5 - stars);
 }
 function buildAdviceLine(seed){
   const theme = pickBySeed(FORTUNE_THEMES, seed);
@@ -586,18 +586,18 @@ function buildLocalFortune(ctx, seed){
   const ritualBase = GUARDIAN_MESSAGES[ctx.guardianCode] || pickBySeed(rituals, seed + 37);
   return {
     date: ctx.dateText,
-    summary: `${starText} ${love}${work}${money}`,
+    stars: starText,
+    summary: `${love}${work}${money}`,
     advice: [adviceLine.line, advice, thaiHint].filter(Boolean).join(''),
     ritual: ritualBase,
     meta: ctx.meta || {}
   };
 }
-function normalizeSummaryStars(summary, starText){
+function normalizeSummaryStars(summary){
   const text = String(summary || '').trim();
   if (!text) return '';
-  const clean = text.replace(/^[★☆]{5}\s*/, '');
-  if (!clean) return starText;
-  return `${starText} ${clean}`;
+  const clean = text.replace(/^[★☆⭐🌟\uFE0F\s]+/g, '').trim();
+  return clean;
 }
 function normalizeFortunePayload(obj, ctx){
   if (!obj || typeof obj !== 'object') return null;
@@ -1618,7 +1618,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
       `個人性格關鍵詞：${traitList.join('、') || '—'}`,
       `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
-      `summary 需以星等開頭（例如 ★★★★☆，總共五顆），後面用 2~3 句描述感情/人際、工作/學習、財運，語氣像每日運勢解析。`,
+      `summary 用 2~3 句描述感情/人際、工作/學習、財運，語氣像每日運勢解析。`,
       `advice 為生活小建議（1~2 句），請不要再寫「今日運勢偏向...」這句，系統會自動加在前面。`,
       `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
       `只使用以上提供的天象/日期/泰國元素資訊，不要捏造其他星體或數據。`,
@@ -1643,7 +1643,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       source = 'local';
     }
     if (fortune && fortune.summary){
-      fortune.summary = normalizeSummaryStars(fortune.summary, starText);
+      fortune.summary = normalizeSummaryStars(fortune.summary);
+    }
+    if (fortune && !fortune.summary){
+      const fallback = buildLocalFortune(ctx, seed + 53);
+      fortune.summary = fallback.summary || '';
+    }
+    if (fortune && !fortune.stars){
+      fortune.stars = starText;
     }
     if (fortune && adviceLine && adviceLine.line){
       fortune.advice = normalizeAdviceWithLine(fortune.advice || '', adviceLine.line);

@@ -178,6 +178,7 @@
       <div id="fortuneLoading" class="fortune-loading">正在翻牌中…</div>
       <div id="fortuneError" class="fortune-error" style="display:none;"></div>
       <div id="fortuneCard" class="fortune-card" style="display:none;">
+        <div class="fortune-stars" id="fortuneStars"></div>
         <div class="fortune-summary" id="fortuneSummary"></div>
         <div class="fortune-section">
           <div class="fortune-label">生活小建議</div>
@@ -5905,6 +5906,7 @@ function escapeHtml(s) {
 .fortune-error{padding:12px;border-radius:12px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.4);color:#fecaca;font-size:13px;}
 .fortune-card{padding:16px;border-radius:16px;background:linear-gradient(135deg,#111827,#0f172a);border:1px solid rgba(94,234,212,.25);box-shadow:0 16px 36px rgba(0,0,0,.35);animation:fortuneFlip .6s ease;}
 .fortune-card{position:relative;overflow:hidden;transform-style:preserve-3d;}
+.fortune-stars{font-size:16px;letter-spacing:2px;color:#fbbf24;margin-bottom:6px;}
 .fortune-summary{font-size:16px;font-weight:800;color:#f8fafc;margin-bottom:10px;}
 .fortune-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(148,163,184,.18);}
 .fortune-label{font-size:12px;letter-spacing:1px;color:#94a3b8;margin-bottom:6px;}
@@ -5961,6 +5963,7 @@ function escapeHtml(s) {
   const fortuneError = document.getElementById('fortuneError');
   const fortuneCard = document.getElementById('fortuneCard');
   const fortuneDate = document.getElementById('fortuneDate');
+  const fortuneStars = document.getElementById('fortuneStars');
   const fortuneSummary = document.getElementById('fortuneSummary');
   const fortuneAdvice = document.getElementById('fortuneAdvice');
   const fortuneRitual = document.getElementById('fortuneRitual');
@@ -6001,6 +6004,11 @@ function escapeHtml(s) {
     if (!fortune) return;
     lastFortune = fortune;
     if (fortuneDate) fortuneDate.textContent = fortune.date || '';
+    if (fortuneStars){
+      const stars = fortune.stars || '';
+      fortuneStars.textContent = stars;
+      fortuneStars.style.display = stars ? '' : 'none';
+    }
     if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
     if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
@@ -6141,11 +6149,18 @@ function escapeHtml(s) {
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 24px system-ui, -apple-system, "Segoe UI", sans-serif';
     ctx.fillText(lastFortune.date || '', pad + 40, 360);
-    const summaryStart = lastGuardianName ? 460 : 440;
+    let summaryStart = lastGuardianName ? 460 : 440;
     if (lastGuardianName){
       ctx.fillStyle = '#cbd5f5';
       ctx.font = '600 24px system-ui, -apple-system, "Segoe UI", sans-serif';
       ctx.fillText(`守護神：${lastGuardianName}`, pad + 40, 398);
+    }
+    const starLine = lastFortune.stars || '';
+    if (starLine){
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '600 28px system-ui, -apple-system, "Segoe UI", sans-serif';
+      ctx.fillText(starLine, pad + 40, summaryStart);
+      summaryStart += 52;
     }
     ctx.fillStyle = '#f8fafc';
     ctx.font = '700 32px system-ui, -apple-system, "Segoe UI", sans-serif';

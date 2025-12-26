@@ -58,9 +58,35 @@
   }
 
   let bindingGuardian = false;
+  const QUIZ_BIND_KEY = '__lastQuizBindPending__';
+  const QUIZ_BIND_TTL = 2 * 60 * 60 * 1000;
+  function clearLocalQuizCache(){
+    try{
+      localStorage.removeItem('__lastQuizGuardian__');
+      localStorage.removeItem('__lastQuizProfile__');
+      localStorage.removeItem(QUIZ_BIND_KEY);
+    }catch(_){}
+  }
+  function readQuizBindPendingTs(){
+    try{
+      const raw = localStorage.getItem(QUIZ_BIND_KEY);
+      if (!raw) return 0;
+      const obj = JSON.parse(raw);
+      const ts = Number(obj && obj.ts ? obj.ts : 0);
+      if (!ts) return 0;
+      if (Date.now() - ts > QUIZ_BIND_TTL){
+        clearLocalQuizCache();
+        return 0;
+      }
+      return ts;
+    }catch(_){
+      return 0;
+    }
+  }
   function readLocalQuizPayload(){
     let guardian = null;
     let quiz = null;
+    if (!readQuizBindPendingTs()) return null;
     try{
       const raw = localStorage.getItem('__lastQuizGuardian__');
       if (raw){
@@ -86,16 +112,16 @@
   }
   async function bindLocalGuardianIfNeeded(profile){
     if (bindingGuardian) return;
-    if (!profile || profile.guardian) return;
+    if (!profile || profile.guardian){
+      if (profile && profile.guardian) clearLocalQuizCache();
+      return;
+    }
     const local = readLocalQuizPayload();
     if (!local || !local.guardian) return;
     const guardianName = local.guardian.name || local.guardian.code || '守護神';
     const shouldBind = window.confirm(`您剛才的測驗結果為守護神 ${guardianName}，是否要自動帶入此 Google 帳號？`);
     if (!shouldBind){
-      try{
-        localStorage.removeItem('__lastQuizGuardian__');
-        localStorage.removeItem('__lastQuizProfile__');
-      }catch(_){}
+      clearLocalQuizCache();
       return;
     }
     bindingGuardian = true;
@@ -109,10 +135,7 @@
           quiz: local.quiz || undefined
         })
       });
-      try{
-        localStorage.removeItem('__lastQuizGuardian__');
-        localStorage.removeItem('__lastQuizProfile__');
-      }catch(_){}
+      clearLocalQuizCache();
       await refreshProfile();
     }catch(_){}
     bindingGuardian = false;
@@ -125,7 +148,7 @@
       return;
     }
     try{
-      const res = await fetch('/api/me/profile', { credentials:'include' });
+      const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
       if (res.ok){
         const data = await res.json().catch(()=>null);
         state.profile = data && data.profile ? data.profile : null;

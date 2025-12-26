@@ -453,7 +453,7 @@ async function showResult(){
   }
   // logged-in: allow only once per Taiwan day
   try{
-    const res = await fetch('/api/me/profile', { credentials:'include' });
+    const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
     if (res.ok){
       const data = await res.json().catch(()=>null);
       const profile = data && data.profile ? data.profile : null;
@@ -510,6 +510,7 @@ async function showResult(){
   };
   try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Date.now() })); }catch(_){}
   try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(quizProfile)); }catch(_){}
+  try{ localStorage.setItem('__lastQuizBindPending__', JSON.stringify({ ts: Date.now() })); }catch(_){}
   // 若已登入，同步到會員檔案
   try{
     await fetch('/api/me/profile', {
