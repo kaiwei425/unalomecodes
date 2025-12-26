@@ -89,6 +89,15 @@
     if (!profile || profile.guardian) return;
     const local = readLocalQuizPayload();
     if (!local || !local.guardian) return;
+    const guardianName = local.guardian.name || local.guardian.code || '守護神';
+    const shouldBind = window.confirm(`您剛才的測驗結果為守護神 ${guardianName}，是否要自動帶入此 Google 帳號？`);
+    if (!shouldBind){
+      try{
+        localStorage.removeItem('__lastQuizGuardian__');
+        localStorage.removeItem('__lastQuizProfile__');
+      }catch(_){}
+      return;
+    }
     bindingGuardian = true;
     try{
       await fetch('/api/me/profile', {
