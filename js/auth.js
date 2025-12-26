@@ -7,6 +7,10 @@
   const liffId = window.LIFF_ID || '';
   let liffReady = false;
   let liffInitPromise = null;
+  function isLineWebView(){
+    const ua = (navigator.userAgent || '').toLowerCase();
+    return ua.includes('line');
+  }
 
   function notify(){
     listeners.forEach(fn=>{
@@ -266,6 +270,10 @@
           return;
         }
       }catch(_){}
+    }
+    if (isLineWebView()){
+      alert('LINE 內建瀏覽器無法使用 Google 登入，請使用 LINE 登入或改用外部瀏覽器開啟。');
+      return;
     }
     try{
       const path = window.location.pathname + window.location.search + window.location.hash;
