@@ -286,22 +286,23 @@
     const style = document.createElement('style');
     style.textContent = `
       .auth-login-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;}
-      .auth-login-backdrop{position:absolute;inset:0;background:rgba(2,6,23,.55);}
-      .auth-login-panel{position:relative;background:#fff;color:#0f172a;border-radius:16px;padding:18px 16px;min-width:260px;width:min(320px,92%);box-shadow:0 24px 60px rgba(0,0,0,.35);}
-      .auth-login-title{font-size:16px;font-weight:700;margin-bottom:10px;}
-      .auth-login-desc{font-size:13px;color:#64748b;margin-bottom:14px;line-height:1.5;}
-      .auth-login-legal{margin:0 0 14px;padding:10px 12px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12px;color:#475569;line-height:1.6;}
+      .auth-login-backdrop{position:absolute;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(2px);}
+      .auth-login-panel{position:relative;background:linear-gradient(180deg,#ffffff,#f8fafc);color:#0f172a;border-radius:20px;padding:20px 18px;min-width:260px;width:min(360px,92%);box-shadow:0 30px 70px rgba(0,0,0,.35);border:1px solid rgba(148,163,184,.25);}
+      .auth-login-title{font-size:18px;font-weight:800;margin-bottom:6px;letter-spacing:.3px;}
+      .auth-login-desc{font-size:13px;color:#64748b;margin-bottom:14px;line-height:1.6;}
+      .auth-login-legal{margin:0 0 16px;padding:12px 14px;border-radius:12px;border:1px solid #e2e8f0;background:#f1f5f9;font-size:12px;color:#475569;line-height:1.7;}
       .auth-login-legal ul{margin:6px 0 0;padding-left:18px;}
       .auth-login-legal li{margin:4px 0;}
-      .auth-login-consent{margin-top:6px;color:#0f172a;font-weight:600;}
-      .auth-login-actions{display:grid;gap:10px;}
-      .auth-login-btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
-      .auth-login-icon{width:18px;height:18px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
-      .auth-login-icon.line{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='10' fill='%2300B900'/><text x='24' y='31' text-anchor='middle' font-family='Arial' font-size='16' font-weight='700' fill='%23fff'>LINE</text></svg>\");}
-      .auth-login-icon.google{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='22' fill='%23fff'/><path d='M24 12a12 12 0 0 1 8.49 3.51l-3.2 3.2A7.5 7.5 0 0 0 24 16.5c-3.22 0-5.94 2.08-6.96 4.96l-3.73-2.88A11.98 11.98 0 0 1 24 12z' fill='%23EA4335'/><path d='M12.9 19.58A12.1 12.1 0 0 0 12 24c0 1.56.3 3.05.86 4.42l3.78-2.92A7.51 7.51 0 0 1 16.5 24c0-1.05.21-2.04.59-2.95l-4.19-1.47z' fill='%23FBBC05'/><path d='M24 36a12 12 0 0 0 8.2-3.2l-3.9-3.02A7.5 7.5 0 0 1 24 31.5c-2.94 0-5.44-1.68-6.67-4.1l-3.72 2.87A12 12 0 0 0 24 36z' fill='%2334A853'/><path d='M36 24c0-.83-.1-1.62-.27-2.37H24v4.74h6.66A5.74 5.74 0 0 1 28.2 29.8l3.9 3.02A11.98 11.98 0 0 0 36 24z' fill='%234285F4'/></svg>\");}
-      .auth-login-btn.line{background:#00b900;color:#fff;}
-      .auth-login-btn.google{background:#0f172a;color:#fff;}
-      .auth-login-cancel{margin-top:8px;font-size:12px;color:#94a3b8;text-align:center;cursor:pointer;}
+      .auth-login-consent{margin-top:6px;color:#0f172a;font-weight:700;}
+      .auth-login-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 4px;}
+      .auth-login-btn{border:none;border-radius:999px;width:68px;height:68px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(15,23,42,.18);transition:transform .16s ease, box-shadow .16s ease;}
+      .auth-login-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(15,23,42,.22);}
+      .auth-login-icon{width:36px;height:36px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
+      .auth-login-icon.line{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%2300B900'/><path d='M32 18c-9.39 0-17 6.12-17 13.68 0 6.77 6.05 12.4 14.22 13.46.55.12 1.3.37 1.49.85.17.44.11 1.12.05 1.56l-.23 1.44c-.06.42-.3 1.64 1.44.9 1.74-.75 9.38-5.52 12.78-9.46 2.34-2.57 3.47-5.12 3.47-8.75C49 24.12 41.39 18 32 18z' fill='%23fff'/></svg>\");}
+      .auth-login-icon.google{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%23fff'/><path d='M32 16a16 16 0 0 1 11.32 4.69l-4.27 4.27A10 10 0 0 0 32 22c-4.29 0-7.9 2.77-9.28 6.61l-4.98-3.84A15.97 15.97 0 0 1 32 16z' fill='%23EA4335'/><path d='M18.47 26.98A16.16 16.16 0 0 0 17.33 32c0 2.08.39 4.07 1.14 5.89l5.04-3.89A9.99 9.99 0 0 1 23 32c0-1.4.28-2.72.79-3.93l-5.32-1.09z' fill='%23FBBC05'/><path d='M32 48a16 16 0 0 0 10.93-4.27l-5.2-4.03A10 10 0 0 1 32 42c-3.92 0-7.25-2.24-8.89-5.47l-4.96 3.83A16 16 0 0 0 32 48z' fill='%2334A853'/><path d='M48.67 32c0-1.11-.13-2.16-.36-3.16H32v6.32h8.88A7.65 7.65 0 0 1 37.07 40l5.2 4.03A15.95 15.95 0 0 0 48.67 32z' fill='%234285F4'/></svg>\");}
+      .auth-login-btn.line{background:#fff;border:1px solid rgba(0,185,0,.25);}
+      .auth-login-btn.google{background:#fff;border:1px solid rgba(59,130,246,.18);}
+      .auth-login-cancel{margin-top:10px;font-size:12px;color:#94a3b8;text-align:center;cursor:pointer;}
     `;
     document.head.appendChild(style);
     const modal = document.createElement('div');
@@ -312,17 +313,17 @@
         <div class="auth-login-title">登入會員</div>
         <div class="auth-login-desc">請選擇登入方式</div>
         <div class="auth-login-legal">
-          為了提供會員服務，我們會向 LINE/Google 取得您的 Email，僅用於下列用途：
+          為完成會員登入與服務，我們會取得您的基本資料（姓名、Email、帳號識別碼、頭像），並僅用於：
           <ul>
             <li>會員身分識別與登入狀態維持</li>
-            <li>訂單/日籤相關通知與查詢</li>
-            <li>客服聯繫與必要的服務通知</li>
+            <li>訂單／日籤通知與查詢、客服聯繫</li>
+            <li>必要的服務與系統通知</li>
           </ul>
-          <div class="auth-login-consent">點擊登入即表示您同意我們依上述用途收集與使用 Email。</div>
+          <div class="auth-login-consent">點擊登入代表您已閱讀並同意本網站之服務條款與隱私權政策。</div>
         </div>
         <div class="auth-login-actions">
-          <button type="button" class="auth-login-btn line" data-auth-login-provider="line"><span class="auth-login-icon line" aria-hidden="true"></span>LINE 登入</button>
-          <button type="button" class="auth-login-btn google" data-auth-login-provider="google"><span class="auth-login-icon google" aria-hidden="true"></span>Google 登入</button>
+          <button type="button" class="auth-login-btn line" data-auth-login-provider="line" aria-label="LINE 登入" title="LINE 登入"><span class="auth-login-icon line" aria-hidden="true"></span></button>
+          <button type="button" class="auth-login-btn google" data-auth-login-provider="google" aria-label="Google 登入" title="Google 登入"><span class="auth-login-icon google" aria-hidden="true"></span></button>
         </div>
         <div class="auth-login-cancel" data-auth-login-close>取消</div>
       </div>
