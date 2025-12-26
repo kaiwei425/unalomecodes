@@ -295,7 +295,10 @@
       .auth-login-legal li{margin:4px 0;}
       .auth-login-consent{margin-top:6px;color:#0f172a;font-weight:600;}
       .auth-login-actions{display:grid;gap:10px;}
-      .auth-login-btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;}
+      .auth-login-btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+      .auth-login-icon{width:18px;height:18px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
+      .auth-login-icon.line{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='10' fill='%2300B900'/><text x='24' y='31' text-anchor='middle' font-family='Arial' font-size='16' font-weight='700' fill='%23fff'>LINE</text></svg>\");}
+      .auth-login-icon.google{background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='22' fill='%23fff'/><path d='M24 12a12 12 0 0 1 8.49 3.51l-3.2 3.2A7.5 7.5 0 0 0 24 16.5c-3.22 0-5.94 2.08-6.96 4.96l-3.73-2.88A11.98 11.98 0 0 1 24 12z' fill='%23EA4335'/><path d='M12.9 19.58A12.1 12.1 0 0 0 12 24c0 1.56.3 3.05.86 4.42l3.78-2.92A7.51 7.51 0 0 1 16.5 24c0-1.05.21-2.04.59-2.95l-4.19-1.47z' fill='%23FBBC05'/><path d='M24 36a12 12 0 0 0 8.2-3.2l-3.9-3.02A7.5 7.5 0 0 1 24 31.5c-2.94 0-5.44-1.68-6.67-4.1l-3.72 2.87A12 12 0 0 0 24 36z' fill='%2334A853'/><path d='M36 24c0-.83-.1-1.62-.27-2.37H24v4.74h6.66A5.74 5.74 0 0 1 28.2 29.8l3.9 3.02A11.98 11.98 0 0 0 36 24z' fill='%234285F4'/></svg>\");}
       .auth-login-btn.line{background:#00b900;color:#fff;}
       .auth-login-btn.google{background:#0f172a;color:#fff;}
       .auth-login-cancel{margin-top:8px;font-size:12px;color:#94a3b8;text-align:center;cursor:pointer;}
@@ -318,8 +321,8 @@
           <div class="auth-login-consent">點擊登入即表示您同意我們依上述用途收集與使用 Email。</div>
         </div>
         <div class="auth-login-actions">
-          <button type="button" class="auth-login-btn line" data-auth-login-provider="line">LINE 登入</button>
-          <button type="button" class="auth-login-btn google" data-auth-login-provider="google">Google 登入</button>
+          <button type="button" class="auth-login-btn line" data-auth-login-provider="line"><span class="auth-login-icon line" aria-hidden="true"></span>LINE 登入</button>
+          <button type="button" class="auth-login-btn google" data-auth-login-provider="google"><span class="auth-login-icon google" aria-hidden="true"></span>Google 登入</button>
         </div>
         <div class="auth-login-cancel" data-auth-login-close>取消</div>
       </div>
@@ -419,6 +422,8 @@
     }catch(_){}
     state.user = null;
     state.profile = null;
+    state.loading = false;
+    state.ready = true;
     updateWidgets();
     notifyProfile();
     window.location.reload();

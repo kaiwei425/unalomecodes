@@ -1675,6 +1675,26 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const body = await request.json();
         let changed = false;
         const prevGuardianCode = String(record.guardian?.code || '').toUpperCase();
+        if (body && body.profile){
+          if (Object.prototype.hasOwnProperty.call(body.profile, 'name')){
+            record.name = String(body.profile.name || '').trim();
+            changed = true;
+          }
+          if (Object.prototype.hasOwnProperty.call(body.profile, 'email')){
+            record.email = String(body.profile.email || '').trim();
+            changed = true;
+          }
+        }
+        if (body && (Object.prototype.hasOwnProperty.call(body, 'name') || Object.prototype.hasOwnProperty.call(body, 'email'))){
+          if (Object.prototype.hasOwnProperty.call(body, 'name')){
+            record.name = String(body.name || '').trim();
+            changed = true;
+          }
+          if (Object.prototype.hasOwnProperty.call(body, 'email')){
+            record.email = String(body.email || '').trim();
+            changed = true;
+          }
+        }
         if (body && body.defaultContact){
           record.defaultContact = Object.assign({}, record.defaultContact || {}, {
             name: String(body.defaultContact.name || '').trim(),

@@ -940,6 +940,10 @@
       if (statusEl) statusEl.style.color = '#ef4444';
       try{
         const body = {
+          profile:{
+            name: nameInput ? nameInput.value.trim() : '',
+            email: emailInput ? emailInput.value.trim() : ''
+          },
           defaultContact:{
             name: nameInput ? nameInput.value.trim() : '',
             email: emailInput ? emailInput.value.trim() : '',
