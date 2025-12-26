@@ -165,6 +165,34 @@
   </footer>
 </dialog>
 
+<dialog id="fortuneDialog" class="fortune-dialog">
+  <div class="fortune-shell">
+    <div class="fortune-head">
+      <div>
+        <div class="fortune-title">今日專屬日籤</div>
+        <div class="fortune-date" id="fortuneDate">—</div>
+      </div>
+      <button type="button" class="fortune-close" id="fortuneClose">✕</button>
+    </div>
+    <div class="fortune-body">
+      <div id="fortuneLoading" class="fortune-loading">正在翻牌中…</div>
+      <div id="fortuneError" class="fortune-error" style="display:none;"></div>
+      <div id="fortuneCard" class="fortune-card" style="display:none;">
+        <div class="fortune-summary" id="fortuneSummary"></div>
+        <div class="fortune-section">
+          <div class="fortune-label">生活小建議</div>
+          <div class="fortune-text" id="fortuneAdvice"></div>
+        </div>
+        <div class="fortune-section">
+          <div class="fortune-label">守護神供俸 / 祈願</div>
+          <div class="fortune-text" id="fortuneRitual"></div>
+        </div>
+        <div class="fortune-meta" id="fortuneMeta"></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="dlg">
   <div class="closeBar">
     <strong id="dlgTitle">商品資訊</strong>
@@ -5853,6 +5881,33 @@ function escapeHtml(s) {
 #lineWarning .line-tip{font-size:13px;color:#1d4ed8;background:#eef2ff;border-radius:12px;padding:10px 14px;margin-bottom:16px;}
 #lineWarning .line-actions{display:flex;gap:10px;margin-top:10px;}
 #lineWarning .line-actions .btn{flex:1;}
+
+.guardian-badge{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:linear-gradient(135deg,#0f172a,#111827);border:1px solid rgba(148,163,184,0.35);color:#e2e8f0;box-shadow:0 12px 24px rgba(15,23,42,0.25);}
+.guardian-badge img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2));}
+.guardian-meta{display:flex;flex-direction:column;gap:2px;font-size:12px;}
+.guardian-meta strong{font-size:13px;font-weight:700;color:#f8fafc;}
+.fortune-btn{margin-top:2px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#0b1120;border:none;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(249,115,22,.35);}
+.fortune-btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;}
+
+.fortune-dialog{border:none;border-radius:18px;padding:0;max-width:560px;width:92%;background:#0b1022;color:#e5e7eb;box-shadow:0 24px 60px rgba(0,0,0,.45);}
+.fortune-shell{padding:20px;display:grid;gap:16px;background:
+  radial-gradient(circle at 20% 10%, rgba(253,224,71,.08), transparent 38%),
+  radial-gradient(circle at 80% 0%, rgba(56,189,248,.12), transparent 40%),
+  #0b1022;border-radius:18px;border:1px solid rgba(148,163,184,0.2);}
+.fortune-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.fortune-title{font-size:18px;font-weight:800;letter-spacing:.5px;}
+.fortune-date{font-size:12px;color:#94a3b8;}
+.fortune-close{border:none;background:rgba(255,255,255,.1);color:#e2e8f0;border-radius:999px;width:28px;height:28px;cursor:pointer;}
+.fortune-loading{padding:16px;border-radius:14px;border:1px dashed rgba(148,163,184,.3);background:rgba(15,23,42,.55);color:#cbd5f5;font-size:13px;text-align:center;}
+.fortune-error{padding:12px;border-radius:12px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.4);color:#fecaca;font-size:13px;}
+.fortune-card{padding:16px;border-radius:16px;background:linear-gradient(135deg,#111827,#0f172a);border:1px solid rgba(94,234,212,.25);box-shadow:0 16px 36px rgba(0,0,0,.35);animation:fortuneFlip .6s ease;}
+.fortune-summary{font-size:16px;font-weight:800;color:#f8fafc;margin-bottom:10px;}
+.fortune-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(148,163,184,.18);}
+.fortune-label{font-size:12px;letter-spacing:1px;color:#94a3b8;margin-bottom:6px;}
+.fortune-text{font-size:14px;line-height:1.7;color:#e2e8f0;}
+.fortune-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:#cbd5f5;}
+.fortune-meta span{padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.6);}
+@keyframes fortuneFlip{from{transform:rotateY(20deg) scale(.98);opacity:.2;}to{transform:rotateY(0deg) scale(1);opacity:1;}}
 </style>
 <script>
 (function(){
@@ -5888,11 +5943,105 @@ function escapeHtml(s) {
 // 守護神徽章（顯示最近測驗結果）
 (function(){
   const badge = document.getElementById('guardianBadge');
+  const fortuneDialog = document.getElementById('fortuneDialog');
+  const fortuneClose = document.getElementById('fortuneClose');
+  const fortuneLoading = document.getElementById('fortuneLoading');
+  const fortuneError = document.getElementById('fortuneError');
+  const fortuneCard = document.getElementById('fortuneCard');
+  const fortuneDate = document.getElementById('fortuneDate');
+  const fortuneSummary = document.getElementById('fortuneSummary');
+  const fortuneAdvice = document.getElementById('fortuneAdvice');
+  const fortuneRitual = document.getElementById('fortuneRitual');
+  const fortuneMeta = document.getElementById('fortuneMeta');
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   const badgeIcon = (function(){
     if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
     return '/img/guardian-emblem.png'; // 請將圖檔放在此路徑
   })();
+  function showDialog(dlg){
+    if (!dlg) return;
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.setAttribute('open', 'open');
+  }
+  function closeDialog(dlg){
+    if (!dlg) return;
+    if (typeof dlg.close === 'function') dlg.close();
+    else dlg.removeAttribute('open');
+  }
+  function setFortuneLoading(){
+    if (fortuneLoading) fortuneLoading.style.display = '';
+    if (fortuneError) fortuneError.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = 'none';
+  }
+  function setFortuneError(message){
+    if (fortuneError){
+      fortuneError.textContent = message || '暫時無法取得日籤，請稍後再試。';
+      fortuneError.style.display = '';
+    }
+    if (fortuneLoading) fortuneLoading.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = 'none';
+  }
+  function renderFortune(fortune){
+    if (!fortune) return;
+    if (fortuneDate) fortuneDate.textContent = fortune.date || '';
+    if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
+    if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
+    if (fortuneMeta){
+      const meta = fortune.meta || {};
+      const tags = [];
+      if (meta.sunSign) tags.push(`太陽星座 ${meta.sunSign}`);
+      if (meta.moonPhase) tags.push(`月相 ${meta.moonPhase}`);
+      if (meta.iching) tags.push(`易經 ${meta.iching}`);
+      if (meta.todayDow) tags.push(`今日星期${meta.todayDow}`);
+      fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+    }
+    if (fortuneLoading) fortuneLoading.style.display = 'none';
+    if (fortuneError) fortuneError.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = '';
+  }
+  async function fetchFortune(){
+    setFortuneLoading();
+    try{
+      const res = await fetch('/api/fortune', { cache:'no-store', credentials:'include' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取日籤。');
+        throw new Error((data && data.error) || '取得日籤失敗');
+      }
+      renderFortune(data.fortune || null);
+    }catch(err){
+      setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
+    }
+  }
+  function openFortuneDialog(){
+    const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+      ? window.authState.isLoggedIn()
+      : false;
+    if (!loggedIn){
+      if (window.authState && typeof window.authState.promptLogin === 'function'){
+        window.authState.promptLogin('請先登入後再領取日籤。');
+      }
+      return;
+    }
+    showDialog(fortuneDialog);
+    fetchFortune();
+  }
+  function syncQuizProfile(profile){
+    if (!profile || profile.quiz) return;
+    let raw = null;
+    try{ raw = localStorage.getItem('__lastQuizProfile__'); }catch(_){}
+    if (!raw) return;
+    let quiz = null;
+    try{ quiz = JSON.parse(raw); }catch(_){}
+    if (!quiz || !quiz.dow) return;
+    fetch('/api/me/profile', {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ quiz })
+    }).catch(()=>{});
+  }
   function readGuardian(){
     try{
       const raw = localStorage.getItem('__lastQuizGuardian__');
@@ -5922,15 +6071,25 @@ function escapeHtml(s) {
     }
     const code = String(g.code||'').toUpperCase();
     const name = map[code] || '守護神';
-    badge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><span>守護神：${name}</span>`;
+    badge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><div class="guardian-meta"><strong>守護神：${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>領取日籤</button></div>`;
     badge.style.display = 'flex';
+    const btn = badge.querySelector('[data-fortune-btn]');
+    if (btn){
+      btn.addEventListener('click', openFortuneDialog);
+    }
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
-    window.authState.onProfile(()=>render());
+    window.authState.onProfile((profile)=>{
+      syncQuizProfile(profile);
+      render();
+    });
   }
   // 若剛登入後端尚未回傳 guardian，稍後再補一次
   setTimeout(render, 800);
   render();
+  if (fortuneClose){
+    fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
+  }
 })();
 </script>
 </body>

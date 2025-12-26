@@ -457,16 +457,6 @@ async function showResult(){
   } catch {}
   // 圖片覆蓋
   const finalImg = DEITY_IMG_OVERRIDES[code] || meta.img || '';
-  try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Date.now() })); }catch(_){}
-  // 若已登入，同步到會員檔案
-  try{
-    await fetch('/api/me/profile', {
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      credentials:'include',
-      body: JSON.stringify({ guardian:{ code, name, ts: Date.now() } })
-    });
-  }catch(_){}
   // 顯示圖片
   const imgEl = document.getElementById('deityImg');
   if (finalImg) { imgEl.src = finalImg; imgEl.crossOrigin='anonymous'; imgEl.referrerPolicy='no-referrer'; imgEl.style.display = 'block'; }
@@ -476,6 +466,37 @@ async function showResult(){
   const color    = DOW[state.dow]?.color || '';
   const tip      = DOW[state.dow]?.tip || '';
   const zName    = ZODIAC[state.zod]?.name || '—';
+  const traits = [
+    QUESTIONS[2].opts[state.p2],
+    QUESTIONS[3].opts[state.p3],
+    QUESTIONS[4].opts[state.p4],
+    QUESTIONS[5].opts[state.p5],
+    QUESTIONS[6].opts[state.p6],
+    QUESTIONS[7].opts[state.p7]
+  ].filter(Boolean);
+  const quizProfile = {
+    dow: state.dow,
+    dowLabel: dayName,
+    zod: state.zod,
+    zodLabel: zName,
+    job: state.job,
+    jobLabel,
+    color,
+    traits,
+    answers: { p2: state.p2, p3: state.p3, p4: state.p4, p5: state.p5, p6: state.p6, p7: state.p7 },
+    ts: Date.now()
+  };
+  try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Date.now() })); }catch(_){}
+  try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(quizProfile)); }catch(_){}
+  // 若已登入，同步到會員檔案
+  try{
+    await fetch('/api/me/profile', {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ guardian:{ code, name, ts: Date.now() }, quiz: quizProfile })
+    });
+  }catch(_){}
   const result = [
     `守護者：${meta.name || name}`,
     meta.desc ? `指引：${meta.desc.trim()}` : '',

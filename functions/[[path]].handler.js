@@ -281,6 +281,33 @@ function lastDigits(str, count=5){
 function normalizeOrderSuffix(str, count=5){
   return String(str||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-count);
 }
+function normalizeQuizInput(raw){
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  if (raw.dow) out.dow = String(raw.dow).trim();
+  if (raw.dowLabel) out.dowLabel = String(raw.dowLabel).trim();
+  if (raw.zod) out.zod = String(raw.zod).trim();
+  if (raw.zodLabel) out.zodLabel = String(raw.zodLabel).trim();
+  if (raw.job) out.job = String(raw.job).trim();
+  if (raw.jobLabel) out.jobLabel = String(raw.jobLabel).trim();
+  if (raw.color) out.color = String(raw.color).trim();
+  if (Array.isArray(raw.traits)){
+    out.traits = raw.traits.map(s=>String(s||'').trim()).filter(Boolean).slice(0, 12);
+  }
+  if (raw.answers && typeof raw.answers === 'object'){
+    const ans = {};
+    ['p2','p3','p4','p5','p6','p7'].forEach(k=>{
+      if (raw.answers[k]) ans[k] = String(raw.answers[k]).trim();
+    });
+    out.answers = ans;
+  }
+  try{
+    out.ts = raw.ts ? new Date(raw.ts).toISOString() : new Date().toISOString();
+  }catch(_){
+    out.ts = new Date().toISOString();
+  }
+  return out;
+}
 
 // Generate a public-share token for ritual results
 function makeToken(len=32){
@@ -355,6 +382,218 @@ function formatTZ(ts, offsetHours=0){
     const d = new Date(shifted);
     return d.toISOString().replace('T',' ').replace(/\.\d+Z$/,'');
   }catch(_){ return ts; }
+}
+
+function taipeiDateKey(ts=Date.now()){
+  const d = new Date(ts + 8 * 3600 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+function taipeiDateParts(ts=Date.now()){
+  const d = new Date(ts + 8 * 3600 * 1000);
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+    dow: d.getUTCDay()
+  };
+}
+function formatTaipeiDate(ts=Date.now()){
+  const p = taipeiDateParts(ts);
+  return `${p.year}/${String(p.month).padStart(2,'0')}/${String(p.day).padStart(2,'0')}`;
+}
+function fnv1aHash(str){
+  let h = 2166136261>>>0;
+  for (let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h>>>0;
+}
+function pickBySeed(list, seed){
+  if (!Array.isArray(list) || !list.length) return '';
+  const idx = Math.abs(seed) % list.length;
+  return list[idx];
+}
+function sunSignByDate(month, day){
+  const table = [
+    { key:'Capricorn', name:'魔羯座', element:'土', from:[12,22], to:[1,19] },
+    { key:'Aquarius', name:'水瓶座', element:'風', from:[1,20], to:[2,18] },
+    { key:'Pisces', name:'雙魚座', element:'水', from:[2,19], to:[3,20] },
+    { key:'Aries', name:'牡羊座', element:'火', from:[3,21], to:[4,19] },
+    { key:'Taurus', name:'金牛座', element:'土', from:[4,20], to:[5,20] },
+    { key:'Gemini', name:'雙子座', element:'風', from:[5,21], to:[6,20] },
+    { key:'Cancer', name:'巨蟹座', element:'水', from:[6,21], to:[7,22] },
+    { key:'Leo', name:'獅子座', element:'火', from:[7,23], to:[8,22] },
+    { key:'Virgo', name:'處女座', element:'土', from:[8,23], to:[9,22] },
+    { key:'Libra', name:'天秤座', element:'風', from:[9,23], to:[10,22] },
+    { key:'Scorpio', name:'天蠍座', element:'水', from:[10,23], to:[11,21] },
+    { key:'Sagittarius', name:'射手座', element:'火', from:[11,22], to:[12,21] }
+  ];
+  for (const item of table){
+    const [fm, fd] = item.from;
+    const [tm, td] = item.to;
+    if (fm <= tm){
+      if ((month === fm && day >= fd) || (month === tm && day <= td) || (month > fm && month < tm)) return item;
+    }else{
+      if ((month === fm && day >= fd) || (month === tm && day <= td) || (month > fm || month < tm)) return item;
+    }
+  }
+  return table[0];
+}
+function moonPhaseInfo(ts=Date.now()){
+  const synodic = 29.530588853;
+  const newMoon = Date.UTC(2000, 0, 6, 18, 14, 0);
+  const days = (ts - newMoon) / 86400000;
+  const phase = ((days % synodic) + synodic) % synodic;
+  const idx = Math.floor((phase / synodic) * 8);
+  const names = [
+    { name:'新月', tag:'New Moon' },
+    { name:'上弦前月牙', tag:'Waxing Crescent' },
+    { name:'上弦月', tag:'First Quarter' },
+    { name:'盈凸月', tag:'Waxing Gibbous' },
+    { name:'滿月', tag:'Full Moon' },
+    { name:'虧凸月', tag:'Waning Gibbous' },
+    { name:'下弦月', tag:'Last Quarter' },
+    { name:'殘月', tag:'Waning Crescent' }
+  ];
+  return names[idx] || names[0];
+}
+const ICHING_NAMES = [
+  '乾為天','坤為地','水雷屯','山水蒙','水天需','天水訟','地水師','水地比',
+  '風天小畜','天澤履','地天泰','天地否','天火同人','火天大有','地山謙','雷地豫',
+  '澤雷隨','山風蠱','地澤臨','風地觀','火雷噬嗑','山火賁','山地剝','地雷復',
+  '天雷無妄','山天大畜','山雷頤','澤風大過','坎為水','離為火','澤山咸','雷風恆',
+  '天山遯','雷天大壯','火地晉','地火明夷','風火家人','火澤睽','水山蹇','雷水解',
+  '山澤損','風雷益','澤天夬','天風姤','澤地萃','地風升','澤水困','水風井',
+  '澤火革','火風鼎','震為雷','艮為山','風山漸','雷澤歸妹','雷火豐','火山旅',
+  '巽為風','兌為澤','風水渙','水澤節','風澤中孚','雷山小過','水火既濟','火水未濟'
+];
+function textSimilarity(a, b){
+  const norm = (s)=> String(s||'').replace(/\s+/g,'').toLowerCase();
+  const aa = norm(a);
+  const bb = norm(b);
+  if (!aa || !bb) return 0;
+  if (aa === bb) return 1;
+  const grams = (s)=>{
+    const set = new Set();
+    for (let i=0;i<s.length-1;i++) set.add(s.slice(i, i+2));
+    return set;
+  };
+  const g1 = grams(aa);
+  const g2 = grams(bb);
+  let inter = 0;
+  for (const x of g1) if (g2.has(x)) inter++;
+  const union = g1.size + g2.size - inter;
+  return union ? inter / union : 0;
+}
+function isTooSimilar(fortune, history){
+  const summary = fortune?.summary || '';
+  const advice = fortune?.advice || '';
+  for (const h of history){
+    if (!h) continue;
+    const hs = h.summary || '';
+    const ha = h.advice || '';
+    if (textSimilarity(summary, hs) > 0.84) return true;
+    if (textSimilarity(advice, ha) > 0.84) return true;
+  }
+  return false;
+}
+function buildLocalFortune(ctx, seed){
+  const themes = ['穩定聚焦','重新整理','小幅突破','順勢前行','修復節奏','溫和推進'];
+  const focuses = ['整理手邊任務','與人溝通協調','身心平衡','財務細節','學習精進','斷捨離'];
+  const advices = [
+    '把最重要的一件事先完成，效率自然拉高。',
+    '今天適合把界線說清楚，避免情緒耗損。',
+    '把步調放慢一點，讓直覺帶你做正確選擇。',
+    '用 20 分鐘整理空間，運勢會跟著回正。',
+    '重要決定先寫下利弊，再做最後確認。'
+  ];
+  const rituals = [
+    '備一杯清水與一朵淡色花，對守護神說出今日心願。',
+    '點一盞小燭或香，默念三次感謝與請求。',
+    '用雙手合十靜心一分鐘，想像守護神的光護住你。'
+  ];
+  const guardianOfferings = {
+    FM:'金色系供品或香花，誠心祈求指引與貴人。',
+    GA:'甜品、牛奶與清水，祈願開智慧、排除阻礙。',
+    CD:'清水與白花，祝福內心清明與穩定。',
+    KP:'粉色花或香氛，祈願感情與人際和順。',
+    HP:'清水與白花，祈願守護與正氣。',
+    XZ:'樸素供品與清香，祈願長輩之氣庇佑。',
+    WE:'清水與香，祈願洞察與保護。',
+    HM:'紅色或橘色小供品，祈願勇氣與行動力。',
+    RH:'深色供品或清水，祈願破除干擾。',
+    JL:'黃色或金色小供品，祈願事業與貴人。',
+    ZD:'金色系供品或香花，祈願財運穩定。',
+    ZF:'花果與清香，祈願人緣與富足。'
+  };
+  const theme = pickBySeed(themes, seed);
+  const focus = pickBySeed(focuses, seed + 7);
+  const advice = pickBySeed(advices, seed + 13);
+  const ritualBase = guardianOfferings[ctx.guardianCode] || pickBySeed(rituals, seed + 19);
+  return {
+    date: ctx.dateText,
+    summary: `今日運勢偏向「${theme}」，把重點放在${focus}會更順。`,
+    advice,
+    ritual: `向${ctx.guardianName}誠心致意，${ritualBase}`,
+    meta: ctx.meta || {}
+  };
+}
+function normalizeFortunePayload(obj, ctx){
+  if (!obj || typeof obj !== 'object') return null;
+  const out = {};
+  out.date = String(obj.date || ctx.dateText || '').trim();
+  out.summary = String(obj.summary || '').trim();
+  out.advice = String(obj.advice || '').trim();
+  out.ritual = String(obj.ritual || '').trim();
+  if (obj.meta && typeof obj.meta === 'object'){
+    out.meta = obj.meta;
+  } else {
+    out.meta = ctx.meta || {};
+  }
+  if (!out.summary || !out.advice || !out.ritual) return null;
+  return out;
+}
+function parseJsonFromText(text){
+  if (!text) return null;
+  try{ return JSON.parse(text); }catch(_){}
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try{ return JSON.parse(m[0]); }catch(_){ return null; }
+}
+async function callOpenAIFortune(env, prompt, seed){
+  const apiKey = env.OPENAI_API_KEY || env.OPENAI_KEY || '';
+  if (!apiKey) return null;
+  const model = env.OPENAI_MODEL || 'gpt-4o-mini';
+  const payload = {
+    model,
+    messages: [
+      { role:'system', content:'你是資深命理顧問，請以繁體中文輸出。只回傳 JSON，不要任何多餘文字。' },
+      { role:'user', content: prompt }
+    ],
+    temperature: 0.85,
+    max_tokens: 320,
+    response_format: { type:'json_object' }
+  };
+  if (seed != null) payload.seed = seed;
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    console.error('openai fortune error', res.status, text);
+    return null;
+  }
+  let data = null;
+  try{ data = JSON.parse(text); }catch(_){ return null; }
+  const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!content) return null;
+  return parseJsonFromText(content);
 }
 
 async function signSession(payload, secret){
@@ -1113,44 +1352,23 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (request.method === 'PATCH') {
       try{
         const body = await request.json();
+        let changed = false;
         if (body && body.defaultContact){
-          await updateUserDefaultContact(env, record.id, {
+          record.defaultContact = Object.assign({}, record.defaultContact || {}, {
             name: String(body.defaultContact.name || '').trim(),
             phone: String(body.defaultContact.phone || '').trim(),
             email: String(body.defaultContact.email || '').trim()
           });
-          const refreshed = await loadUserRecord(env, record.id);
-          return json({ ok:true, profile: {
-            id: refreshed.id,
-            name: refreshed.name,
-            email: refreshed.email,
-            picture: refreshed.picture,
-            defaultContact: refreshed.defaultContact || null,
-            defaultStore: refreshed.defaultStore || null,
-            memberPerks: refreshed.memberPerks || {},
-            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
-            guardian: refreshed.guardian || null
-          }});
+          changed = true;
         }
         if (body && body.defaultStore){
-          await updateUserDefaultStore(env, record.id, {
+          record.defaultStore = Object.assign({}, record.defaultStore || {}, {
             id: String(body.defaultStore.id || body.defaultStore.storeid || '').trim(),
             name: String(body.defaultStore.name || body.defaultStore.storename || '').trim(),
             address: String(body.defaultStore.address || body.defaultStore.storeaddress || '').trim(),
             tel: String(body.defaultStore.tel || body.defaultStore.storetel || '').trim()
           });
-          const refreshed = await loadUserRecord(env, record.id);
-          return json({ ok:true, profile: {
-            id: refreshed.id,
-            name: refreshed.name,
-            email: refreshed.email,
-            picture: refreshed.picture,
-            defaultContact: refreshed.defaultContact || null,
-            defaultStore: refreshed.defaultStore || null,
-            memberPerks: refreshed.memberPerks || {},
-            wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
-            guardian: refreshed.guardian || null
-          }});
+          changed = true;
         }
         if (body && body.guardian){
           const payload = {
@@ -1159,6 +1377,16 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             ts: body.guardian.ts ? new Date(body.guardian.ts).toISOString() : new Date().toISOString()
           };
           record.guardian = payload;
+          changed = true;
+        }
+        if (body && body.quiz){
+          const quiz = normalizeQuizInput(body.quiz);
+          if (quiz){
+            record.quiz = quiz;
+            changed = true;
+          }
+        }
+        if (changed){
           await saveUserRecord(env, record);
           const refreshed = await loadUserRecord(env, record.id);
           return json({ ok:true, profile: {
@@ -1170,7 +1398,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             defaultStore: refreshed.defaultStore || null,
             memberPerks: refreshed.memberPerks || {},
             wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
-            guardian: refreshed.guardian || null
+            guardian: refreshed.guardian || null,
+            quiz: refreshed.quiz || null
           }});
         }
       }catch(_){}
@@ -1185,8 +1414,127 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       defaultStore: record.defaultStore || null,
       memberPerks: record.memberPerks || {},
       wishlist: Array.isArray(record.wishlist) ? record.wishlist : [],
-      guardian: record.guardian || null
+      guardian: record.guardian || null,
+      quiz: record.quiz || null
     }});
+  }
+
+  if (pathname === '/api/fortune' && request.method === 'GET') {
+    const record = await getSessionUserRecord(request, env);
+    const headers = jsonHeadersFor(request, env);
+    if (!record){
+      return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers });
+    }
+    if (!env.FORTUNES){
+      return new Response(JSON.stringify({ ok:false, error:'FORTUNES KV not bound' }), { status:500, headers });
+    }
+    const todayKey = taipeiDateKey();
+    const cacheKey = `FORTUNE:${record.id}:${todayKey}`;
+    try{
+      const cached = await env.FORTUNES.get(cacheKey);
+      if (cached){
+        return new Response(cached, { status:200, headers });
+      }
+    }catch(_){}
+    const guardian = record.guardian || null;
+    const quiz = record.quiz || null;
+    if (!guardian || !guardian.code){
+      return new Response(JSON.stringify({ ok:false, error:'missing_guardian', needQuiz:true }), { status:400, headers });
+    }
+    if (!quiz || (!quiz.dow && !quiz.job && !quiz.zod)){
+      return new Response(JSON.stringify({ ok:false, error:'missing_quiz', needQuiz:true }), { status:400, headers });
+    }
+    const parts = taipeiDateParts();
+    const dateText = formatTaipeiDate();
+    const sunSign = sunSignByDate(parts.month, parts.day);
+    const moon = moonPhaseInfo(Date.now());
+    const ichSeed = fnv1aHash(`${todayKey}|${record.id}|${guardian.code}`);
+    const iching = ICHING_NAMES[ichSeed % ICHING_NAMES.length];
+    const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
+    const meta = {
+      dateKey: todayKey,
+      sunSign: sunSign.name,
+      sunElement: sunSign.element,
+      moonPhase: moon.name,
+      iching,
+      todayDow: ['日','一','二','三','四','五','六'][parts.dow] || ''
+    };
+    const ctx = {
+      dateText,
+      guardianName: guardian.name || guardian.code || '守護神',
+      guardianCode: String(guardian.code || '').toUpperCase(),
+      quiz,
+      meta
+    };
+    const history = [];
+    for (let i=1;i<=7;i++){
+      const dk = taipeiDateKey(Date.now() - i * 86400000);
+      const hk = `FORTUNE:${record.id}:${dk}`;
+      try{
+        const raw = await env.FORTUNES.get(hk);
+        if (raw){
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.fortune) history.push(parsed.fortune);
+        }
+      }catch(_){}
+    }
+    const seedStr = [
+      record.id,
+      todayKey,
+      guardian.code || '',
+      quiz.dow || '',
+      quiz.zod || '',
+      quiz.job || '',
+      (quiz.answers && Object.values(quiz.answers).join('')) || ''
+    ].join('|');
+    const seed = fnv1aHash(seedStr);
+    const avoidSummaries = history.map(h=>h.summary).filter(Boolean).slice(0, 5);
+    const avoidAdvice = history.map(h=>h.advice).filter(Boolean).slice(0, 5);
+    const prompt = [
+      `今天日期：${dateText}（台灣時間）`,
+      `當日天象：太陽星座 ${sunSign.name}（${sunSign.element}），月相 ${moon.name}，易經 ${iching}`,
+      `使用者資料：守護神 ${ctx.guardianName}（${ctx.guardianCode}）`,
+      `出生星期：${quiz.dowLabel || quiz.dow || '—'}${quiz.color ? `（幸運色：${quiz.color}）` : ''}`,
+      `星座：${quiz.zodLabel || quiz.zod || '—'}`,
+      `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
+      `個人性格關鍵詞：${traitList.join('、') || '—'}`,
+      `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
+      `summary 為一句話總結（20~30 字），advice/ritual 各 1~2 句，內容具體且不空泛。`,
+      avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
+      avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : ''
+    ].filter(Boolean).join('\n');
+    let fortune = normalizeFortunePayload(await callOpenAIFortune(env, prompt, seed), ctx);
+    let source = fortune ? 'openai' : 'local';
+    if (fortune && isTooSimilar(fortune, history)){
+      const promptAlt = prompt + '\n請換一組新的角度與語彙，避免雷同。';
+      const alt = normalizeFortunePayload(await callOpenAIFortune(env, promptAlt, seed + 1), ctx);
+      if (alt && !isTooSimilar(alt, history)){
+        fortune = alt;
+        source = 'openai';
+      }else{
+        fortune = buildLocalFortune(ctx, seed + 17);
+        source = 'local';
+      }
+    }
+    if (!fortune){
+      fortune = buildLocalFortune(ctx, seed + 17);
+      source = 'local';
+    }
+    if (isTooSimilar(fortune, history)){
+      fortune = buildLocalFortune(ctx, seed + 37);
+      source = 'local';
+    }
+    const payload = {
+      ok:true,
+      fortune,
+      dateKey: todayKey,
+      source,
+      createdAt: new Date().toISOString()
+    };
+    try{
+      await env.FORTUNES.put(cacheKey, JSON.stringify(payload));
+    }catch(_){}
+    return new Response(JSON.stringify(payload), { status:200, headers });
   }
 
   // Food map favorites (member)
