@@ -88,6 +88,12 @@
     .fill{height:100%;background:linear-gradient(90deg,#f59e0b,#2563eb);width:0%}
     #resultBox{border:1px solid rgba(0,0,0,0.05);}
     #resultBox img{border-radius:16px;box-shadow:0 14px 28px rgba(0,0,0,.16);}
+    .loading-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:9999;}
+    .loading-card{background:#fff;border-radius:16px;padding:18px 22px;min-width:220px;text-align:center;box-shadow:0 18px 40px rgba(15,23,42,.25);}
+    .loading-spinner{width:34px;height:34px;border-radius:50%;border:3px solid rgba(37,99,235,.2);border-top-color:#f59e0b;animation:quizSpin .8s linear infinite;margin:0 auto 10px;}
+    .loading-title{font-weight:800;font-size:16px;margin-bottom:4px;color:#0f172a;}
+    .loading-sub{font-size:12px;color:#64748b;}
+    @keyframes quizSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
     /* 答題按鈕統一尺寸，手機易點 */
     #opts .btn{width:100%; min-height:72px; border-radius:16px;}
   </style>
@@ -154,6 +160,13 @@
       </div>
     </div>
   </main>
+  <div id="resultLoading" class="loading-overlay" role="status" aria-live="polite">
+    <div class="loading-card">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <div class="loading-title">守護神感應中…</div>
+      <div class="loading-sub">請稍候</div>
+    </div>
+  </div>
 
 <script>
 /* =====================
@@ -321,6 +334,11 @@ const state = { dow:'', zod:'', job:'', p2:'', p3:'', p4:'', p5:'', p6:'', p7:''
 let currentStep = 0; // 0: dow, 1: zod, 2..8: questions 1-7
 const TOTAL_STEPS = 2 + 7;
 let currentQuestion = 1;
+const resultLoading = document.getElementById('resultLoading');
+function setResultLoading(on){
+  if (!resultLoading) return;
+  resultLoading.style.display = on ? 'flex' : 'none';
+}
 
 // render weekday
 const dowBox = document.getElementById('dowBox');
@@ -451,6 +469,8 @@ async function showResult(){
   if (!state.dow || !state.zod || !state.job || !state.p2 || !state.p3 || !state.p4 || !state.p5 || !state.p6 || !state.p7){
     alert('請完整作答「星期、星座與 7 題」'); return;
   }
+  setResultLoading(true);
+  try{
   // logged-in: allow only once per Taiwan day
   try{
     const res = await fetch('/api/me/profile', { credentials:'include', cache:'no-store' });
@@ -728,6 +748,9 @@ async function showResult(){
       };
     }
   }catch(_){}
+  } finally {
+    setResultLoading(false);
+  }
 }
 </script>
 </body>
