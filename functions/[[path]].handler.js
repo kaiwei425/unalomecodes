@@ -458,6 +458,10 @@ function moonPhaseInfo(ts=Date.now()){
   ];
   return names[idx] || names[0];
 }
+function thaiDayColor(dow){
+  const map = ['紅','黃','粉紅','綠','橘','藍','紫'];
+  return map[dow] || '';
+}
 const ICHING_NAMES = [
   '乾為天','坤為地','水雷屯','山水蒙','水天需','天水訟','地水師','水地比',
   '風天小畜','天澤履','地天泰','天地否','天火同人','火天大有','地山謙','雷地豫',
@@ -509,33 +513,35 @@ function buildLocalFortune(ctx, seed){
     '重要決定先寫下利弊，再做最後確認。'
   ];
   const rituals = [
-    '備一杯清水與一朵淡色花，對守護神說出今日心願。',
-    '點一盞小燭或香，默念三次感謝與請求。',
-    '用雙手合十靜心一分鐘，想像守護神的光護住你。'
+    '閉上眼睛誠心祈願三次，想像守護神在你身旁。',
+    '對自己說一句肯定的話，今天會更有力量。',
+    '用一分鐘深呼吸，讓心安定後再做決定。'
   ];
-  const guardianOfferings = {
-    FM:'金色系供品或香花，誠心祈求指引與貴人。',
-    GA:'甜品、牛奶與清水，祈願開智慧、排除阻礙。',
-    CD:'清水與白花，祝福內心清明與穩定。',
-    KP:'粉色花或香氛，祈願感情與人際和順。',
-    HP:'清水與白花，祈願守護與正氣。',
-    XZ:'樸素供品與清香，祈願長輩之氣庇佑。',
-    WE:'清水與香，祈願洞察與保護。',
-    HM:'紅色或橘色小供品，祈願勇氣與行動力。',
-    RH:'深色供品或清水，祈願破除干擾。',
-    JL:'黃色或金色小供品，祈願事業與貴人。',
-    ZD:'金色系供品或香花，祈願財運穩定。',
-    ZF:'花果與清香，祈願人緣與富足。'
+  const guardianMessages = {
+    FM:'把擔心交給時間，今天只要把一件事做到最好就足夠。',
+    GA:'閉上眼深呼吸三次，想清楚目標再出發，你會更順。',
+    CD:'先穩住情緒，再處理問題，你的穩定就是幸運。',
+    KP:'把柔軟放在心裡，但行動要堅定，今天會有好轉。',
+    HP:'相信自己走在對的路上，慢一點也沒關係。',
+    XZ:'少一點內耗，多一點耐心，今天的你會更清明。',
+    WE:'把注意力放回當下，會發現答案一直都在。',
+    HM:'給自己一句肯定：我可以做到，然後就去做。',
+    RH:'保持界線、拒絕干擾，你會越走越穩。',
+    JL:'把機會握緊，今天的努力會換來回報。',
+    ZD:'先整理財務與節奏，穩定就是最好的好運。',
+    ZF:'對自己溫柔一點，人緣與幸福自然靠近。'
   };
   const theme = pickBySeed(themes, seed);
   const focus = pickBySeed(focuses, seed + 7);
   const advice = pickBySeed(advices, seed + 13);
-  const ritualBase = guardianOfferings[ctx.guardianCode] || pickBySeed(rituals, seed + 19);
+  const thaiColor = ctx.meta && ctx.meta.thaiDayColor ? String(ctx.meta.thaiDayColor) : '';
+  const thaiHint = thaiColor ? `泰國星期色是${thaiColor}，可用小配件或穿搭呼應。` : '';
+  const ritualBase = guardianMessages[ctx.guardianCode] || pickBySeed(rituals, seed + 19);
   return {
     date: ctx.dateText,
     summary: `今日運勢偏向「${theme}」，把重點放在${focus}會更順。`,
-    advice,
-    ritual: `向${ctx.guardianName}誠心致意，${ritualBase}`,
+    advice: thaiHint ? `${advice} ${thaiHint}` : advice,
+    ritual: ritualBase,
     meta: ctx.meta || {}
   };
 }
@@ -1448,8 +1454,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const dateText = formatTaipeiDate();
     const sunSign = sunSignByDate(parts.month, parts.day);
     const moon = moonPhaseInfo(Date.now());
-    const ichSeed = fnv1aHash(`${todayKey}|${record.id}|${guardian.code}`);
+    const ichSeed = fnv1aHash(`${todayKey}`);
     const iching = ICHING_NAMES[ichSeed % ICHING_NAMES.length];
+    const thaiColor = thaiDayColor(parts.dow);
+    const buddhistYear = parts.year + 543;
     const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
     const meta = {
       dateKey: todayKey,
@@ -1457,7 +1465,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       sunElement: sunSign.element,
       moonPhase: moon.name,
       iching,
-      todayDow: ['日','一','二','三','四','五','六'][parts.dow] || ''
+      todayDow: ['日','一','二','三','四','五','六'][parts.dow] || '',
+      thaiDayColor: thaiColor,
+      buddhistYear,
+      guardianName: guardian.name || guardian.code || '守護神'
     };
     const ctx = {
       dateText,
@@ -1493,13 +1504,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const prompt = [
       `今天日期：${dateText}（台灣時間）`,
       `當日天象：太陽星座 ${sunSign.name}（${sunSign.element}），月相 ${moon.name}，易經 ${iching}`,
+      `泰國元素：今日星期色 ${thaiColor || '—'}，佛曆 ${buddhistYear} 年`,
       `使用者資料：守護神 ${ctx.guardianName}（${ctx.guardianCode}）`,
       `出生星期：${quiz.dowLabel || quiz.dow || '—'}${quiz.color ? `（幸運色：${quiz.color}）` : ''}`,
       `星座：${quiz.zodLabel || quiz.zod || '—'}`,
       `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
       `個人性格關鍵詞：${traitList.join('、') || '—'}`,
       `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
-      `summary 為一句話總結（20~30 字），advice/ritual 各 1~2 句，內容具體且不空泛。`,
+      `summary 為一句話總結（20~30 字），advice 為生活小建議（1~2 句）。`,
+      `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
       avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
       avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : ''
     ].filter(Boolean).join('\n');

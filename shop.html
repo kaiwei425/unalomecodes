@@ -184,7 +184,7 @@
           <div class="fortune-text" id="fortuneAdvice"></div>
         </div>
         <div class="fortune-section">
-          <div class="fortune-label">守護神供俸 / 祈願</div>
+          <div class="fortune-label" id="fortuneRitualLabel">守護神想對你說</div>
           <div class="fortune-text" id="fortuneRitual"></div>
         </div>
         <div class="fortune-meta" id="fortuneMeta"></div>
@@ -5908,6 +5908,10 @@ function escapeHtml(s) {
 .fortune-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:#cbd5f5;}
 .fortune-meta span{padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.6);}
 @keyframes fortuneFlip{from{transform:rotateY(20deg) scale(.98);opacity:.2;}to{transform:rotateY(0deg) scale(1);opacity:1;}}
+@media(max-width:560px){
+  .guardian-badge{justify-content:center;text-align:center;}
+  .guardian-meta{align-items:center;}
+}
 </style>
 <script>
 (function(){
@@ -5953,6 +5957,7 @@ function escapeHtml(s) {
   const fortuneAdvice = document.getElementById('fortuneAdvice');
   const fortuneRitual = document.getElementById('fortuneRitual');
   const fortuneMeta = document.getElementById('fortuneMeta');
+  const fortuneRitualLabel = document.getElementById('fortuneRitualLabel');
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   const badgeIcon = (function(){
     if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
@@ -5994,7 +5999,13 @@ function escapeHtml(s) {
       if (meta.moonPhase) tags.push(`月相 ${meta.moonPhase}`);
       if (meta.iching) tags.push(`易經 ${meta.iching}`);
       if (meta.todayDow) tags.push(`今日星期${meta.todayDow}`);
+      if (meta.thaiDayColor) tags.push(`泰國星期色 ${meta.thaiDayColor}`);
+      if (meta.buddhistYear) tags.push(`佛曆 ${meta.buddhistYear}`);
       fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+    }
+    if (fortuneRitualLabel){
+      const gName = (fortune.meta && fortune.meta.guardianName) || '';
+      fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
     }
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneError) fortuneError.style.display = 'none';
