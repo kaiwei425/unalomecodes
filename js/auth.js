@@ -4,6 +4,9 @@
   const profileListeners = [];
   const adminListeners = [];
   const loginUrl = '/api/auth/google/login';
+  const liffId = window.LIFF_ID || '';
+  let liffReady = false;
+  let liffInitPromise = null;
 
   function notify(){
     listeners.forEach(fn=>{
@@ -30,7 +33,9 @@
         btn.textContent = '登出';
         btn.dataset.authAction = 'logout';
       }else{
-        btn.textContent = '使用 Google 登入';
+        btn.textContent = (liffReady && window.liff && window.liff.isInClient && window.liff.isInClient())
+          ? '使用 LINE 登入'
+          : '使用 Google 登入';
         btn.dataset.authAction = 'login';
       }
       if (!state.loading || state.ready){
@@ -49,6 +54,48 @@
         }
       }
     });
+  }
+
+  async function initLiff(){
+    if (!liffId || !window.liff || typeof window.liff.init !== 'function') return false;
+    if (liffInitPromise) return liffInitPromise;
+    liffInitPromise = (async ()=>{
+      try{
+        await window.liff.init({ liffId });
+        liffReady = true;
+        updateWidgets();
+        return true;
+      }catch(_){
+        liffReady = false;
+        return false;
+      }
+    })();
+    return liffInitPromise;
+  }
+
+  async function liffLoginIfNeeded(){
+    const ok = await initLiff();
+    if (!ok) return false;
+    try{
+      if (!window.liff.isLoggedIn()){
+        if (window.liff.isInClient && window.liff.isInClient()){
+          window.liff.login({ redirectUri: window.location.href });
+          return true;
+        }
+        return false;
+      }
+      const idToken = window.liff.getIDToken ? window.liff.getIDToken() : '';
+      if (!idToken) return false;
+      await fetch('/api/auth/line/liff', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'include',
+        body: JSON.stringify({ id_token: idToken })
+      });
+      return true;
+    }catch(_){
+      return false;
+    }
   }
 
   function notifyProfile(){
@@ -211,7 +258,15 @@
     refreshAdmin();
   }
 
-  function login(){
+  async function login(){
+    if (await initLiff()){
+      try{
+        if (!window.liff.isLoggedIn()){
+          window.liff.login({ redirectUri: window.location.href });
+          return;
+        }
+      }catch(_){}
+    }
     try{
       const path = window.location.pathname + window.location.search + window.location.hash;
       const redirectParam = encodeURIComponent(path || '/shop.html');
@@ -302,5 +357,8 @@
     }
   };
 
-  refreshUser();
+  (async ()=>{
+    await liffLoginIfNeeded();
+    refreshUser();
+  })();
 })();

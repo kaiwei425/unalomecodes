@@ -119,6 +119,30 @@ async function isAdmin(request, env){
     return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
   }catch(e){ return false; }
 }
+async function verifyLineIdToken(idToken, env){
+  if (!idToken || !env || !env.LINE_CHANNEL_ID) return null;
+  try{
+    const res = await fetch('https://api.line.me/oauth2/v2.1/verify', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        id_token: String(idToken || ''),
+        client_id: String(env.LINE_CHANNEL_ID || '')
+      })
+    });
+    const text = await res.text();
+    let data = null;
+    try{ data = JSON.parse(text); }catch(_){ data = null; }
+    if (!res.ok || !data || !data.sub){
+      console.error('line verify error', res.status, text);
+      return null;
+    }
+    return data;
+  }catch(err){
+    console.error('line verify exception', err);
+    return null;
+  }
+}
 
 // === Coupon helpers (new in-house system) ===
 function inferCouponDeity(code, hint){
@@ -1091,6 +1115,44 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     headers.append('Set-Cookie', `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`);
     headers.append('Set-Cookie', `oauth_redirect=${encodeURIComponent(redirectPath)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
     return new Response(null, { status:302, headers });
+  }
+
+  if (pathname === '/api/auth/line/liff' && request.method === 'POST') {
+    const headers = jsonHeadersFor(request, env);
+    if (!env.LINE_CHANNEL_ID){
+      return new Response(JSON.stringify({ ok:false, error:'LINE not configured' }), { status:500, headers });
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const idToken = String(body.id_token || body.idToken || '').trim();
+    if (!idToken){
+      return new Response(JSON.stringify({ ok:false, error:'missing_id_token' }), { status:400, headers });
+    }
+    const info = await verifyLineIdToken(idToken, env);
+    if (!info){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_id_token' }), { status:401, headers });
+    }
+    const sub = String(info.sub || '').trim();
+    const user = {
+      id: `line:${sub}`,
+      email: info.email || '',
+      name: info.name || info.email || 'LINE 使用者',
+      picture: info.picture || '',
+      provider: 'line',
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000
+    };
+    await ensureUserRecord(env, user);
+    const token = await signSession(user, env.SESSION_SECRET || '');
+    const h = new Headers(headers);
+    h.append('Set-Cookie', `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
+    h.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+    return new Response(JSON.stringify({ ok:true, user:{
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      picture: user.picture,
+      provider: user.provider
+    }}), { status:200, headers: h });
   }
 
   if (pathname === '/api/auth/google/callback') {
