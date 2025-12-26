@@ -115,6 +115,38 @@
     .fortune-text{font-size:14px;line-height:1.7;color:#e2e8f0;}
     .fortune-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:#cbd5f5;}
     .fortune-meta span{padding:4px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.6);}
+    .guardian-badge{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:linear-gradient(135deg,#0f172a,#111827);
+      border:1px solid rgba(148,163,184,0.35);
+      color:#e2e8f0;
+      box-shadow:0 12px 24px rgba(15,23,42,0.25);
+      justify-content:center;
+      text-align:center;
+      margin:6px auto 0;
+      max-width:320px;
+    }
+    .guardian-badge img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2));}
+    .guardian-meta{display:flex;flex-direction:column;gap:2px;font-size:12px;align-items:center;}
+    .guardian-meta strong{font-size:13px;font-weight:700;color:#f8fafc;}
+    .fortune-btn{
+      margin-top:2px;
+      background:linear-gradient(135deg,#f59e0b,#f97316);
+      color:#0b1120;
+      border:none;
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:11px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:0 6px 14px rgba(249,115,22,.35);
+    }
+    .fortune-btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;}
+    .line-entry-actions{grid-template-columns:1fr;}
     .loading-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:9999;}
     .loading-card{background:#fff;border-radius:16px;padding:18px 22px;min-width:220px;text-align:center;box-shadow:0 18px 40px rgba(15,23,42,.25);}
     .loading-spinner{width:34px;height:34px;border-radius:50%;border:3px solid rgba(37,99,235,.2);border-top-color:#f59e0b;animation:quizSpin .8s linear infinite;margin:0 auto 10px;}
@@ -163,9 +195,8 @@
 
     <div class="card" id="lineFortuneEntry" style="display:none">
       <h2>已完成守護神測驗</h2>
-      <div class="result" id="lineFortuneDesc">你可以直接領取日籤。</div>
-      <div class="footer">
-        <button type="button" class="btn primary" data-fortune-btn>領取日籤</button>
+      <div id="lineGuardianBadge" class="guardian-badge" style="display:none;"></div>
+      <div class="footer line-entry-actions">
         <button type="button" class="btn" id="lineRetakeBtn">重新測驗守護神</button>
       </div>
     </div>
@@ -437,12 +468,16 @@ function setResultLoading(on){
   resultLoading.style.display = on ? 'flex' : 'none';
 }
 const lineEntry = document.getElementById('lineFortuneEntry');
-const lineFortuneDesc = document.getElementById('lineFortuneDesc');
+const lineGuardianBadge = document.getElementById('lineGuardianBadge');
 const lineRetakeBtn = document.getElementById('lineRetakeBtn');
 let forceQuiz = false;
 function isLineClient(){
   return !!(window.liff && window.liff.isInClient && window.liff.isInClient());
 }
+const badgeIcon = (function(){
+  if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
+  return '/img/guardian-emblem.png';
+})();
 function setQuizVisible(show){
   const ids = ['stepDow','stepZod','quizBox'];
   ids.forEach(id=>{
@@ -458,9 +493,11 @@ function showLineEntry(profile){
     renderStep();
     return;
   }
-  const name = profile.guardian.name || profile.guardian.code || '守護神';
-  if (lineFortuneDesc){
-    lineFortuneDesc.textContent = `守護神：${name}。你可以直接領取日籤，或重新測驗。`;
+  const code = String(profile.guardian.code || '').toUpperCase();
+  const name = profile.guardian.name || (code ? deityName(code) : '守護神');
+  if (lineGuardianBadge){
+    lineGuardianBadge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><div class="guardian-meta"><strong>守護神：${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>領取日籤</button></div>`;
+    lineGuardianBadge.style.display = 'flex';
   }
   lineEntry.style.display = '';
   setQuizVisible(false);
