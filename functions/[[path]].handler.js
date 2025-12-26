@@ -36,6 +36,8 @@ const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
 const FORTUNE_FORMAT_VERSION = 5;
+const FORTUNE_STATS_PREFIX = 'FORTUNE_STATS:';
+const FORTUNE_STATS_SEEN_PREFIX = 'FORTUNE_STATS:SEEN:';
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -412,6 +414,19 @@ function formatTZ(ts, offsetHours=0){
 function taipeiDateKey(ts=Date.now()){
   const d = new Date(ts + 8 * 3600 * 1000);
   return d.toISOString().slice(0, 10);
+}
+async function recordFortuneStat(env, dateKey, userId){
+  if (!env || !env.FORTUNES || !dateKey || !userId) return;
+  const seenKey = `${FORTUNE_STATS_SEEN_PREFIX}${dateKey}:${userId}`;
+  const countKey = `${FORTUNE_STATS_PREFIX}${dateKey}`;
+  try{
+    const seen = await env.FORTUNES.get(seenKey);
+    if (seen) return;
+    await env.FORTUNES.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+    const raw = await env.FORTUNES.get(countKey);
+    const count = (parseInt(raw || '0', 10) || 0) + 1;
+    await env.FORTUNES.put(countKey, String(count), { expirationTtl: 60 * 60 * 24 * 365 });
+  }catch(_){}
 }
 function taipeiDateParts(ts=Date.now()){
   const d = new Date(ts + 8 * 3600 * 1000);
@@ -1520,6 +1535,28 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, admin:true, email: admin.email || '', name: admin.name || admin.email || '' });
   }
 
+  if (pathname === '/api/admin/fortune-stats' && request.method === 'GET') {
+    if (!(await isAdmin(request, env))){
+      return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+    }
+    if (!env.FORTUNES){
+      return new Response(JSON.stringify({ ok:false, error:'FORTUNES KV not bound' }), { status:500, headers: jsonHeadersFor(request, env) });
+    }
+    const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
+    const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
+    const out = [];
+    for (let i = days - 1; i >= 0; i--){
+      const dateKey = taipeiDateKey(Date.now() - i * 86400000);
+      let count = 0;
+      try{
+        const raw = await env.FORTUNES.get(`${FORTUNE_STATS_PREFIX}${dateKey}`);
+        count = parseInt(raw || '0', 10) || 0;
+      }catch(_){}
+      out.push({ date: dateKey, count });
+    }
+    return new Response(JSON.stringify({ ok:true, days: out }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
   // Admin: list users / profiles
   if (pathname === '/api/admin/users' && request.method === 'GET') {
     if (!(await isAdmin(request, env))){
@@ -1730,6 +1767,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const currentCode = String(record?.guardian?.code || '').toUpperCase();
         const cachedVersion = Number(parsed?.version || 0);
         if (cachedCode && currentCode && cachedCode === currentCode && cachedVersion === FORTUNE_FORMAT_VERSION){
+          await recordFortuneStat(env, todayKey, record.id);
           return new Response(cached, { status:200, headers });
         }
       }
@@ -1863,6 +1901,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     try{
       await env.FORTUNES.put(cacheKey, JSON.stringify(payload));
     }catch(_){}
+    await recordFortuneStat(env, todayKey, record.id);
     return new Response(JSON.stringify(payload), { status:200, headers });
   }
 

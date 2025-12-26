@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日籤統計｜unalomecodes</title>
+<style>
+  :root{--bg:#0b1022;--card:#111827;--muted:#94a3b8;--line:#1f2937;--accent:#f59e0b;}
+  html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1022,#0f172a);color:#e5e7eb;font-family:ui-sans-serif,system-ui,-apple-system;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:960px;margin:0 auto;padding:20px;}
+  .backLink{margin-bottom:10px;}
+  .backBtn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:999px;
+    background:#111827;border:1px solid #263046;color:#e5e7eb;
+    text-decoration:none;font-weight:700;font-size:13px;
+    transition:all .18s ease;
+  }
+  .backBtn:hover{border-color:#fbbf24;color:#fbbf24;}
+  h1{font-size:22px;margin:12px 0 8px 0;letter-spacing:.5px}
+  .muted{color:var(--muted);font-size:13px;}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;}
+  .bar input{background:#0f172a;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:8px 10px;width:100px;}
+  .bar button{border:none;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0b1220;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px dashed rgba(255,255,255,.06);}
+  th{text-align:left;color:#94a3b8;font-weight:700;background:#0f172a;position:sticky;top:0;}
+  tbody tr:hover{background:#0f172a;}
+  .sum{margin-left:auto;font-weight:700;color:#fbbf24;}
+  #loginGate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.7);backdrop-filter:blur(4px);z-index:2000;}
+  #loginGate .panel{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:18px 20px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.4);}
+  #loginGate .panel h3{margin:0 0 8px;font-size:18px;}
+  #loginGate .panel p{margin:0 0 12px;color:#94a3b8;font-size:13px;line-height:1.6;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
+    <h1>日籤領取統計</h1>
+    <div class="muted">統計「每日唯一領取人數」（同一帳號同一天只計一次）。</div>
+    <div class="bar">
+      <label>顯示天數 <input id="daysInput" type="number" min="1" max="90" value="14"></label>
+      <button id="reload">重新整理</button>
+      <span class="sum" id="total"></span>
+    </div>
+    <div class="card">
+      <div style="max-height:70vh;overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:120px">日期</th>
+              <th style="min-width:120px">領取人數</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="2" class="muted">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="loginGate">
+    <div class="panel">
+      <h3>需要管理員登入</h3>
+      <p>請使用管理員帳號登入後查看日籤統計。</p>
+      <button id="loginGo" class="backBtn" style="border-radius:10px;">前往登入</button>
+    </div>
+  </div>
+
+<script>
+const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+const tbody = document.getElementById('tbody');
+const totalEl = document.getElementById('total');
+const daysInput = document.getElementById('daysInput');
+const gate = document.getElementById('loginGate');
+
+async function authedFetch(url, options){
+  const opts = Object.assign({}, options || {});
+  opts.credentials = 'include';
+  const target = /^https?:/i.test(url) ? url : API_BASE + url;
+  const res = await fetch(target, opts);
+  if (res.status === 401){
+    throw new Error('unauthorized');
+  }
+  return res;
+}
+
+function render(rows){
+  const total = rows.reduce((sum, r)=> sum + (Number(r.count)||0), 0);
+  if (totalEl) totalEl.textContent = `合計 ${total} 人`;
+  tbody.innerHTML = rows.map(r=>(
+    `<tr><td>${r.date}</td><td>${r.count}</td></tr>`
+  )).join('') || '<tr><td colspan="2" class="muted">目前沒有資料</td></tr>';
+}
+
+async function loadStats(){
+  if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="muted">載入中…</td></tr>';
+  const days = Math.max(1, Math.min(90, parseInt(daysInput.value || '14', 10) || 14));
+  try{
+    const res = await authedFetch(`/api/admin/fortune-stats?days=${days}`, { cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || 'load_failed');
+    if (gate) gate.style.display = 'none';
+    render(Array.isArray(data.days) ? data.days : []);
+  }catch(err){
+    if (String(err && err.message) === 'unauthorized'){
+      if (gate) gate.style.display = 'flex';
+      return;
+    }
+    if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="muted">讀取失敗：${(err && err.message) || err}</td></tr>`;
+  }
+}
+
+const reloadBtn = document.getElementById('reload');
+if (reloadBtn) reloadBtn.addEventListener('click', loadStats);
+if (daysInput) daysInput.addEventListener('change', loadStats);
+
+const loginGo = document.getElementById('loginGo');
+if (loginGo){
+  loginGo.addEventListener('click', ()=>{
+    const redirect = encodeURIComponent('/admin/fortune-stats.html');
+    window.location.href = `${API_BASE}/api/auth/google/admin/start?redirect=${redirect}`;
+  });
+}
+
+loadStats();
+</script>
+</body>
+</html>
