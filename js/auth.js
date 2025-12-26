@@ -294,14 +294,14 @@
       .auth-login-legal ul{margin:6px 0 0;padding-left:18px;}
       .auth-login-legal li{margin:4px 0;}
       .auth-login-consent{margin-top:6px;color:#0f172a;font-weight:700;}
-      .auth-login-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 4px;}
-      .auth-login-btn{border:none;border-radius:999px;width:68px;height:68px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(15,23,42,.18);transition:transform .16s ease, box-shadow .16s ease;}
-      .auth-login-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(15,23,42,.22);}
-      .auth-login-icon{width:40px;height:40px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;}
-      .auth-login-icon.line{background-image:url(\"https://vos.line-scdn.net/strapi-cluster-instance-bucket-84/appicon_01_f9ed1cf01f.jpeg\");background-size:cover;}
+      .auth-login-actions{display:grid;gap:10px;margin:12px 0 4px;}
+      .auth-login-btn{border:none;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px rgba(15,23,42,.14);transition:transform .16s ease, box-shadow .16s ease;}
+      .auth-login-btn:hover{transform:translateY(-1px);box-shadow:0 16px 30px rgba(15,23,42,.2);}
+      .auth-login-icon{width:20px;height:20px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;flex:0 0 auto;}
+      .auth-login-icon.line{background-image:url(\"https://vos.line-scdn.net/strapi-cluster-instance-bucket-84/appicon_01_f9ed1cf01f.jpeg\");}
       .auth-login-icon.google{background-image:url(\"/img/google-logo.png\");}
-      .auth-login-btn.line{background:#fff;border:1px solid rgba(0,185,0,.25);}
-      .auth-login-btn.google{background:#fff;border:1px solid rgba(59,130,246,.18);}
+      .auth-login-btn.line{background:#06c755;color:#fff;border:1px solid rgba(6,199,85,.4);}
+      .auth-login-btn.google{background:#fff;color:#0f172a;border:1px solid rgba(59,130,246,.18);}
       .auth-login-cancel{margin-top:10px;font-size:12px;color:#94a3b8;text-align:center;cursor:pointer;}
     `;
     document.head.appendChild(style);
@@ -322,8 +322,12 @@
           <div class="auth-login-consent">點擊登入代表您已閱讀並同意本網站之服務條款與隱私權政策。</div>
         </div>
         <div class="auth-login-actions">
-          <button type="button" class="auth-login-btn line" data-auth-login-provider="line" aria-label="LINE 登入" title="LINE 登入"><span class="auth-login-icon line" aria-hidden="true"></span></button>
-          <button type="button" class="auth-login-btn google" data-auth-login-provider="google" aria-label="Google 登入" title="Google 登入"><span class="auth-login-icon google" aria-hidden="true"></span></button>
+          <button type="button" class="auth-login-btn line" data-auth-login-provider="line">
+            <span class="auth-login-icon line" aria-hidden="true"></span>LINE 登入
+          </button>
+          <button type="button" class="auth-login-btn google" data-auth-login-provider="google">
+            <span class="auth-login-icon google" aria-hidden="true"></span>Google 登入
+          </button>
         </div>
         <div class="auth-login-cancel" data-auth-login-close>取消</div>
       </div>
