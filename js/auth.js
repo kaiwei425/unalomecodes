@@ -290,6 +290,10 @@
       .auth-login-panel{position:relative;background:#fff;color:#0f172a;border-radius:16px;padding:18px 16px;min-width:260px;width:min(320px,92%);box-shadow:0 24px 60px rgba(0,0,0,.35);}
       .auth-login-title{font-size:16px;font-weight:700;margin-bottom:10px;}
       .auth-login-desc{font-size:13px;color:#64748b;margin-bottom:14px;line-height:1.5;}
+      .auth-login-legal{margin:0 0 14px;padding:10px 12px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;font-size:12px;color:#475569;line-height:1.6;}
+      .auth-login-legal ul{margin:6px 0 0;padding-left:18px;}
+      .auth-login-legal li{margin:4px 0;}
+      .auth-login-consent{margin-top:6px;color:#0f172a;font-weight:600;}
       .auth-login-actions{display:grid;gap:10px;}
       .auth-login-btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;}
       .auth-login-btn.line{background:#00b900;color:#fff;}
@@ -304,6 +308,15 @@
       <div class="auth-login-panel" role="dialog" aria-modal="true">
         <div class="auth-login-title">登入會員</div>
         <div class="auth-login-desc">請選擇登入方式</div>
+        <div class="auth-login-legal">
+          為了提供會員服務，我們會向 LINE/Google 取得您的 Email，僅用於下列用途：
+          <ul>
+            <li>會員身分識別與登入狀態維持</li>
+            <li>訂單/日籤相關通知與查詢</li>
+            <li>客服聯繫與必要的服務通知</li>
+          </ul>
+          <div class="auth-login-consent">點擊登入即表示您同意我們依上述用途收集與使用 Email。</div>
+        </div>
         <div class="auth-login-actions">
           <button type="button" class="auth-login-btn line" data-auth-login-provider="line">LINE 登入</button>
           <button type="button" class="auth-login-btn google" data-auth-login-provider="google">Google 登入</button>
