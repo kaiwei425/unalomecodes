@@ -472,6 +472,20 @@ const ICHING_NAMES = [
   '澤火革','火風鼎','震為雷','艮為山','風山漸','雷澤歸妹','雷火豐','火山旅',
   '巽為風','兌為澤','風水渙','水澤節','風澤中孚','雷山小過','水火既濟','火水未濟'
 ];
+const GUARDIAN_MESSAGES = {
+  FM:'把擔心交給時間，今天只要把一件事做到最好就足夠。',
+  GA:'閉上眼深呼吸三次，想清楚目標再出發，你會更順。',
+  CD:'先穩住情緒，再處理問題，你的穩定就是幸運。',
+  KP:'把柔軟放在心裡，但行動要堅定，今天會有好轉。',
+  HP:'相信自己走在對的路上，慢一點也沒關係。',
+  XZ:'少一點內耗，多一點耐心，今天的你會更清明。',
+  WE:'把注意力放回當下，會發現答案一直都在。',
+  HM:'給自己一句肯定：我可以做到，然後就去做。',
+  RH:'保持界線、拒絕干擾，你會越走越穩。',
+  JL:'把機會握緊，今天的努力會換來回報。',
+  ZD:'先整理財務與節奏，穩定就是最好的好運。',
+  ZF:'對自己溫柔一點，人緣與幸福自然靠近。'
+};
 function textSimilarity(a, b){
   const norm = (s)=> String(s||'').replace(/\s+/g,'').toLowerCase();
   const aa = norm(a);
@@ -517,26 +531,12 @@ function buildLocalFortune(ctx, seed){
     '對自己說一句肯定的話，今天會更有力量。',
     '用一分鐘深呼吸，讓心安定後再做決定。'
   ];
-  const guardianMessages = {
-    FM:'把擔心交給時間，今天只要把一件事做到最好就足夠。',
-    GA:'閉上眼深呼吸三次，想清楚目標再出發，你會更順。',
-    CD:'先穩住情緒，再處理問題，你的穩定就是幸運。',
-    KP:'把柔軟放在心裡，但行動要堅定，今天會有好轉。',
-    HP:'相信自己走在對的路上，慢一點也沒關係。',
-    XZ:'少一點內耗，多一點耐心，今天的你會更清明。',
-    WE:'把注意力放回當下，會發現答案一直都在。',
-    HM:'給自己一句肯定：我可以做到，然後就去做。',
-    RH:'保持界線、拒絕干擾，你會越走越穩。',
-    JL:'把機會握緊，今天的努力會換來回報。',
-    ZD:'先整理財務與節奏，穩定就是最好的好運。',
-    ZF:'對自己溫柔一點，人緣與幸福自然靠近。'
-  };
   const theme = pickBySeed(themes, seed);
   const focus = pickBySeed(focuses, seed + 7);
   const advice = pickBySeed(advices, seed + 13);
   const thaiColor = ctx.meta && ctx.meta.thaiDayColor ? String(ctx.meta.thaiDayColor) : '';
   const thaiHint = thaiColor ? `泰國星期色是${thaiColor}，可用小配件或穿搭呼應。` : '';
-  const ritualBase = guardianMessages[ctx.guardianCode] || pickBySeed(rituals, seed + 19);
+  const ritualBase = GUARDIAN_MESSAGES[ctx.guardianCode] || pickBySeed(rituals, seed + 19);
   return {
     date: ctx.dateText,
     summary: `今日運勢偏向「${theme}」，把重點放在${focus}會更順。`,
@@ -559,6 +559,14 @@ function normalizeFortunePayload(obj, ctx){
   }
   if (!out.summary || !out.advice || !out.ritual) return null;
   return out;
+}
+function sanitizeRitual(text, ctx){
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  if (/(蠟燭|點香|供品|香火|供奉|焚香)/.test(raw)){
+    return GUARDIAN_MESSAGES[ctx.guardianCode] || '閉上眼睛誠心祈願，今天會有力量陪著你。';
+  }
+  return raw;
 }
 function parseJsonFromText(text){
   if (!text) return null;
@@ -1513,6 +1521,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
       `summary 為一句話總結（20~30 字），advice 為生活小建議（1~2 句）。`,
       `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
+      `只使用以上提供的天象/日期/泰國元素資訊，不要捏造其他星體或數據。`,
       avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
       avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : ''
     ].filter(Boolean).join('\n');
@@ -1532,6 +1541,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!fortune){
       fortune = buildLocalFortune(ctx, seed + 17);
       source = 'local';
+    }
+    if (fortune && fortune.ritual){
+      fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
     }
     if (isTooSimilar(fortune, history)){
       fortune = buildLocalFortune(ctx, seed + 37);
