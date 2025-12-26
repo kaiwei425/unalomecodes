@@ -1447,7 +1447,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     try{
       const cached = await env.FORTUNES.get(cacheKey);
       if (cached){
-        return new Response(cached, { status:200, headers });
+        try{
+          const parsed = JSON.parse(cached);
+          const cachedCode = parsed?.fortune?.meta?.guardianCode || '';
+          if (!cachedCode || String(cachedCode).toUpperCase() === String(record?.guardian?.code || '').toUpperCase()){
+            return new Response(cached, { status:200, headers });
+          }
+        }catch(_){
+          return new Response(cached, { status:200, headers });
+        }
       }
     }catch(_){}
     const guardian = record.guardian || null;
@@ -1476,7 +1484,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       todayDow: ['日','一','二','三','四','五','六'][parts.dow] || '',
       thaiDayColor: thaiColor,
       buddhistYear,
-      guardianName: guardian.name || guardian.code || '守護神'
+      guardianName: guardian.name || guardian.code || '守護神',
+      guardianCode: String(guardian.code || '').toUpperCase()
     };
     const ctx = {
       dateText,

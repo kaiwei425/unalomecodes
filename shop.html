@@ -191,7 +191,6 @@
         <div class="fortune-actions">
           <button type="button" class="fortune-share-btn" id="fortuneShareBtn">自動截圖分享</button>
         </div>
-        <div class="fortune-seal">封</div>
       </div>
     </div>
   </div>
@@ -5915,8 +5914,6 @@ function escapeHtml(s) {
 .fortune-actions{margin-top:14px;display:flex;justify-content:flex-end;}
 .fortune-share-btn{border:none;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:700;color:#0b1120;background:linear-gradient(135deg,#fde68a,#f59e0b);box-shadow:0 10px 20px rgba(245,158,11,.3);cursor:pointer;}
 .fortune-share-btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;}
-.fortune-seal{position:absolute;right:14px;bottom:14px;width:46px;height:46px;border-radius:999px;background:radial-gradient(circle at 30% 30%, #fca5a5, #ef4444 60%, #b91c1c 100%);box-shadow:0 10px 18px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;letter-spacing:1px;transform:scale(.6) rotate(-8deg);opacity:0;animation:sealPop .6s ease forwards .25s;}
-@keyframes sealPop{to{transform:scale(1) rotate(-8deg);opacity:1;}}
 @keyframes fortuneFlip{from{transform:rotateY(20deg) scale(.98);opacity:.2;}to{transform:rotateY(0deg) scale(1);opacity:1;}}
 @media(max-width:560px){
   .guardian-badge{justify-content:center;text-align:center;}
@@ -6124,9 +6121,12 @@ function escapeHtml(s) {
     ctx.fill();
     ctx.stroke();
     const brandImg = document.querySelector('.brand img');
-    const logoUrl = (window.UNALOME_LOGO || (brandImg && brandImg.src) || '/img/guardian-emblem.png');
-    let logo = await loadImageFromUrl(logoUrl);
-    if (!logo && logoUrl !== '/img/guardian-emblem.png'){
+    const preferredLogo = window.UNALOME_LOGO || '/logo.png';
+    let logo = await loadImageFromUrl(preferredLogo);
+    if (!logo && brandImg && brandImg.src){
+      logo = await loadImageFromUrl(brandImg.src);
+    }
+    if (!logo){
       logo = await loadImageFromUrl('/img/guardian-emblem.png');
     }
     if (logo){
@@ -6167,13 +6167,6 @@ function escapeHtml(s) {
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '500 28px system-ui, -apple-system, "Segoe UI", sans-serif';
     wrapText(ctx, lastFortune.ritual || '', pad + 40, y, w - pad * 2 - 80, 40);
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath();
-    ctx.arc(w - pad - 60, h - 300, 50, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '800 24px system-ui, -apple-system, "Segoe UI", sans-serif';
-    ctx.fillText('封', w - pad - 68, h - 292);
     return new Promise(resolve=>{
       canvas.toBlob(b=> resolve(b), 'image/png');
     });
