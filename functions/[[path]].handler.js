@@ -235,6 +235,48 @@ async function isAdmin(request, env){
     return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
   }catch(e){ return false; }
 }
+function collectAllowedOrigins(env, request, extraRaw){
+  const allow = new Set();
+  let selfOrigin = '';
+  try{ selfOrigin = new URL(request.url).origin; }catch(_){}
+  const addOrigin = (val)=>{
+    if (!val) return;
+    try{
+      const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
+      allow.add(u.origin);
+    }catch(_){}
+  };
+  if (selfOrigin) allow.add(selfOrigin);
+  addOrigin(env.SITE_URL);
+  addOrigin(env.PUBLIC_SITE_URL);
+  addOrigin(env.PUBLIC_ORIGIN);
+  const extra = (env.CORS_ORIGINS || env.ALLOWED_ORIGINS || extraRaw || '')
+    .split(',').map(s=>s.trim()).filter(Boolean);
+  extra.forEach(addOrigin);
+  return allow;
+}
+function isAllowedAdminOrigin(request, env){
+  const allow = collectAllowedOrigins(env, request, env.ADMIN_ORIGINS || '');
+  const originHeader = (request.headers.get('Origin') || '').trim();
+  if (originHeader) return allow.has(originHeader);
+  const ref = (request.headers.get('Referer') || '').trim();
+  if (!ref) return true;
+  try{
+    const refOrigin = new URL(ref).origin;
+    return allow.has(refOrigin);
+  }catch(_){
+    return false;
+  }
+}
+async function requireAdminWrite(request, env){
+  if (!(await isAdmin(request, env))) {
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  if (!isAllowedAdminOrigin(request, env)) {
+    return new Response(JSON.stringify({ ok:false, error:'Forbidden origin' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  return null;
+}
 async function verifyLineIdToken(idToken, env){
   if (!idToken || !env || !env.LINE_CHANNEL_ID) return null;
   try{
@@ -329,9 +371,18 @@ async function redeemCoupon(env, { code, deity, orderId, lock }){
   const rec = await readCoupon(env, codeNorm);
   if (!rec) return { ok:false, reason:'not_found' };
   if (rec.used) return { ok:false, reason:'already_used' };
-   const nowTs = Date.now();
-   if (rec.startAt && nowTs < Date.parse(rec.startAt)) return { ok:false, reason:'not_started' };
-   if (rec.expireAt && nowTs > Date.parse(rec.expireAt)) return { ok:false, reason:'expired' };
+  const nowTs = Date.now();
+  if (rec.reservedUntil){
+    const reservedUntil = Date.parse(rec.reservedUntil);
+    if (!Number.isNaN(reservedUntil) && reservedUntil > nowTs){
+      const reservedBy = String(rec.reservedBy || '').trim();
+      if (reservedBy && orderId && reservedBy !== String(orderId)) {
+        return { ok:false, reason:'reserved' };
+      }
+    }
+  }
+  if (rec.startAt && nowTs < Date.parse(rec.startAt)) return { ok:false, reason:'not_started' };
+  if (rec.expireAt && nowTs > Date.parse(rec.expireAt)) return { ok:false, reason:'expired' };
   const targetDeity = String(rec.deity||'').toUpperCase();
   const want = String(deity||'').toUpperCase();
   if (rec.type !== 'SHIP' && rec.type !== 'ALL'){
@@ -1158,6 +1209,30 @@ function resolveVariant(product, variantName){
   const v = variants[idx] || {};
   return { ok:true, name: String(v.name || vn || ''), priceDiff: Number(v.priceDiff || 0) || 0 };
 }
+function resolveAvailableStock(product, variantName){
+  if (!product) return null;
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (variants.length){
+    const vn = cleanVariantName(variantName || '');
+    let idx = -1;
+    if (vn){
+      idx = variants.findIndex(v => cleanVariantName(v?.name) === vn);
+    }
+    if (idx < 0 && variants.length === 1) idx = 0;
+    if (idx >= 0){
+      const v = variants[idx] || {};
+      if (v.stock !== undefined && v.stock !== null){
+        const n = Number(v.stock);
+        return Number.isFinite(n) ? n : 0;
+      }
+    }
+  }
+  if (product.stock !== undefined && product.stock !== null){
+    const n = Number(product.stock);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return null;
+}
 async function buildItemFromProduct(env, productId, variantName, qty){
   const pid = String(productId || '').trim();
   if (!pid) return { ok:false, error:'missing_product_id' };
@@ -1169,6 +1244,10 @@ async function buildItemFromProduct(env, productId, variantName, qty){
   const base = Number(product.basePrice || 0) || 0;
   const unit = Math.max(0, base + Number(variantInfo.priceDiff || 0));
   const count = Math.max(1, Number(qty || 1));
+  const available = resolveAvailableStock(product, variantInfo.name || variantName || '');
+  if (available !== null && available < count){
+    return { ok:false, error:'out_of_stock', available };
+  }
   const item = {
     productId: pid,
     productName: String(product.name || ''),
@@ -1385,7 +1464,8 @@ export async function onRequest(context) {
     return listProducts(url, env);
   }
   if (pathname === "/api/products" && request.method === "POST") {
-    if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
     return createProduct(request, env);
   }
 
@@ -1394,9 +1474,9 @@ export async function onRequest(context) {
     if (prodIdMatch) {
       const id = decodeURIComponent(prodIdMatch[1]);
       if (request.method === "GET")   return getProduct(id, env);
-      if (request.method === "PUT")   { if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return putProduct(id, request, env); }
-      if (request.method === "PATCH") { if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return patchProduct(id, request, env); }
-      if (request.method === "DELETE"){ if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders }); return deleteProduct(id, env); }
+      if (request.method === "PUT")   { const guard = await requireAdminWrite(request, env); if (guard) return guard; return putProduct(id, request, env); }
+      if (request.method === "PATCH") { const guard = await requireAdminWrite(request, env); if (guard) return guard; return patchProduct(id, request, env); }
+      if (request.method === "DELETE"){ const guard = await requireAdminWrite(request, env); if (guard) return guard; return deleteProduct(id, env); }
     }
 // ======== Bank Transfer Additions (non-breaking) ========
 if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathname === '/api/order/confirm-transfer')) {
@@ -1535,7 +1615,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       });
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
-      headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
+      headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict');
       headers.append('Location', `${origin}${redirectPath}`);
       return new Response(null, { status:302, headers });
     }catch(err){
@@ -1575,7 +1655,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const token = await signSession(user, env.SESSION_SECRET || '');
     const h = new Headers(headers);
     h.append('Set-Cookie', `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
-    h.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+    h.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
     return new Response(JSON.stringify({ ok:true, user:{
       id: user.id,
       name: user.name,
@@ -1663,7 +1743,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
       });
       // 移除可能存在的 admin session，避免一般登入沿用先前的管理員憑證
-      headers.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
+      headers.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
       // 若為管理員白名單且已設定 ADMIN_JWT_SECRET，直接簽發 admin_session，免二次登入
       try{
         const allowed = parseAdminEmails(env);
@@ -1677,7 +1757,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             exp: Date.now() + 60 * 60 * 1000 // 1 小時
           };
           const adminToken = await signSession(adminPayload, env.ADMIN_JWT_SECRET);
-          headers.append('Set-Cookie', `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
+          headers.append('Set-Cookie', `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`);
         }
       }catch(_){}
       headers.append('Set-Cookie', clearStateCookie);
@@ -1809,7 +1889,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       };
       const adminToken = await signSession(adminPayload, env.ADMIN_JWT_SECRET || '');
       const headers = new Headers({
-        'Set-Cookie': `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`,
+        'Set-Cookie': `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`,
       });
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
@@ -1903,8 +1983,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
   }
   if (pathname === '/api/admin/users/reset-guardian' && request.method === 'POST') {
-    if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
     }
     const store = getUserStore(env);
     if (!store){
@@ -1959,14 +2040,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   }
 
   if (pathname === '/api/logout' && request.method === 'POST') {
-    return new Response(JSON.stringify({ ok:true }), {
-      headers:{
-        'Set-Cookie': [
-          'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax',
-          'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax'
-        ].join(', ')
-      }
-    });
+    const headers = new Headers({ 'Content-Type': 'application/json; charset=utf-8' });
+    headers.append('Set-Cookie', 'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
+    headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict');
+    return new Response(JSON.stringify({ ok:true }), { status:200, headers });
   }
 
   if (pathname === '/api/me/profile') {
@@ -2265,8 +2342,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return json({ ok:true, items });
     }
     if (request.method === 'POST'){
-      if (!(await isAdmin(request, env))){
-        return json({ ok:false, error:'Unauthorized' }, 401);
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
       }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       try{
@@ -2500,6 +2578,44 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       if (body && body.buyer_note && !body.note) body.note = String(body.buyer_note);
     } else {
       const fd = await request.formData();
+      const maxUploadBytes = Number(env.PROOF_MAX_BYTES || 8 * 1024 * 1024) || 8 * 1024 * 1024;
+      const allowedProofMime = new Set([
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'image/svg+xml',
+        'application/pdf'
+      ]);
+      const allowedProofExt = new Set(['jpg','jpeg','png','webp','gif','svg','pdf']);
+      const mimeByExt = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+        gif: 'image/gif',
+        svg: 'image/svg+xml',
+        pdf: 'application/pdf'
+      };
+      const validateUploadFile = (file) => {
+        const mime = String(file.type || '').toLowerCase();
+        const extFromName = safeExt(file.name || '').toLowerCase();
+        let ext = (guessExt(mime) || extFromName || '').toLowerCase();
+        if (ext === 'jpeg') ext = 'jpg';
+        const mimeOk = mime ? allowedProofMime.has(mime) : false;
+        const extOk = ext ? allowedProofExt.has(ext) : false;
+        if (!mimeOk && !extOk) return { ok:false, error:'只支援 JPG/PNG/WebP/GIF/SVG/PDF 檔案' };
+        if (mime && !mimeOk) return { ok:false, error:'檔案類型不支援' };
+        if (ext && !extOk) return { ok:false, error:'檔案副檔名不支援' };
+        const size = Number(file.size || 0);
+        if (size && size > maxUploadBytes) {
+          const limitMb = Math.round(maxUploadBytes / 1024 / 1024);
+          return { ok:false, error:`檔案過大（上限 ${limitMb}MB）` };
+        }
+        if (!ext) ext = 'jpg';
+        const contentType = mimeOk ? mime : (mimeByExt[ext] || 'application/octet-stream');
+        return { ok:true, ext, contentType };
+      };
       // DEBUG holder for receipt upload info
       let __dbg_proof_info = null;
       // === Save uploaded proof into R2 (preferred) ===
@@ -2507,19 +2623,22 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       try {
         const f = fd.get('proof') || fd.get('receipt') || fd.get('upload') || fd.get('file') || fd.get('screenshot');
         if (f && typeof f !== 'string' && (f.stream || f.arrayBuffer)) {
+          const check = validateUploadFile(f);
+          if (!check.ok) {
+            return new Response(JSON.stringify({ ok:false, error: check.error }), { status:400, headers: jsonHeaders });
+          }
           const day = new Date();
           const y = day.getFullYear();
           const m = String(day.getMonth()+1).padStart(2,'0');
           const d = String(day.getDate()).padStart(2,'0');
           // normalize ext & content type
-          const ext0 = (f.type && f.type.split('/')[1]) || (safeExt(f.name) || 'jpg');
-          const ext = ext0 === 'jpeg' ? 'jpg' : ext0;
+          const ext = check.ext;
           const key = `receipts/${y}${m}${d}/${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${ext}`;
 
           // Prefer streaming to R2 to avoid memory spikes, fallback to arrayBuffer
           if (typeof f.stream === 'function') {
             await env.R2_BUCKET.put(key, f.stream(), {
-              httpMetadata: { contentType: f.type || 'image/jpeg', contentDisposition: 'inline' }
+              httpMetadata: { contentType: check.contentType, contentDisposition: 'inline' }
             });
           } else {
             const buf = await f.arrayBuffer();
@@ -2531,7 +2650,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
               );
             }
             await env.R2_BUCKET.put(key, buf, {
-              httpMetadata: { contentType: f.type || 'image/jpeg', contentDisposition: 'inline' }
+              httpMetadata: { contentType: check.contentType, contentDisposition: 'inline' }
             });
           }
 
@@ -2546,17 +2665,20 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       try {
         const rf = fd.get('ritual_photo') || fd.get('candle_photo') || fd.get('photo');
         if (rf && typeof rf !== 'string' && (rf.stream || rf.arrayBuffer)) {
+          const check = validateUploadFile(rf);
+          if (!check.ok) {
+            return new Response(JSON.stringify({ ok:false, error: check.error }), { status:400, headers: jsonHeaders });
+          }
           const day2 = new Date();
           const y2 = day2.getFullYear();
           const m2 = String(day2.getMonth()+1).padStart(2,'0');
           const d2 = String(day2.getDate()).padStart(2,'0');
-          const ext0b = (rf.type && rf.type.split('/')[1]) || (safeExt(rf.name) || 'jpg');
-          const extb = ext0b === 'jpeg' ? 'jpg' : ext0b;
+          const extb = check.ext;
           const rkey = `rituals/${y2}${m2}${d2}/${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extb}`;
 
           if (typeof rf.stream === 'function') {
             await env.R2_BUCKET.put(rkey, rf.stream(), {
-              httpMetadata: { contentType: rf.type || 'image/jpeg', contentDisposition: 'inline' }
+              httpMetadata: { contentType: check.contentType, contentDisposition: 'inline' }
             });
           } else {
             const rbuf = await rf.arrayBuffer();
@@ -2564,7 +2686,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
               // ignore empty ritual photo
             } else {
               await env.R2_BUCKET.put(rkey, rbuf, {
-                httpMetadata: { contentType: rf.type || 'image/jpeg', contentDisposition: 'inline' }
+                httpMetadata: { contentType: check.contentType, contentDisposition: 'inline' }
               });
             }
           }
@@ -2620,6 +2742,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       const msg = reason === 'product_not_found' ? '找不到商品'
         : reason === 'product_inactive' ? '商品已下架'
         : reason === 'invalid_variant' ? '商品規格無效'
+        : reason === 'out_of_stock' ? '庫存不足'
         : '缺少商品資訊';
       return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: jsonHeaders });
     }
@@ -2831,6 +2954,8 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       results: [],
       coupon: couponApplied || undefined,
       couponAssignment: (couponApplied && couponApplied.lines) ? couponApplied.lines : undefined,
+      stockDeducted: false,
+      soldCounted: false,
       // memberDiscount: 暫不使用
       ...(Object.keys(extra).length ? { extra } : {})
     };
@@ -2850,10 +2975,12 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     if (ids.length > 1000) ids.length = 1000;
     await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
 
-    // Auto-increment product sold counters
-    try { await bumpSoldCounters(env, items, productId, qty); } catch(_){}
     // Decrement inventory (variants 或 product-level)
-    try { await decStockCounters(env, items, productId, (body.variantName||body.variant||''), qty); } catch(_){}
+    try {
+      await decStockCounters(env, items, productId, (body.variantName||body.variant||''), qty);
+      order.stockDeducted = true;
+      await env.ORDERS.put(order.id, JSON.stringify(order));
+    } catch(_){}
     try {
       await maybeSendOrderEmails(env, order, { origin, channel: 'bank' });
     } catch (err) {
@@ -2880,8 +3007,9 @@ if (pathname === '/api/order/confirm-transfer' && request.method === 'POST') {
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: __headersJSON__() });
   }
-  if (!(await isAdmin(request, env))) {
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: __headersJSON__() });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
   }
   try {
     const body = await request.json();
@@ -2994,12 +3122,13 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
 
     let draft;
     try{
-      draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', lockCoupon:true });
+      draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', reserveCoupon:true, reserveTtlSec: Number(env.CC_COUPON_HOLD_TTL_SEC || 900) || 900 });
     }catch(e){
       const reason = e && e.code ? String(e.code) : 'invalid_product';
       const msg = reason === 'product_not_found' ? '找不到商品'
         : reason === 'product_inactive' ? '商品已下架'
         : reason === 'invalid_variant' ? '商品規格無效'
+        : reason === 'out_of_stock' ? '庫存不足'
         : '缺少商品資訊';
       return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: jsonHeaders });
     }
@@ -3060,6 +3189,8 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       createdAt: new Date().toISOString(),
       status: 'INIT'
     };
+    order.stockDeducted = false;
+    order.soldCounted = false;
 
     await env.ORDERS.put(order.id, JSON.stringify(order));
     const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
@@ -3068,8 +3199,11 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
     ids.unshift(order.id);
     if (ids.length > 1000) ids.length = 1000;
     await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
-    try { await bumpSoldCounters(env, draft.items, order.productId, order.qty); } catch(_){}
-    try { await decStockCounters(env, draft.items, order.productId, order.variantName, order.qty); } catch(_){}
+    try {
+      await decStockCounters(env, draft.items, order.productId, order.variantName, order.qty);
+      order.stockDeducted = true;
+      await env.ORDERS.put(order.id, JSON.stringify(order));
+    } catch(_){}
     try {
       await maybeSendOrderEmails(env, order, { origin, channel: 'credit' });
     } catch (err) {
@@ -3140,6 +3274,27 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     if (rtnCode === 1 && orderAmount && Math.round(paidAmount) !== Math.round(orderAmount)) {
       order.status = '付款金額不符';
       order.payment.status = 'AMOUNT_MISMATCH';
+      if (order.coupon && !order.coupon.failed) {
+        try{
+          const codes = Array.isArray(order.coupon.codes) && order.coupon.codes.length
+            ? order.coupon.codes
+            : (order.coupon.code ? [order.coupon.code] : []);
+          for (const code of codes){
+            if (!code) continue;
+            await releaseCouponUsage(env, code, order.id);
+          }
+          order.coupon.locked = false;
+          order.coupon.reserved = false;
+        }catch(_){}
+      }
+      if (order.stockDeducted === true) {
+        try { await restoreStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+        order.stockDeducted = false;
+      }
+      if (order.soldCounted === true) {
+        try { await decSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+        order.soldCounted = false;
+      }
       order.updatedAt = new Date().toISOString();
       await env.ORDERS.put(orderId, JSON.stringify(order));
       return new Response('0|AMOUNT_MISMATCH', { status:400, headers:{'Content-Type':'text/plain'} });
@@ -3147,19 +3302,52 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     order.status = rtnCode === 1 ? '已付款待出貨' : '付款失敗';
     order.updatedAt = new Date().toISOString();
 
-    if (rtnCode === 1 && order.coupon && !order.coupon.locked && !order.coupon.failed) {
-      try {
-        const codes = Array.isArray(order.coupon.codes) && order.coupon.codes.length
-          ? order.coupon.codes
-          : (order.coupon.code ? [order.coupon.code] : []);
-        for (const code of codes){
-          if (!code) continue;
-          try{
-            await markCouponUsageOnce(env, code, order.id);
-          }catch(_){}
-        }
-        order.coupon.locked = true;
-      } catch(_){}
+    if (rtnCode === 1) {
+      if (order.coupon && !order.coupon.locked && !order.coupon.failed) {
+        try {
+          const codes = Array.isArray(order.coupon.codes) && order.coupon.codes.length
+            ? order.coupon.codes
+            : (order.coupon.code ? [order.coupon.code] : []);
+          for (const code of codes){
+            if (!code) continue;
+            try{
+              await markCouponUsageOnce(env, code, order.id);
+            }catch(_){}
+          }
+          order.coupon.locked = true;
+          order.coupon.reserved = false;
+        } catch(_){}
+      }
+      if (!order.stockDeducted) {
+        try { await decStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+        order.stockDeducted = true;
+      }
+      if (!order.soldCounted) {
+        try { await bumpSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+        order.soldCounted = true;
+      }
+    } else {
+      if (order.coupon && !order.coupon.failed) {
+        try {
+          const codes = Array.isArray(order.coupon.codes) && order.coupon.codes.length
+            ? order.coupon.codes
+            : (order.coupon.code ? [order.coupon.code] : []);
+          for (const code of codes){
+            if (!code) continue;
+            await releaseCouponUsage(env, code, order.id);
+          }
+          order.coupon.locked = false;
+          order.coupon.reserved = false;
+        } catch(_){}
+      }
+      if (order.stockDeducted === true) {
+        try { await restoreStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+        order.stockDeducted = false;
+      }
+      if (order.soldCounted === true) {
+        try { await decSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+        order.soldCounted = false;
+      }
     }
 
     await env.ORDERS.put(orderId, JSON.stringify(order));
@@ -3210,6 +3398,12 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
       return new Response(JSON.stringify({ ok:false, code, reason:'already_used', orderId: rec.orderId||'' }), { status:200, headers: jsonHeaders });
     }
     const nowTs = Date.now();
+    if (rec.reservedUntil){
+      const reservedUntil = Date.parse(rec.reservedUntil);
+      if (!Number.isNaN(reservedUntil) && reservedUntil > nowTs){
+        return new Response(JSON.stringify({ ok:false, code, reason:'reserved' }), { status:200, headers: jsonHeaders });
+      }
+    }
     if (rec.startAt && nowTs < Date.parse(rec.startAt)){
       return new Response(JSON.stringify({ ok:false, code, reason:'not_started', startAt: rec.startAt }), { status:200, headers: jsonHeaders });
     }
@@ -3245,8 +3439,9 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
 
 // Issue coupon (new in-house system)
 if (pathname === '/api/coupons/issue' && request.method === 'POST') {
-  if (!(await isAdmin(request, env))){
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
   }
   if (!env.COUPONS){
     return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
@@ -3381,8 +3576,9 @@ if (pathname === '/api/coupons/list' && request.method === 'GET') {
 
 // 批次發放：全館券/免運券
 if (pathname === '/api/coupons/issue-batch' && request.method === 'POST') {
-  if (!(await isAdmin(request, env))){
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
   }
   if (!env.COUPONS){
     return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
@@ -3463,6 +3659,7 @@ async function markCouponUsageOnce(env, code, orderId) {
   if (!env.ORDERS) return { ok: false, reason: "ORDERS_not_bound" };
 
   const key = `COUPON_USED:${c}`;
+  const holdKey = `COUPON_HOLD:${c}`;
   try {
     const existing = await env.ORDERS.get(key);
     if (existing) {
@@ -3479,14 +3676,115 @@ async function markCouponUsageOnce(env, code, orderId) {
           rec.used = true;
           rec.usedAt = payload.ts;
           rec.orderId = payload.orderId;
+          if (rec.reservedBy && rec.reservedBy === payload.orderId) {
+            delete rec.reservedBy;
+            delete rec.reservedAt;
+            delete rec.reservedUntil;
+          }
           await saveCoupon(env, rec);
         }
       }
+    }catch(_){}
+    try{
+      await env.ORDERS.delete(holdKey);
     }catch(_){}
     return { ok: true };
   } catch (e) {
     console.error("markCouponUsageOnce error", e);
     return { ok: false, reason: "error" };
+  }
+}
+
+async function reserveCouponUsage(env, code, orderId, ttlSec=900) {
+  const c = (code || "").toUpperCase().trim();
+  if (!c) return { ok:false, reason:'missing_code' };
+  if (!env.ORDERS) return { ok:false, reason:'ORDERS_not_bound' };
+  const usedKey = `COUPON_USED:${c}`;
+  const holdKey = `COUPON_HOLD:${c}`;
+  try{
+    const used = await env.ORDERS.get(usedKey);
+    if (used) return { ok:false, reason:'already_used' };
+    const existing = await env.ORDERS.get(holdKey);
+    if (existing){
+      let parsed = null;
+      try{ parsed = JSON.parse(existing); }catch(_){}
+      if (parsed && parsed.orderId && String(parsed.orderId) === String(orderId)) {
+        return { ok:true, reserved:true };
+      }
+      return { ok:false, reason:'reserved', existing: parsed || null };
+    }
+    const ttl = Math.max(60, Number(ttlSec || 0) || 900);
+    const expTs = Date.now() + ttl * 1000;
+    const payload = { code: c, orderId: String(orderId||''), ts: new Date().toISOString(), exp: expTs };
+    await env.ORDERS.put(holdKey, JSON.stringify(payload), { expirationTtl: ttl });
+    try{
+      if (env.COUPONS){
+        const rec = await readCoupon(env, c);
+        if (rec && !rec.used){
+          rec.reservedBy = payload.orderId;
+          rec.reservedAt = payload.ts;
+          rec.reservedUntil = new Date(expTs).toISOString();
+          await saveCoupon(env, rec);
+        }
+      }
+    }catch(_){}
+    return { ok:true, reserved:true, exp: expTs };
+  }catch(e){
+    console.error('reserveCouponUsage error', e);
+    return { ok:false, reason:'error' };
+  }
+}
+
+async function releaseCouponUsage(env, code, orderId) {
+  const c = (code || "").toUpperCase().trim();
+  if (!c || !env.ORDERS) return { ok:false, reason:'missing_code' };
+  const usedKey = `COUPON_USED:${c}`;
+  const holdKey = `COUPON_HOLD:${c}`;
+  try{
+    const used = await env.ORDERS.get(usedKey);
+    if (used){
+      let parsed = null;
+      try{ parsed = JSON.parse(used); }catch(_){}
+      if (parsed && parsed.orderId && String(parsed.orderId) === String(orderId)){
+        await env.ORDERS.delete(usedKey);
+        if (env.COUPONS){
+          try{
+            const rec = await readCoupon(env, c);
+            if (rec && String(rec.orderId||'') === String(orderId)){
+              rec.used = false;
+              delete rec.usedAt;
+              delete rec.orderId;
+              await saveCoupon(env, rec);
+            }
+          }catch(_){}
+        }
+      }
+    }
+    const hold = await env.ORDERS.get(holdKey);
+    if (hold){
+      let parsed = null;
+      try{ parsed = JSON.parse(hold); }catch(_){}
+      if (!parsed || !parsed.orderId || String(parsed.orderId) === String(orderId)){
+        await env.ORDERS.delete(holdKey);
+      }
+    }
+    if (env.COUPONS){
+      try{
+        const rec = await readCoupon(env, c);
+        if (rec && (!rec.used || String(rec.orderId||'') === String(orderId))){
+          if (!rec.reservedBy || String(rec.reservedBy||'') === String(orderId)){
+            delete rec.reservedBy;
+            delete rec.reservedAt;
+            delete rec.reservedUntil;
+            await saveCoupon(env, rec);
+          }
+        }
+      }catch(_){}
+    }
+    return { ok:true };
+  }catch(e){
+    console.error('releaseCouponUsage error', e);
+    return { ok:false, reason:'error' };
   }
 }
 
@@ -3629,8 +3927,29 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
               }
             }
           }
-          if (lockError) {
-            couponApplied = { code: (firstCoupon && firstCoupon.code) || '', deity: firstCoupon?.deity || '', codes: couponInputs.map(c=>c.code), failed: true, reason: lockError.reason || 'already_used' };
+          let reserveError = null;
+          if (!lockError && opts.reserveCoupon) {
+            const ttl = Number(opts.reserveTtlSec || env.COUPON_HOLD_TTL_SEC || 900) || 900;
+            const codesToReserve = Array.from(new Set(
+              (discInfo.lines || []).map(l => String(l.code||'').toUpperCase()).filter(Boolean)
+            ));
+            if (!codesToReserve.length && firstCoupon && firstCoupon.code) codesToReserve.push(firstCoupon.code);
+            for (const code of codesToReserve){
+              const reserved = await reserveCouponUsage(env, code, newId, ttl);
+              if (!reserved.ok){
+                reserveError = reserved;
+                break;
+              }
+            }
+          }
+          if (lockError || reserveError) {
+            couponApplied = {
+              code: (firstCoupon && firstCoupon.code) || '',
+              deity: firstCoupon?.deity || '',
+              codes: couponInputs.map(c=>c.code),
+              failed: true,
+              reason: (lockError && (lockError.reason || 'already_used')) || (reserveError && (reserveError.reason || 'reserved')) || 'invalid'
+            };
           } else {
             amount = Math.max(0, Number(amount || 0) - totalDisc);
             couponApplied = {
@@ -3642,7 +3961,8 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
               redeemedAt: Date.now(),
               lines: Array.isArray(discInfo.lines) ? discInfo.lines : [],
               multi: couponInputs.length > 1,
-              locked: !!opts.lockCoupon
+              locked: !!opts.lockCoupon,
+              reserved: !!opts.reserveCoupon
             };
           }
         } else {
@@ -3658,22 +3978,31 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
         if (r && r.ok) {
           let locked = { ok:true };
           if (opts.lockCoupon) locked = await markCouponUsageOnce(env, firstCoupon.code, newId);
+          let reserved = { ok:true };
           if (!locked.ok) {
             couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: locked.reason || 'already_used' };
           } else {
-            const disc = Math.max(0, Number(r.amount || 200) || 200);
-            amount = Math.max(0, Number(amount || 0) - disc);
-            couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon };
+            if (opts.reserveCoupon) {
+              const ttl = Number(opts.reserveTtlSec || env.COUPON_HOLD_TTL_SEC || 900) || 900;
+              reserved = await reserveCouponUsage(env, firstCoupon.code, newId, ttl);
+            }
+            if (!reserved.ok) {
+              couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: reserved.reason || 'reserved' };
+            } else {
+              const disc = Math.max(0, Number(r.amount || 200) || 200);
+              amount = Math.max(0, Number(amount || 0) - disc);
+              couponApplied = { code: firstCoupon.code, deity: r.deity || firstCoupon.deity, discount: disc, redeemedAt: Date.now(), locked: !!opts.lockCoupon, reserved: !!opts.reserveCoupon };
+            }
           }
-      } else {
-        couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
+        } else {
+          couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: (r && r.reason) || 'invalid' };
+        }
+      } catch (e) {
+        console.error('redeemCoupon error', e);
+        couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
       }
-    } catch (e) {
-      console.error('redeemCoupon error', e);
-      couponApplied = { code: firstCoupon.code, deity: firstCoupon.deity, failed: true, reason: 'error' };
     }
   }
-}
 
   const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
   const shippingNeeded = needShippingFee(items, fallbackText);
@@ -3724,7 +4053,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
   };
 
   // 最後保險：若已算出折扣但尚未鎖券，這裡再鎖一次，避免同券重複使用
-  if (couponApplied && couponApplied.discount > 0 && !couponApplied.locked) {
+  if (couponApplied && couponApplied.discount > 0 && !couponApplied.locked && !couponApplied.reserved) {
     try{
       const codesToLock = Array.from(new Set(
         (couponApplied.codes && couponApplied.codes.length ? couponApplied.codes : [couponApplied.code])
@@ -4155,6 +4484,92 @@ function normalizeReceiptUrl(o, origin, env){
   return u;
 }
 // --- 訂單 API：/api/order /api/order/status ---
+function normalizeStatus(s){
+  return String(s || '').trim();
+}
+function statusIsPaid(s){
+  const v = normalizeStatus(s);
+  if (!v) return false;
+  const lower = v.toLowerCase();
+  const unpaidHints = ['待付款','未付款','pending','waiting','待處理','待確認'];
+  if (unpaidHints.some(k => lower.includes(k))) return false;
+  const paidHints = ['已付款','已寄件','已出貨','已完成','完成訂單','完成','出貨'];
+  if (paidHints.some(k => v.includes(k))) return true;
+  return /\bpaid\b/i.test(v);
+}
+function statusIsCanceled(s){
+  const v = normalizeStatus(s);
+  if (!v) return false;
+  const cancelHints = ['取消','作廢','退款','退貨','失敗','金額不符','拒收','逾期','未取','無效','撤單'];
+  if (cancelHints.some(k => v.includes(k))) return true;
+  return /\b(cancel|failed|void|refund|chargeback)\b/i.test(v);
+}
+function extractCouponCodes(coupon){
+  if (!coupon) return [];
+  const raw = Array.isArray(coupon.codes) && coupon.codes.length ? coupon.codes : (coupon.code ? [coupon.code] : []);
+  return Array.from(new Set(raw.map(c => String(c || '').trim().toUpperCase()).filter(Boolean)));
+}
+async function ensureOrderPaidResources(env, order){
+  let changed = false;
+  if (order && order.coupon && !order.coupon.failed) {
+    const codes = extractCouponCodes(order.coupon);
+    if (codes.length && !order.coupon.locked) {
+      let lockOk = true;
+      for (const code of codes){
+        const locked = await markCouponUsageOnce(env, code, order.id);
+        if (!locked.ok){
+          lockOk = false;
+          break;
+        }
+      }
+      if (lockOk){
+        order.coupon.locked = true;
+        order.coupon.reserved = false;
+        changed = true;
+      }
+    }
+    if (order.coupon.locked && order.coupon.reserved) {
+      order.coupon.reserved = false;
+      changed = true;
+    }
+  }
+  if (order.stockDeducted === false) {
+    try { await decStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+    order.stockDeducted = true;
+    changed = true;
+  }
+  if (order.soldCounted === false) {
+    try { await bumpSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+    order.soldCounted = true;
+    changed = true;
+  }
+  return changed;
+}
+async function releaseOrderResources(env, order){
+  let changed = false;
+  if (order && order.coupon && !order.coupon.failed) {
+    const codes = extractCouponCodes(order.coupon);
+    for (const code of codes){
+      try { await releaseCouponUsage(env, code, order.id); } catch(_){}
+    }
+    if (order.coupon.locked || order.coupon.reserved){
+      order.coupon.locked = false;
+      order.coupon.reserved = false;
+      changed = true;
+    }
+  }
+  if (order.stockDeducted === true) {
+    try { await restoreStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+    order.stockDeducted = false;
+    changed = true;
+  }
+  if (order.soldCounted === true) {
+    try { await decSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+    order.soldCounted = false;
+    changed = true;
+  }
+  return changed;
+}
 // CORS/預檢
 if (request.method === 'OPTIONS') {
   return new Response(null, {
@@ -4665,8 +5080,9 @@ ${renderLineBanner()}
         if (!env.ORDERS) {
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
-        if (!(await isAdmin(request, env))) {
-          return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+        {
+          const guard = await requireAdminWrite(request, env);
+          if (guard) return guard;
         }
         try{
           const id = decodeURIComponent(m[1]);
@@ -4705,8 +5121,9 @@ ${renderLineBanner()}
         if (!env.ORDERS) {
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
-        if (!(await isAdmin(request, env))) {
-          return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+        {
+          const guard = await requireAdminWrite(request, env);
+          if (guard) return guard;
         }
         try{
           const id = decodeURIComponent(m[1]);
@@ -4754,8 +5171,9 @@ ${renderLineBanner()}
       if (!env.ORDERS) {
         return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
       }
-      if (!(await isAdmin(request, env))) {
-        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
       }
       try {
         const ct = (request.headers.get('content-type') || '').toLowerCase();
@@ -4872,6 +5290,7 @@ if (pathname === '/api/order') {
         const msg = reason === 'product_not_found' ? '找不到商品'
           : reason === 'product_inactive' ? '商品已下架'
           : reason === 'invalid_variant' ? '商品規格無效'
+          : reason === 'out_of_stock' ? '庫存不足'
           : '缺少商品資訊';
         return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: orderHeaders });
       }
@@ -4947,7 +5366,9 @@ if (pathname === '/api/order') {
         createdAt:now, updatedAt:now,
         resultToken: makeToken(32),
         results: [],
-        coupon: couponApplied || undefined
+        coupon: couponApplied || undefined,
+        stockDeducted: false,
+        soldCounted: false
       };
 
       await env.ORDERS.put(id, JSON.stringify(order));
@@ -4958,9 +5379,18 @@ if (pathname === '/api/order') {
       await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
 
       // Auto-increment product sold counter for this order
-      try { await bumpSoldSingle(env, productId, qty); } catch(_){}
+      try {
+        await bumpSoldSingle(env, productId, qty);
+        order.soldCounted = true;
+      } catch(_){}
       // Decrement inventory for this order (variant-aware if provided)
-      try { await decStockSingle(env, productId, body.variantName || body.variant || '', qty); } catch(_){}
+      try {
+        await decStockSingle(env, productId, body.variantName || body.variant || '', qty);
+        order.stockDeducted = true;
+      } catch(_){}
+      if (order.soldCounted || order.stockDeducted) {
+        await env.ORDERS.put(id, JSON.stringify(order));
+      }
 
       return new Response(JSON.stringify({ ok:true, id }), { status:200, headers: orderHeaders });
     } catch (e) {
@@ -5043,12 +5473,22 @@ if (pathname === '/api/order') {
   }
 
   if (request.method === 'DELETE') {
-    if (!(await isAdmin(request, env))) {
-      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: orderHeaders });
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
     }
     try {
       const id = url.searchParams.get('id');
       if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: orderHeaders });
+      const raw = await env.ORDERS.get(id);
+      if (raw) {
+        try{
+          const obj = JSON.parse(raw);
+          if (!statusIsPaid(obj.status) || statusIsCanceled(obj.status)){
+            await releaseOrderResources(env, obj);
+          }
+        }catch(_){}
+      }
       await env.ORDERS.delete(id);
       const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
       const ids = idxRaw ? JSON.parse(idxRaw) : [];
@@ -5067,8 +5507,9 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
   if (!env.ORDERS) {
     return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeadersFor(request, env) });
   }
-  if (!(await isAdmin(request, env))) {
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
   }
   try {
     
@@ -5081,6 +5522,12 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     if (action === 'delete') {
       const raw0 = await env.ORDERS.get(id);
       if (!raw0) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeadersFor(request, env) });
+      try{
+        const obj0 = JSON.parse(raw0);
+        if (!statusIsPaid(obj0.status) || statusIsCanceled(obj0.status)){
+          await releaseOrderResources(env, obj0);
+        }
+      }catch(_){}
       await env.ORDERS.delete(id);
       const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
       const ids = idxRaw ? JSON.parse(idxRaw) : [];
@@ -5098,6 +5545,17 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       if (status && status !== prevStatus) {
         obj.status = status;
         statusChanged = true;
+      }
+      const nextStatus = obj.status || '';
+      const prevPaid = statusIsPaid(prevStatus);
+      const nextPaid = statusIsPaid(nextStatus);
+      const nextCanceled = statusIsCanceled(nextStatus);
+      if (statusChanged) {
+        if (nextPaid) {
+          await ensureOrderPaidResources(env, obj);
+        } else if (nextCanceled || (prevPaid && !nextPaid)) {
+          await releaseOrderResources(env, obj);
+        }
       }
       obj.updatedAt = new Date().toISOString();
       await env.ORDERS.put(id, JSON.stringify(obj));
@@ -5159,7 +5617,10 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'POST') {
-  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -5193,7 +5654,10 @@ if (pathname === '/api/service/products' && request.method === 'POST') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'PUT') {
-  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
   const body = await request.json();
@@ -5210,7 +5674,10 @@ if (pathname === '/api/service/products' && request.method === 'PUT') {
 }
 
 if (pathname === '/api/service/products' && request.method === 'DELETE') {
-  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
   const id = String(url.searchParams.get('id')||'').trim();
@@ -5517,7 +5984,10 @@ if (pathname === '/api/service/orders/export' && request.method === 'GET') {
 }
 
 if (pathname === '/api/service/order/status' && request.method === 'POST') {
-  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -5564,7 +6034,10 @@ if (pathname === '/api/service/order/status' && request.method === 'POST') {
 }
 
 if (pathname === '/api/service/order/result-photo' && request.method === 'POST') {
-  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -5655,12 +6128,18 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
 
     // 圖片刪除
     if (pathname.startsWith("/api/file/") && request.method === "DELETE") {
-      if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+      }
       const key = decodeURIComponent(pathname.replace("/api/file/", ""));
       return deleteR2FileByKey(key, env);
     }
     if (pathname === "/api/deleteFile" && request.method === "POST") {
-      if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+      }
       return deleteR2FileViaBody(request, env);
     }
 
@@ -5801,13 +6280,19 @@ if (pathname === "/api/stories" && request.method === "POST") {
   // Support method override: POST + _method=DELETE
   const _m = (url.searchParams.get("_method") || "").toUpperCase();
   if (_m === "DELETE") {
-    if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
     return deleteStories(url, env);
   }
   return createStory(request, env);
 }
 if (pathname === "/api/stories" && request.method === "DELETE") {
-  if (!(await isAdmin(request, env))) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+  {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
   return deleteStories(url, env);
 }
     // Image resize proxy
@@ -6304,6 +6789,36 @@ async function bumpSoldCounters(env, items, fallbackProductId, fallbackQty){
     }
   }catch(_){}
 }
+async function decSoldSingle(env, pid, qty){
+  try{
+    const id = String(pid||'').trim();
+    const dec = Math.max(1, Number(qty||1));
+    if (!id) return;
+    const key = `PRODUCT:${id}`;
+    const raw = await env.PRODUCTS.get(key);
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    const curr = Number(p.sold||0) || 0;
+    p.sold = Math.max(0, curr - dec);
+    p.updatedAt = new Date().toISOString();
+    await env.PRODUCTS.put(key, JSON.stringify(p));
+  }catch(_){}
+}
+async function decSoldCounters(env, items, fallbackProductId, fallbackQty){
+  try{
+    if (Array.isArray(items) && items.length){
+      for (const it of items){
+        const pid = it && (it.productId || it.id);
+        const q   = it && (it.qty || it.quantity || 1);
+        await decSoldSingle(env, pid, q);
+      }
+      return;
+    }
+    if (fallbackProductId){
+      await decSoldSingle(env, fallbackProductId, fallbackQty || 1);
+    }
+  }catch(_){}
+}
 
 /* ========== STOCK decrement helpers ========== */
 function cleanVariantName(s){
@@ -6366,6 +6881,63 @@ async function decStockCounters(env, items, fallbackProductId, fallbackVariantNa
     // 單品備援
     if (fallbackProductId){
       await decStockSingle(env, fallbackProductId, fallbackVariantName || '', fallbackQty || 1);
+    }
+  }catch(_){}
+}
+
+async function incStockSingle(env, pid, variantName, qty){
+  try{
+    const id = String(pid||'').trim();
+    const inc = Math.max(1, Number(qty||1));
+    if (!id) return;
+    const key = `PRODUCT:${id}`;
+    const raw = await env.PRODUCTS.get(key);
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    let touched = false;
+
+    const vn = cleanVariantName(variantName);
+    if (Array.isArray(p.variants) && p.variants.length){
+      let idx = -1;
+      if (vn){
+        idx = p.variants.findIndex(v => cleanVariantName(v?.name) === vn);
+      }
+      if (idx < 0 && p.variants.length === 1) idx = 0;
+      if (idx >= 0){
+        const v = p.variants[idx];
+        if (v.stock !== undefined && v.stock !== null){
+          const curr = Number(v.stock||0) || 0;
+          v.stock = curr + inc;
+          touched = true;
+        }
+      }
+    }
+
+    if (!touched && typeof p.stock !== 'undefined'){
+      const curr = Number(p.stock||0) || 0;
+      p.stock = curr + inc;
+      touched = true;
+    }
+
+    if (touched){
+      p.updatedAt = new Date().toISOString();
+      await env.PRODUCTS.put(key, JSON.stringify(p));
+    }
+  }catch(_){}
+}
+async function restoreStockCounters(env, items, fallbackProductId, fallbackVariantName, fallbackQty){
+  try{
+    if (Array.isArray(items) && items.length){
+      for (const it of items){
+        const pid = it && (it.productId || it.id);
+        const vn  = it && (it.variantName || it.variant || '');
+        const q   = it && (it.qty || it.quantity || 1);
+        await incStockSingle(env, pid, vn, q);
+      }
+      return;
+    }
+    if (fallbackProductId){
+      await incStockSingle(env, fallbackProductId, fallbackVariantName || '', fallbackQty || 1);
     }
   }catch(_){}
 }

@@ -43,6 +43,9 @@
   .badge.status-paid{ border-color:#f59e0b; color:#f59e0b; background:rgba(245,158,11,.08) }
   .badge.status-shipped{ border-color:#60a5fa; color:#60a5fa; background:rgba(96,165,250,.08) }
   .badge.status-done{ border-color:#34d399; color:#34d399; background:rgba(52,211,153,.08) }
+  .badge.status-pending{ border-color:#94a3b8; color:#94a3b8; background:rgba(148,163,184,.08) }
+  .badge.status-cancel{ border-color:#f87171; color:#f87171; background:rgba(248,113,113,.08) }
+  .badge.status-fail{ border-color:#fb7185; color:#fb7185; background:rgba(251,113,133,.08) }
 
   /* login overlay */
   #loginGate{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:100000}
@@ -73,7 +76,19 @@
     <h1>訂單管理（批次）</h1>
 <div class="bar">
       <input id="q" placeholder="搜尋 訂單編號 / 商品 / email / 門市 ...">
-      <select id="statusSel"><option value="">全部狀態</option><option value="已付款待出貨">已付款待出貨</option><option value="已寄件">已寄件</option><option value="已完成訂單">已完成訂單</option></select> <select id="sortSel"><option value="time_desc">時間：新 → 舊</option><option value="time_asc">時間：舊 → 新</option><option value="amt_desc">金額：高 → 低</option><option value="amt_asc">金額：低 → 高</option><option value="status">狀態</option></select>
+      <select id="statusSel">
+        <option value="">全部狀態</option>
+        <option value="pending">pending</option>
+        <option value="待付款">待付款</option>
+        <option value="waiting_verify">waiting_verify</option>
+        <option value="已付款待出貨">已付款待出貨</option>
+        <option value="已寄件">已寄件</option>
+        <option value="已完成訂單">已完成訂單</option>
+        <option value="付款失敗">付款失敗</option>
+        <option value="付款金額不符">付款金額不符</option>
+        <option value="已取消">已取消</option>
+      </select>
+      <select id="sortSel"><option value="time_desc">時間：新 → 舊</option><option value="time_asc">時間：舊 → 新</option><option value="amt_desc">金額：高 → 低</option><option value="amt_asc">金額：低 → 高</option><option value="status">狀態</option></select>
       <button class="btn" id="reload">重新整理</button>
       <span class="muted" id="count"></span>
     </div>
@@ -383,9 +398,15 @@ const items = Array.isArray(o.items) ? o.items : [{
       <td style="display:flex;gap:6px;flex-wrap:wrap">
         <select class="opStatus" style="padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#0b1022;color:#e5e7eb" data-id="${o.id}">
           <option value="">選擇狀態</option>
+          <option value="pending" ${String(o.status||"")=== "pending" ? "selected":""}>pending</option>
+          <option value="待付款" ${String(o.status||"")=== "待付款" ? "selected":""}>待付款</option>
+          <option value="waiting_verify" ${String(o.status||"")=== "waiting_verify" ? "selected":""}>waiting_verify</option>
           <option value="已付款待出貨" ${String(o.status||"")=== "已付款待出貨" ? "selected":""}>已付款待出貨</option>
           <option value="已寄件" ${String(o.status||"")=== "已寄件" ? "selected":""}>已寄件</option>
           <option value="已完成訂單" ${String(o.status||"")=== "已完成訂單" ? "selected":""}>已完成訂單</option>
+          <option value="付款失敗" ${String(o.status||"")=== "付款失敗" ? "selected":""}>付款失敗</option>
+          <option value="付款金額不符" ${String(o.status||"")=== "付款金額不符" ? "selected":""}>付款金額不符</option>
+          <option value="已取消" ${String(o.status||"")=== "已取消" ? "selected":""}>已取消</option>
         </select>
         <button class="btn" data-act="applyStatus" data-id="${o.id}">套用</button>
         <button class="btn danger" data-act="singleDel" data-id="${o.id}">刪除</button>
@@ -676,9 +697,13 @@ document.addEventListener('click', function(e){
 // helpers for badge color + amount sorting
 function statusClass(s){
   const v = String(s||'').trim();
-  if (v === '已付款待出貨') return 'status-paid';
-  if (v === '已寄件') return 'status-shipped';
-  if (v === '已完成訂單') return 'status-done';
+  if (!v) return '';
+  if (v === 'pending' || v === '待付款' || v === 'waiting_verify') return 'status-pending';
+  if (v.includes('付款失敗') || v.includes('金額不符')) return 'status-fail';
+  if (v.includes('取消') || v.includes('作廢') || v.includes('退款')) return 'status-cancel';
+  if (v.includes('已付款')) return 'status-paid';
+  if (v.includes('已寄件') || v.includes('已出貨')) return 'status-shipped';
+  if (v.includes('已完成')) return 'status-done';
   return '';
 }
 function amountNumber(o){
