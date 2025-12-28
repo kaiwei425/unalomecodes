@@ -67,6 +67,10 @@
   const contactNoteInput = checkoutForm ? checkoutForm.querySelector('textarea[name="note"]') : null;
   const contactPhotoInput = document.getElementById('svcContactPhoto');
   const contactPhotoName = document.getElementById('svcContactPhotoName');
+  const contactPhotoWrap = document.getElementById('svcContactPhotoWrap');
+  const contactPhotoTitle = document.getElementById('svcContactPhotoTitle');
+  const contactPhotoHint = document.getElementById('svcContactPhotoHint');
+  const contactPhotoSkipHint = document.getElementById('svcContactPhotoSkipHint');
   const bankBackBtn = document.getElementById('svcBankBack');
   const checkoutStep3OrderId = document.getElementById('svcStep3OrderId');
   const checkoutStep3Service = document.getElementById('svcStep3Service');
@@ -297,6 +301,46 @@
     return service && service.qtyEnabled === true;
   }
 
+  function isRitualPhotoRequired(service){
+    if (!service) return true;
+    if (Object.prototype.hasOwnProperty.call(service, 'ritualPhotoRequired')) return !!service.ritualPhotoRequired;
+    if (Object.prototype.hasOwnProperty.call(service, 'photoRequired')) return !!service.photoRequired;
+    if (Object.prototype.hasOwnProperty.call(service, 'requirePhoto')) return !!service.requirePhoto;
+    const name = String(service.name || service.serviceName || '').trim();
+    if (name && /代捐棺/.test(name)) return false;
+    return true;
+  }
+
+  function isCheckoutPhotoRequired(){
+    if (checkoutForm && checkoutForm.dataset && checkoutForm.dataset.photoRequired){
+      return checkoutForm.dataset.photoRequired === '1';
+    }
+    return true;
+  }
+
+  function applyPhotoRequirement(required){
+    const need = !!required;
+    if (checkoutForm && checkoutForm.dataset){
+      checkoutForm.dataset.photoRequired = need ? '1' : '0';
+    }
+    if (contactPhotoInput){
+      contactPhotoInput.required = need;
+      contactPhotoInput.disabled = !need;
+    }
+    if (contactPhotoWrap) contactPhotoWrap.style.display = need ? '' : 'none';
+    if (contactPhotoSkipHint) contactPhotoSkipHint.style.display = need ? 'none' : '';
+    if (contactPhotoTitle){
+      contactPhotoTitle.textContent = need
+        ? '上傳個人照片（祈福使用，必填）'
+        : '上傳個人照片（祈福使用，可略過）';
+    }
+    if (!need){
+      checkoutRitualPhoto = { url:'', name:'' };
+      if (contactPhotoInput) contactPhotoInput.value = '';
+      if (contactPhotoName) contactPhotoName.textContent = '';
+    }
+  }
+
   function getServiceQtyLabel(service){
     const label = service && (service.qtyLabel || service.quantityLabel || service.unitLabel);
     return String(label || '數量');
@@ -495,6 +539,7 @@
     if (checkoutForm){
       checkoutForm.reset();
     }
+    applyPhotoRequirement(true);
     setCheckoutStep(1);
     setRequestDateMin();
   }
@@ -530,10 +575,12 @@
       alert('請填寫生日');
       return null;
     }
-    if (!contactPhotoInput || !contactPhotoInput.files || !contactPhotoInput.files[0]){
-      alert('請上傳祈福用照片');
-      if (contactPhotoInput) contactPhotoInput.focus();
-      return null;
+    if (isCheckoutPhotoRequired()){
+      if (!contactPhotoInput || !contactPhotoInput.files || !contactPhotoInput.files[0]){
+        alert('請上傳祈福用照片');
+        if (contactPhotoInput) contactPhotoInput.focus();
+        return null;
+      }
     }
     return { name, nameEn, phone: phoneDigits, email, birth, requestDate, note };
   }
@@ -562,6 +609,7 @@
   }
 
   async function ensureRitualPhotoUploaded(){
+    if (!isCheckoutPhotoRequired()) return '';
     if (!contactPhotoInput) return checkoutRitualPhoto.url || '';
     const file = contactPhotoInput.files && contactPhotoInput.files[0];
     if (!file){
@@ -909,6 +957,7 @@
     const fee = qtyEnabled ? getServiceFee(detailDataset) : 0;
     const feeLabel = qtyEnabled ? getServiceFeeLabel(detailDataset) : '';
     const qtyLabel = qtyEnabled ? getServiceQtyLabel(detailDataset) : '';
+    const photoRequired = isRitualPhotoRequired(detailDataset);
     const item = {
       uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
       serviceId: svcId,
@@ -921,6 +970,7 @@
       qtyLabel,
       serviceFee: fee,
       serviceFeeLabel: feeLabel,
+      photoRequired,
       image: (Array.isArray(detailDataset.gallery) && detailDataset.gallery[0]) || detailDataset.cover || ''
     };
     cart.push(item);
@@ -936,6 +986,8 @@
     if (!Array.isArray(cart) || !cart.length) return;
     const svcId = cart[0].serviceId || '';
     lastCartSnapshot = cart.map(item => Object.assign({}, item));
+    const photoRequired = cart.some(item => isRitualPhotoRequired(item));
+    applyPhotoRequirement(photoRequired);
     const selectedOpts = [];
     cart.filter(it => it.optionName).forEach(it => {
       const qty = getItemQty(it);

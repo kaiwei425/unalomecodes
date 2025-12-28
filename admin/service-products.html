@@ -78,6 +78,13 @@
         <label>車馬費（固定，加在總價）</label>
         <input id="svc_fixed_fee" type="number" min="0" value="0">
         <div class="muted">總價 = 單價 × 數量 + 車馬費。</div>
+        <label>需要上傳個人照片</label>
+        <div class="row" style="align-items:center;gap:8px;">
+          <label style="margin:0;display:flex;align-items:center;gap:8px;font-size:13px;">
+            <input id="svc_photo_required" type="checkbox" checked>
+            需要上傳祈福照片
+          </label>
+        </div>
         <label>已售出（顯示用）</label>
         <input id="svc_sold" type="number" min="0" value="0">
         <label>限時上架至（選填）</label>
@@ -148,6 +155,7 @@
   const qtyEnabledInput = document.getElementById('svc_qty_enabled');
   const qtyLabelInput = document.getElementById('svc_qty_label');
   const fixedFeeInput = document.getElementById('svc_fixed_fee');
+  const photoRequiredInput = document.getElementById('svc_photo_required');
   const imagePreview = document.getElementById('svcImagePreview');
   const optionsWrap = document.getElementById('svc_options');
   let items = [];
@@ -253,6 +261,7 @@
       qtyEnabled: !!(qtyEnabledInput && qtyEnabledInput.checked),
       qtyLabel: qtyLabelInput ? qtyLabelInput.value.trim() : '',
       fixedFee: Number(fixedFeeInput ? fixedFeeInput.value : 0),
+      ritualPhotoRequired: !!(photoRequiredInput && photoRequiredInput.checked),
       limitedUntil: toIsoFromLocal(document.getElementById('svc_limited_until').value.trim()),
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
@@ -280,6 +289,14 @@
     if (qtyEnabledInput) qtyEnabledInput.checked = data.qtyEnabled === true;
     if (qtyLabelInput) qtyLabelInput.value = data.qtyLabel || '數量';
     if (fixedFeeInput) fixedFeeInput.value = Number(data.fixedFee||0);
+    if (photoRequiredInput){
+      const required = Object.prototype.hasOwnProperty.call(data, 'ritualPhotoRequired')
+        ? data.ritualPhotoRequired
+        : (Object.prototype.hasOwnProperty.call(data, 'photoRequired')
+          ? data.photoRequired
+          : (Object.prototype.hasOwnProperty.call(data, 'requirePhoto') ? data.requirePhoto : true));
+      photoRequiredInput.checked = required !== false;
+    }
     document.getElementById('svc_limited_until').value = formatDatetimeLocal(data.limitedUntil);
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
@@ -310,7 +327,8 @@
       instagram:'',
       qtyEnabled:true,
       qtyLabel:'幾口棺',
-      fixedFee:300
+      fixedFee:300,
+      ritualPhotoRequired:false
     });
     formMsg.textContent = '';
   }
