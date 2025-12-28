@@ -318,8 +318,19 @@
     return true;
   }
 
-  function applyPhotoRequirement(required){
+  function applyPhotoRequirement(required, serviceName){
     const need = !!required;
+    const name = String(serviceName || '').trim();
+    let skipText = '此服務不需上傳個人照片。';
+    if (name){
+      if (/義德善堂/.test(name) && /捐/.test(name)){
+        skipText = `${name}不用上傳照片。`;
+      }else if (/代捐棺/.test(name)){
+        skipText = '代捐棺服務不用上傳照片。';
+      }else{
+        skipText = `${name}不需上傳個人照片。`;
+      }
+    }
     if (checkoutForm && checkoutForm.dataset){
       checkoutForm.dataset.photoRequired = need ? '1' : '0';
     }
@@ -328,7 +339,10 @@
       contactPhotoInput.disabled = !need;
     }
     if (contactPhotoWrap) contactPhotoWrap.style.display = need ? '' : 'none';
-    if (contactPhotoSkipHint) contactPhotoSkipHint.style.display = need ? 'none' : '';
+    if (contactPhotoSkipHint){
+      contactPhotoSkipHint.textContent = skipText;
+      contactPhotoSkipHint.style.display = need ? 'none' : '';
+    }
     if (contactPhotoTitle){
       contactPhotoTitle.textContent = need
         ? '上傳個人照片（祈福使用，必填）'
@@ -539,7 +553,7 @@
     if (checkoutForm){
       checkoutForm.reset();
     }
-    applyPhotoRequirement(true);
+    applyPhotoRequirement(true, '');
     setCheckoutStep(1);
     setRequestDateMin();
   }
@@ -987,7 +1001,8 @@
     const svcId = cart[0].serviceId || '';
     lastCartSnapshot = cart.map(item => Object.assign({}, item));
     const photoRequired = cart.some(item => isRitualPhotoRequired(item));
-    applyPhotoRequirement(photoRequired);
+    const serviceName = cart[0] && cart[0].serviceName ? cart[0].serviceName : '';
+    applyPhotoRequirement(photoRequired, serviceName);
     const selectedOpts = [];
     cart.filter(it => it.optionName).forEach(it => {
       const qty = getItemQty(it);
