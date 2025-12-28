@@ -562,6 +562,7 @@
     CATS.forEach(cat=>{
       const b = document.createElement('button');
       b.textContent = cat; b.dataset.cat = cat;
+      b.classList.add('side-cat-btn');
       if(cat===selectedCat) b.classList.add('active');
       if (cat === '蠟燭加持祈福') {
         b.addEventListener('click', function(){
@@ -581,17 +582,24 @@
       }
       list.appendChild(b);
     });
-    const hotWrap = document.createElement('div');
-    hotWrap.className = 'hot-toggle-wrap';
     const hotBtn = document.createElement('button');
     hotBtn.id = 'hotToggle';
-    hotBtn.className = 'hot-toggle';
+    hotBtn.className = 'side-cat-btn';
     hotBtn.type = 'button';
-    hotBtn.setAttribute('aria-expanded','false');
-    hotBtn.innerHTML = '<span class="label">熱賣中商品</span><span class="state">展開</span>';
-    hotWrap.appendChild(hotBtn);
+    hotBtn.textContent = '熱賣中商品';
+    if (selectedCat === '__hot__') hotBtn.classList.add('active');
+    hotBtn.addEventListener('click', ()=>{
+      if (selectedCat === '__hot__') {
+        selectedCat = null;
+      } else {
+        selectedCat = '__hot__';
+      }
+      [...list.children].forEach(x=> x.classList.toggle('active', x===hotBtn));
+      window.__currentCategoryFilter = selectedCat;
+      if(typeof applyFilter === 'function') applyFilter();
+    });
     side.appendChild(box);
-    box.appendChild(hotWrap);
+    list.appendChild(hotBtn);
   }
 
   document.addEventListener('DOMContentLoaded', buildCats);

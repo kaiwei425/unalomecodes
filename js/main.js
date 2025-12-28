@@ -2,8 +2,6 @@ const listEl = document.getElementById('list');
 const banner = document.getElementById('banner');
 const hotSection = document.getElementById('hotSection');
 const hotList = document.getElementById('hotList');
-let hotToggle = null;
-const hotMedia = window.matchMedia ? window.matchMedia('(max-width:640px)') : null;
 let limitedTimer = null;
 
 let rawItems = [];
@@ -109,56 +107,16 @@ function scheduleLimitedTimer(){
   limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
 }
 
-function resolveHotToggle(){
-  if (hotToggle && document.body.contains(hotToggle)) return hotToggle;
-  hotToggle = document.getElementById('hotToggle');
-  return hotToggle;
-}
-
-function setHotCollapsed(collapsed){
-  const toggle = resolveHotToggle();
-  if (!hotSection || !toggle) return;
-  hotSection.classList.toggle('is-collapsed', collapsed);
-  toggle.setAttribute('aria-expanded', String(!collapsed));
-  const state = toggle.querySelector('.state');
-  if (state){
-    state.textContent = collapsed ? '展開' : '收合';
-  }else{
-    toggle.textContent = collapsed ? '展開' : '收合';
-  }
-}
-
-function applyHotToggleByMedia(){
-  const toggle = resolveHotToggle();
-  if (!hotSection || !toggle) return;
-  if (hotMedia && hotMedia.matches){
-    if (!hotSection.hasAttribute('data-hot-toggle-init')){
-      setHotCollapsed(true);
-      hotSection.setAttribute('data-hot-toggle-init','1');
-    }else{
-      setHotCollapsed(hotSection.classList.contains('is-collapsed'));
-    }
-  }else{
-    setHotCollapsed(false);
-  }
-}
-
-let hotMediaBound = false;
-function bindHotToggle(){
-  const toggle = resolveHotToggle();
-  if (!hotSection || !toggle || toggle.__bound) return;
-  toggle.__bound = true;
-  toggle.addEventListener('click', ()=>{
-    setHotCollapsed(!hotSection.classList.contains('is-collapsed'));
+function getHotItems(items){
+  const list = (items || [])
+    .filter(p => p && !isLimitedExpired(p.limitedUntil))
+    .filter(p => Number(p.sold||0) > 0);
+  list.sort((a,b)=>{
+    const diff = Number(b.sold||0) - Number(a.sold||0);
+    if (diff !== 0) return diff;
+    return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
   });
-  if (hotMedia && !hotMediaBound){
-    hotMediaBound = true;
-    if (typeof hotMedia.addEventListener === 'function'){
-      hotMedia.addEventListener('change', applyHotToggleByMedia);
-    }else if (typeof hotMedia.addListener === 'function'){
-      hotMedia.addListener(applyHotToggleByMedia);
-    }
-  }
+  return list.slice(0, 3);
 }
 
 async function loadProducts(){
@@ -210,52 +168,54 @@ function applyFilter(){
   // 從 shop.html 的 cats-inline 腳本讀取當前選擇的分類
   // 這裡使用一個全域變數來溝通
   const category = window.__currentCategoryFilter || null;
+  const isHot = category === '__hot__';
 
-  viewItems = rawItems.filter(p=>{
+  const filtered = rawItems.filter(p=>{
     const price = minPrice(p);
     if (deity && p.deity !== deity) return false;
     if (price < min) return false;
     if (price > max) return false;
-    if (category && p.category !== category) return false;
+    if (!isHot && category && p.category !== category) return false;
     if (isLimitedExpired(p && p.limitedUntil)) return false;
     return true;
   });
 
-  if (sort === 'sold-desc') viewItems.sort((a,b)=>Number(b.sold||0)-Number(a.sold||0));
-  else if (sort === 'price-asc') viewItems.sort((a,b)=>minPrice(a)-minPrice(b));
-  else if (sort === 'price-desc') viewItems.sort((a,b)=>minPrice(b)-minPrice(a));
-  else if (sort === 'newest') viewItems.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  viewItems = isHot ? getHotItems(filtered) : filtered;
 
+  if (!isHot){
+    if (sort === 'sold-desc') viewItems.sort((a,b)=>Number(b.sold||0)-Number(a.sold||0));
+    else if (sort === 'price-asc') viewItems.sort((a,b)=>minPrice(a)-minPrice(b));
+    else if (sort === 'price-desc') viewItems.sort((a,b)=>minPrice(b)-minPrice(a));
+    else if (sort === 'newest') viewItems.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  }
+
+  if (hotSection){
+    if (isHot){
+      hotSection.style.display = 'none';
+    }else{
+      renderHotItems(rawItems);
+    }
+  }
   renderList(viewItems);
 }
 
 function renderHotItems(items){
   if (!hotSection || !hotList) return;
-  const list = (items || [])
-    .filter(p => p && !isLimitedExpired(p.limitedUntil))
-    .filter(p => Number(p.sold||0) > 0);
-  list.sort((a,b)=>{
-    const diff = Number(b.sold||0) - Number(a.sold||0);
-    if (diff !== 0) return diff;
-    return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
-  });
-  const top = list.slice(0, 3);
+  if (window.__currentCategoryFilter === '__hot__'){
+    hotSection.style.display = 'none';
+    return;
+  }
+  const top = getHotItems(items);
   if (!top.length){
     hotSection.style.display = 'none';
     hotList.innerHTML = '';
-    const toggle = resolveHotToggle();
-    if (toggle) toggle.hidden = true;
     return;
   }
   hotSection.style.display = '';
-  const toggle = resolveHotToggle();
-  if (toggle) toggle.hidden = false;
   hotList.innerHTML = '';
   top.forEach(p=>{
     hotList.appendChild(buildProductCard(p, { hot:true }));
   });
-  bindHotToggle();
-  applyHotToggleByMedia();
   updateLimitedCountdowns(hotList);
   scheduleLimitedTimer();
 }
@@ -263,7 +223,9 @@ function renderHotItems(items){
 function renderList(items){
   listEl.innerHTML = '';
   if (!items.length){
-    listEl.innerHTML = '<div class="empty" style="grid-column:1/-1">沒有符合條件的商品</div>'; const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
+    const isHot = window.__currentCategoryFilter === '__hot__';
+    const msg = isHot ? '目前沒有熱賣中商品' : '沒有符合條件的商品';
+    listEl.innerHTML = `<div class="empty" style="grid-column:1/-1">${msg}</div>`; const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
     return;
   }
 
@@ -281,8 +243,6 @@ document.getElementById('fDeity').addEventListener('change', applyFilter);
 document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
-
-document.addEventListener('DOMContentLoaded', bindHotToggle);
 
 // 後備：事件委派，避免按鈕未綁定時無法打開詳情
 document.addEventListener('click', function(e){

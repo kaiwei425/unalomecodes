@@ -4,7 +4,6 @@
   const hotSection = document.getElementById('svcHotSection');
   const hotListEl = document.getElementById('svcHotList');
   let hotToggle = null;
-  const hotMedia = window.matchMedia ? window.matchMedia('(max-width:640px)') : null;
   const lookupTriggers = Array.from(document.querySelectorAll('#svcLookupBtn, #linkServiceLookup'));
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
@@ -99,7 +98,8 @@
   let lastOrderResult = null;
   let lastRemitLast5 = '';
   let limitedTimer = null;
-  let hotMediaBound = false;
+  let serviceItems = [];
+  let hotOnly = false;
   const RECEIPT_MAX_SIZE = 20 * 1024 * 1024;
   const BANK_INFO = {
     name: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-name') || checkoutDialog.dataset.bankName || '中國信託 (822)') : '中國信託 (822)',
@@ -622,53 +622,19 @@
     return hotToggle;
   }
 
-  function setHotCollapsed(collapsed){
-    const toggle = resolveHotToggle();
-    if (!hotSection || !toggle) return;
-    hotSection.classList.toggle('is-collapsed', collapsed);
-    toggle.setAttribute('aria-expanded', String(!collapsed));
-    const state = toggle.querySelector('.state');
-    if (state){
-      state.textContent = collapsed ? '展開' : '收合';
-    }else{
-      toggle.textContent = collapsed ? '展開' : '收合';
-    }
-  }
-
-  function applyHotToggleByMedia(){
-    const toggle = resolveHotToggle();
-    if (!hotSection || !toggle) return;
-    if (hotMedia && hotMedia.matches){
-      if (!hotSection.hasAttribute('data-hot-toggle-init')){
-        setHotCollapsed(true);
-        hotSection.setAttribute('data-hot-toggle-init','1');
-      }else{
-        setHotCollapsed(hotSection.classList.contains('is-collapsed'));
-      }
-    }else{
-      setHotCollapsed(false);
-    }
-  }
-
   function bindHotToggle(){
     const toggle = resolveHotToggle();
-    if (!hotSection || !toggle || toggle.__bound) return;
+    if (!toggle || toggle.__bound) return;
     toggle.__bound = true;
     toggle.addEventListener('click', ()=>{
-      setHotCollapsed(!hotSection.classList.contains('is-collapsed'));
+      hotOnly = !hotOnly;
+      toggle.classList.toggle('active', hotOnly);
+      renderList(serviceItems);
+      renderHotServices(serviceItems);
     });
-    if (hotMedia && !hotMediaBound){
-      hotMediaBound = true;
-      if (typeof hotMedia.addEventListener === 'function'){
-        hotMedia.addEventListener('change', applyHotToggleByMedia);
-      }else if (typeof hotMedia.addListener === 'function'){
-        hotMedia.addListener(applyHotToggleByMedia);
-      }
-    }
   }
 
-  function renderHotServices(items){
-    if (!hotSection || !hotListEl) return;
+  function getHotItems(items){
     const list = (items || [])
       .filter(it => it && it.active !== false && !isLimitedExpired(it.limitedUntil))
       .filter(it => Number(it.sold||0) > 0);
@@ -677,23 +643,26 @@
       if (diff !== 0) return diff;
       return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
     });
-    const top = list.slice(0, 3);
+    return list.slice(0, 3);
+  }
+
+  function renderHotServices(items){
+    if (!hotSection || !hotListEl) return;
+    if (hotOnly){
+      hotSection.style.display = 'none';
+      return;
+    }
+    const top = getHotItems(items);
     if (!top.length){
       hotSection.style.display = 'none';
       hotListEl.innerHTML = '';
-      const toggle = resolveHotToggle();
-      if (toggle) toggle.hidden = true;
       return;
     }
     hotSection.style.display = '';
-    const toggle = resolveHotToggle();
-    if (toggle) toggle.hidden = false;
     hotListEl.innerHTML = '';
     top.forEach(service=>{
       hotListEl.appendChild(buildServiceCard(service, { hot:true }));
     });
-    bindHotToggle();
-    applyHotToggleByMedia();
     updateLimitedCountdowns(hotListEl);
     scheduleLimitedTimer();
   }
@@ -701,16 +670,17 @@
   function renderList(items){
     if (!listEl) return;
     const activeItems = items.filter(it => it && it.active !== false && !isLimitedExpired(it.limitedUntil));
+    const displayItems = hotOnly ? getHotItems(activeItems) : activeItems;
     listEl.innerHTML = '';
-    if (!activeItems.length){
+    if (!displayItems.length){
       const placeholder = document.createElement('div');
       placeholder.id = 'svcListEmpty';
       placeholder.className = 'empty';
-      placeholder.textContent = '目前尚未上架服務，請稍後再試。';
+      placeholder.textContent = hotOnly ? '目前沒有熱賣中的服務。' : '目前尚未上架服務，請稍後再試。';
       listEl.appendChild(placeholder);
       return;
     }
-    activeItems.forEach(service => {
+    displayItems.forEach(service => {
       listEl.appendChild(buildServiceCard(service));
     });
     updateLimitedCountdowns(listEl);
@@ -1457,8 +1427,10 @@
 
   document.addEventListener('DOMContentLoaded', async ()=>{
     const services = await fetchServices();
-    renderHotServices(services);
-    renderList(services);
+    serviceItems = Array.isArray(services) ? services : [];
+    bindHotToggle();
+    renderHotServices(serviceItems);
+    renderList(serviceItems);
     if (emptyEl) emptyEl.remove();
     initLookupDialog();
     updateCartBadge();
