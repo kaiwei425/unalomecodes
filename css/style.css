@@ -245,18 +245,22 @@ html,body{
   .hot-toggle{
     display:none;
     align-items:center;
-    gap:6px;
-    border:1px solid var(--line);
-    background:#fff;
-    color:var(--fg);
+    justify-content:space-between;
+    gap:10px;
+    width:100%;
+    border:1px solid #fed7aa;
+    background:#fff7ed;
+    color:#9a3412;
     border-radius:999px;
-    padding:6px 12px;
+    padding:8px 12px;
     font-size:12px;
     font-weight:700;
     cursor:pointer;
   }
+  .hot-toggle .state{font-weight:800;color:#c2410c;}
+  .hot-toggle-wrap{margin-top:10px;}
   @media(max-width:640px){
-    .hot-toggle{display:inline-flex;}
+    .hot-toggle{display:flex;}
     .hot-section.is-collapsed .hot-grid{display:none;}
   }
   .hot-grid{margin-top:0;gap:12px;}

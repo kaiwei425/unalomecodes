@@ -2,7 +2,7 @@ const listEl = document.getElementById('list');
 const banner = document.getElementById('banner');
 const hotSection = document.getElementById('hotSection');
 const hotList = document.getElementById('hotList');
-const hotToggle = document.getElementById('hotToggle');
+let hotToggle = null;
 const hotMedia = window.matchMedia ? window.matchMedia('(max-width:640px)') : null;
 let limitedTimer = null;
 
@@ -109,15 +109,28 @@ function scheduleLimitedTimer(){
   limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
 }
 
+function resolveHotToggle(){
+  if (hotToggle && document.body.contains(hotToggle)) return hotToggle;
+  hotToggle = document.getElementById('hotToggle');
+  return hotToggle;
+}
+
 function setHotCollapsed(collapsed){
-  if (!hotSection || !hotToggle) return;
+  const toggle = resolveHotToggle();
+  if (!hotSection || !toggle) return;
   hotSection.classList.toggle('is-collapsed', collapsed);
-  hotToggle.setAttribute('aria-expanded', String(!collapsed));
-  hotToggle.textContent = collapsed ? '展開' : '收合';
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  const state = toggle.querySelector('.state');
+  if (state){
+    state.textContent = collapsed ? '展開' : '收合';
+  }else{
+    toggle.textContent = collapsed ? '展開' : '收合';
+  }
 }
 
 function applyHotToggleByMedia(){
-  if (!hotSection || !hotToggle) return;
+  const toggle = resolveHotToggle();
+  if (!hotSection || !toggle) return;
   if (hotMedia && hotMedia.matches){
     if (!hotSection.hasAttribute('data-hot-toggle-init')){
       setHotCollapsed(true);
@@ -127,6 +140,24 @@ function applyHotToggleByMedia(){
     }
   }else{
     setHotCollapsed(false);
+  }
+}
+
+let hotMediaBound = false;
+function bindHotToggle(){
+  const toggle = resolveHotToggle();
+  if (!hotSection || !toggle || toggle.__bound) return;
+  toggle.__bound = true;
+  toggle.addEventListener('click', ()=>{
+    setHotCollapsed(!hotSection.classList.contains('is-collapsed'));
+  });
+  if (hotMedia && !hotMediaBound){
+    hotMediaBound = true;
+    if (typeof hotMedia.addEventListener === 'function'){
+      hotMedia.addEventListener('change', applyHotToggleByMedia);
+    }else if (typeof hotMedia.addListener === 'function'){
+      hotMedia.addListener(applyHotToggleByMedia);
+    }
   }
 }
 
@@ -212,13 +243,18 @@ function renderHotItems(items){
   if (!top.length){
     hotSection.style.display = 'none';
     hotList.innerHTML = '';
+    const toggle = resolveHotToggle();
+    if (toggle) toggle.hidden = true;
     return;
   }
   hotSection.style.display = '';
+  const toggle = resolveHotToggle();
+  if (toggle) toggle.hidden = false;
   hotList.innerHTML = '';
   top.forEach(p=>{
     hotList.appendChild(buildProductCard(p, { hot:true }));
   });
+  bindHotToggle();
   applyHotToggleByMedia();
   updateLimitedCountdowns(hotList);
   scheduleLimitedTimer();
@@ -246,16 +282,7 @@ document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
 
-if (hotToggle && hotSection){
-  hotToggle.addEventListener('click', ()=>{
-    setHotCollapsed(!hotSection.classList.contains('is-collapsed'));
-  });
-  if (hotMedia && typeof hotMedia.addEventListener === 'function'){
-    hotMedia.addEventListener('change', applyHotToggleByMedia);
-  }else if (hotMedia && typeof hotMedia.addListener === 'function'){
-    hotMedia.addListener(applyHotToggleByMedia);
-  }
-}
+document.addEventListener('DOMContentLoaded', bindHotToggle);
 
 // 後備：事件委派，避免按鈕未綁定時無法打開詳情
 document.addEventListener('click', function(e){

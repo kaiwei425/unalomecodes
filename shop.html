@@ -120,7 +120,6 @@
             <div class="hot-title">熱賣中商品</div>
             <div class="hot-sub">人氣排行</div>
           </div>
-          <button id="hotToggle" class="hot-toggle" type="button" aria-expanded="false">展開</button>
         </div>
         <div id="hotList" class="grid hot-grid"></div>
       </div>
@@ -582,7 +581,17 @@
       }
       list.appendChild(b);
     });
+    const hotWrap = document.createElement('div');
+    hotWrap.className = 'hot-toggle-wrap';
+    const hotBtn = document.createElement('button');
+    hotBtn.id = 'hotToggle';
+    hotBtn.className = 'hot-toggle';
+    hotBtn.type = 'button';
+    hotBtn.setAttribute('aria-expanded','false');
+    hotBtn.innerHTML = '<span class="label">熱賣中商品</span><span class="state">展開</span>';
+    hotWrap.appendChild(hotBtn);
     side.appendChild(box);
+    box.appendChild(hotWrap);
   }
 
   document.addEventListener('DOMContentLoaded', buildCats);
