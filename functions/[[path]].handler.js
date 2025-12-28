@@ -7642,11 +7642,13 @@ async function maybeSendStoryEmail(env, item, requestUrl){
   try{
     const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
     const fromDefault = (env.STORY_EMAIL_FROM || env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
-    const toList = (env.STORY_NOTIFY_EMAIL || env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '')
+    const toList = (env.STORY_NOTIFY_EMAIL || '')
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
-    if (!apiKey || !fromDefault || !toList.length) {
+    const fallbackTo = 'bkkaiwei@gmail.com';
+    const finalTo = toList.length ? toList : [fallbackTo];
+    if (!apiKey || !fromDefault || !finalTo.length) {
       return;
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
@@ -7690,7 +7692,7 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     ].filter(Boolean).join('\n');
     await sendEmailMessage(env, {
       from: fromDefault,
-      to: toList,
+      to: finalTo,
       subject,
       html,
       text
