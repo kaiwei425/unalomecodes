@@ -6847,7 +6847,9 @@ async function handleUpload(request, env, origin) {
       allowedMimes.delete("application/pdf");
       allowedExts.delete("pdf");
     }
-    const maxBytes = isAuthed ? (20 * 1024 * 1024) : (3 * 1024 * 1024);
+    const anonMaxMb = Math.max(1, Number(env.UPLOAD_ANON_MAX_MB || env.UPLOAD_MAX_MB || 10) || 10);
+    const authMaxMb = Math.max(1, Number(env.UPLOAD_AUTH_MAX_MB || env.UPLOAD_MAX_MB || 20) || 20);
+    const maxBytes = (isAuthed ? authMaxMb : anonMaxMb) * 1024 * 1024;
     for (const f of files) {
       if (typeof f.stream !== "function") continue;
       if (f.size && f.size > maxBytes) {
