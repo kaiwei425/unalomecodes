@@ -115,6 +115,41 @@
     });
   }
 
+  let welcomeNoticeChecked = false;
+  async function maybeNotifyWelcomeCoupon(){
+    if (welcomeNoticeChecked) return;
+    if (!state.user) return;
+    welcomeNoticeChecked = true;
+    if (typeof showToast !== 'function' || !document.getElementById('toast')) return;
+    try{
+      const res = await fetch('/api/me/coupons', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || !data.ok) return;
+      const items = Array.isArray(data.items) ? data.items : [];
+      const nowTs = Date.now();
+      const welcome = items.find(c=>{
+        if (!c) return false;
+        const from = String(c.issuedFrom || '').toLowerCase();
+        if (from !== 'welcome') return false;
+        if (c.used) return false;
+        if (c.expireAt){
+          const exp = Date.parse(c.expireAt);
+          if (!Number.isNaN(exp) && exp <= nowTs) return false;
+        }
+        return true;
+      });
+      if (!welcome) return;
+      const code = String(welcome.code || '').trim().toUpperCase();
+      const seenKey = '__welcome_coupon_seen__' + code;
+      try{
+        if (localStorage.getItem(seenKey)) return;
+      }catch(_){}
+      const amount = Number(welcome.amount || 200) || 200;
+      showToast(`🎁 歡迎禮已發放：NT$${amount} 全館折價券（14天內有效）`);
+      try{ localStorage.setItem(seenKey, String(Date.now())); }catch(_){}
+    }catch(_){}
+  }
+
   let bindingGuardian = false;
   const QUIZ_BIND_KEY = '__lastQuizBindPending__';
   const QUIZ_BIND_TTL = 2 * 60 * 60 * 1000;
@@ -267,6 +302,7 @@
     notify();
     refreshProfile();
     refreshAdmin();
+    maybeNotifyWelcomeCoupon();
   }
 
   function lineLogin(){

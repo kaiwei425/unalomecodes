@@ -378,6 +378,48 @@ async function saveCoupon(env, obj){
   await env.COUPONS.put(couponKey(obj.code), JSON.stringify(rec));
   return rec;
 }
+async function generateUniqueCouponCode(env, deity){
+  const d = String(deity || '').trim().toUpperCase() || 'XX';
+  if (!env || !env.COUPONS) return makeCouponCode(d);
+  for (let i=0;i<6;i++){
+    const cand = makeCouponCode(d);
+    const exists = await env.COUPONS.get(couponKey(cand));
+    if (!exists) return cand;
+  }
+  return makeCouponCode(d);
+}
+async function issueWelcomeCoupon(env, record){
+  if (!env || !env.COUPONS || !record || !record.id) return null;
+  if (record.welcomeCouponIssued || record.welcomeCoupon) return null;
+  try{
+    const ttlDays = Math.max(1, Number(env.WELCOME_COUPON_TTL_DAYS || 14) || 14);
+    const amount = Math.max(1, Number(env.WELCOME_COUPON_AMOUNT || 200) || 200);
+    const now = new Date();
+    const issuedAt = now.toISOString();
+    const expireAt = new Date(now.getTime() + ttlDays * 86400000).toISOString();
+    const code = await generateUniqueCouponCode(env, 'ALL');
+    const rec = {
+      code,
+      deity: 'ALL',
+      type: 'ALL',
+      amount,
+      issuedAt,
+      expireAt,
+      issuedFrom: 'welcome',
+      issuedTo: record.id,
+      used: false
+    };
+    await saveCoupon(env, rec);
+    const list = Array.isArray(record.coupons) ? record.coupons.slice() : [];
+    if (!list.includes(code)) list.unshift(code);
+    record.coupons = list.slice(0, 200);
+    record.welcomeCouponIssued = true;
+    record.welcomeCoupon = { code, issuedAt, expireAt, amount };
+    return rec;
+  }catch(_){
+    return null;
+  }
+}
 async function redeemCoupon(env, { code, deity, orderId, lock }){
   if (!code) return { ok:false, reason:"missing_code" };
   const codeNorm = String(code||'').toUpperCase();
@@ -1058,6 +1100,7 @@ async function saveUserRecord(env, data){
 async function ensureUserRecord(env, profile){
   if (!profile || !profile.id) return null;
   let record = await loadUserRecord(env, profile.id);
+  const isNew = !record;
   const now = new Date().toISOString();
   if (!record){
     record = {
@@ -1086,6 +1129,9 @@ async function ensureUserRecord(env, profile){
   }
   if (!Array.isArray(record.favoritesFoods)){
     record.favoritesFoods = [];
+  }
+  if (isNew){
+    await issueWelcomeCoupon(env, record);
   }
   await saveUserRecord(env, record);
   return record;
@@ -1369,6 +1415,191 @@ async function canAccessProof(request, env, key){
   return await verifyProofToken(env, key, token);
 }
 
+function normalizeStatus(s){
+  return String(s || '').trim();
+}
+function statusIsPaid(s){
+  const v = normalizeStatus(s);
+  if (!v) return false;
+  const lower = v.toLowerCase();
+  const unpaidHints = ['待付款','未付款','pending','waiting','待處理','待確認'];
+  if (unpaidHints.some(k => lower.includes(k))) return false;
+  const paidHints = ['已付款','已寄件','已出貨','已完成','完成訂單','完成','出貨'];
+  if (paidHints.some(k => v.includes(k))) return true;
+  return /\bpaid\b/i.test(v);
+}
+function statusIsCanceled(s){
+  const v = normalizeStatus(s);
+  if (!v) return false;
+  const cancelHints = ['取消','作廢','退款','退貨','失敗','金額不符','拒收','逾期','未取','無效','撤單'];
+  if (cancelHints.some(k => v.includes(k))) return true;
+  return /\b(cancel|failed|void|refund|chargeback)\b/i.test(v);
+}
+function extractCouponCodes(coupon){
+  if (!coupon) return [];
+  const raw = Array.isArray(coupon.codes) && coupon.codes.length ? coupon.codes : (coupon.code ? [coupon.code] : []);
+  return Array.from(new Set(raw.map(c => String(c || '').trim().toUpperCase()).filter(Boolean)));
+}
+async function ensureOrderPaidResources(env, order){
+  let changed = false;
+  if (order && order.coupon && !order.coupon.failed) {
+    const codes = extractCouponCodes(order.coupon);
+    if (codes.length && !order.coupon.locked) {
+      let lockOk = true;
+      for (const code of codes){
+        const locked = await markCouponUsageOnce(env, code, order.id);
+        if (!locked.ok){
+          lockOk = false;
+          break;
+        }
+      }
+      if (lockOk){
+        order.coupon.locked = true;
+        order.coupon.reserved = false;
+        changed = true;
+      }
+    }
+    if (order.coupon.locked && order.coupon.reserved) {
+      order.coupon.reserved = false;
+      changed = true;
+    }
+  }
+  if (order.stockDeducted === false) {
+    try { await decStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+    order.stockDeducted = true;
+    changed = true;
+  }
+  if (order.soldCounted === false) {
+    try { await bumpSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+    order.soldCounted = true;
+    changed = true;
+  }
+  return changed;
+}
+async function releaseOrderResources(env, order){
+  let changed = false;
+  if (order && order.coupon && !order.coupon.failed) {
+    const codes = extractCouponCodes(order.coupon);
+    for (const code of codes){
+      try { await releaseCouponUsage(env, code, order.id); } catch(_){}
+    }
+    if (order.coupon.locked || order.coupon.reserved){
+      order.coupon.locked = false;
+      order.coupon.reserved = false;
+      changed = true;
+    }
+  }
+  if (order.stockDeducted === true) {
+    try { await restoreStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
+    order.stockDeducted = false;
+    changed = true;
+  }
+  if (order.soldCounted === true) {
+    try { await decSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
+    order.soldCounted = false;
+    changed = true;
+  }
+  return changed;
+}
+function parseOrderTimestamp(order){
+  const ts = Date.parse(order?.createdAt || order?.payment?.createdAt || order?.updatedAt || '');
+  return Number.isNaN(ts) ? 0 : ts;
+}
+function resolveOrderHoldTtlSec(order, env){
+  const fallback = Number(env.ORDER_HOLD_TTL_SEC || 86400) || 86400;
+  const creditTtl = Number(env.CC_ORDER_HOLD_TTL_SEC || env.CC_COUPON_HOLD_TTL_SEC || 1800) || 1800;
+  const bankTtl = Number(env.BANK_ORDER_HOLD_TTL_SEC || env.ORDER_HOLD_TTL_SEC || 72 * 3600) || (72 * 3600);
+  const method = String(order?.method || '').toLowerCase();
+  if (method.includes('信用卡') || method.includes('綠界') || method.includes('credit') || order?.payment?.gateway === 'ecpay') {
+    return creditTtl;
+  }
+  if (method.includes('轉帳') || method.includes('匯款') || method.includes('bank')) {
+    return bankTtl;
+  }
+  return fallback;
+}
+function isWaitingVerifyStatus(status){
+  const v = normalizeStatus(status);
+  if (!v) return false;
+  if (v === 'waiting_verify') return true;
+  return v.includes('待確認') || v.includes('待查帳');
+}
+function isHoldReleaseCandidate(order, includeWaitingVerify){
+  if (!order || order.type === 'service') return false;
+  const status = normalizeStatus(order.status || '');
+  if (!status) return true;
+  if (statusIsPaid(status)) return false;
+  if (!includeWaitingVerify && isWaitingVerifyStatus(status)) return false;
+  return true;
+}
+export async function releaseExpiredOrderHolds(env, opts = {}){
+  if (!env || !env.ORDERS) {
+    return { ok:false, error:'ORDERS KV not bound' };
+  }
+  const now = Number(opts.now || Date.now());
+  const dryRun = !!opts.dryRun;
+  const includeWaitingVerify = opts.includeWaitingVerify === true
+    || String(env.ORDER_RELEASE_INCLUDE_WAITING_VERIFY || '') === '1';
+  const maxScan = Math.min(Number(opts.limit || env.ORDER_RELEASE_LIMIT || 300) || 300, 1000);
+  let ids = [];
+  try{
+    const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
+    ids = idxRaw ? JSON.parse(idxRaw) : [];
+    if (!Array.isArray(ids)) ids = [];
+  }catch(_){ ids = []; }
+  let scanned = 0;
+  let expired = 0;
+  let released = 0;
+  let updated = 0;
+  for (const id of ids){
+    if (maxScan && scanned >= maxScan) break;
+    scanned++;
+    const raw = await env.ORDERS.get(id);
+    if (!raw) continue;
+    let order = null;
+    try{ order = JSON.parse(raw); }catch(_){ order = null; }
+    if (!order) continue;
+    const status = normalizeStatus(order.status || '');
+    if (statusIsPaid(status)) continue;
+    if (statusIsCanceled(status)) {
+      const changed = await releaseOrderResources(env, order);
+      if (changed && !dryRun) {
+        order.updatedAt = new Date().toISOString();
+        await env.ORDERS.put(id, JSON.stringify(order));
+        updated++;
+      }
+      if (changed) released++;
+      continue;
+    }
+    if (!isHoldReleaseCandidate(order, includeWaitingVerify)) continue;
+    const createdTs = parseOrderTimestamp(order);
+    if (!createdTs) continue;
+    const ttlSec = resolveOrderHoldTtlSec(order, env);
+    if (now - createdTs < ttlSec * 1000) continue;
+    expired++;
+    const changed = await releaseOrderResources(env, order);
+    const expireStatus = '付款逾期';
+    let statusChanged = false;
+    if (expireStatus && order.status !== expireStatus) {
+      order.status = expireStatus;
+      statusChanged = true;
+    }
+    order.cancelReason = order.cancelReason || 'hold_expired';
+    order.cancelledAt = order.cancelledAt || new Date().toISOString();
+    if (order.payment && order.payment.status !== 'PAID') {
+      order.payment.status = 'EXPIRED';
+      order.payment.expiredAt = new Date().toISOString();
+    }
+    if ((changed || statusChanged) && !dryRun) {
+      order.updatedAt = new Date().toISOString();
+      await env.ORDERS.put(id, JSON.stringify(order));
+      updated++;
+    }
+    if (changed || statusChanged) released++;
+  }
+  return { ok:true, scanned, expired, released, updated, dryRun };
+}
+
 export async function onRequest(context) {
   const { request, env, next } = context;
 
@@ -1499,7 +1730,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key',
       'Cache-Control': 'no-store'
     }
   });
@@ -2495,9 +2726,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (request.method === 'GET') {
       const codes = Array.isArray(record.coupons) ? record.coupons : [];
       const items = [];
+      const nextCodes = [];
+      let changed = false;
+      const nowTs = Date.now();
       for (const code of codes){
         const rec = await readCoupon(env, code);
         if (rec){
+          if (rec.expireAt){
+            const exp = Date.parse(rec.expireAt);
+            if (!Number.isNaN(exp) && exp <= nowTs){
+              changed = true;
+              continue;
+            }
+          }
           items.push({
             code: rec.code,
             deity: rec.deity || inferCouponDeity(rec.code),
@@ -2506,13 +2747,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             issuedAt: rec.issuedAt || null,
             startAt: rec.startAt || null,
             expireAt: rec.expireAt || null,
+            issuedFrom: rec.issuedFrom || '',
             used: !!rec.used,
             usedAt: rec.usedAt || null,
             orderId: rec.orderId || ''
           });
+          nextCodes.push(code);
         } else {
-          items.push({ code, missing:true });
+          changed = true;
         }
+      }
+      if (changed){
+        record.coupons = nextCodes.slice(0, 200);
+        await saveUserRecord(env, record);
       }
       return json({ ok:true, items });
     }
@@ -4498,190 +4745,6 @@ function normalizeReceiptUrl(o, origin, env){
   return u;
 }
 // --- 訂單 API：/api/order /api/order/status ---
-function normalizeStatus(s){
-  return String(s || '').trim();
-}
-function statusIsPaid(s){
-  const v = normalizeStatus(s);
-  if (!v) return false;
-  const lower = v.toLowerCase();
-  const unpaidHints = ['待付款','未付款','pending','waiting','待處理','待確認'];
-  if (unpaidHints.some(k => lower.includes(k))) return false;
-  const paidHints = ['已付款','已寄件','已出貨','已完成','完成訂單','完成','出貨'];
-  if (paidHints.some(k => v.includes(k))) return true;
-  return /\bpaid\b/i.test(v);
-}
-function statusIsCanceled(s){
-  const v = normalizeStatus(s);
-  if (!v) return false;
-  const cancelHints = ['取消','作廢','退款','退貨','失敗','金額不符','拒收','逾期','未取','無效','撤單'];
-  if (cancelHints.some(k => v.includes(k))) return true;
-  return /\b(cancel|failed|void|refund|chargeback)\b/i.test(v);
-}
-function extractCouponCodes(coupon){
-  if (!coupon) return [];
-  const raw = Array.isArray(coupon.codes) && coupon.codes.length ? coupon.codes : (coupon.code ? [coupon.code] : []);
-  return Array.from(new Set(raw.map(c => String(c || '').trim().toUpperCase()).filter(Boolean)));
-}
-async function ensureOrderPaidResources(env, order){
-  let changed = false;
-  if (order && order.coupon && !order.coupon.failed) {
-    const codes = extractCouponCodes(order.coupon);
-    if (codes.length && !order.coupon.locked) {
-      let lockOk = true;
-      for (const code of codes){
-        const locked = await markCouponUsageOnce(env, code, order.id);
-        if (!locked.ok){
-          lockOk = false;
-          break;
-        }
-      }
-      if (lockOk){
-        order.coupon.locked = true;
-        order.coupon.reserved = false;
-        changed = true;
-      }
-    }
-    if (order.coupon.locked && order.coupon.reserved) {
-      order.coupon.reserved = false;
-      changed = true;
-    }
-  }
-  if (order.stockDeducted === false) {
-    try { await decStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
-    order.stockDeducted = true;
-    changed = true;
-  }
-  if (order.soldCounted === false) {
-    try { await bumpSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
-    order.soldCounted = true;
-    changed = true;
-  }
-  return changed;
-}
-async function releaseOrderResources(env, order){
-  let changed = false;
-  if (order && order.coupon && !order.coupon.failed) {
-    const codes = extractCouponCodes(order.coupon);
-    for (const code of codes){
-      try { await releaseCouponUsage(env, code, order.id); } catch(_){}
-    }
-    if (order.coupon.locked || order.coupon.reserved){
-      order.coupon.locked = false;
-      order.coupon.reserved = false;
-      changed = true;
-    }
-  }
-  if (order.stockDeducted === true) {
-    try { await restoreStockCounters(env, order.items, order.productId, order.variantName, order.qty); } catch(_){}
-    order.stockDeducted = false;
-    changed = true;
-  }
-  if (order.soldCounted === true) {
-    try { await decSoldCounters(env, order.items, order.productId, order.qty); } catch(_){}
-    order.soldCounted = false;
-    changed = true;
-  }
-  return changed;
-}
-function parseOrderTimestamp(order){
-  const ts = Date.parse(order?.createdAt || order?.payment?.createdAt || order?.updatedAt || '');
-  return Number.isNaN(ts) ? 0 : ts;
-}
-function resolveOrderHoldTtlSec(order, env){
-  const fallback = Number(env.ORDER_HOLD_TTL_SEC || 86400) || 86400;
-  const creditTtl = Number(env.CC_ORDER_HOLD_TTL_SEC || env.CC_COUPON_HOLD_TTL_SEC || 1800) || 1800;
-  const bankTtl = Number(env.BANK_ORDER_HOLD_TTL_SEC || env.ORDER_HOLD_TTL_SEC || 72 * 3600) || (72 * 3600);
-  const method = String(order?.method || '').toLowerCase();
-  if (method.includes('信用卡') || method.includes('綠界') || method.includes('credit') || order?.payment?.gateway === 'ecpay') {
-    return creditTtl;
-  }
-  if (method.includes('轉帳') || method.includes('匯款') || method.includes('bank')) {
-    return bankTtl;
-  }
-  return fallback;
-}
-function isWaitingVerifyStatus(status){
-  const v = normalizeStatus(status);
-  if (!v) return false;
-  if (v === 'waiting_verify') return true;
-  return v.includes('待確認') || v.includes('待查帳');
-}
-function isHoldReleaseCandidate(order, includeWaitingVerify){
-  if (!order || order.type === 'service') return false;
-  const status = normalizeStatus(order.status || '');
-  if (!status) return true;
-  if (statusIsPaid(status)) return false;
-  if (!includeWaitingVerify && isWaitingVerifyStatus(status)) return false;
-  return true;
-}
-export async function releaseExpiredOrderHolds(env, opts = {}){
-  if (!env || !env.ORDERS) {
-    return { ok:false, error:'ORDERS KV not bound' };
-  }
-  const now = Number(opts.now || Date.now());
-  const dryRun = !!opts.dryRun;
-  const includeWaitingVerify = opts.includeWaitingVerify === true
-    || String(env.ORDER_RELEASE_INCLUDE_WAITING_VERIFY || '') === '1';
-  const maxScan = Math.min(Number(opts.limit || env.ORDER_RELEASE_LIMIT || 300) || 300, 1000);
-  let ids = [];
-  try{
-    const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
-    ids = idxRaw ? JSON.parse(idxRaw) : [];
-    if (!Array.isArray(ids)) ids = [];
-  }catch(_){ ids = []; }
-  let scanned = 0;
-  let expired = 0;
-  let released = 0;
-  let updated = 0;
-  for (const id of ids){
-    if (maxScan && scanned >= maxScan) break;
-    scanned++;
-    const raw = await env.ORDERS.get(id);
-    if (!raw) continue;
-    let order = null;
-    try{ order = JSON.parse(raw); }catch(_){ order = null; }
-    if (!order) continue;
-    const status = normalizeStatus(order.status || '');
-    if (statusIsPaid(status)) continue;
-    if (statusIsCanceled(status)) {
-      const changed = await releaseOrderResources(env, order);
-      if (changed && !dryRun) {
-        order.updatedAt = new Date().toISOString();
-        await env.ORDERS.put(id, JSON.stringify(order));
-        updated++;
-      }
-      if (changed) released++;
-      continue;
-    }
-    if (!isHoldReleaseCandidate(order, includeWaitingVerify)) continue;
-    const createdTs = parseOrderTimestamp(order);
-    if (!createdTs) continue;
-    const ttlSec = resolveOrderHoldTtlSec(order, env);
-    if (now - createdTs < ttlSec * 1000) continue;
-    expired++;
-    const changed = await releaseOrderResources(env, order);
-    const expireStatus = '付款逾期';
-    let statusChanged = false;
-    if (expireStatus && order.status !== expireStatus) {
-      order.status = expireStatus;
-      statusChanged = true;
-    }
-    order.cancelReason = order.cancelReason || 'hold_expired';
-    order.cancelledAt = order.cancelledAt || new Date().toISOString();
-    if (order.payment && order.payment.status !== 'PAID') {
-      order.payment.status = 'EXPIRED';
-      order.payment.expiredAt = new Date().toISOString();
-    }
-    if ((changed || statusChanged) && !dryRun) {
-      order.updatedAt = new Date().toISOString();
-      await env.ORDERS.put(id, JSON.stringify(order));
-      updated++;
-    }
-    if (changed || statusChanged) released++;
-  }
-  return { ok:true, scanned, expired, released, updated, dryRun };
-}
 // CORS/預檢
 if (request.method === 'OPTIONS') {
   return new Response(null, {
