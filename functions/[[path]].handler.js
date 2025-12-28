@@ -6374,6 +6374,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       return new Response(JSON.stringify({ ok:false, error:'請至少選擇一個服務項目' }), { status:400, headers: jsonHeaders });
     }
     const basePrice = Number(svc.price||0);
+    const fixedFee = Math.max(0, Number(svc.fixedFee ?? svc.serviceFee ?? svc.travelFee ?? svc.extraFee ?? 0) || 0);
+    const feeLabel = String(svc.feeLabel || '車馬費').trim();
     let items = [];
     if (selectionList.length){
       items = selectionList.map(opt => ({
@@ -6387,16 +6389,14 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       baseCount = 1;
     }
     if (baseCount > 0){
-      for (let i=0;i<baseCount;i++){
-        items.push({
-          name: svc.name,
-          qty: 1,
-          total: basePrice,
-          image: svc.cover||''
-        });
-      }
+      items.push({
+        name: svc.name,
+        qty: baseCount,
+        total: basePrice * baseCount,
+        image: svc.cover||''
+      });
     }
-    let finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0);
+    let finalPrice = items.reduce((sum,it)=> sum + Number(it.total||0), 0) + fixedFee;
     const transfer = {
       amount: finalPrice,
       last5: transferLast5,
@@ -6419,6 +6419,10 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       selectedOptions: selectionList.length > 1 ? selectionList : (selectionList.length ? selectionList : undefined),
       items,
       amount: finalPrice,
+      serviceFee: fixedFee || 0,
+      serviceFeeLabel: feeLabel || '車馬費',
+      qtyEnabled: svc.qtyEnabled === true,
+      qtyLabel: svc.qtyLabel || undefined,
       status: '待處理',
       buyer: Object.assign({}, buyer, {
         nameEn: String(body?.nameEn || body?.buyer?.nameEn || body?.buyer_name_en || body?.buyer_nameEn || '')

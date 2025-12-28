@@ -22,6 +22,11 @@
   const detailAddBtn = document.getElementById('svcDetailAddCart');
   const detailHero = document.getElementById('svcDetailHero');
   const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
+  const detailQtyWrap = document.getElementById('svcDetailQtyWrap');
+  const detailQtyInput = document.getElementById('svcDetailQty');
+  const detailQtyLabel = document.getElementById('svcDetailQtyLabel');
+  const detailFeeHint = document.getElementById('svcDetailFeeHint');
+  const detailPriceHint = document.getElementById('svcDetailPriceHint');
   const detailLimited = document.getElementById('svcDetailLimited');
   const detailRemaining = document.getElementById('svcDetailRemaining');
   const reviewListEl = document.getElementById('svcRvList');
@@ -282,6 +287,42 @@
     return 'NT$ ' + n.toLocaleString('zh-TW');
   }
 
+  function getItemQty(item){
+    const raw = Number(item && item.qty);
+    if (!Number.isFinite(raw) || raw < 1) return 1;
+    return Math.floor(raw);
+  }
+
+  function isQtyEnabled(service){
+    return service && service.qtyEnabled === true;
+  }
+
+  function getServiceQtyLabel(service){
+    const label = service && (service.qtyLabel || service.quantityLabel || service.unitLabel);
+    return String(label || '數量');
+  }
+
+  function getServiceFee(service){
+    const raw = service && (service.fixedFee ?? service.serviceFee ?? service.travelFee ?? service.extraFee ?? service.carFee);
+    const fee = Number(raw || 0);
+    return Number.isFinite(fee) && fee > 0 ? fee : 0;
+  }
+
+  function getServiceFeeLabel(service){
+    const label = service && (service.feeLabel || service.serviceFeeLabel);
+    return String(label || '車馬費');
+  }
+
+  function getCartFee(list){
+    if (!Array.isArray(list) || !list.length) return 0;
+    return getServiceFee(list[0]);
+  }
+
+  function getCartFeeLabel(list){
+    if (!Array.isArray(list) || !list.length) return '車馬費';
+    return getServiceFeeLabel(list[0]);
+  }
+
   function loadCart(){
     try{
       const raw = localStorage.getItem(CART_KEY);
@@ -318,7 +359,11 @@
   }
 
   function cartTotal(list){
-    return list.reduce((sum,item)=> sum + Number(item.basePrice||0) + Number(item.optionPrice||0), 0);
+    const itemsTotal = list.reduce((sum,item)=> {
+      const unit = Number(item.basePrice||0) + Number(item.optionPrice||0);
+      return sum + unit * getItemQty(item);
+    }, 0);
+    return itemsTotal + getCartFee(list);
   }
 
   function setRequestDateMin(){
@@ -409,10 +454,10 @@
             ${sanitizeImageUrl(item.image) ? `<img src="${escapeHtml(sanitizeImageUrl(item.image))}" alt="">` : ''}
             <div>
               <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
-              <div class="meta">${escapeHtml(item.optionName||'標準服務')}</div>
+              <div class="meta">${escapeHtml(item.optionName||'標準服務')}${getItemQty(item) > 1 ? ` × ${getItemQty(item)}` : ''}</div>
             </div>
           </div>
-          <div class="price">${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</div>
+          <div class="price">${formatTWD((Number(item.basePrice||0)+Number(item.optionPrice||0)) * getItemQty(item))}</div>
           <button type="button" class="svc-cart-remove" data-remove="${escapeHtml(item.uid||'')}">移除</button>
         </div>
       `).join('');
@@ -719,7 +764,29 @@
     const base = Number(detailDataset.price || 0);
     const variant = getVariantSelection(detailDataset);
     const diff = variant ? Number(variant.price||0) : 0;
-    detailPriceEl.textContent = (base + diff).toLocaleString('zh-TW');
+    const unit = base + diff;
+    const qtyEnabled = isQtyEnabled(detailDataset);
+    const qty = qtyEnabled && detailQtyInput ? Math.max(1, Number(detailQtyInput.value||1) || 1) : 1;
+    const fee = qtyEnabled ? getServiceFee(detailDataset) : 0;
+    detailPriceEl.textContent = (unit * qty + fee).toLocaleString('zh-TW');
+    if (detailPriceHint){
+      if (qtyEnabled){
+        const feeText = fee > 0 ? ` + ${getServiceFeeLabel(detailDataset)} ${formatTWD(fee)}` : '';
+        detailPriceHint.textContent = `單價 ${formatTWD(unit)} × ${qty}${feeText}`;
+        detailPriceHint.style.display = '';
+      }else{
+        detailPriceHint.textContent = '';
+        detailPriceHint.style.display = 'none';
+      }
+    }
+  }
+  if (detailQtyInput && !detailQtyInput.__bound){
+    detailQtyInput.__bound = true;
+    detailQtyInput.addEventListener('input', ()=>{
+      const val = Math.max(1, Number(detailQtyInput.value||1) || 1);
+      detailQtyInput.value = String(Math.floor(val));
+      updateDetailPrice();
+    });
   }
 
   function openServiceDetail(service){
@@ -756,6 +823,23 @@
     if (detailIncludes){
       const includes = Array.isArray(service.includes) ? service.includes : [];
       detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : '<li>老師依實際情況安排內容</li>';
+    }
+    if (detailQtyWrap && detailQtyInput){
+      const qtyEnabled = isQtyEnabled(service);
+      if (qtyEnabled){
+        detailQtyWrap.style.display = '';
+        detailQtyInput.value = '1';
+        detailQtyInput.min = '1';
+        detailQtyInput.step = '1';
+        if (detailQtyLabel) detailQtyLabel.textContent = getServiceQtyLabel(service);
+        if (detailFeeHint){
+          const fee = getServiceFee(service);
+          detailFeeHint.textContent = fee > 0 ? `${getServiceFeeLabel(service)} ${formatTWD(fee)}` : '';
+          detailFeeHint.style.display = fee > 0 ? '' : 'none';
+        }
+      }else{
+        detailQtyWrap.style.display = 'none';
+      }
     }
     currentReviewCode = (service.reviewCode || service.deityCode || service.deity || service.code || resolveServiceId(service) || '').toString().trim().toUpperCase();
     loadServiceReviews(currentReviewCode);
@@ -820,6 +904,11 @@
       return;
     }
     const svcId = resolveServiceId(detailDataset);
+    const qtyEnabled = isQtyEnabled(detailDataset);
+    const qty = qtyEnabled && detailQtyInput ? Math.max(1, Number(detailQtyInput.value||1) || 1) : 1;
+    const fee = qtyEnabled ? getServiceFee(detailDataset) : 0;
+    const feeLabel = qtyEnabled ? getServiceFeeLabel(detailDataset) : '';
+    const qtyLabel = qtyEnabled ? getServiceQtyLabel(detailDataset) : '';
     const item = {
       uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
       serviceId: svcId,
@@ -827,6 +916,11 @@
       basePrice: Number(detailDataset.price||0),
       optionName: variant ? variant.name : '',
       optionPrice: variant ? Number(variant.price||0) : 0,
+      qty,
+      qtyEnabled,
+      qtyLabel,
+      serviceFee: fee,
+      serviceFeeLabel: feeLabel,
       image: (Array.isArray(detailDataset.gallery) && detailDataset.gallery[0]) || detailDataset.cover || ''
     };
     cart.push(item);
@@ -842,17 +936,35 @@
     if (!Array.isArray(cart) || !cart.length) return;
     const svcId = cart[0].serviceId || '';
     lastCartSnapshot = cart.map(item => Object.assign({}, item));
-    const selectedOpts = cart.filter(it => it.optionName).map(it => ({ name: it.optionName, price: it.optionPrice }));
-    const baseCount = cart.filter(it => !it.optionName).length || 0;
+    const selectedOpts = [];
+    cart.filter(it => it.optionName).forEach(it => {
+      const qty = getItemQty(it);
+      for (let i=0;i<qty;i++){
+        selectedOpts.push({ name: it.optionName, price: it.optionPrice });
+      }
+    });
+    const baseCount = cart.filter(it => !it.optionName).reduce((sum, it)=> sum + getItemQty(it), 0) || 0;
     if (checkoutForm){
       checkoutForm.dataset.selectedOptions = JSON.stringify(selectedOpts);
       checkoutForm.dataset.baseCount = String(baseCount);
       checkoutForm.dataset.serviceId = svcId;
+      checkoutForm.dataset.serviceFee = String(getCartFee(cart));
+      checkoutForm.dataset.serviceFeeLabel = getCartFeeLabel(cart);
     }
     if (checkoutServiceIdInput) checkoutServiceIdInput.value = svcId;
     if (checkoutServiceName) checkoutServiceName.textContent = cart[0].serviceName || '服務';
     if (checkoutSummary){
-      checkoutSummary.innerHTML = cart.map(item => `<li>${escapeHtml(item.optionName || '標準服務')}｜${formatTWD(Number(item.basePrice||0)+Number(item.optionPrice||0))}</li>`).join('');
+      const lines = cart.map(item => {
+        const qty = getItemQty(item);
+        const unit = Number(item.basePrice||0)+Number(item.optionPrice||0);
+        const label = escapeHtml(item.optionName || '標準服務') + (qty > 1 ? ` × ${qty}` : '');
+        return `<li>${label}｜${formatTWD(unit * qty)}</li>`;
+      });
+      const fee = getCartFee(cart);
+      if (fee > 0){
+        lines.push(`<li>${escapeHtml(getCartFeeLabel(cart))}｜${formatTWD(fee)}</li>`);
+      }
+      checkoutSummary.innerHTML = lines.join('');
     }
     const total = cartTotal(cart);
     if (checkoutTotal) checkoutTotal.textContent = formatTWD(total);

@@ -66,6 +66,18 @@
         <input id="svc_name" placeholder="例：蠟燭祈福｜基本祈請">
         <label>費用（NT$）</label>
         <input id="svc_price" type="number" min="0" value="0">
+        <label>啟用數量欄位</label>
+        <div class="row" style="align-items:center;gap:8px;">
+          <label style="margin:0;display:flex;align-items:center;gap:8px;font-size:13px;">
+            <input id="svc_qty_enabled" type="checkbox">
+            開啟數量輸入（單價 × 數量）
+          </label>
+        </div>
+        <label>數量欄位名稱</label>
+        <input id="svc_qty_label" placeholder="例：幾口棺" value="數量">
+        <label>車馬費（固定，加在總價）</label>
+        <input id="svc_fixed_fee" type="number" min="0" value="0">
+        <div class="muted">總價 = 單價 × 數量 + 車馬費。</div>
         <label>已售出（顯示用）</label>
         <input id="svc_sold" type="number" min="0" value="0">
         <label>限時上架至（選填）</label>
@@ -133,6 +145,9 @@
   const imagesInput = document.getElementById('svc_images');
   const soldInput = document.getElementById('svc_sold');
   const activeInput = document.getElementById('svc_active');
+  const qtyEnabledInput = document.getElementById('svc_qty_enabled');
+  const qtyLabelInput = document.getElementById('svc_qty_label');
+  const fixedFeeInput = document.getElementById('svc_fixed_fee');
   const imagePreview = document.getElementById('svcImagePreview');
   const optionsWrap = document.getElementById('svc_options');
   let items = [];
@@ -235,6 +250,9 @@
       price: Number(document.getElementById('svc_price').value || 0),
       sold: Number(soldInput.value || 0),
       active: activeInput.value !== '0',
+      qtyEnabled: !!(qtyEnabledInput && qtyEnabledInput.checked),
+      qtyLabel: qtyLabelInput ? qtyLabelInput.value.trim() : '',
+      fixedFee: Number(fixedFeeInput ? fixedFeeInput.value : 0),
       limitedUntil: toIsoFromLocal(document.getElementById('svc_limited_until').value.trim()),
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
@@ -259,6 +277,9 @@
     document.getElementById('svc_price').value = Number(data.price||0);
     soldInput.value = Number(data.sold||0);
     activeInput.value = data.active === false ? '0' : '1';
+    if (qtyEnabledInput) qtyEnabledInput.checked = data.qtyEnabled === true;
+    if (qtyLabelInput) qtyLabelInput.value = data.qtyLabel || '數量';
+    if (fixedFeeInput) fixedFeeInput.value = Number(data.fixedFee||0);
     document.getElementById('svc_limited_until').value = formatDatetimeLocal(data.limitedUntil);
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
@@ -278,7 +299,19 @@
   }
   function resetForm(){
     currentId = '';
-    fillForm({ id:'', price:0, gallery:[], options:[{name:'',price:0}], active:true, instagram:'' });
+    fillForm({
+      id:'',
+      name:'代捐棺服務',
+      price:500,
+      sold:0,
+      gallery:[],
+      options:[{name:'',price:0}],
+      active:true,
+      instagram:'',
+      qtyEnabled:true,
+      qtyLabel:'幾口棺',
+      fixedFee:300
+    });
     formMsg.textContent = '';
   }
   async function uploadFiles(fileList){
