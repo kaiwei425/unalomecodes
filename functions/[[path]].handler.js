@@ -26,7 +26,7 @@ const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key',
   'Cache-Control': 'no-store'
 };
 
@@ -419,6 +419,67 @@ async function issueWelcomeCoupon(env, record){
   }catch(_){
     return null;
   }
+}
+async function revokeUserCoupons(env, record, opts = {}){
+  const result = { total: 0, revoked: 0, codes: [] };
+  if (!record) return result;
+  const rawCodes = [];
+  if (Array.isArray(record.coupons)) rawCodes.push(...record.coupons);
+  if (record.welcomeCoupon && record.welcomeCoupon.code) rawCodes.push(record.welcomeCoupon.code);
+  const codes = Array.from(new Set(
+    rawCodes.map(c => String(c || '').trim().toUpperCase()).filter(Boolean)
+  ));
+  result.total = codes.length;
+  result.codes = codes.slice();
+  if (!codes.length) return result;
+  const now = new Date().toISOString();
+  const reason = String(opts.reason || 'user_deleted');
+  for (const code of codes){
+    let changed = false;
+    if (env.COUPONS){
+      try{
+        const rec = await readCoupon(env, code);
+        if (rec){
+          if (rec.issuedTo && record.id && String(rec.issuedTo) === String(record.id)) {
+            delete rec.issuedTo;
+            changed = true;
+          }
+          if (!rec.used){
+            rec.used = true;
+            rec.usedAt = now;
+            rec.orderId = rec.orderId || 'USER_DELETED';
+            changed = true;
+          }
+          rec.revoked = true;
+          rec.revokedAt = now;
+          rec.revokedReason = reason;
+          if (rec.reservedBy) {
+            delete rec.reservedBy;
+            delete rec.reservedAt;
+            delete rec.reservedUntil;
+          }
+          changed = true;
+          if (changed) await saveCoupon(env, rec);
+        }
+      }catch(_){}
+    }
+    if (env.ORDERS){
+      try{
+        await env.ORDERS.delete(`COUPON_HOLD:${code}`);
+      }catch(_){}
+      try{
+        const usedKey = `COUPON_USED:${code}`;
+        const existing = await env.ORDERS.get(usedKey);
+        if (!existing){
+          const payload = { code, orderId: 'USER_DELETED', ts: now, reason };
+          await env.ORDERS.put(usedKey, JSON.stringify(payload));
+          changed = true;
+        }
+      }catch(_){}
+    }
+    if (changed) result.revoked++;
+  }
+  return result;
 }
 async function redeemCoupon(env, { code, deity, orderId, lock }){
   if (!code) return { ok:false, reason:"missing_code" };
@@ -1064,7 +1125,14 @@ async function getSessionUser(request, env){
   const cookies = parseCookies(request);
   const token = cookies.auth || '';
   if (!token) return null;
-  return await verifySessionToken(token, env.SESSION_SECRET);
+  const user = await verifySessionToken(token, env.SESSION_SECRET);
+  if (!user) return null;
+  const store = getUserStore(env);
+  if (!store) return user;
+  const record = await loadUserRecord(env, user.id);
+  if (!record) return null;
+  if (record.disabled || record.deleted) return null;
+  return user;
 }
 
 function getUserStore(env){
@@ -1532,7 +1600,7 @@ function isHoldReleaseCandidate(order, includeWaitingVerify){
   if (!includeWaitingVerify && isWaitingVerifyStatus(status)) return false;
   return true;
 }
-export async function releaseExpiredOrderHolds(env, opts = {}){
+async function releaseExpiredOrderHolds(env, opts = {}){
   if (!env || !env.ORDERS) {
     return { ok:false, error:'ORDERS KV not bound' };
   }
@@ -1730,7 +1798,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key',
       'Cache-Control': 'no-store'
     }
   });
@@ -2279,8 +2347,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!record){
       return json({ ok:false, error:'user_not_found' }, 404);
     }
+    let revokedCoupons = null;
+    try{
+      revokedCoupons = await revokeUserCoupons(env, record, { reason:'user_deleted' });
+    }catch(e){
+      revokedCoupons = { error: String(e) };
+    }
     await store.delete(userKey(id));
-    return json({ ok:true, id });
+    return json({ ok:true, id, revokedCoupons });
   }
 
   if (pathname === '/api/me/store') {
@@ -2814,7 +2888,7 @@ function __headersJSON__() {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key',
     'Cache-Control': 'no-store'
   };
 }
@@ -3386,7 +3460,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/ecpay/create' ||
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key',
       'Cache-Control': 'no-store'
     }
   });
@@ -3785,6 +3859,22 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
   }
   try{
     const body = await request.json().catch(()=>({}));
+    const ip = getClientIp(request) || 'unknown';
+    const rateLimit = Math.max(1, Number(env.QUIZ_COUPON_RATE_LIMIT || 10) || 10);
+    const windowSec = Math.max(30, Number(env.QUIZ_COUPON_WINDOW_SEC || 300) || 300);
+    const ok = await checkRateLimit(env, `rl:quiz_coupon:${ip}`, rateLimit, windowSec);
+    if (!ok){
+      return new Response(JSON.stringify({ ok:false, error:'Too many requests' }), { status:429, headers: jsonHeaders });
+    }
+    const secret = String(env.QUIZ_COUPON_SECRET || env.QUIZ_COUPON_KEY || '').trim();
+    if (secret){
+      const headerKey = (request.headers.get('x-quiz-key') || request.headers.get('X-Quiz-Key') || '').trim();
+      const queryKey = (url.searchParams.get('key') || '').trim();
+      const bodyKey = String(body.key || body.secret || body.quizKey || body.token || '').trim();
+      if (headerKey !== secret && queryKey !== secret && bodyKey !== secret){
+        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+      }
+    }
     const deityRaw = String(body.deity || body.code || '').trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(deityRaw)){
       return new Response(JSON.stringify({ ok:false, error:'Missing or invalid deity' }), { status:400, headers: jsonHeaders });
@@ -4778,7 +4868,7 @@ if (request.method === 'OPTIONS') {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key',
       'Cache-Control': 'no-store'
     }
   });
@@ -6537,8 +6627,15 @@ async function handleUpload(request, env, origin) {
     }
     const uploader = await getSessionUser(request, env);
     const isAuthed = !!uploader;
+    if (!isAuthed && String(env.UPLOAD_REQUIRE_AUTH || '') === '1') {
+      return withCORS(json({ ok:false, error:"Login required" }, 401));
+    }
     const ip = getClientIp(request) || 'unknown';
-    const ok = await checkRateLimit(env, `rl:upload:${isAuthed ? 'auth' : 'anon'}:${ip}`, isAuthed ? 60 : 20, 300);
+    const windowSec = Math.max(30, Number(env.UPLOAD_RATE_WINDOW_SEC || 300) || 300);
+    const anonLimit = Math.max(1, Number(env.UPLOAD_ANON_LIMIT || 10) || 10);
+    const authLimit = Math.max(1, Number(env.UPLOAD_AUTH_LIMIT || 60) || 60);
+    const limit = isAuthed ? authLimit : anonLimit;
+    const ok = await checkRateLimit(env, `rl:upload:${isAuthed ? 'auth' : 'anon'}:${ip}`, limit, windowSec);
     if (!ok){
       return withCORS(json({ ok:false, error:"Too many requests" }, 429));
     }
@@ -6546,6 +6643,10 @@ async function handleUpload(request, env, origin) {
     let files = form.getAll("files[]");
     if (!files.length) files = form.getAll("file");
     if (!files.length) return json({ ok:false, error:"No files provided" }, 400);
+    const maxFiles = Math.max(1, Number(env.UPLOAD_MAX_FILES || (isAuthed ? 10 : 3)) || (isAuthed ? 10 : 3));
+    if (files.length > maxFiles){
+      return json({ ok:false, error:`Too many files (max ${maxFiles})` }, 400);
+    }
 
     const allowedMimes = new Set([
       "image/jpeg",
@@ -6942,7 +7043,7 @@ function withCORS(res) {
   const h = new Headers(res.headers);
   h.set("Access-Control-Allow-Origin", "*");
   h.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  h.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Key, x-admin-key");
+  h.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key");
   h.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   return new Response(res.body, { status: res.status, headers: h });
 }
@@ -6953,7 +7054,7 @@ function corsPreflight() {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Key, x-admin-key",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key",
       "Access-Control-Max-Age": "86400"
     }
   });
@@ -7177,6 +7278,42 @@ async function listStories(url, env){
   return withCORS(json({ok:true, items}));
 }
 
+function normalizeStoryImageUrl(raw, requestUrl, env){
+  const val = String(raw || '').trim();
+  if (!val) return '';
+  if (val.length > 500) return '';
+  if (val.startsWith('/api/file/') || val.startsWith('/api/proof/')) return val;
+  let base = '';
+  try{ base = new URL(requestUrl).origin; }catch(_){}
+  let url = null;
+  try{
+    url = base ? new URL(val, base) : new URL(val);
+  }catch(_){
+    return '';
+  }
+  const protocol = String(url.protocol || '').toLowerCase();
+  if (protocol !== 'https:' && protocol !== 'http:') return '';
+  const allow = new Set();
+  const addOrigin = (input)=>{
+    if (!input) return;
+    try{
+      const u = input.startsWith('http') ? new URL(input) : new URL(`https://${input}`);
+      allow.add(u.origin);
+    }catch(_){}
+  };
+  if (base) allow.add(base);
+  addOrigin(env?.SITE_URL);
+  addOrigin(env?.PUBLIC_SITE_URL);
+  addOrigin(env?.PUBLIC_ORIGIN);
+  addOrigin(env?.R2_PUBLIC_URL);
+  addOrigin(env?.FILE_HOST);
+  addOrigin(env?.PUBLIC_FILE_HOST);
+  const extra = (env?.STORY_IMAGE_ORIGINS || '').split(',').map(s=>s.trim()).filter(Boolean);
+  extra.forEach(addOrigin);
+  if (!allow.has(url.origin)) return '';
+  return url.toString();
+}
+
 async function createStory(request, env){
   try{
     const reqUrl = new URL(request.url);
@@ -7201,10 +7338,12 @@ async function createStory(request, env){
     const code = String((body.code||"").toUpperCase());
     const nick = String(body.nick||"訪客").slice(0, 20);
     const msg  = String(body.msg||"").trim();
-    const imageUrl = String(body.imageUrl || "").trim();
+    const imageUrlRaw = String(body.imageUrl || "").trim();
+    const imageUrl = normalizeStoryImageUrl(imageUrlRaw, request.url, env);
     if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
     if (!msg || msg.length < 2) return withCORS(json({ok:false, error:"Message too short"}, 400));
     if (msg.length > 800) return withCORS(json({ok:false, error:"Message too long"}, 400));
+    if (imageUrlRaw && !imageUrl) return withCORS(json({ ok:false, error:"Invalid imageUrl" }, 400));
     try{
       const ipRaw = (request.headers.get('CF-Connecting-IP') || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '').toString();
       const ip = ipRaw.split(',')[0].trim();

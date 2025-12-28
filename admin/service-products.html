@@ -41,7 +41,10 @@
   .optionsGrid{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
   .svc-option-row{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center;}
   @media(max-width:520px){.svc-option-row{grid-template-columns:1fr 1fr;}}
+  html.admin-guard-hide{visibility:hidden;}
 </style>
+<script>document.documentElement.classList.add('admin-guard-hide');</script>
+<script src="/js/admin-guard.js" defer></script>
 </head>
 <body>
   <div class="wrap">

@@ -1,0 +1,25 @@
+(function(){
+  try{
+    var root = document.documentElement;
+    if (!root) return;
+    var redirect = encodeURIComponent(location.pathname + location.search + location.hash);
+    fetch('/api/auth/admin/me', { credentials:'include', cache:'no-store' })
+      .then(function(res){
+        return res.json().catch(function(){ return {}; }).then(function(data){
+          return { ok: res.ok && data && data.ok };
+        });
+      })
+      .then(function(result){
+        if (result && result.ok){
+          root.classList.remove('admin-guard-hide');
+          return;
+        }
+        location.href = '/api/auth/google/admin/start?redirect=' + redirect;
+      })
+      .catch(function(){
+        location.href = '/api/auth/google/admin/start?redirect=' + redirect;
+      });
+  }catch(_){
+    // ignore
+  }
+})();

@@ -44,7 +44,10 @@
   .status-new{color:#166534;font-weight:700;}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 6px;}
   .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;}
+  html.admin-guard-hide{visibility:hidden;}
 </style>
+<script>document.documentElement.classList.add('admin-guard-hide');</script>
+<script src="/js/admin-guard.js" defer></script>
 </head>
 <body>
 <div class="wrap">

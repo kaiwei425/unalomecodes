@@ -140,7 +140,10 @@ textarea.raw{width:100%;min-height:140px;background:#0a1020;color:var(--fg);bord
 /* Image Lightbox for Overlay */
 #imageLightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;align-items:center;justify-content:center;padding:20px;}
 #imageLightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5);cursor:pointer;}
+html.admin-guard-hide{visibility:hidden;}
 </style>
+<script>document.documentElement.classList.add('admin-guard-hide');</script>
+<script src="/js/admin-guard.js" defer></script>
 </head>
 
 <body>

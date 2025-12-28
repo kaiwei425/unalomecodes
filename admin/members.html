@@ -34,7 +34,10 @@
   .action-btn:hover{border-color:#f97316;color:#f97316;}
   .action-btn.danger{border-color:#7f1d1d;color:#fecaca;background:rgba(127,29,29,.15);}
   .action-btn.danger:hover{border-color:#fca5a5;color:#fca5a5;}
+  html.admin-guard-hide{visibility:hidden;}
 </style>
+<script>document.documentElement.classList.add('admin-guard-hide');</script>
+<script src="/js/admin-guard.js" defer></script>
 </head>
 <body>
   <div class="wrap">
@@ -136,7 +139,7 @@
       items = Array.isArray(data.items) ? data.items : [];
       render();
     }catch(err){
-      tbody.innerHTML = `<tr><td colspan="5" style="color:#f87171;">讀取失敗：${escapeHtml(err.message||err)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="color:#f87171;">讀取失敗：${escapeHtml(err.message||err)}</td></tr>`;
     }
   }
 

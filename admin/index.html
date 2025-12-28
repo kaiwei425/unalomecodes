@@ -90,7 +90,10 @@ html,body{
 .btn:hover{transform:translateY(-1px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.08);}
 .btn.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1d4ed8;color:#fff;}
 .footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center;}
+  html.admin-guard-hide{visibility:hidden;}
 </style>
+<script>document.documentElement.classList.add('admin-guard-hide');</script>
+<script src="/js/admin-guard.js" defer></script>
 </head>
 <body>
 <div class="wrap">
