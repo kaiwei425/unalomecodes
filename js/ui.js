@@ -93,12 +93,12 @@ function openDetail(p){
     variants.forEach((v,idx)=>{
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = `${v.name}（+${formatPrice(Number(v.priceDiff||0))}）`;
+      opt.textContent = `${v.name}`;
       sel.appendChild(opt);
     });
   } else {
     const opt = document.createElement('option');
-    opt.value = -1; opt.textContent = '標準外殼（無加價）';
+    opt.value = -1; opt.textContent = '標準款';
     sel.appendChild(opt);
   }
 
@@ -133,7 +133,6 @@ function openDetail(p){
       } else {
         stockEl.style.display = 'inline-flex';
         stockEl.textContent = available > 0 ? `庫存：${available}` : '庫存：0（已售完）';
-        stockEl.classList.add('dlgTag','dlgTag--stock');
         stockEl.classList.toggle('ok', available > 0);
         stockEl.classList.toggle('zero', available <= 0);
       }
