@@ -2256,6 +2256,32 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     return json({ ok:true, id });
   }
+  if (pathname === '/api/admin/users/delete' && request.method === 'POST') {
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    const store = getUserStore(env);
+    if (!store){
+      return json({ ok:false, error:'USERS KV not bound' }, 500);
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const id = String(body.id || body.userId || '').trim();
+    const confirm = String(body.confirm || '').trim();
+    if (!id){
+      return json({ ok:false, error:'missing_user_id' }, 400);
+    }
+    if (confirm !== '刪除'){
+      return json({ ok:false, error:'confirm_required' }, 400);
+    }
+    const record = await loadUserRecord(env, id);
+    if (!record){
+      return json({ ok:false, error:'user_not_found' }, 404);
+    }
+    await store.delete(userKey(id));
+    return json({ ok:true, id });
+  }
 
   if (pathname === '/api/me/store') {
     const record = await getSessionUserRecord(request, env);

@@ -32,6 +32,8 @@
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
   .action-btn{border:none;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;background:#1f2937;color:#e2e8f0;border:1px solid #334155;}
   .action-btn:hover{border-color:#f97316;color:#f97316;}
+  .action-btn.danger{border-color:#7f1d1d;color:#fecaca;background:rgba(127,29,29,.15);}
+  .action-btn.danger:hover{border-color:#fca5a5;color:#fca5a5;}
 </style>
 </head>
 <body>
@@ -69,6 +71,7 @@
 <script>
   const API = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users';
   const API_RESET = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/reset-guardian';
+  const API_DELETE = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/delete';
   const q = document.getElementById('q');
   const tbody = document.getElementById('tbody');
   const sortSel = document.getElementById('sortSel');
@@ -108,6 +111,7 @@
         </td>
         <td>
           <button class="action-btn" data-reset-id="${escapeHtml(u.id||'')}" data-reset-name="${escapeHtml(u.name||u.email||'')}">重置守護神</button>
+          <button class="action-btn danger" data-del-id="${escapeHtml(u.id||'')}" data-del-name="${escapeHtml(u.name||u.email||'')}">刪除會員</button>
         </td>
       </tr>`;
     }).join('') || '<tr><td colspan="6" class="muted">目前沒有資料</td></tr>';
@@ -140,25 +144,48 @@
   q.addEventListener('input', ()=>{ clearTimeout(q._t); q._t=setTimeout(render,200); });
   sortSel.addEventListener('change', render);
   tbody.addEventListener('click', async e=>{
-    const btn = e.target.closest('[data-reset-id]');
-    if (!btn) return;
-    const id = btn.getAttribute('data-reset-id');
-    const name = btn.getAttribute('data-reset-name') || '';
+    const resetBtn = e.target.closest('[data-reset-id]');
+    if (resetBtn){
+      const id = resetBtn.getAttribute('data-reset-id');
+      const name = resetBtn.getAttribute('data-reset-name') || '';
+      if (!id) return;
+      if (!confirm(`確定要重置 ${name ? name + ' 的' : ''}守護神？`)) return;
+      try{
+        const res = await fetch(API_RESET, {
+          method:'POST',
+          credentials:'include',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        await load();
+        alert('已重置守護神');
+      }catch(err){
+        alert('重置失敗：' + (err.message || err));
+      }
+      return;
+    }
+    const delBtn = e.target.closest('[data-del-id]');
+    if (!delBtn) return;
+    const id = delBtn.getAttribute('data-del-id');
+    const name = delBtn.getAttribute('data-del-name') || '';
     if (!id) return;
-    if (!confirm(`確定要重置 ${name ? name + ' 的' : ''}守護神？`)) return;
+    const confirmText = prompt(`確定要刪除會員「${name || id}」嗎？\n此動作不可復原。\n請輸入「刪除」確認`);
+    if (confirmText !== '刪除') return;
     try{
-      const res = await fetch(API_RESET, {
+      const res = await fetch(API_DELETE, {
         method:'POST',
         credentials:'include',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id, confirm:'刪除' })
       });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
       await load();
-      alert('已重置守護神');
+      alert('已刪除會員');
     }catch(err){
-      alert('重置失敗：' + (err.message || err));
+      alert('刪除失敗：' + (err.message || err));
     }
   });
   load();
