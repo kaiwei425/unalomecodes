@@ -2,6 +2,8 @@ const listEl = document.getElementById('list');
 const banner = document.getElementById('banner');
 const hotSection = document.getElementById('hotSection');
 const hotList = document.getElementById('hotList');
+const hotToggle = document.getElementById('hotToggle');
+const hotMedia = window.matchMedia ? window.matchMedia('(max-width:640px)') : null;
 let limitedTimer = null;
 
 let rawItems = [];
@@ -107,6 +109,27 @@ function scheduleLimitedTimer(){
   limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
 }
 
+function setHotCollapsed(collapsed){
+  if (!hotSection || !hotToggle) return;
+  hotSection.classList.toggle('is-collapsed', collapsed);
+  hotToggle.setAttribute('aria-expanded', String(!collapsed));
+  hotToggle.textContent = collapsed ? '展開' : '收合';
+}
+
+function applyHotToggleByMedia(){
+  if (!hotSection || !hotToggle) return;
+  if (hotMedia && hotMedia.matches){
+    if (!hotSection.hasAttribute('data-hot-toggle-init')){
+      setHotCollapsed(true);
+      hotSection.setAttribute('data-hot-toggle-init','1');
+    }else{
+      setHotCollapsed(hotSection.classList.contains('is-collapsed'));
+    }
+  }else{
+    setHotCollapsed(false);
+  }
+}
+
 async function loadProducts(){
   try{
     const res = await fetch('/api/products?active=true',{cache:'no-store'});
@@ -196,6 +219,7 @@ function renderHotItems(items){
   top.forEach(p=>{
     hotList.appendChild(buildProductCard(p, { hot:true }));
   });
+  applyHotToggleByMedia();
   updateLimitedCountdowns(hotList);
   scheduleLimitedTimer();
 }
@@ -221,6 +245,17 @@ document.getElementById('fDeity').addEventListener('change', applyFilter);
 document.getElementById('fMin').addEventListener('input', applyFilter);
 document.getElementById('fMax').addEventListener('input', applyFilter);
 document.getElementById('fSort').addEventListener('change', applyFilter);
+
+if (hotToggle && hotSection){
+  hotToggle.addEventListener('click', ()=>{
+    setHotCollapsed(!hotSection.classList.contains('is-collapsed'));
+  });
+  if (hotMedia && typeof hotMedia.addEventListener === 'function'){
+    hotMedia.addEventListener('change', applyHotToggleByMedia);
+  }else if (hotMedia && typeof hotMedia.addListener === 'function'){
+    hotMedia.addListener(applyHotToggleByMedia);
+  }
+}
 
 // 後備：事件委派，避免按鈕未綁定時無法打開詳情
 document.addEventListener('click', function(e){
