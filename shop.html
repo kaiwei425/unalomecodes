@@ -5789,7 +5789,16 @@ document.addEventListener('DOMContentLoaded', function() {
         imageUrl = uploadData.files[0].url;
       }
 
-      const storyPayload = { code: productCode, nick: nick, msg: msg, imageUrl: imageUrl };
+      const productName = (function(){
+        const dlg = document.getElementById('dlg');
+        if (dlg){
+          const raw = dlg.getAttribute('data-product-name') || '';
+          if (raw) return raw;
+        }
+        const titleEl = document.getElementById('dlgTitle');
+        return titleEl ? titleEl.textContent.trim() : '';
+      })();
+      const storyPayload = { code: productCode, nick: nick, msg: msg, imageUrl: imageUrl, productName: productName };
       const storyRes = await fetch('/api/stories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(storyPayload) });
       const storyData = await storyRes.json();
       if (!storyRes.ok || !storyData.ok) throw new Error(storyData.error || '送出分享失敗');

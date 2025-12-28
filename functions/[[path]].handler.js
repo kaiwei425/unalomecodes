@@ -7667,6 +7667,7 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     const base = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
     const adminLink = `${base}/admin/code-viewer.html?code=${encodeURIComponent(item.code || '')}`;
     const nick = String(item.nick || '訪客').trim();
+    const productName = String(item.productName || '').trim();
     const msg = String(item.msg || '').trim();
     const ts = item.ts ? new Date(item.ts).toLocaleString('zh-TW', { hour12:false }) : '';
     const imageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || base;
@@ -7683,6 +7684,7 @@ async function maybeSendStoryEmail(env, item, requestUrl){
           <p>收到一則新的商品留言：</p>
           <div style="padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
             <p style="margin:0 0 6px;"><strong>留言人：</strong>${esc(nick)}</p>
+            ${productName ? `<p style="margin:0 0 6px;"><strong>商品：</strong>${esc(productName)}</p>` : ''}
             ${ts ? `<p style="margin:0 0 6px;"><strong>時間：</strong>${esc(ts)}</p>` : ''}
             <p style="margin:0 0 6px;"><strong>代碼：</strong>${esc(item.code || '')}</p>
             <p style="margin:0;"><strong>內容：</strong><br>${esc(msg)}</p>
@@ -7697,6 +7699,7 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     const text = [
       `${siteName} 新留言通知`,
       `留言人：${nick}`,
+      productName ? `商品：${productName}` : '',
       ts ? `時間：${ts}` : '',
       `代碼：${item.code || ''}`,
       `內容：${msg}`,
@@ -7770,6 +7773,7 @@ async function createStory(request, env){
     const code = String((body.code||"").toUpperCase());
     const nick = String(body.nick||"訪客").slice(0, 20);
     const msg  = String(body.msg||"").trim();
+    const productName = String(body.productName || body.product || body.itemName || body.name || '').trim().slice(0, 80);
     const imageUrlRaw = String(body.imageUrl || "").trim();
     const imageUrl = normalizeStoryImageUrl(imageUrlRaw, request.url, env);
     if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
@@ -7792,7 +7796,15 @@ async function createStory(request, env){
     }catch(_){}
     const now = new Date().toISOString();
     const id = `${code}:${now}:${crypto.randomUUID()}`;
-    const item = { id, code, nick, msg, ts: now, imageUrl: imageUrl || undefined };
+    const item = {
+      id,
+      code,
+      nick,
+      msg,
+      ts: now,
+      productName: productName || undefined,
+      imageUrl: imageUrl || undefined
+    };
     await env.STORIES.put(`STORY:${id}`, JSON.stringify(item));
     const idxKey = `IDX:${code}`;
     const idxRaw = await env.STORIES.get(idxKey);

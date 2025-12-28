@@ -162,6 +162,7 @@
     }
   }
   let currentReviewCode = '';
+  let currentReviewName = '';
   async function loadServiceReviews(code){
     if (!reviewListEl) return;
     if (!code){
@@ -904,6 +905,7 @@
       }
     }
     currentReviewCode = (service.reviewCode || service.deityCode || service.deity || service.code || resolveServiceId(service) || '').toString().trim().toUpperCase();
+    currentReviewName = (service.name || service.serviceName || '').toString().trim();
     loadServiceReviews(currentReviewCode);
     const igUrl = service.instagram || service.ig || service.igUrl || '';
     if (detailIG){
@@ -1661,7 +1663,7 @@
           }
           imageUrl = uploadData.files[0].url;
         }
-        const payload = { code: currentReviewCode, nick, msg, imageUrl };
+        const payload = { code: currentReviewCode, nick, msg, imageUrl, productName: currentReviewName };
         const res = await fetch('/api/stories', {
           method:'POST',
           headers:{'Content-Type':'application/json'},

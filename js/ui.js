@@ -335,7 +335,7 @@ function stashPendingDetail(){
     if (!txt) return alert('請先輸入你的分享內容～');
     (async()=>{
       try{
-        const payload = { code: storyCodeFromProduct(p), nick: '訪客', msg: txt };
+        const payload = { code: storyCodeFromProduct(p), nick: '訪客', msg: txt, productName: (p && p.name) ? p.name : '' };
         const res = await fetch('/api/stories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
