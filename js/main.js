@@ -185,7 +185,7 @@ function renderHotItems(items){
     if (diff !== 0) return diff;
     return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
   });
-  const top = list.slice(0, 6);
+  const top = list.slice(0, 3);
   if (!top.length){
     hotSection.style.display = 'none';
     hotList.innerHTML = '';
