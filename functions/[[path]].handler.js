@@ -7703,7 +7703,34 @@ async function maybeSendStoryEmail(env, item, requestUrl){
       imgUrl ? `圖片：${imgUrl}` : '',
       `管理連結：${adminLink}`
     ].filter(Boolean).join('\n');
-    await sendEmailMessage(env, {
+    const sender = (typeof sendEmailMessage === 'function')
+      ? (msg)=> sendEmailMessage(env, msg)
+      : async (msg)=>{
+          const endpoint = (env.RESEND_ENDPOINT || 'https://api.resend.com/emails').trim() || 'https://api.resend.com/emails';
+          const replyTo = msg.replyTo || 'bkkaiwei@gmail.com';
+          const payload = {
+            from: msg.from || fromDefault,
+            to: Array.isArray(msg.to) ? msg.to : [msg.to].filter(Boolean),
+            subject: msg.subject || 'Order Notification',
+            html: msg.html || undefined,
+            text: msg.text || undefined
+          };
+          if (replyTo) payload.reply_to = replyTo;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const errText = await res.text().catch(()=> '');
+            throw new Error(`Email API ${res.status}: ${errText || res.statusText}`);
+          }
+          try{ return await res.json(); }catch(_){ return {}; }
+        };
+    await sender({
       from: fromDefault,
       to: finalTo,
       subject,
