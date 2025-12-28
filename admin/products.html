@@ -346,7 +346,8 @@
     const category = ($("new_category") && $("new_category").value) || "佛牌/聖物";
     const basePrice = Number($("new_price").value || 0);
     const sold = Number($("new_sold").value || 0);
-    const limitedUntil = $("new_limited_until") ? $("new_limited_until").value.trim() : "";
+    const limitedUntilRaw = $("new_limited_until") ? $("new_limited_until").value.trim() : "";
+    const limitedUntil = toIsoFromLocal(limitedUntilRaw);
     const description = $("new_desc").value.trim();
     const instagram = $("new_instagram") ? $("new_instagram").value.trim() : "";
 
@@ -632,7 +633,7 @@
         category: catSel.value,
         basePrice: Number(price.input.value||0),
         sold: Number(sold.input.value||0),
-        limitedUntil: limited.input.value.trim(),
+        limitedUntil: toIsoFromLocal(limited.input.value.trim()),
         description: desc.input.value.trim(),
         instagram: ig.input.value.trim(),
         images: p.images||[],
@@ -667,7 +668,7 @@
           deity: deity.input.value.trim(),
           basePrice: Number(price.input.value||0),
           sold: Number(sold.input.value||0),
-          limitedUntil: limited.input.value.trim(),
+          limitedUntil: toIsoFromLocal(limited.input.value.trim()),
           description: desc.input.value.trim(),
           instagram: ig.input.value.trim()
         });
@@ -757,6 +758,22 @@
     const r = el("div",{ class:"row" });
     a.style="flex:1"; b.style="flex:1";
     r.append(a,b); return r;
+  }
+  function toIsoFromLocal(val){
+    const raw = String(val || "").trim();
+    if (!raw) return "";
+    const parts = raw.split("T");
+    if (parts.length !== 2) return "";
+    const [datePart, timePart] = parts;
+    const dateBits = datePart.split("-").map(Number);
+    const timeBits = timePart.split(":").map(Number);
+    if (dateBits.length < 3 || timeBits.length < 2) return "";
+    const [y, m, d] = dateBits;
+    const [hh, mm] = timeBits;
+    if (![y, m, d, hh, mm].every(n => Number.isFinite(n))) return "";
+    const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
+    if (!Number.isFinite(dt.getTime())) return "";
+    return dt.toISOString();
   }
   function formatDatetimeLocal(val){
     const raw = String(val || "").trim();

@@ -157,6 +157,22 @@
     if (!rowId) return null;
     return items.find(it => getRowId(it) === rowId) || null;
   }
+  function toIsoFromLocal(val){
+    const raw = String(val || '').trim();
+    if (!raw) return '';
+    const parts = raw.split('T');
+    if (parts.length !== 2) return '';
+    const [datePart, timePart] = parts;
+    const dateBits = datePart.split('-').map(Number);
+    const timeBits = timePart.split(':').map(Number);
+    if (dateBits.length < 3 || timeBits.length < 2) return '';
+    const [y, m, d] = dateBits;
+    const [hh, mm] = timeBits;
+    if (![y, m, d, hh, mm].every(n => Number.isFinite(n))) return '';
+    const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
+    if (!Number.isFinite(dt.getTime())) return '';
+    return dt.toISOString();
+  }
   function formatDatetimeLocal(val){
     const raw = String(val || '').trim();
     if (!raw) return '';
@@ -219,7 +235,7 @@
       price: Number(document.getElementById('svc_price').value || 0),
       sold: Number(soldInput.value || 0),
       active: activeInput.value !== '0',
-      limitedUntil: document.getElementById('svc_limited_until').value.trim(),
+      limitedUntil: toIsoFromLocal(document.getElementById('svc_limited_until').value.trim()),
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
       instagram: document.getElementById('svc_instagram').value.trim(),
