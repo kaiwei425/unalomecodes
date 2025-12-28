@@ -552,13 +552,18 @@
 
 <script id="cats-inline">
 (function(){
-  const CATS = ["佛牌/聖物","蠟燭加持祈福","跑廟行程","其他"];
+  const CATS = [
+    { key: "佛牌/聖物", label: "佛牌/聖物" },
+    { key: "蠟燭加持祈福", label: "祈福加持/代捐棺材" },
+    { key: "跑廟行程", label: "跑廟行程" },
+    { key: "其他", label: "其他" }
+  ];
   let selectedCat = "佛牌/聖物";
 
   function normalizeCat(cat){
     if (!cat) return "";
     // 接受後台直接填四種分類名稱（完全比對）
-    if (CATS.includes(cat)) return cat;
+    if (CATS.some(item => item.key === cat)) return cat;
     return "";
   }
 
@@ -577,19 +582,19 @@
     const list = box.querySelector('.list');
     CATS.forEach(cat=>{
       const b = document.createElement('button');
-      b.textContent = cat; b.dataset.cat = cat;
+      b.textContent = cat.label; b.dataset.cat = cat.key;
       b.classList.add('side-cat-btn');
-      if(cat===selectedCat) b.classList.add('active');
-      if (cat === '蠟燭加持祈福') {
+      if(cat.key === selectedCat) b.classList.add('active');
+      if (cat.key === '蠟燭加持祈福') {
         b.addEventListener('click', function(){
           window.location.href = 'https://shop.unalomecodes.com/service';
         });
       } else {
         b.addEventListener('click', ()=>{
-          if (selectedCat === cat) {
+          if (selectedCat === cat.key) {
             selectedCat = null;
           } else {
-            selectedCat = cat;
+            selectedCat = cat.key;
           }
           [...list.children].forEach(x=> x.classList.toggle('active', x===b));
           window.__currentCategoryFilter = selectedCat;
