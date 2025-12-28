@@ -42,6 +42,17 @@
   dialog .dlgBody div{line-height:1.5;}
   .closeBtn{border:none;background:rgba(255,255,255,.1);color:#fff;border-radius:999px;width:28px;height:28px;font-size:16px;cursor:pointer;}
   .proof-img{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.12);object-fit:cover;max-height:220px;margin-top:8px;}
+  dialog.qna-dialog{border:none;border-radius:16px;padding:0;background:#0f172a;color:#e5e7eb;border:1px solid #1f2937;max-width:560px;width:95%}
+  .qna-head{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;}
+  .qna-body{padding:16px 18px;display:grid;gap:10px;}
+  .qna-list{max-height:320px;overflow:auto;display:grid;gap:8px;}
+  .qna-item{border:1px solid #1f2937;border-radius:12px;padding:10px;background:#111827;}
+  .qna-item.admin{border-color:#facc15;background:#1f1a0b;}
+  .qna-meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#94a3b8;margin-bottom:6px;}
+  .qna-text{white-space:pre-wrap;font-size:13px;color:#e5e7eb;}
+  .qna-actions{display:flex;gap:6px;margin-top:6px;}
+  .qna-actions button{border:1px solid #334155;background:#0f172a;color:#e5e7eb;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer;}
+  .qna-form textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid #334155;background:#0b1022;color:#e5e7eb;padding:8px;}
   html.admin-guard-hide{visibility:hidden;}
 </style>
 <script>document.documentElement.classList.add('admin-guard-hide');</script>
@@ -69,6 +80,19 @@
     </div>
     <div class="dlgBody" id="svcOrderDetailBody">
       <div>載入中…</div>
+    </div>
+  </dialog>
+  <dialog id="svcQnaDialog" class="qna-dialog">
+    <div class="qna-head">
+      <strong id="svcQnaTitle">訂單問與答</strong>
+      <button type="button" class="closeBtn" id="svcQnaClose">✕</button>
+    </div>
+    <div class="qna-body">
+      <div class="qna-list" id="svcQnaList"></div>
+      <div class="qna-form">
+        <textarea id="svcQnaInput" placeholder="輸入回覆內容..."></textarea>
+        <button type="button" class="btn primary" id="svcQnaSend">送出回覆</button>
+      </div>
     </div>
   </dialog>
   <input type="file" id="resultPhotoInput" accept="image/*" style="display:none;">
@@ -147,6 +171,79 @@
       return new Date(ts).toLocaleString('zh-TW', { timeZone:'Asia/Bangkok', hour12:false });
     }catch(_){ return ts; }
   }
+  function escapeHtml(str){
+    return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  const qnaDialog = document.getElementById('svcQnaDialog');
+  const qnaTitle = document.getElementById('svcQnaTitle');
+  const qnaList = document.getElementById('svcQnaList');
+  const qnaInput = document.getElementById('svcQnaInput');
+  const qnaSend = document.getElementById('svcQnaSend');
+  const qnaClose = document.getElementById('svcQnaClose');
+  let qnaOrderId = '';
+  let qnaItems = [];
+
+  function renderQna(items){
+    if (!qnaList) return;
+    const list = Array.isArray(items) ? items : [];
+    qnaItems = list;
+    if (!list.length){
+      qnaList.innerHTML = '<div class="muted">尚無留言。</div>';
+      return;
+    }
+    qnaList.innerHTML = list.map(item=>{
+      const role = item.role === 'admin' ? '客服' : '顧客';
+      const edited = item.edited ? '（已編輯）' : '';
+      const ts = item.updatedAt || item.ts || '';
+      return `
+        <div class="qna-item ${item.role === 'admin' ? 'admin' : ''}">
+          <div class="qna-meta">
+            <div>${escapeHtml(role)} ${edited}</div>
+            <div>${escapeHtml(ts ? new Date(ts).toLocaleString('zh-TW',{hour12:false}) : '')}</div>
+          </div>
+          <div class="qna-text">${escapeHtml(item.text || '')}</div>
+          <div class="qna-actions">
+            <button type="button" data-qna-edit="1" data-id="${escapeHtml(item.id||'')}">編輯</button>
+            <button type="button" data-qna-del="1" data-id="${escapeHtml(item.id||'')}">刪除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadQna(orderId){
+    if (!orderId) return;
+    const data = await authedFetch(`/api/order/qna?orderId=${encodeURIComponent(orderId)}`, { cache:'no-store' });
+    renderQna(data.items || []);
+  }
+
+  async function sendQna(text){
+    if (!qnaOrderId) return;
+    await authedFetch('/api/order/qna', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ orderId: qnaOrderId, text })
+    });
+  }
+
+  async function editQna(id, text){
+    if (!qnaOrderId) return;
+    await authedFetch('/api/order/qna', {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ orderId: qnaOrderId, id, text })
+    });
+  }
+
+  async function deleteQna(id){
+    if (!qnaOrderId) return;
+    await authedFetch('/api/order/qna', {
+      method:'DELETE',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ orderId: qnaOrderId, id })
+    });
+  }
 
   function render(){
     const q = (filterInput.value||'').toLowerCase();
@@ -198,6 +295,7 @@
           <div class="actions">
             <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
             <button class="btn" data-act="view" data-id="${o.id}">明細</button>
+            <button class="btn" data-act="qna" data-id="${o.id}">問與答</button>
             <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
             <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
             <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
@@ -250,6 +348,20 @@
     if (act === 'view'){
       const order = orders.find(o=> o.id === id);
       if (order) openDetail(order);
+      return;
+    }
+    if (act === 'qna'){
+      qnaOrderId = id || '';
+      if (qnaTitle) qnaTitle.textContent = `訂單問與答｜${qnaOrderId}`;
+      if (qnaInput) qnaInput.value = '';
+      if (qnaList) qnaList.innerHTML = '<div class="muted">載入中…</div>';
+      try{
+        await loadQna(qnaOrderId);
+      }catch(err){
+        if (qnaList) qnaList.innerHTML = `<div class="muted">讀取失敗：${escapeHtml(err.message || 'error')}</div>`;
+      }
+      if (qnaDialog && typeof qnaDialog.showModal === 'function') qnaDialog.showModal();
+      else if (qnaDialog) qnaDialog.setAttribute('open','');
       return;
     }
     if (act === 'photo'){
@@ -327,9 +439,6 @@
   const detailDialog = document.getElementById('svcOrderDetail');
   const detailBody = document.getElementById('svcOrderDetailBody');
   const detailClose = document.getElementById('svcOrderDetailClose');
-  function escapeHtml(str){
-    return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
   function openDetail(order){
     if (!detailDialog || !detailBody) return;
     const transfer = order.transfer || {};
@@ -355,6 +464,63 @@
   }
   if (detailClose){
     detailClose.addEventListener('click', ()=> detailDialog.close());
+  }
+  if (qnaClose && qnaDialog){
+    qnaClose.addEventListener('click', ()=> qnaDialog.close());
+  }
+  if (qnaSend){
+    qnaSend.addEventListener('click', async ()=>{
+      if (!qnaOrderId) return;
+      const text = (qnaInput && qnaInput.value || '').trim();
+      if (!text){ alert('請先輸入回覆內容'); return; }
+      qnaSend.disabled = true;
+      qnaSend.textContent = '送出中…';
+      try{
+        await sendQna(text);
+        if (qnaInput) qnaInput.value = '';
+        await loadQna(qnaOrderId);
+      }catch(err){
+        alert('送出失敗：' + (err.message || err));
+      }finally{
+        qnaSend.disabled = false;
+        qnaSend.textContent = '送出回覆';
+      }
+    });
+  }
+  if (qnaList){
+    qnaList.addEventListener('click', async (e)=>{
+      const editBtn = e.target.closest && e.target.closest('[data-qna-edit]');
+      const delBtn = e.target.closest && e.target.closest('[data-qna-del]');
+      if (!editBtn && !delBtn) return;
+      const id = (editBtn || delBtn).getAttribute('data-id') || '';
+      if (!id) return;
+      if (editBtn){
+        const msgId = editBtn.getAttribute('data-id') || '';
+        const target = qnaItems.find(it => it && it.id === msgId);
+        const currentText = target ? (target.text || '') : '';
+        const next = prompt('修改留言', currentText);
+        if (next == null) return;
+        const text = String(next).trim();
+        if (!text){ alert('內容不可空白'); return; }
+        try{
+          await editQna(id, text);
+          await loadQna(qnaOrderId);
+        }catch(err){
+          alert('更新失敗：' + (err.message || err));
+        }
+        return;
+      }
+      if (delBtn){
+        const ok = confirm('確定要刪除這則留言？');
+        if (!ok) return;
+        try{
+          await deleteQna(id);
+          await loadQna(qnaOrderId);
+        }catch(err){
+          alert('刪除失敗：' + (err.message || err));
+        }
+      }
+    });
   }
   const resultInput = document.getElementById('resultPhotoInput');
   if (resultInput){

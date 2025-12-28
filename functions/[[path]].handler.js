@@ -160,6 +160,132 @@ function maskEmail(val){
   const domain = s.slice(idx);
   return head + '***' + domain;
 }
+
+async function findOrderByIdForQna(env, orderId){
+  const id = String(orderId || '').trim();
+  if (!id) return null;
+  const candidates = [];
+  if (env.ORDERS) candidates.push({ store: env.ORDERS, type: 'physical' });
+  if (env.SERVICE_ORDERS && env.SERVICE_ORDERS !== env.ORDERS) {
+    candidates.push({ store: env.SERVICE_ORDERS, type: 'service' });
+  }
+  if (env.SERVICE_ORDERS && env.SERVICE_ORDERS === env.ORDERS) {
+    candidates.push({ store: env.SERVICE_ORDERS, type: 'service' });
+  }
+  for (const entry of candidates){
+    if (!entry.store) continue;
+    try{
+      const raw = await entry.store.get(id);
+      if (!raw) continue;
+      const order = JSON.parse(raw);
+      const derivedType = String(order?.type || '').toLowerCase() === 'service' ? 'service' : entry.type;
+      return { order, store: entry.store, type: derivedType };
+    }catch(_){}
+  }
+  return null;
+}
+
+function orderBelongsToUser(order, record){
+  if (!order || !record) return false;
+  if (order.buyer && order.buyer.uid && order.buyer.uid === record.id) return true;
+  if (record.email){
+    const emails = [
+      order?.buyer?.email,
+      order?.buyer?.contact,
+      order?.email,
+      order?.contact
+    ].filter(Boolean);
+    if (emails.some(e => String(e).toLowerCase() === record.email.toLowerCase())) return true;
+  }
+  return false;
+}
+
+function sanitizeQnaItem(item){
+  return {
+    id: item.id,
+    role: item.role,
+    text: item.text,
+    ts: item.ts,
+    updatedAt: item.updatedAt || undefined,
+    edited: item.edited === true,
+    name: item.name || ''
+  };
+}
+
+async function loadOrderQna(store, orderId){
+  if (!store) return [];
+  try{
+    const raw = await store.get(`QNA:${orderId}`);
+    if (!raw) return [];
+    const items = JSON.parse(raw);
+    return Array.isArray(items) ? items : [];
+  }catch(_){
+    return [];
+  }
+}
+
+async function saveOrderQna(store, orderId, items){
+  if (!store) return;
+  const list = Array.isArray(items) ? items.slice(0, 200) : [];
+  await store.put(`QNA:${orderId}`, JSON.stringify(list));
+}
+
+async function maybeSendOrderQnaEmail(env, opts){
+  const result = { ok:false, skipped:false, error:'' };
+  try{
+    const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
+    const fromDefault = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
+    const toList = Array.isArray(opts.to) ? opts.to.filter(Boolean) : [opts.to].filter(Boolean);
+    if (!apiKey || !fromDefault || !toList.length){
+      result.skipped = true;
+      return result;
+    }
+    const esc = (val)=>{
+      const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+      return String(val || '').replace(/[&<>"']/g, m => map[m] || m);
+    };
+    const sender = (typeof sendEmailMessage === 'function')
+      ? (msg)=> sendEmailMessage(env, msg)
+      : async (msg)=>{
+          const endpoint = (env.RESEND_ENDPOINT || 'https://api.resend.com/emails').trim() || 'https://api.resend.com/emails';
+          const replyTo = msg.replyTo || 'bkkaiwei@gmail.com';
+          const payload = {
+            from: msg.from || fromDefault,
+            to: Array.isArray(msg.to) ? msg.to : [msg.to].filter(Boolean),
+            subject: msg.subject || 'Order Q&A',
+            html: msg.html || undefined,
+            text: msg.text || undefined
+          };
+          if (replyTo) payload.reply_to = replyTo;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const errText = await res.text().catch(()=> '');
+            throw new Error(`Email API ${res.status}: ${errText || res.statusText}`);
+          }
+          try{ return await res.json(); }catch(_){ return {}; }
+        };
+    await sender({
+      from: fromDefault,
+      to: toList,
+      subject: opts.subject || 'Order Q&A',
+      html: opts.html || undefined,
+      text: opts.text || undefined,
+      replyTo: opts.replyTo || undefined
+    });
+    result.ok = true;
+    return result;
+  }catch(err){
+    result.error = String(err && err.message || err);
+    return result;
+  }
+}
 function redactOrderForPublic(order){
   const out = Object.assign({}, order || {});
   if (out.buyer){
@@ -3017,6 +3143,141 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }catch(_){}
     }
     return json({ ok:true, orders: out });
+  }
+
+  if (pathname === '/api/order/qna') {
+    if (request.method === 'OPTIONS') return corsPreflight();
+    const adminSession = await getAdminSession(request, env);
+    const adminKeyOk = await isAdmin(request, env);
+    const isAdminUser = !!adminSession || adminKeyOk;
+    let body = {};
+    if (request.method !== 'GET') {
+      try{ body = await request.json(); }catch(_){ body = {}; }
+    }
+    const orderId = String(
+      (request.method === 'GET' ? url.searchParams.get('orderId') : (body.orderId || body.id || ''))
+      || url.searchParams.get('orderId')
+      || ''
+    ).trim();
+    if (!orderId) return json({ ok:false, error:'missing orderId' }, 400);
+    const found = await findOrderByIdForQna(env, orderId);
+    if (!found || !found.order) return json({ ok:false, error:'order not found' }, 404);
+    const order = found.order;
+    const store = found.store;
+    const orderType = found.type || 'physical';
+    let record = null;
+    if (!isAdminUser){
+      record = await getSessionUserRecord(request, env);
+      if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+      if (!orderBelongsToUser(order, record)) return json({ ok:false, error:'forbidden' }, 403);
+    }
+    if (request.method === 'GET'){
+      const items = await loadOrderQna(store, orderId);
+      return json({ ok:true, orderId, items: items.map(sanitizeQnaItem) });
+    }
+    const items = await loadOrderQna(store, orderId);
+    if (request.method === 'POST'){
+      const text = String(body.text || '').trim();
+      if (!text) return json({ ok:false, error:'empty text' }, 400);
+      if (text.length > 1000) return json({ ok:false, error:'text too long' }, 400);
+      const now = new Date().toISOString();
+      const role = isAdminUser ? 'admin' : 'user';
+      const name = isAdminUser
+        ? (adminSession && (adminSession.name || adminSession.email)) || '客服'
+        : (record && (record.name || record.email)) || (order?.buyer?.name || '會員');
+      const item = {
+        id: crypto.randomUUID(),
+        role,
+        text,
+        ts: now,
+        name,
+        uid: isAdminUser ? '' : (record ? record.id : '')
+      };
+      items.push(item);
+      await saveOrderQna(store, orderId, items);
+
+      try{
+        const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+        const originUrl = env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com';
+        const base = originUrl.replace(/\/$/, '');
+        const orderLinkAdmin = `${base}/${orderType === 'service' ? 'admin/service-orders.html' : 'admin/orders.html'}`;
+        const orderLinkCustomer = `${base}/account-orders.html`;
+        const buyerEmail = String(order?.buyer?.email || order?.buyer_email || order?.email || '').trim();
+        const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
+        const adminTo = Array.from(new Set(['bkkaiwei@gmail.com', ...adminRaw]));
+        const itemsList = buildOrderItems(order).map(it=>{
+          const spec = it.spec ? `（${it.spec}）` : '';
+          return `${it.name}${spec} × ${it.qty}`;
+        }).join('、') || (order?.serviceName || order?.productName || '');
+        const esc = (val)=>{
+          const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+          return String(val || '').replace(/[&<>"']/g, m => map[m] || m);
+        };
+        const htmlBase = `
+          <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px;background:#f5f7fb;">
+            <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
+              <p style="margin:0 0 12px;font-weight:700;font-size:18px;">${esc(siteName)}</p>
+              <p>訂單編號：${esc(orderId)}</p>
+              ${itemsList ? `<p>商品：${esc(itemsList)}</p>` : ''}
+              <div style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+                <p style="margin:0 0 6px;"><strong>留言人：</strong>${esc(name)}</p>
+                <p style="margin:0;"><strong>內容：</strong><br>${esc(text)}</p>
+              </div>
+            </div>
+          </div>
+        `;
+        if (role === 'user'){
+          await maybeSendOrderQnaEmail(env, {
+            to: adminTo,
+            subject: `[${siteName}] 訂單新留言 ${orderId}`,
+            html: htmlBase,
+            text: `${siteName} 訂單新留言\n訂單編號：${orderId}\n商品：${itemsList}\n留言人：${name}\n內容：${text}\n管理頁：${orderLinkAdmin}`
+          });
+        }else if (buyerEmail){
+          await maybeSendOrderQnaEmail(env, {
+            to: [buyerEmail],
+            subject: `[${siteName}] 訂單回覆 ${orderId}`,
+            html: htmlBase,
+            text: `${siteName} 訂單回覆\n訂單編號：${orderId}\n商品：${itemsList}\n客服回覆：${text}\n查詢訂單：${orderLinkCustomer}`
+          });
+        }
+      }catch(_){}
+
+      return json({ ok:true, item: sanitizeQnaItem(item) });
+    }
+    if (request.method === 'PATCH'){
+      const msgId = String(body.id || '').trim();
+      const text = String(body.text || '').trim();
+      if (!msgId) return json({ ok:false, error:'missing id' }, 400);
+      if (!text) return json({ ok:false, error:'empty text' }, 400);
+      if (text.length > 1000) return json({ ok:false, error:'text too long' }, 400);
+      const idx = items.findIndex(it => it && it.id === msgId);
+      if (idx === -1) return json({ ok:false, error:'not found' }, 404);
+      const target = items[idx];
+      if (!isAdminUser){
+        if (target.role !== 'user' || !record || target.uid !== record.id) return json({ ok:false, error:'forbidden' }, 403);
+      }
+      target.text = text;
+      target.updatedAt = new Date().toISOString();
+      target.edited = true;
+      items[idx] = target;
+      await saveOrderQna(store, orderId, items);
+      return json({ ok:true, item: sanitizeQnaItem(target) });
+    }
+    if (request.method === 'DELETE'){
+      const msgId = String(body.id || url.searchParams.get('id') || '').trim();
+      if (!msgId) return json({ ok:false, error:'missing id' }, 400);
+      const idx = items.findIndex(it => it && it.id === msgId);
+      if (idx === -1) return json({ ok:false, error:'not found' }, 404);
+      const target = items[idx];
+      if (!isAdminUser){
+        if (target.role !== 'user' || !record || target.uid !== record.id) return json({ ok:false, error:'forbidden' }, 403);
+      }
+      items.splice(idx, 1);
+      await saveOrderQna(store, orderId, items);
+      return json({ ok:true });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
   }
 
   if (pathname === '/api/me/wishlist') {

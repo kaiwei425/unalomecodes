@@ -25,6 +25,95 @@
       return d.toLocaleString('zh-TW', { hour12:false });
     }catch(_){ return str; }
   }
+  function fmtTime(str){
+    if (!str) return '';
+    try{
+      return new Date(str).toLocaleString('zh-TW', { hour12:false });
+    }catch(_){ return str; }
+  }
+
+  const qnaCache = new Map();
+
+  function renderQnaList(listEl, items, orderId){
+    if (!listEl) return;
+    const safeItems = Array.isArray(items) ? items : [];
+    qnaCache.set(orderId, safeItems);
+    if (!safeItems.length){
+      listEl.innerHTML = '<div class="empty-msg">尚無留言，歡迎提出問題。</div>';
+      return;
+    }
+    listEl.innerHTML = safeItems.map(item=>{
+      const role = item.role === 'admin' ? '客服' : '你';
+      const edited = item.edited ? '（已編輯）' : '';
+      const allowEdit = item.role === 'user';
+      return `
+        <div class="qna-item ${item.role === 'admin' ? 'admin' : ''}">
+          <div class="qna-meta">
+            <div>${escapeHtml(role)} ${edited}</div>
+            <div>${escapeHtml(fmtTime(item.updatedAt || item.ts || ''))}</div>
+          </div>
+          <div class="qna-text">${escapeHtml(item.text || '')}</div>
+          ${allowEdit ? `
+            <div class="qna-actions">
+              <button type="button" data-qna-edit="1" data-id="${escapeHtml(item.id||'')}" data-order-id="${escapeHtml(orderId)}">編輯</button>
+              <button type="button" data-qna-del="1" data-id="${escapeHtml(item.id||'')}" data-order-id="${escapeHtml(orderId)}">刪除</button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function fetchQna(orderId){
+    const res = await fetch(`/api/order/qna?orderId=${encodeURIComponent(orderId)}`, { credentials:'include' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    return Array.isArray(data.items) ? data.items : [];
+  }
+
+  async function postQna(orderId, text){
+    const res = await fetch('/api/order/qna', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ orderId, text })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    return data.item || null;
+  }
+
+  async function patchQna(orderId, id, text){
+    const res = await fetch('/api/order/qna', {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ orderId, id, text })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    return data.item || null;
+  }
+
+  async function deleteQna(orderId, id){
+    const res = await fetch('/api/order/qna', {
+      method:'DELETE',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ orderId, id })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    return true;
+  }
 
   function renderOrders(listEl, items, emptyText){
     if (!listEl) return;
@@ -80,8 +169,10 @@
         <div style="font-size:13px;color:#334155;">${it.text}</div>
       </div>`;
     }).join('');
+    const orderId = String(order.id || order.orderId || '').trim();
+    div.setAttribute('data-order-id', orderId);
     div.innerHTML = `
-      <div class="order-id">${escapeHtml(order.id || order.orderId || '')}</div>
+      <div class="order-id">${escapeHtml(orderId)}</div>
       <div class="order-meta">狀態：<span class="badge-status">${status}</span></div>
       <div class="order-meta">建立時間：${escapeHtml(dateStr)}</div>
       <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
@@ -92,6 +183,17 @@
       ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
       ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
       ${itemCards}
+      <div class="order-qna" data-qna="1">
+        <button type="button" class="qna-toggle" data-qna-toggle="1">訂單問與答</button>
+        <span class="qna-status" data-qna-status="1"></span>
+        <div class="qna-body" data-qna-body="1">
+          <div class="qna-list" data-qna-list="1"></div>
+          <div class="qna-form">
+            <textarea placeholder="輸入訊息..." data-qna-input="1"></textarea>
+            <button type="button" data-qna-send="1">送出</button>
+          </div>
+        </div>
+      </div>
     `;
       listEl.appendChild(div);
     });
@@ -131,6 +233,106 @@
       else window.location.href = '/shop.html';
     });
   }
+
+  async function loadQnaInto(root){
+    if (!root) return;
+    const orderId = root.getAttribute('data-order-id') || '';
+    const statusEl = root.querySelector('[data-qna-status]');
+    const listEl = root.querySelector('[data-qna-list]');
+    if (!orderId || !listEl) return;
+    if (statusEl) statusEl.textContent = '載入中…';
+    try{
+      const items = await fetchQna(orderId);
+      renderQnaList(listEl, items, orderId);
+      if (statusEl) statusEl.textContent = '';
+    }catch(err){
+      if (statusEl) statusEl.textContent = '讀取失敗';
+      if (listEl) listEl.innerHTML = `<div class="empty-msg">${escapeHtml(err.message || '讀取失敗')}</div>`;
+    }
+  }
+
+  document.addEventListener('click', async (e)=>{
+    const toggleBtn = e.target.closest && e.target.closest('[data-qna-toggle]');
+    if (toggleBtn){
+      const root = toggleBtn.closest('.order-item');
+      if (!root) return;
+      const body = root.querySelector('[data-qna-body]');
+      if (!body) return;
+      const isOpen = body.style.display === 'block';
+      if (isOpen){
+        body.style.display = 'none';
+      }else{
+        body.style.display = 'block';
+        await loadQnaInto(root);
+      }
+      return;
+    }
+    const sendBtn = e.target.closest && e.target.closest('[data-qna-send]');
+    if (sendBtn){
+      const root = sendBtn.closest('.order-item');
+      if (!root) return;
+      const orderId = root.getAttribute('data-order-id') || '';
+      const input = root.querySelector('[data-qna-input]');
+      if (!orderId || !input) return;
+      const text = input.value.trim();
+      if (!text){
+        alert('請先輸入訊息');
+        return;
+      }
+      sendBtn.disabled = true;
+      sendBtn.textContent = '送出中…';
+      try{
+        await postQna(orderId, text);
+        input.value = '';
+        await loadQnaInto(root);
+      }catch(err){
+        alert(err.message || '送出失敗');
+      }finally{
+        sendBtn.disabled = false;
+        sendBtn.textContent = '送出';
+      }
+      return;
+    }
+    const editBtn = e.target.closest && e.target.closest('[data-qna-edit]');
+    if (editBtn){
+      const orderId = editBtn.getAttribute('data-order-id') || '';
+      const msgId = editBtn.getAttribute('data-id') || '';
+      if (!orderId || !msgId) return;
+      const items = qnaCache.get(orderId) || [];
+      const target = items.find(it => it && it.id === msgId);
+      if (!target) return;
+      const next = prompt('修改留言', target.text || '');
+      if (next == null) return;
+      const text = String(next).trim();
+      if (!text){
+        alert('留言內容不能空白');
+        return;
+      }
+      try{
+        await patchQna(orderId, msgId, text);
+        const root = editBtn.closest('.order-item');
+        await loadQnaInto(root);
+      }catch(err){
+        alert(err.message || '更新失敗');
+      }
+      return;
+    }
+    const delBtn = e.target.closest && e.target.closest('[data-qna-del]');
+    if (delBtn){
+      const orderId = delBtn.getAttribute('data-order-id') || '';
+      const msgId = delBtn.getAttribute('data-id') || '';
+      if (!orderId || !msgId) return;
+      const ok = confirm('確定要刪除這則留言？');
+      if (!ok) return;
+      try{
+        await deleteQna(orderId, msgId);
+        const root = delBtn.closest('.order-item');
+        await loadQnaInto(root);
+      }catch(err){
+        alert(err.message || '刪除失敗');
+      }
+    }
+  });
 
   function ensureLogin(){
     if (!window.authState){
