@@ -402,7 +402,7 @@
       fetch('/api/me/profile',{credentials:'include',cache:'no-store'})
         .then(r=>r.json().catch(()=>({})))
         .then(data=>{
-          const p = data && (data.profile || data);
+          const p = data && data.profile ? data.profile : null;
           if (p){
             lastProfile = p;
             fillContactFromProfile(p, true);

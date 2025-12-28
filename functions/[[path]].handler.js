@@ -2633,6 +2633,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/me/profile') {
     const record = await getSessionUserRecord(request, env);
     if (!record){
+      if (request.method === 'GET') {
+        return json({ ok:true, profile:null }, 200);
+      }
       return json({ ok:false, error:'unauthorized' }, 401);
     }
     if (request.method === 'PATCH') {
