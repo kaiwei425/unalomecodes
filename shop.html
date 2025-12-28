@@ -215,6 +215,7 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <div id="dlgName" style="font-weight:800;margin:2px 0 6px"></div>
         <span class="chip" id="dlgChip"></span>
+        <span class="chip" id="dlgStock" style="display:none;"></span>
       </div>
       <div id="dlgDeity" style="font-size:13px;color:#6b7280;margin-bottom:6px"></div>
       <div id="dlgDesc" style="font-size:14px;white-space:pre-wrap;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:10px;max-height:220px;overflow:auto"></div>
@@ -1599,6 +1600,30 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             if (pNew){
               var chip = document.getElementById('dlgChip');
               if (chip) chip.textContent = '已售出：' + Number(pNew.sold||0);
+              var stockEl = document.getElementById('dlgStock');
+              if (stockEl){
+                var vStock = null;
+                if (Array.isArray(pNew.variants) && pNew.variants.length){
+                  var has = false; var sum = 0;
+                  pNew.variants.forEach(function(v){
+                    if (v && v.stock !== undefined && v.stock !== null){
+                      var n = Number(v.stock);
+                      if (!isNaN(n)){ has = true; sum += n; }
+                    }
+                  });
+                  if (has) vStock = sum;
+                }
+                if (vStock === null && pNew.stock !== undefined && pNew.stock !== null){
+                  var n2 = Number(pNew.stock);
+                  if (!isNaN(n2)) vStock = n2;
+                }
+                if (vStock === null){
+                  stockEl.style.display = 'none';
+                } else {
+                  stockEl.style.display = 'inline-block';
+                  stockEl.textContent = vStock > 0 ? ('庫存：' + vStock) : '庫存：0（已售完）';
+                }
+              }
             }
           }
         }catch(_){}

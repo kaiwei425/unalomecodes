@@ -43,6 +43,7 @@ function openDetail(p){
   document.getElementById('dlgTitle').textContent = p.name;
   document.getElementById('dlgName').textContent = p.name;
   const chipEl=document.getElementById('dlgChip'); chipEl.textContent = `已售出：${Number(p.sold||0)}`; chipEl.classList.add('badge');
+  const stockEl = document.getElementById('dlgStock');
   const dEl=document.getElementById('dlgDeity'); dEl.textContent=''; if(p.deity){ dEl.innerHTML = `<span class='badge'>${escapeHtml(p.deity)}</span>`; }
   document.getElementById('dlgDesc').textContent = p.description || '';
 
@@ -89,6 +90,48 @@ function openDetail(p){
   const qty = document.getElementById('dlgQty');
   qty.value = 1;
   const priceEl = document.getElementById('dlgPrice');
+  function resolveVariantStock(idx){
+    const variants = Array.isArray(p.variants) ? p.variants : [];
+    if (variants.length){
+      let v = null;
+      if (idx >= 0 && variants[idx]) v = variants[idx];
+      else if (variants.length === 1) v = variants[0];
+      if (v && v.stock !== undefined && v.stock !== null){
+        const n = Number(v.stock);
+        return Number.isFinite(n) ? n : 0;
+      }
+    }
+    if (p.stock !== undefined && p.stock !== null){
+      const n = Number(p.stock);
+      return Number.isFinite(n) ? n : 0;
+    }
+    return null;
+  }
+  function updateStockDisplay(){
+    const idx = Number(sel.value);
+    const available = resolveVariantStock(idx);
+    if (stockEl){
+      if (available === null){
+        stockEl.style.display = 'none';
+      } else {
+        stockEl.style.display = 'inline-block';
+        stockEl.textContent = available > 0 ? `庫存：${available}` : '庫存：0（已售完）';
+      }
+    }
+    if (available !== null && available > 0){
+      qty.setAttribute('max', String(available));
+      if (Number(qty.value || 1) > available) qty.value = available;
+    } else {
+      qty.removeAttribute('max');
+      if (available === 0 && Number(qty.value || 1) < 1) qty.value = 1;
+    }
+    try{
+      const btn = document.getElementById('btnAddCart');
+      if (btn){
+        btn.setAttribute('data-stock', available === null ? '' : String(available));
+      }
+    }catch(_){}
+  }
   function refreshPrice(){
     const base = basePrice(p);
     const idx = Number(sel.value);
@@ -100,6 +143,7 @@ function openDetail(p){
       var priceNode = document.getElementById('dlgPrice');
       if (priceNode) { priceNode.setAttribute('data-price', String((base + diff) * q)); }
     } catch(e) {}
+    updateStockDisplay();
   }
   sel.onchange = refreshPrice;
   qty.oninput = refreshPrice;
@@ -126,6 +170,17 @@ function openDetail(p){
     const diff = (idx>=0 && variants[idx]) ? Number(variants[idx].priceDiff||0) : 0;
     const unit = basePrice(p) + diff;
     const qty = Math.max(1, Number(qtyEl.value||1));
+    const available = resolveVariantStock(idx);
+    if (available !== null){
+      if (available <= 0){
+        alert('該商品已無庫存');
+        return;
+      }
+      if (qty > available){
+        alert('該商品庫存不足');
+        return;
+      }
+    }
     let variantName = '';
     try {
       if (idx>=0 && variants[idx] && variants[idx].name) { variantName = String(variants[idx].name); }

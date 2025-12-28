@@ -22,6 +22,29 @@ function minPrice(p){
   }
   return basePrice(p);
 }
+function resolveTotalStock(p){
+  if (!p) return null;
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+  if (variants.length){
+    let hasStock = false;
+    let sum = 0;
+    for (const v of variants){
+      if (v && v.stock !== undefined && v.stock !== null){
+        const n = Number(v.stock);
+        if (Number.isFinite(n)){
+          hasStock = true;
+          sum += n;
+        }
+      }
+    }
+    if (hasStock) return sum;
+  }
+  if (p.stock !== undefined && p.stock !== null){
+    const n = Number(p.stock);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return null;
+}
 
 async function loadProducts(){
   try{
@@ -99,6 +122,8 @@ function renderList(items){
   for (const p of items){
     const img = (p.images && p.images[0]) ? p.images[0] : '';
     const price = minPrice(p);
+    const stockTotal = resolveTotalStock(p);
+    const stockBadge = stockTotal === null ? '' : `<span class="badge">庫存：${stockTotal}</span>`;
     const card = document.createElement('div');
     card.className = 'card';
     card.setAttribute('data-id', String(p.id || ''));
@@ -109,6 +134,7 @@ function renderList(items){
         <div class="meta">
           ${p.deity?`<span class="badge">${escapeHtml(p.deity)}</span>`:""}
           <span class="badge">已售出：${Number(p.sold||0)}</span>
+          ${stockBadge}
         </div>
         <div class="price">NT$ ${formatPrice(price)}</div>
         <div class="cta">
