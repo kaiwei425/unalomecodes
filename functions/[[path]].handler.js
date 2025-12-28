@@ -686,6 +686,67 @@ function base64UrlDecodeToBytes(b64){
   return bytes;
 }
 
+async function hmacSha256(secret, data){
+  if (!secret) return null;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name:'HMAC', hash:'SHA-256' },
+    false,
+    ['sign','verify']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+  return new Uint8Array(sig);
+}
+
+async function makeSignedState(payload, secret){
+  if (!secret) return '';
+  const body = JSON.stringify(payload || {});
+  const payloadB64 = base64UrlEncode(body);
+  const sigBytes = await hmacSha256(secret, payloadB64);
+  if (!sigBytes) return '';
+  const sigB64 = base64UrlEncode(sigBytes);
+  return `${payloadB64}.${sigB64}`;
+}
+
+async function verifySignedState(state, secret, maxAgeSec){
+  if (!state || !secret) return null;
+  const parts = String(state).split('.');
+  if (parts.length !== 2) return null;
+  const [payloadB64, sigB64] = parts;
+  let sigBytes;
+  try{
+    sigBytes = base64UrlDecodeToBytes(sigB64);
+  }catch(_){
+    return null;
+  }
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name:'HMAC', hash:'SHA-256' },
+    false,
+    ['verify']
+  );
+  const ok = await crypto.subtle.verify('HMAC', key, sigBytes, enc.encode(payloadB64));
+  if (!ok) return null;
+  let payload = null;
+  try{
+    const decoded = new TextDecoder().decode(base64UrlDecodeToBytes(payloadB64));
+    payload = JSON.parse(decoded);
+  }catch(_){
+    return null;
+  }
+  if (maxAgeSec){
+    const ts = Number(payload && payload.t);
+    if (!Number.isFinite(ts)) return null;
+    const age = Math.floor(Date.now() / 1000) - ts;
+    if (age < 0 || age > maxAgeSec) return null;
+  }
+  return payload;
+}
+
 function csvEscape(val){
   const s = String(val ?? '');
   if (s.includes('"') || s.includes(',') || s.includes('\n')){
@@ -1867,12 +1928,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!env.LINE_CHANNEL_ID || !env.LINE_CHANNEL_SECRET) {
       return new Response('LINE OAuth not configured', { status:500 });
     }
-    const state = makeToken(24);
     const redirectRaw = url.searchParams.get('redirect') || '';
     let redirectPath = '/shop.html';
     if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
       redirectPath = redirectRaw;
     }
+    const stateSecret = env.LINE_CHANNEL_SECRET || env.OAUTH_STATE_SECRET || env.SESSION_SECRET || '';
+    const statePayload = { t: Math.floor(Date.now() / 1000), n: makeToken(12), r: redirectPath };
+    let state = await makeSignedState(statePayload, stateSecret);
+    if (!state) state = makeToken(24);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: String(env.LINE_CHANNEL_ID || ''),
@@ -1895,6 +1959,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const expectedState = cookies.line_oauth_state || '';
     const clearStateCookie = 'line_oauth_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
     const clearRedirectCookie = 'line_oauth_redirect=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const stateSecret = env.LINE_CHANNEL_SECRET || env.OAUTH_STATE_SECRET || env.SESSION_SECRET || '';
+    const signedPayload = await verifySignedState(state, stateSecret, 600);
+    const stateValid = !!expectedState && state === expectedState;
     const redirectPath = (()=> {
       const raw = cookies.line_oauth_redirect || '';
       if (raw) {
@@ -1903,9 +1970,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
         }catch(_){}
       }
+      const signedRedirect = signedPayload && signedPayload.r;
+      if (signedRedirect && typeof signedRedirect === 'string' && signedRedirect.startsWith('/') && !signedRedirect.startsWith('//')){
+        return signedRedirect;
+      }
       return '/shop.html';
     })();
-    if (!code || !state || !expectedState || state !== expectedState) {
+    if (!code || !state || (!stateValid && !signedPayload)) {
       const h = new Headers();
       h.append('Set-Cookie', clearStateCookie);
       h.append('Set-Cookie', clearRedirectCookie);

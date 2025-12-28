@@ -3,6 +3,8 @@
   const emptyEl = document.getElementById('svcListEmpty');
   const hotSection = document.getElementById('svcHotSection');
   const hotListEl = document.getElementById('svcHotList');
+  let hotToggle = null;
+  const hotMedia = window.matchMedia ? window.matchMedia('(max-width:640px)') : null;
   const lookupTriggers = Array.from(document.querySelectorAll('#svcLookupBtn, #linkServiceLookup'));
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
@@ -97,6 +99,7 @@
   let lastOrderResult = null;
   let lastRemitLast5 = '';
   let limitedTimer = null;
+  let hotMediaBound = false;
   const RECEIPT_MAX_SIZE = 20 * 1024 * 1024;
   const BANK_INFO = {
     name: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-name') || checkoutDialog.dataset.bankName || '中國信託 (822)') : '中國信託 (822)',
@@ -613,6 +616,57 @@
     limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
   }
 
+  function resolveHotToggle(){
+    if (hotToggle && document.body.contains(hotToggle)) return hotToggle;
+    hotToggle = document.getElementById('svcHotToggle');
+    return hotToggle;
+  }
+
+  function setHotCollapsed(collapsed){
+    const toggle = resolveHotToggle();
+    if (!hotSection || !toggle) return;
+    hotSection.classList.toggle('is-collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    const state = toggle.querySelector('.state');
+    if (state){
+      state.textContent = collapsed ? '展開' : '收合';
+    }else{
+      toggle.textContent = collapsed ? '展開' : '收合';
+    }
+  }
+
+  function applyHotToggleByMedia(){
+    const toggle = resolveHotToggle();
+    if (!hotSection || !toggle) return;
+    if (hotMedia && hotMedia.matches){
+      if (!hotSection.hasAttribute('data-hot-toggle-init')){
+        setHotCollapsed(true);
+        hotSection.setAttribute('data-hot-toggle-init','1');
+      }else{
+        setHotCollapsed(hotSection.classList.contains('is-collapsed'));
+      }
+    }else{
+      setHotCollapsed(false);
+    }
+  }
+
+  function bindHotToggle(){
+    const toggle = resolveHotToggle();
+    if (!hotSection || !toggle || toggle.__bound) return;
+    toggle.__bound = true;
+    toggle.addEventListener('click', ()=>{
+      setHotCollapsed(!hotSection.classList.contains('is-collapsed'));
+    });
+    if (hotMedia && !hotMediaBound){
+      hotMediaBound = true;
+      if (typeof hotMedia.addEventListener === 'function'){
+        hotMedia.addEventListener('change', applyHotToggleByMedia);
+      }else if (typeof hotMedia.addListener === 'function'){
+        hotMedia.addListener(applyHotToggleByMedia);
+      }
+    }
+  }
+
   function renderHotServices(items){
     if (!hotSection || !hotListEl) return;
     const list = (items || [])
@@ -627,13 +681,19 @@
     if (!top.length){
       hotSection.style.display = 'none';
       hotListEl.innerHTML = '';
+      const toggle = resolveHotToggle();
+      if (toggle) toggle.hidden = true;
       return;
     }
     hotSection.style.display = '';
+    const toggle = resolveHotToggle();
+    if (toggle) toggle.hidden = false;
     hotListEl.innerHTML = '';
     top.forEach(service=>{
       hotListEl.appendChild(buildServiceCard(service, { hot:true }));
     });
+    bindHotToggle();
+    applyHotToggleByMedia();
     updateLimitedCountdowns(hotListEl);
     scheduleLimitedTimer();
   }
