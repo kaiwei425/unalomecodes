@@ -346,6 +346,25 @@ html,body{
 }
   .empty{opacity:.85;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:14px;margin-top:12px;background:var(--card)}
   .footer{margin:28px 0 8px;color:var(--muted);font-size:12px;text-align:center}
+  .footer-contact{display:grid;gap:2px;justify-items:center}
+  .footer-social{display:flex;justify-content:center;gap:10px;margin-top:8px}
+  .footer-social .social-icon{
+    width:30px;height:30px;border-radius:999px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid #e2e8f0;color:#1f2937;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .footer-social .social-icon:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.12)}
+  .footer-social svg{width:16px;height:16px;display:block;fill:currentColor}
+  .footer-payments{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px}
+  .footer-payments .pay-chip{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:4px 10px;border-radius:999px;border:1px solid #e2e8f0;
+    background:#fff;font-weight:700;font-size:12px;letter-spacing:.4px;
+    color:#0f172a;
+  }
+  .footer-payments .pay-chip.visa{color:#1a237e}
+  .footer-payments .pay-chip.ecpay{color:#0f9d58}
 
   /* 詳情 Dialog（白底） */
   dialog{border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--fg);max-width:920px;width:96%;box-shadow:0 18px 60px rgba(15,23,42,.25);}
