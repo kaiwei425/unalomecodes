@@ -286,6 +286,43 @@ async function maybeSendOrderQnaEmail(env, opts){
     return result;
   }
 }
+
+function getQnaMetaStore(env, fallback){
+  return env.QNA_META || env.ORDERS || env.SERVICE_ORDERS || fallback || null;
+}
+
+async function getAdminQnaUnread(env, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store) return 0;
+  try{
+    const raw = await store.get('QNA_META:ADMIN_UNREAD');
+    const num = Number(raw || 0);
+    return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0;
+  }catch(_){
+    return 0;
+  }
+}
+
+async function incrementAdminQnaUnread(env, fallback, delta){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store) return 0;
+  const add = Number(delta || 1) || 1;
+  const current = await getAdminQnaUnread(env, store);
+  const next = Math.max(0, current + add);
+  try{
+    await store.put('QNA_META:ADMIN_UNREAD', String(next));
+  }catch(_){}
+  return next;
+}
+
+async function clearAdminQnaUnread(env, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store) return 0;
+  try{
+    await store.put('QNA_META:ADMIN_UNREAD', '0');
+  }catch(_){}
+  return 0;
+}
 function redactOrderForPublic(order){
   const out = Object.assign({}, order || {});
   if (out.buyer){
@@ -3195,6 +3232,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       };
       items.push(item);
       await saveOrderQna(store, orderId, items);
+      if (role === 'user') {
+        await incrementAdminQnaUnread(env, store, 1);
+      }
 
       try{
         const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
@@ -3276,6 +3316,26 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       items.splice(idx, 1);
       await saveOrderQna(store, orderId, items);
       return json({ ok:true });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/admin/qna/unread') {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+    if (request.method === 'GET') {
+      const unread = await getAdminQnaUnread(env, env.ORDERS || env.SERVICE_ORDERS || null);
+      return json({ ok:true, unread });
+    }
+    if (request.method === 'POST') {
+      let body = {};
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      const action = String(body.action || body.mode || '').toLowerCase();
+      if (action === 'clear' || action === 'reset' || action === 'read') {
+        const unread = await clearAdminQnaUnread(env, env.ORDERS || env.SERVICE_ORDERS || null);
+        return json({ ok:true, unread });
+      }
+      return json({ ok:false, error:'invalid action' }, 400);
     }
     return json({ ok:false, error:'method not allowed' }, 405);
   }

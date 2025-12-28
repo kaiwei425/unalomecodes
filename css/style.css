@@ -223,6 +223,26 @@ html,body{
   font-weight:800;
   font-size:14px;
 }
+.member-menu-panel a.qna-link{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.member-menu-panel .qna-badge{
+  min-width:18px;
+  height:18px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#ef4444;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.member-menu-panel .qna-badge.show{display:inline-flex;}
 .member-menu-panel a:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
 
   /* 商品格 */

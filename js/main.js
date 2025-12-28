@@ -278,6 +278,9 @@ document.addEventListener('click', function(e){
   const saveBtn = document.getElementById('profileSave');
   const closeBtn = document.getElementById('profileClose');
   const statusEl = document.getElementById('profileStatus');
+  const qnaLink = panel ? panel.querySelector('#adminQnaLink') : null;
+  const qnaBadge = document.getElementById('adminQnaBadge');
+  let qnaTimer = null;
 
   async function openProfile(){
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
@@ -367,6 +370,66 @@ document.addEventListener('click', function(e){
     document.addEventListener('click', (ev)=>{
       if (!panel.contains(ev.target) && ev.target !== toggle){
         close();
+      }
+    });
+  }
+
+  function setQnaBadge(count){
+    if (!qnaBadge) return;
+    const num = Number(count || 0) || 0;
+    if (num > 0){
+      qnaBadge.textContent = String(num);
+      qnaBadge.classList.add('show');
+    }else{
+      qnaBadge.textContent = '0';
+      qnaBadge.classList.remove('show');
+    }
+  }
+
+  async function refreshQnaUnread(){
+    if (!qnaBadge) return;
+    try{
+      const res = await fetch('/api/admin/qna/unread', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        setQnaBadge(0);
+        return;
+      }
+      setQnaBadge(data.unread || 0);
+    }catch(_){
+      setQnaBadge(0);
+    }
+  }
+
+  async function clearQnaUnread(){
+    try{
+      await fetch('/api/admin/qna/unread', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({ action:'clear' })
+      });
+    }catch(_){}
+    setQnaBadge(0);
+  }
+
+  if (qnaLink){
+    qnaLink.addEventListener('click', ()=>{
+      clearQnaUnread();
+    });
+  }
+
+  if (window.authState && typeof window.authState.onAdmin === 'function'){
+    window.authState.onAdmin(isAdmin=>{
+      if (!qnaLink || !qnaBadge) return;
+      if (isAdmin){
+        refreshQnaUnread();
+        if (qnaTimer) clearInterval(qnaTimer);
+        qnaTimer = setInterval(refreshQnaUnread, 60000);
+      }else{
+        setQnaBadge(0);
+        if (qnaTimer) clearInterval(qnaTimer);
+        qnaTimer = null;
       }
     });
   }

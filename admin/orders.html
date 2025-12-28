@@ -366,6 +366,16 @@ async function loadOrders(){
   render();
 }
 
+async function clearQnaUnread(){
+  try{
+    await authedFetch('/api/admin/qna/unread', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'clear' })
+    });
+  }catch(_){}
+}
+
 function applyFilter(){
   const q  = $('#q').value.trim().toLowerCase();
   const st = $('#statusSel').value;
@@ -1037,7 +1047,10 @@ async function ensureAdminSession(){
 async function boot(){
   try{
     setActiveTab(activeTab);
-    if (await ensureAdminSession()) loadOrders();
+    if (await ensureAdminSession()){
+      clearQnaUnread();
+      loadOrders();
+    }
   }catch(e){ console.error('init loadOrders error', e); }
 }
 if (document.readyState === 'loading'){

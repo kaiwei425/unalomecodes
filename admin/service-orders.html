@@ -312,9 +312,20 @@
       const data = await authedFetch('/api/service/orders');
       orders = Array.isArray(data.items) ? data.items : [];
       render();
+      clearQnaUnread();
     }catch(err){
       bodyEl.innerHTML = `<div class="muted">載入失敗：${err.message}</div>`;
     }
+  }
+
+  async function clearQnaUnread(){
+    try{
+      await authedFetch('/api/admin/qna/unread', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'clear' })
+      });
+    }catch(_){}
   }
   bodyEl.addEventListener('click', async (e)=>{
     const btn = e.target.closest('button[data-act]');
