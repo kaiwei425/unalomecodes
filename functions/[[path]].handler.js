@@ -3249,6 +3249,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           const spec = it.spec ? `（${it.spec}）` : '';
           return `${it.name}${spec} × ${it.qty}`;
         }).join('、') || (order?.serviceName || order?.productName || '');
+        const emailName = role === 'admin' ? '賣家' : name;
         const esc = (val)=>{
           const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
           return String(val || '').replace(/[&<>"']/g, m => map[m] || m);
@@ -3260,7 +3261,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
               <p>訂單編號：${esc(orderId)}</p>
               ${itemsList ? `<p>商品：${esc(itemsList)}</p>` : ''}
               <div style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-                <p style="margin:0 0 6px;"><strong>留言人：</strong>${esc(name)}</p>
+                <p style="margin:0 0 6px;"><strong>留言人：</strong>${esc(emailName)}</p>
                 <p style="margin:0;"><strong>內容：</strong><br>${esc(text)}</p>
               </div>
             </div>
@@ -3271,14 +3272,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             to: adminTo,
             subject: `[${siteName}] 訂單新留言 ${orderId}`,
             html: htmlBase,
-            text: `${siteName} 訂單新留言\n訂單編號：${orderId}\n商品：${itemsList}\n留言人：${name}\n內容：${text}\n管理頁：${orderLinkAdmin}`
+            text: `${siteName} 訂單新留言\n訂單編號：${orderId}\n商品：${itemsList}\n留言人：${emailName}\n內容：${text}\n管理頁：${orderLinkAdmin}`
           });
         }else if (buyerEmail){
           await maybeSendOrderQnaEmail(env, {
             to: [buyerEmail],
             subject: `[${siteName}] 訂單回覆 ${orderId}`,
             html: htmlBase,
-            text: `${siteName} 訂單回覆\n訂單編號：${orderId}\n商品：${itemsList}\n客服回覆：${text}\n查詢訂單：${orderLinkCustomer}`
+            text: `${siteName} 訂單回覆\n訂單編號：${orderId}\n商品：${itemsList}\n回覆人：${emailName}\n內容：${text}\n查詢訂單：${orderLinkCustomer}`
           });
         }
       }catch(_){}
