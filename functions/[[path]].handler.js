@@ -7645,9 +7645,9 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     const toList = (env.STORY_NOTIFY_EMAIL || '')
       .split(',')
       .map(s => s.trim())
-      .filter(Boolean);
+      .filter(s => s && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
     const fallbackTo = 'bkkaiwei@gmail.com';
-    const finalTo = toList.length ? toList : [fallbackTo];
+    const finalTo = Array.from(new Set([fallbackTo, ...toList]));
     if (!apiKey || !fromDefault || !finalTo.length) {
       return;
     }
