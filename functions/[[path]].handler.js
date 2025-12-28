@@ -26,7 +26,7 @@ const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key',
   'Cache-Control': 'no-store'
 };
 
@@ -276,6 +276,20 @@ async function requireAdminWrite(request, env){
     return new Response(JSON.stringify({ ok:false, error:'Forbidden origin' }), { status:403, headers: jsonHeadersFor(request, env) });
   }
   return null;
+}
+async function requireCronOrAdmin(request, env){
+  if (await isAdmin(request, env)) return null;
+  const secret = String(env.CRON_SECRET || env.CRON_KEY || env.ADMIN_CRON_KEY || '').trim();
+  if (!secret) {
+    return new Response(JSON.stringify({ ok:false, error:'Cron key not configured' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  const h = (request.headers.get('x-cron-key') || request.headers.get('X-Cron-Key') || '').trim();
+  let q = '';
+  try{
+    q = new URL(request.url).searchParams.get('key') || '';
+  }catch(_){}
+  if (h === secret || q === secret) return null;
+  return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
 }
 async function verifyLineIdToken(idToken, env){
   if (!idToken || !env || !env.LINE_CHANNEL_ID) return null;
@@ -2527,7 +2541,7 @@ function __headersJSON__() {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key',
     'Cache-Control': 'no-store'
   };
 }
@@ -4570,6 +4584,104 @@ async function releaseOrderResources(env, order){
   }
   return changed;
 }
+function parseOrderTimestamp(order){
+  const ts = Date.parse(order?.createdAt || order?.payment?.createdAt || order?.updatedAt || '');
+  return Number.isNaN(ts) ? 0 : ts;
+}
+function resolveOrderHoldTtlSec(order, env){
+  const fallback = Number(env.ORDER_HOLD_TTL_SEC || 86400) || 86400;
+  const creditTtl = Number(env.CC_ORDER_HOLD_TTL_SEC || env.CC_COUPON_HOLD_TTL_SEC || 1800) || 1800;
+  const bankTtl = Number(env.BANK_ORDER_HOLD_TTL_SEC || env.ORDER_HOLD_TTL_SEC || 72 * 3600) || (72 * 3600);
+  const method = String(order?.method || '').toLowerCase();
+  if (method.includes('信用卡') || method.includes('綠界') || method.includes('credit') || order?.payment?.gateway === 'ecpay') {
+    return creditTtl;
+  }
+  if (method.includes('轉帳') || method.includes('匯款') || method.includes('bank')) {
+    return bankTtl;
+  }
+  return fallback;
+}
+function isWaitingVerifyStatus(status){
+  const v = normalizeStatus(status);
+  if (!v) return false;
+  if (v === 'waiting_verify') return true;
+  return v.includes('待確認') || v.includes('待查帳');
+}
+function isHoldReleaseCandidate(order, includeWaitingVerify){
+  if (!order || order.type === 'service') return false;
+  const status = normalizeStatus(order.status || '');
+  if (!status) return true;
+  if (statusIsPaid(status)) return false;
+  if (!includeWaitingVerify && isWaitingVerifyStatus(status)) return false;
+  return true;
+}
+export async function releaseExpiredOrderHolds(env, opts = {}){
+  if (!env || !env.ORDERS) {
+    return { ok:false, error:'ORDERS KV not bound' };
+  }
+  const now = Number(opts.now || Date.now());
+  const dryRun = !!opts.dryRun;
+  const includeWaitingVerify = opts.includeWaitingVerify === true
+    || String(env.ORDER_RELEASE_INCLUDE_WAITING_VERIFY || '') === '1';
+  const maxScan = Math.min(Number(opts.limit || env.ORDER_RELEASE_LIMIT || 300) || 300, 1000);
+  let ids = [];
+  try{
+    const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
+    ids = idxRaw ? JSON.parse(idxRaw) : [];
+    if (!Array.isArray(ids)) ids = [];
+  }catch(_){ ids = []; }
+  let scanned = 0;
+  let expired = 0;
+  let released = 0;
+  let updated = 0;
+  for (const id of ids){
+    if (maxScan && scanned >= maxScan) break;
+    scanned++;
+    const raw = await env.ORDERS.get(id);
+    if (!raw) continue;
+    let order = null;
+    try{ order = JSON.parse(raw); }catch(_){ order = null; }
+    if (!order) continue;
+    const status = normalizeStatus(order.status || '');
+    if (statusIsPaid(status)) continue;
+    if (statusIsCanceled(status)) {
+      const changed = await releaseOrderResources(env, order);
+      if (changed && !dryRun) {
+        order.updatedAt = new Date().toISOString();
+        await env.ORDERS.put(id, JSON.stringify(order));
+        updated++;
+      }
+      if (changed) released++;
+      continue;
+    }
+    if (!isHoldReleaseCandidate(order, includeWaitingVerify)) continue;
+    const createdTs = parseOrderTimestamp(order);
+    if (!createdTs) continue;
+    const ttlSec = resolveOrderHoldTtlSec(order, env);
+    if (now - createdTs < ttlSec * 1000) continue;
+    expired++;
+    const changed = await releaseOrderResources(env, order);
+    const expireStatus = '付款逾期';
+    let statusChanged = false;
+    if (expireStatus && order.status !== expireStatus) {
+      order.status = expireStatus;
+      statusChanged = true;
+    }
+    order.cancelReason = order.cancelReason || 'hold_expired';
+    order.cancelledAt = order.cancelledAt || new Date().toISOString();
+    if (order.payment && order.payment.status !== 'PAID') {
+      order.payment.status = 'EXPIRED';
+      order.payment.expiredAt = new Date().toISOString();
+    }
+    if ((changed || statusChanged) && !dryRun) {
+      order.updatedAt = new Date().toISOString();
+      await env.ORDERS.put(id, JSON.stringify(order));
+      updated++;
+    }
+    if (changed || statusChanged) released++;
+  }
+  return { ok:true, scanned, expired, released, updated, dryRun };
+}
 // CORS/預檢
 if (request.method === 'OPTIONS') {
   return new Response(null, {
@@ -5575,6 +5687,24 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     } catch (e) {
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeadersFor(request, env) });
   }
+}
+
+if ((pathname === '/api/admin/cron/release-holds' || pathname === '/api/cron/release-holds') && (request.method === 'POST' || request.method === 'GET')) {
+  {
+    const guard = await requireCronOrAdmin(request, env);
+    if (guard) return guard;
+  }
+  let body = {};
+  if (request.method === 'POST') {
+    try{ body = await request.json(); }catch(_){ body = {}; }
+  }
+  const limit = Number(body.limit || url.searchParams.get('limit') || env.ORDER_RELEASE_LIMIT || 300);
+  const dryRun = String(body.dryRun || url.searchParams.get('dry') || '').toLowerCase() === 'true'
+    || String(body.dryRun || url.searchParams.get('dry') || '') === '1';
+  const includeWaitingVerify = String(body.includeWaitingVerify || url.searchParams.get('includeWaitingVerify') || '').toLowerCase() === 'true'
+    || String(body.includeWaitingVerify || url.searchParams.get('includeWaitingVerify') || '') === '1';
+  const result = await releaseExpiredOrderHolds(env, { limit, dryRun, includeWaitingVerify });
+  return new Response(JSON.stringify(result), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
 if (pathname === '/api/service/products' && request.method === 'GET') {

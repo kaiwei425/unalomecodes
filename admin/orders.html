@@ -86,6 +86,7 @@
         <option value="已完成訂單">已完成訂單</option>
         <option value="付款失敗">付款失敗</option>
         <option value="付款金額不符">付款金額不符</option>
+        <option value="付款逾期">付款逾期</option>
         <option value="已取消">已取消</option>
       </select>
       <select id="sortSel"><option value="time_desc">時間：新 → 舊</option><option value="time_asc">時間：舊 → 新</option><option value="amt_desc">金額：高 → 低</option><option value="amt_asc">金額：低 → 高</option><option value="status">狀態</option></select>
@@ -98,6 +99,7 @@
       <button class="btn gold" id="markShipped">批次標記已出貨</button>
       <button class="btn gold" id="markDone">批次標記已完成訂單</button>
       <button class="btn danger" id="batchDelete">批次刪除</button>
+      <button class="btn" id="releaseHolds">手動釋放逾期</button>
       <button class="btn" id="exportCsv">匯出選取訂單（CSV）</button>
       <span class="muted">已選取 <span class="count" id="selCount">0</span> 筆</span>
     </div>
@@ -406,6 +408,7 @@ const items = Array.isArray(o.items) ? o.items : [{
           <option value="已完成訂單" ${String(o.status||"")=== "已完成訂單" ? "selected":""}>已完成訂單</option>
           <option value="付款失敗" ${String(o.status||"")=== "付款失敗" ? "selected":""}>付款失敗</option>
           <option value="付款金額不符" ${String(o.status||"")=== "付款金額不符" ? "selected":""}>付款金額不符</option>
+          <option value="付款逾期" ${String(o.status||"")=== "付款逾期" ? "selected":""}>付款逾期</option>
           <option value="已取消" ${String(o.status||"")=== "已取消" ? "selected":""}>已取消</option>
         </select>
         <button class="btn" data-act="applyStatus" data-id="${o.id}">套用</button>
@@ -637,6 +640,25 @@ $('#batchDelete').addEventListener('click', async ()=>{
   await loadOrders();
 });
 
+// Manual release expired holds
+$('#releaseHolds').addEventListener('click', async ()=>{
+  const ok = confirm('確定要釋放「逾期未付款」的訂單保留（庫存/優惠券）？');
+  if (!ok) return;
+  try{
+    const res = await authedFetch('/api/admin/cron/release-holds', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ dryRun:false })
+    });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
+    toast(`已釋放 ${Number(j.released||0)} 筆（掃描 ${Number(j.scanned||0)}）`);
+    await loadOrders();
+  }catch(err){
+    toast('釋放失敗：' + (err.message||err));
+  }
+});
+
 // Export selected to CSV (use backend API so金額/備註/憑證網址都正確)
 $('#exportCsv').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
@@ -700,7 +722,7 @@ function statusClass(s){
   if (!v) return '';
   if (v === 'pending' || v === '待付款' || v === 'waiting_verify') return 'status-pending';
   if (v.includes('付款失敗') || v.includes('金額不符')) return 'status-fail';
-  if (v.includes('取消') || v.includes('作廢') || v.includes('退款')) return 'status-cancel';
+  if (v.includes('取消') || v.includes('作廢') || v.includes('退款') || v.includes('逾期')) return 'status-cancel';
   if (v.includes('已付款')) return 'status-paid';
   if (v.includes('已寄件') || v.includes('已出貨')) return 'status-shipped';
   if (v.includes('已完成')) return 'status-done';
