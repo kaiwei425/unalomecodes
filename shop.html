@@ -212,12 +212,14 @@
       <div class="dlgIg" id="dlgInstagram" style="display:none;"></div>
     </div>
     <div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <div id="dlgName" style="font-weight:800;margin:2px 0 6px"></div>
-        <span class="chip" id="dlgChip"></span>
-        <span class="chip" id="dlgStock" style="display:none;"></span>
+      <div class="dlgTitleBlock">
+        <div id="dlgName" class="dlgName"></div>
+        <div class="dlgTags">
+          <span id="dlgDeity" class="dlgTag dlgTag--deity" style="display:none;"></span>
+          <span id="dlgChip" class="dlgTag dlgTag--sold"></span>
+          <span id="dlgStock" class="dlgTag dlgTag--stock" style="display:none;"></span>
+        </div>
       </div>
-      <div id="dlgDeity" style="font-size:13px;color:#6b7280;margin-bottom:6px"></div>
       <div id="dlgDesc" style="font-size:14px;white-space:pre-wrap;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:10px;max-height:220px;overflow:auto"></div>
 
       <div class="row" style="margin-top:10px">
@@ -1619,9 +1621,13 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
                 }
                 if (vStock === null){
                   stockEl.style.display = 'none';
+                  stockEl.classList.remove('ok','zero');
                 } else {
-                  stockEl.style.display = 'inline-block';
+                  stockEl.style.display = 'inline-flex';
                   stockEl.textContent = vStock > 0 ? ('庫存：' + vStock) : '庫存：0（已售完）';
+                  stockEl.classList.add('dlgTag','dlgTag--stock');
+                  stockEl.classList.toggle('ok', vStock > 0);
+                  stockEl.classList.toggle('zero', vStock <= 0);
                 }
               }
             }

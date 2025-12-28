@@ -289,8 +289,16 @@ html,body{
   dialog{border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--fg);max-width:920px;width:96%;box-shadow:0 18px 60px rgba(15,23,42,.25);}
   .closeBar{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(255,255,255,.2));border-radius:16px 16px 0 0;}
   .xbtn{appearance:none;background:rgba(15,23,42,.06);border:1px solid var(--line);color:#111;font-size:18px;cursor:pointer;border-radius:10px;width:34px;height:34px;display:grid;place-items:center;}
-  .dlgBody{display:grid;grid-template-columns:1fr;gap:18px;padding:16px}
-  @media(min-width:820px){.dlgBody{grid-template-columns:1fr 1fr}}
+.dlgBody{display:grid;grid-template-columns:1fr;gap:18px;padding:16px}
+@media(min-width:820px){.dlgBody{grid-template-columns:1fr 1fr}}
+.dlgTitleBlock{display:grid;gap:6px;margin:2px 0 6px}
+.dlgName{font-weight:800;font-size:18px;letter-spacing:.2px}
+.dlgTags{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dlgTag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #e2e8f0;background:#f8fafc;color:#0f172a}
+.dlgTag--deity{background:linear-gradient(135deg,#0f172a,#1f2937);border-color:#1f2937;color:#facc15}
+.dlgTag--sold{background:#fff7ed;border-color:#fed7aa;color:#c2410c}
+.dlgTag--stock.ok{background:#ecfdf3;border-color:#86efac;color:#166534}
+.dlgTag--stock.zero{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
   .bigBox{position:relative;background:#f8fafc;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
   .bigBox::before{content:"";display:block;padding-top:100%}
   .big{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;object-fit:contain}

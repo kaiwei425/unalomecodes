@@ -42,9 +42,25 @@ function openDetail(p){
 
   document.getElementById('dlgTitle').textContent = p.name;
   document.getElementById('dlgName').textContent = p.name;
-  const chipEl=document.getElementById('dlgChip'); chipEl.textContent = `已售出：${Number(p.sold||0)}`; chipEl.classList.add('badge');
+  const chipEl=document.getElementById('dlgChip');
+  if (chipEl){
+    chipEl.textContent = `已售出：${Number(p.sold||0)}`;
+    chipEl.classList.remove('badge');
+    chipEl.classList.add('dlgTag','dlgTag--sold');
+  }
   const stockEl = document.getElementById('dlgStock');
-  const dEl=document.getElementById('dlgDeity'); dEl.textContent=''; if(p.deity){ dEl.innerHTML = `<span class='badge'>${escapeHtml(p.deity)}</span>`; }
+  const dEl=document.getElementById('dlgDeity');
+  if (dEl){
+    const deityName = String(p.deity || '').trim();
+    if (deityName){
+      dEl.textContent = deityName;
+      dEl.style.display = 'inline-flex';
+      dEl.classList.add('dlgTag','dlgTag--deity');
+    }else{
+      dEl.textContent = '';
+      dEl.style.display = 'none';
+    }
+  }
   document.getElementById('dlgDesc').textContent = p.description || '';
 
   const big = document.getElementById('dlgBig');
@@ -113,9 +129,13 @@ function openDetail(p){
     if (stockEl){
       if (available === null){
         stockEl.style.display = 'none';
+        stockEl.classList.remove('ok','zero');
       } else {
-        stockEl.style.display = 'inline-block';
+        stockEl.style.display = 'inline-flex';
         stockEl.textContent = available > 0 ? `庫存：${available}` : '庫存：0（已售完）';
+        stockEl.classList.add('dlgTag','dlgTag--stock');
+        stockEl.classList.toggle('ok', available > 0);
+        stockEl.classList.toggle('zero', available <= 0);
       }
     }
     if (available !== null && available > 0){
