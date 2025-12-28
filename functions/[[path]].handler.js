@@ -6045,7 +6045,9 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
     const id = String(url.searchParams.get('id'));
     const raw = await store.get(id);
     if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
-    return new Response(JSON.stringify({ ok:true, item: JSON.parse(raw) }), { status:200, headers: jsonHeaders });
+    const item = JSON.parse(raw);
+    await autoDeactivateExpiredItem(store, item, id, nowMs);
+    return new Response(JSON.stringify({ ok:true, item }), { status:200, headers: jsonHeaders });
   }
   let list = [];
   try{
@@ -6068,6 +6070,7 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
     try{
       const obj = JSON.parse(raw);
       if (!obj.id) obj.id = key;
+      await autoDeactivateExpiredItem(store, obj, key, nowMs);
       items.push(obj);
     }catch(_){}
   }
@@ -6940,6 +6943,7 @@ async function listProducts(url, env) {
 
     // 使用智慧分類函式來補全或修正舊資料的分類
     p.category = inferCategory(p);
+    await autoDeactivateExpiredItem(env.PRODUCTS, p, `PRODUCT:${id}`, nowMs);
     if (active === "true" && p.active !== true) continue;
     if (active === "true" && isLimitedExpired(p, nowMs)) continue;
     // 分類篩選
@@ -6980,7 +6984,9 @@ async function createProduct(request, env) {
 async function getProduct(id, env) {
   const raw = await env.PRODUCTS.get(`PRODUCT:${id}`);
   if (!raw) return withCORS(json({ ok:false, error:"Not found" }, 404));
-  return withCORS(json({ ok:true, product: JSON.parse(raw) }));
+  const product = JSON.parse(raw);
+  await autoDeactivateExpiredItem(env.PRODUCTS, product, `PRODUCT:${id}`, Date.now());
+  return withCORS(json({ ok:true, product }));
 }
 
 // 編輯商品時，若前端傳送 category，會一併存入
@@ -7187,6 +7193,20 @@ function isLimitedExpired(item, nowMs){
   const ts = parseLimitedUntil(item && item.limitedUntil);
   if (!ts) return false;
   return ts <= nowMs;
+}
+
+async function autoDeactivateExpiredItem(store, item, key, nowMs){
+  if (!store || !item || item.active === false) return false;
+  if (!isLimitedExpired(item, nowMs)) return false;
+  try{
+    const next = Object.assign({}, item, { active:false, updatedAt: new Date().toISOString() });
+    await store.put(key, JSON.stringify(next));
+    Object.assign(item, next);
+    return true;
+  }catch(err){
+    console.error('autoDeactivateExpiredItem failed', err);
+  }
+  return false;
 }
 
 function normalizeProduct(body, nowIso) {
