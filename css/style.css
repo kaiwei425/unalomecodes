@@ -354,25 +354,24 @@ html,body{
     justify-items:center;
     align-items:center;
     margin:0 auto 10px;
-    max-width:240px;
+    max-width:260px;
   }
   @media(max-width:420px){
     .footer-logos{grid-template-columns:repeat(4,1fr);max-width:260px;}
   }
   .footer-logos .logo-item{
-    width:36px;height:36px;border-radius:999px;
+    width:44px;height:44px;border-radius:12px;
     display:inline-flex;align-items:center;justify-content:center;
     background:#fff;border:1px solid #e2e8f0;color:#1f2937;
     transition:transform .15s ease, box-shadow .15s ease;
   }
   .footer-logos .logo-item:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.12)}
-  .footer-logos svg{width:18px;height:18px;display:block;fill:currentColor}
-  .footer-logos .logo-text{
-    width:auto;min-width:64px;height:32px;border-radius:999px;
-    padding:0 10px;font-weight:700;font-size:12px;letter-spacing:.4px;
+  .footer-logos img{
+    width:100%;height:100%;
+    object-fit:contain;
+    padding:6px;
+    display:block;
   }
-  .footer-logos .logo-text.visa{color:#1a237e}
-  .footer-logos .logo-text.ecpay{color:#0f9d58}
 
   /* 詳情 Dialog（白底） */
   dialog{border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--fg);max-width:920px;width:96%;box-shadow:0 18px 60px rgba(15,23,42,.25);}

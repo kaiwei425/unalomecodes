@@ -7638,6 +7638,68 @@ function normalizeStoryImageUrl(raw, requestUrl, env){
   return url.toString();
 }
 
+async function maybeSendStoryEmail(env, item, requestUrl){
+  try{
+    const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
+    const fromDefault = (env.STORY_EMAIL_FROM || env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
+    const toList = (env.STORY_NOTIFY_EMAIL || env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (!apiKey || !fromDefault || !toList.length) {
+      return;
+    }
+    const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+    let origin = '';
+    try{ origin = new URL(requestUrl).origin; }catch(_){}
+    const base = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const adminLink = `${base}/admin/code-viewer.html?code=${encodeURIComponent(item.code || '')}`;
+    const nick = String(item.nick || '訪客').trim();
+    const msg = String(item.msg || '').trim();
+    const ts = item.ts ? new Date(item.ts).toLocaleString('zh-TW', { hour12:false }) : '';
+    const imageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || base;
+    const imgUrl = item.imageUrl ? rewriteEmailImageUrl(item.imageUrl, imageHost) : '';
+    const esc = escapeHtmlEmail;
+    const subject = `[${siteName}] 新留言通知：${nick}`;
+    const html = `
+      <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px;background:#f5f7fb;">
+        <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;">
+          <p style="margin:0 0 12px;font-weight:700;font-size:18px;">${esc(siteName)}</p>
+          <p>收到一則新的商品留言：</p>
+          <div style="padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+            <p style="margin:0 0 6px;"><strong>留言人：</strong>${esc(nick)}</p>
+            ${ts ? `<p style="margin:0 0 6px;"><strong>時間：</strong>${esc(ts)}</p>` : ''}
+            <p style="margin:0 0 6px;"><strong>代碼：</strong>${esc(item.code || '')}</p>
+            <p style="margin:0;"><strong>內容：</strong><br>${esc(msg)}</p>
+          </div>
+          ${imgUrl ? `<div style="margin-top:14px;"><a href="${esc(imgUrl)}" target="_blank" rel="noopener">查看留言圖片</a></div>` : ''}
+          <div style="margin-top:16px;">
+            <a href="${esc(adminLink)}" target="_blank" rel="noopener" style="display:inline-block;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;text-decoration:none;font-weight:700;font-size:13px;">前往留言管理</a>
+          </div>
+        </div>
+      </div>
+    `;
+    const text = [
+      `${siteName} 新留言通知`,
+      `留言人：${nick}`,
+      ts ? `時間：${ts}` : '',
+      `代碼：${item.code || ''}`,
+      `內容：${msg}`,
+      imgUrl ? `圖片：${imgUrl}` : '',
+      `管理連結：${adminLink}`
+    ].filter(Boolean).join('\n');
+    await sendEmailMessage(env, {
+      from: fromDefault,
+      to: toList,
+      subject,
+      html,
+      text
+    });
+  }catch(err){
+    console.error('[mail] story notify failed', err);
+  }
+}
+
 async function createStory(request, env){
   try{
     const reqUrl = new URL(request.url);
@@ -7692,6 +7754,7 @@ async function createStory(request, env){
     ids.unshift(id);
     if (ids.length > 300) ids.length = 300;
     await env.STORIES.put(idxKey, JSON.stringify(ids));
+    await maybeSendStoryEmail(env, item, request.url);
     return withCORS(json({ok:true, item}));
   }catch(e){
     return withCORS(json({ok:false, error:String(e)}, 500));
