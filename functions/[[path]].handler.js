@@ -7639,6 +7639,7 @@ function normalizeStoryImageUrl(raw, requestUrl, env){
 }
 
 async function maybeSendStoryEmail(env, item, requestUrl){
+  const result = { ok:false, skipped:false, error:'' };
   try{
     const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
     const fromDefault = (env.STORY_EMAIL_FROM || env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
@@ -7649,7 +7650,9 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     const fallbackTo = 'bkkaiwei@gmail.com';
     const finalTo = Array.from(new Set([fallbackTo, ...toList]));
     if (!apiKey || !fromDefault || !finalTo.length) {
-      return;
+      result.skipped = true;
+      console.log('[mail] story notify skipped', { hasApiKey: !!apiKey, fromDefault, toCount: finalTo.length });
+      return result;
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     let origin = '';
@@ -7697,8 +7700,12 @@ async function maybeSendStoryEmail(env, item, requestUrl){
       html,
       text
     });
+    result.ok = true;
+    return result;
   }catch(err){
     console.error('[mail] story notify failed', err);
+    result.error = String(err && err.message || err);
+    return result;
   }
 }
 
@@ -7756,8 +7763,8 @@ async function createStory(request, env){
     ids.unshift(id);
     if (ids.length > 300) ids.length = 300;
     await env.STORIES.put(idxKey, JSON.stringify(ids));
-    await maybeSendStoryEmail(env, item, request.url);
-    return withCORS(json({ok:true, item}));
+    const mail = await maybeSendStoryEmail(env, item, request.url);
+    return withCORS(json({ok:true, item, mail}));
   }catch(e){
     return withCORS(json({ok:false, error:String(e)}, 500));
   }
