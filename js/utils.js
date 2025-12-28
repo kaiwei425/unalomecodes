@@ -66,3 +66,52 @@ function copyToClipboard(text){
 }
 
 function escapeHtml(s=''){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+function parseLimitedUntil(raw){
+  try{
+    const val = String(raw || '').trim();
+    if (!val) return null;
+    const ts = Date.parse(val);
+    return Number.isFinite(ts) ? ts : null;
+  }catch(_){
+    return null;
+  }
+}
+
+function isLimitedExpired(raw){
+  const ts = parseLimitedUntil(raw);
+  if (!ts) return false;
+  return Date.now() >= ts;
+}
+
+function formatRemainingTime(ms){
+  if (!Number.isFinite(ms)) return '';
+  if (ms <= 0) return '已結束';
+  const totalMinutes = Math.ceil(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}天${hours}小時`;
+  if (hours > 0) return `${hours}小時${minutes}分`;
+  return `${minutes}分`;
+}
+
+function formatLimitedLabel(ts){
+  const text = formatRemainingTime(ts - Date.now());
+  return text === '已結束' ? '已結束' : `剩餘：${text}`;
+}
+
+function updateLimitedCountdowns(root){
+  try{
+    const scope = root || document;
+    const nodes = scope.querySelectorAll('[data-limited-until]');
+    if (!nodes.length) return;
+    const now = Date.now();
+    nodes.forEach(node=>{
+      const ts = Number(node.getAttribute('data-limited-until'));
+      if (!Number.isFinite(ts) || ts <= 0) return;
+      const text = formatRemainingTime(ts - now);
+      node.textContent = text === '已結束' ? '已結束' : `剩餘：${text}`;
+    });
+  }catch(_){}
+}

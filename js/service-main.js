@@ -1,6 +1,8 @@
 (() => {
   const listEl = document.getElementById('svcList');
   const emptyEl = document.getElementById('svcListEmpty');
+  const hotSection = document.getElementById('svcHotSection');
+  const hotListEl = document.getElementById('svcHotList');
   const lookupTriggers = Array.from(document.querySelectorAll('#svcLookupBtn, #linkServiceLookup'));
   const lookupDialog = document.getElementById('svcLookup');
   const lookupClose = document.getElementById('svcLookupClose');
@@ -19,6 +21,8 @@
   const detailAddBtn = document.getElementById('svcDetailAddCart');
   const detailHero = document.getElementById('svcDetailHero');
   const detailOptionsWrap = document.getElementById('svcDetailOptionsWrap');
+  const detailLimited = document.getElementById('svcDetailLimited');
+  const detailRemaining = document.getElementById('svcDetailRemaining');
   const reviewListEl = document.getElementById('svcRvList');
   const reviewNickInput = document.getElementById('svcRvNick');
   const reviewTextInput = document.getElementById('svcRvText');
@@ -92,6 +96,7 @@
   let lastCartSnapshot = [];
   let lastOrderResult = null;
   let lastRemitLast5 = '';
+  let limitedTimer = null;
   const RECEIPT_MAX_SIZE = 20 * 1024 * 1024;
   const BANK_INFO = {
     name: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-name') || checkoutDialog.dataset.bankName || '中國信託 (822)') : '中國信託 (822)',
@@ -220,6 +225,50 @@
       if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
     }catch(_){}
     return '';
+  }
+  function parseLimitedUntil(raw){
+    try{
+      const val = String(raw || '').trim();
+      if (!val) return null;
+      const ts = Date.parse(val);
+      return Number.isFinite(ts) ? ts : null;
+    }catch(_){
+      return null;
+    }
+  }
+  function isLimitedExpired(raw){
+    const ts = parseLimitedUntil(raw);
+    if (!ts) return false;
+    return Date.now() >= ts;
+  }
+  function formatRemainingTime(ms){
+    if (!Number.isFinite(ms)) return '';
+    if (ms <= 0) return '已結束';
+    const totalMinutes = Math.ceil(ms / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return `${days}天${hours}小時`;
+    if (hours > 0) return `${hours}小時${minutes}分`;
+    return `${minutes}分`;
+  }
+  function formatLimitedLabel(ts){
+    const text = formatRemainingTime(ts - Date.now());
+    return text === '已結束' ? '已結束' : `剩餘：${text}`;
+  }
+  function updateLimitedCountdowns(root){
+    try{
+      const scope = root || document;
+      const nodes = scope.querySelectorAll('[data-limited-until]');
+      if (!nodes.length) return;
+      const now = Date.now();
+      nodes.forEach(node=>{
+        const ts = Number(node.getAttribute('data-limited-until'));
+        if (!Number.isFinite(ts) || ts <= 0) return;
+        const text = formatRemainingTime(ts - now);
+        node.textContent = text === '已結束' ? '已結束' : `剩餘：${text}`;
+      });
+    }catch(_){}
   }
   function normalizeOrderSuffix(val){
     return String(val||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-5);
@@ -505,7 +554,7 @@
 
   async function fetchServices(){
     try{
-      const res = await fetch('/api/service/products', { cache:'no-store' });
+      const res = await fetch('/api/service/products?active=true', { cache:'no-store' });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'error');
       return Array.isArray(data.items) ? data.items : [];
@@ -515,9 +564,83 @@
     }
   }
 
+  function getLimitedInfo(item){
+    const ts = parseLimitedUntil(item && item.limitedUntil);
+    if (!ts) return null;
+    return { ts, label: formatLimitedLabel(ts) };
+  }
+
+  function buildLimitedRow(item, labelText){
+    const info = getLimitedInfo(item);
+    if (!info) return '';
+    return `
+      <div class="meta meta-limited">
+        <span class="badge badge-limited">${labelText}</span>
+        <span class="badge badge-remaining" data-limited-until="${info.ts}">${info.label}</span>
+      </div>
+    `;
+  }
+
+  function buildServiceCard(service, opts = {}){
+    const sid = resolveServiceId(service);
+    if (!service.id && sid) service.id = sid;
+    const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
+    const sold = Number(service.sold || 0);
+    const limitedRow = buildLimitedRow(service, '限時服務');
+    const card = document.createElement('div');
+    card.className = 'card service-card' + (opts.hot ? ' hot-card' : '');
+    card.innerHTML = `
+      <div class="pic">${sanitizeImageUrl(cover) ? `<img src="${escapeHtml(sanitizeImageUrl(cover))}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
+      <div class="body">
+        <div class="name">${escapeHtml(service.name||'服務')}</div>
+        ${limitedRow}
+        <div class="meta"><span class="badge badge-sold">已售出：${sold}</span></div>
+        <div class="price">${formatTWD(service.price)}</div>
+        <div class="cta">
+          <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
+        </div>
+      </div>
+    `;
+    const btn = card.querySelector('button[data-service]');
+    if (btn){
+      btn.addEventListener('click', () => openServiceDetail(service));
+    }
+    return card;
+  }
+
+  function scheduleLimitedTimer(){
+    if (limitedTimer) return;
+    limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
+  }
+
+  function renderHotServices(items){
+    if (!hotSection || !hotListEl) return;
+    const list = (items || [])
+      .filter(it => it && it.active !== false && !isLimitedExpired(it.limitedUntil))
+      .filter(it => Number(it.sold||0) > 0);
+    list.sort((a,b)=>{
+      const diff = Number(b.sold||0) - Number(a.sold||0);
+      if (diff !== 0) return diff;
+      return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
+    });
+    const top = list.slice(0, 6);
+    if (!top.length){
+      hotSection.style.display = 'none';
+      hotListEl.innerHTML = '';
+      return;
+    }
+    hotSection.style.display = '';
+    hotListEl.innerHTML = '';
+    top.forEach(service=>{
+      hotListEl.appendChild(buildServiceCard(service, { hot:true }));
+    });
+    updateLimitedCountdowns(hotListEl);
+    scheduleLimitedTimer();
+  }
+
   function renderList(items){
     if (!listEl) return;
-    const activeItems = items.filter(it => it && it.active !== false);
+    const activeItems = items.filter(it => it && it.active !== false && !isLimitedExpired(it.limitedUntil));
     listEl.innerHTML = '';
     if (!activeItems.length){
       const placeholder = document.createElement('div');
@@ -528,29 +651,10 @@
       return;
     }
     activeItems.forEach(service => {
-      const sid = resolveServiceId(service);
-      if (!service.id && sid) service.id = sid;
-      const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
-      const sold = Number(service.sold || 0);
-      const card = document.createElement('div');
-      card.className = 'card service-card';
-      card.innerHTML = `
-        <div class="pic">${sanitizeImageUrl(cover) ? `<img src="${escapeHtml(sanitizeImageUrl(cover))}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
-        <div class="body">
-          <div class="name">${escapeHtml(service.name||'服務')}</div>
-          <div class="meta"><span class="badge">已售出：${sold}</span></div>
-          <div class="price">${formatTWD(service.price)}</div>
-          <div class="cta">
-            <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
-          </div>
-        </div>
-      `;
-      const btn = card.querySelector('button[data-service]');
-      if (btn){
-        btn.addEventListener('click', () => openServiceDetail(service));
-      }
-      listEl.appendChild(card);
+      listEl.appendChild(buildServiceCard(service));
     });
+    updateLimitedCountdowns(listEl);
+    scheduleLimitedTimer();
   }
 
   function populateVariantSelect(service){
@@ -593,6 +697,32 @@
     lastDetailService = service;
     if (detailTitle) detailTitle.textContent = service.name || '服務';
     if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
+    const limitedTs = parseLimitedUntil(service && service.limitedUntil);
+    const limitedExpired = limitedTs ? Date.now() >= limitedTs : false;
+    if (detailLimited){
+      if (limitedTs){
+        detailLimited.textContent = '限時服務';
+        detailLimited.style.display = 'inline-flex';
+      }else{
+        detailLimited.textContent = '';
+        detailLimited.style.display = 'none';
+      }
+    }
+    if (detailRemaining){
+      if (limitedTs){
+        detailRemaining.textContent = formatLimitedLabel(limitedTs);
+        detailRemaining.setAttribute('data-limited-until', String(limitedTs));
+        detailRemaining.style.display = 'inline-flex';
+      }else{
+        detailRemaining.textContent = '';
+        detailRemaining.removeAttribute('data-limited-until');
+        detailRemaining.style.display = 'none';
+      }
+    }
+    if (detailAddBtn){
+      detailAddBtn.disabled = !!limitedExpired;
+      detailAddBtn.textContent = limitedExpired ? '已結束' : '加入購物車';
+    }
     if (detailIncludes){
       const includes = Array.isArray(service.includes) ? service.includes : [];
       detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : '<li>老師依實際情況安排內容</li>';
@@ -631,6 +761,8 @@
     populateVariantSelect(service);
     updateDetailPrice();
     openDialog(detailDialog);
+    updateLimitedCountdowns(detailDialog);
+    scheduleLimitedTimer();
   }
 
   function ensureSingleService(cart, serviceId){
@@ -643,6 +775,11 @@
 
   function addCurrentSelection(){
     if (!detailDataset) return;
+    const limitedTs = parseLimitedUntil(detailDataset && detailDataset.limitedUntil);
+    if (limitedTs && Date.now() >= limitedTs){
+      alert('此服務已結束上架');
+      return;
+    }
     let cart = loadCart();
     cart = ensureSingleService(cart, resolveServiceId(detailDataset));
     if (cart === null) return;
@@ -1260,6 +1397,7 @@
 
   document.addEventListener('DOMContentLoaded', async ()=>{
     const services = await fetchServices();
+    renderHotServices(services);
     renderList(services);
     if (emptyEl) emptyEl.remove();
     initLookupDialog();

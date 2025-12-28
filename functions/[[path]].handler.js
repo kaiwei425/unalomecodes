@@ -6038,6 +6038,9 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
   }
+  const activeParam = String(url.searchParams.get('active') || '').toLowerCase();
+  const activeOnly = activeParam === 'true' || activeParam === '1';
+  const nowMs = Date.now();
   if (url.searchParams.get('id')){
     const id = String(url.searchParams.get('id'));
     const raw = await store.get(id);
@@ -6068,7 +6071,10 @@ if (pathname === '/api/service/products' && request.method === 'GET') {
       items.push(obj);
     }catch(_){}
   }
-  const finalItems = items.length ? items : DEFAULT_SERVICE_PRODUCTS;
+  const baseItems = items.length ? items : DEFAULT_SERVICE_PRODUCTS;
+  const finalItems = activeOnly
+    ? baseItems.filter(obj => obj && obj.active !== false && !isLimitedExpired(obj, nowMs))
+    : baseItems;
   return new Response(JSON.stringify({ ok:true, items: finalItems }), { status:200, headers: jsonHeaders });
 }
 
@@ -6095,6 +6101,9 @@ if (pathname === '/api/service/products' && request.method === 'POST') {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   });
+  if (Object.prototype.hasOwnProperty.call(bodyData, 'limitedUntil')) {
+    payload.limitedUntil = normalizeLimitedUntil(bodyData.limitedUntil);
+  }
   await store.put(id, JSON.stringify(payload));
   const idxKey = 'SERVICE_PRODUCT_INDEX';
   let list = [];
@@ -6124,6 +6133,9 @@ if (pathname === '/api/service/products' && request.method === 'PUT') {
   const raw = await store.get(id);
   if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
   const prev = JSON.parse(raw);
+  if (Object.prototype.hasOwnProperty.call(body, 'limitedUntil')) {
+    body.limitedUntil = normalizeLimitedUntil(body.limitedUntil);
+  }
   const next = Object.assign({}, prev, body, { id, updatedAt: new Date().toISOString() });
   await store.put(id, JSON.stringify(next));
   return new Response(JSON.stringify({ ok:true, item: next }), { status:200, headers: jsonHeaders });
@@ -6913,6 +6925,7 @@ async function listProducts(url, env) {
   const category = url.searchParams.get("category");
   const indexRaw = await env.PRODUCTS.get("INDEX");
   const ids = indexRaw ? JSON.parse(indexRaw) : [];
+  const nowMs = Date.now();
 
   const items = [];
   for (const id of ids) {
@@ -6928,6 +6941,7 @@ async function listProducts(url, env) {
     // 使用智慧分類函式來補全或修正舊資料的分類
     p.category = inferCategory(p);
     if (active === "true" && p.active !== true) continue;
+    if (active === "true" && isLimitedExpired(p, nowMs)) continue;
     // 分類篩選
     if (category && p.category !== category) continue;
     items.push(p);
@@ -7021,6 +7035,9 @@ async function patchProduct(id, request, env) {
     // 若 patch 有 category，則覆蓋
     if (typeof patch.category !== "undefined") {
       next.category = String(patch.category);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "limitedUntil")) {
+      next.limitedUntil = normalizeLimitedUntil(patch.limitedUntil);
     }
 
     next.updatedAt = new Date().toISOString();
@@ -7151,6 +7168,27 @@ function getDeityCodeFromName(name) {
 }
 // 商品資料標準化，預設 category 為「佛牌」，並確保回傳
 // 前端可於管理端提供分類下拉式選單（佛牌、蠟燭、靈符、服飾）供選擇
+function normalizeLimitedUntil(value){
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const ts = Date.parse(raw);
+  if (!Number.isFinite(ts)) return "";
+  return new Date(ts).toISOString();
+}
+
+function parseLimitedUntil(value){
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const ts = Date.parse(raw);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+function isLimitedExpired(item, nowMs){
+  const ts = parseLimitedUntil(item && item.limitedUntil);
+  if (!ts) return false;
+  return ts <= nowMs;
+}
+
 function normalizeProduct(body, nowIso) {
   return {
     id: String(body.id || crypto.randomUUID()),
@@ -7169,6 +7207,7 @@ function normalizeProduct(body, nowIso) {
     })) : [],
     instagram: String(body.instagram || body.ig || body.instagramUrl || body.igUrl || ""),
     category: inferCategory(body), // 改為使用智慧分類函式
+    limitedUntil: normalizeLimitedUntil(body.limitedUntil),
     active: body.active !== false,
     createdAt: body.createdAt || nowIso,
     updatedAt: nowIso

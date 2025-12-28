@@ -114,6 +114,13 @@
         <input id="fMin" type="number" placeholder="最低價" style="width:130px;">
         <input id="fMax" type="number" placeholder="最高價" style="width:130px;">
       </div>
+      <div id="hotSection" class="hot-section" style="display:none;">
+        <div class="hot-head">
+          <div class="hot-title">熱賣中商品</div>
+          <div class="hot-sub">人氣排行</div>
+        </div>
+        <div id="hotList" class="grid hot-grid"></div>
+      </div>
       <div id="banner" class="empty" style="display:none"></div>
       <div id="skeleton" class="skeleton-grid"><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div><div class="skeleton-card"><div class="skeleton-pic"></div><div class="skeleton-line"></div><div class="skeleton-line w60"></div></div></div>
       <div id="list" class="grid"></div>
@@ -216,6 +223,8 @@
         <div id="dlgName" class="dlgName"></div>
         <div class="dlgTags">
           <span id="dlgDeity" class="dlgTag dlgTag--deity" style="display:none;"></span>
+          <span id="dlgLimited" class="dlgTag dlgTag--limited" style="display:none;"></span>
+          <span id="dlgRemaining" class="dlgTag dlgTag--remaining" style="display:none;"></span>
           <span id="dlgChip" class="dlgTag dlgTag--sold"></span>
         </div>
       </div>

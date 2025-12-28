@@ -50,6 +50,8 @@ function openDetail(p){
   }
   const stockEl = document.getElementById('dlgStock');
   const dEl=document.getElementById('dlgDeity');
+  const limitedEl = document.getElementById('dlgLimited');
+  const remainingEl = document.getElementById('dlgRemaining');
   if (dEl){
     const deityName = String(p.deity || '').trim();
     if (deityName){
@@ -62,6 +64,28 @@ function openDetail(p){
     }
   }
   document.getElementById('dlgDesc').textContent = p.description || '';
+  const limitedTs = parseLimitedUntil(p && p.limitedUntil);
+  const limitedExpired = limitedTs ? Date.now() >= limitedTs : false;
+  if (limitedEl){
+    if (limitedTs){
+      limitedEl.textContent = '限時商品';
+      limitedEl.style.display = 'inline-flex';
+    }else{
+      limitedEl.textContent = '';
+      limitedEl.style.display = 'none';
+    }
+  }
+  if (remainingEl){
+    if (limitedTs){
+      remainingEl.textContent = formatLimitedLabel(limitedTs);
+      remainingEl.setAttribute('data-limited-until', String(limitedTs));
+      remainingEl.style.display = 'inline-flex';
+    }else{
+      remainingEl.textContent = '';
+      remainingEl.removeAttribute('data-limited-until');
+      remainingEl.style.display = 'none';
+    }
+  }
 
   const big = document.getElementById('dlgBig');
   const thumbs = document.getElementById('dlgThumbs');
@@ -168,10 +192,17 @@ function openDetail(p){
   sel.onchange = refreshPrice;
   qty.oninput = refreshPrice;
   refreshPrice();
+  if (typeof updateLimitedCountdowns === 'function'){
+    updateLimitedCountdowns(document.getElementById('dlg'));
+  }
 
   // CTA
   const btnAdd = document.getElementById('btnAddCart');
   // 直接結帳功能已移除，僅保留加入購物車
+  if (btnAdd){
+    btnAdd.disabled = !!limitedExpired;
+    btnAdd.textContent = limitedExpired ? '已結束' : '加入購物車';
+  }
 
   function isCandleItem(obj){
     try{
@@ -183,6 +214,11 @@ function openDetail(p){
 
   // 加入購物車：用 localStorage 簡易存放
   btnAdd.onclick = ()=>{
+    const limitedTs = parseLimitedUntil(p && p.limitedUntil);
+    if (limitedTs && Date.now() >= limitedTs){
+      alert('此商品已結束上架');
+      return;
+    }
     const sel = document.getElementById('dlgVariant');
     const qtyEl = document.getElementById('dlgQty');
     const variants = Array.isArray(p.variants)?p.variants:[];

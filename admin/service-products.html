@@ -68,6 +68,9 @@
         <input id="svc_price" type="number" min="0" value="0">
         <label>已售出（顯示用）</label>
         <input id="svc_sold" type="number" min="0" value="0">
+        <label>限時上架至（選填）</label>
+        <input id="svc_limited_until" type="datetime-local">
+        <div class="muted">留空代表不限時，到期會自動隱藏。</div>
         <label>詳細說明</label>
         <textarea id="svc_description" placeholder="完整介紹、祈福流程、注意事項…"></textarea>
         <label>IG 影片連結（可選）</label>
@@ -154,6 +157,14 @@
     if (!rowId) return null;
     return items.find(it => getRowId(it) === rowId) || null;
   }
+  function formatDatetimeLocal(val){
+    const raw = String(val || '').trim();
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (!Number.isFinite(d.getTime())) return '';
+    const pad = (n)=> String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 
   function getImages(){
     const raw = (imagesInput.value || '').trim();
@@ -208,6 +219,7 @@
       price: Number(document.getElementById('svc_price').value || 0),
       sold: Number(soldInput.value || 0),
       active: activeInput.value !== '0',
+      limitedUntil: document.getElementById('svc_limited_until').value.trim(),
       duration: document.getElementById('svc_duration').value.trim(),
       description: document.getElementById('svc_description').value,
       instagram: document.getElementById('svc_instagram').value.trim(),
@@ -231,6 +243,7 @@
     document.getElementById('svc_price').value = Number(data.price||0);
     soldInput.value = Number(data.sold||0);
     activeInput.value = data.active === false ? '0' : '1';
+    document.getElementById('svc_limited_until').value = formatDatetimeLocal(data.limitedUntil);
     document.getElementById('svc_duration').value = data.duration || '';
     document.getElementById('svc_description').value = data.description || '';
     document.getElementById('svc_instagram').value = data.instagram || '';

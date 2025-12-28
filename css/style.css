@@ -230,6 +230,21 @@ html,body{
   @media(max-width:640px){.grid{grid-template-columns:1fr;}}
   @media(min-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
+  .hot-section{
+    margin:6px 0 16px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 12px 28px rgba(15,23,42,.08);
+  }
+  .hot-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .hot-title{font-weight:800;font-size:18px;}
+  .hot-sub{font-size:12px;color:var(--muted);}
+  .hot-grid{margin-top:0;gap:12px;}
+  .hot-grid .card{border-color:#fde68a;box-shadow:0 10px 24px rgba(245,158,11,.18);}
+  .hot-grid .card:hover{border-color:#f59e0b;}
+
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(15,23,42,.08);transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;}
   .card:hover{transform:translateY(-4px);border-color:rgba(24,161,104,.25);box-shadow:0 18px 40px rgba(15,23,42,.12);}
   .card .pic{position:relative;background:linear-gradient(135deg, #f8fafc, #edf2ff);}
@@ -270,6 +285,17 @@ html,body{
     border-color:#fecaca;
     color:#b91c1c;
   }
+  .card .meta .badge-limited{
+    background:#fff1f2;
+    border-color:#fecdd3;
+    color:#be123c;
+  }
+  .card .meta .badge-remaining{
+    background:#f0fdf4;
+    border-color:#86efac;
+    color:#166534;
+  }
+  .meta.meta-limited{margin:0 0 6px;}
   .price{font-weight:800;margin-top:6px;font-size:17px}
   .cta{display:flex;gap:8px;margin-top:12px}
   .btn{
@@ -292,6 +318,7 @@ html,body{
   .btn:hover{transform:translateY(-2px);border-color:rgba(24,161,104,.3);box-shadow:0 10px 20px rgba(15,23,42,.12);}
   .btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);border-color:#1095d6;color:#fff;box-shadow:0 10px 20px rgba(16,149,214,.25);}
   .btn.primary:hover{filter:brightness(1.03);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none;}
   .btn.link{
   background:#facc15;        /* 金色或亮黃色底 */
   border-color:#eab308;
@@ -327,6 +354,8 @@ html,body{
 .dlgTag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #e2e8f0;background:#f8fafc;color:#0f172a}
 .dlgTag--deity{background:linear-gradient(135deg,#0f172a,#1f2937);border-color:#1f2937;color:#facc15}
 .dlgTag--sold{background:#fff7ed;border-color:#fed7aa;color:#c2410c}
+.dlgTag--limited{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+.dlgTag--remaining{background:#f0fdf4;border-color:#86efac;color:#166534}
 .dlgStockVal{
   display:inline-flex;align-items:center;justify-content:center;
   min-height:36px;padding:6px 12px;border-radius:10px;

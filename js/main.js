@@ -1,5 +1,8 @@
 const listEl = document.getElementById('list');
 const banner = document.getElementById('banner');
+const hotSection = document.getElementById('hotSection');
+const hotList = document.getElementById('hotList');
+let limitedTimer = null;
 
 let rawItems = [];
 let viewItems = [];
@@ -46,6 +49,64 @@ function resolveTotalStock(p){
   return null;
 }
 
+function getLimitedInfo(p){
+  const ts = parseLimitedUntil(p && p.limitedUntil);
+  if (!ts) return null;
+  return { ts, label: formatLimitedLabel(ts) };
+}
+
+function buildLimitedRow(p, labelText){
+  const info = getLimitedInfo(p);
+  if (!info) return '';
+  return `
+    <div class="meta meta-limited">
+      <span class="badge badge-limited">${labelText}</span>
+      <span class="badge badge-remaining" data-limited-until="${info.ts}">${info.label}</span>
+    </div>
+  `;
+}
+
+function buildProductCard(p, opts = {}){
+  const img = sanitizeImageUrl((p.images && p.images[0]) ? p.images[0] : '');
+  const price = minPrice(p);
+  const stockTotal = resolveTotalStock(p);
+  const stockBadge = stockTotal === null
+    ? ''
+    : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">庫存：${stockTotal}</span>`;
+  const deityBadge = p.deity ? `<span class="badge badge-deity">${escapeHtml(p.deity)}</span>` : '';
+  const limitedRow = buildLimitedRow(p, '限時商品');
+
+  const card = document.createElement('div');
+  card.className = 'card' + (opts.hot ? ' hot-card' : '');
+  card.setAttribute('data-id', String(p.id || ''));
+  card.innerHTML = `
+    <div class="pic">${img?`<img src="${escapeHtml(img)}" alt="" loading="lazy" decoding="async">`:''}</div>
+    <div class="body">
+      <div class="name">${escapeHtml(p.name)}</div>
+      ${limitedRow}
+      ${deityBadge ? `<div class="meta meta-top">${deityBadge}</div>` : ''}
+      <div class="meta meta-bottom">
+        <span class="badge badge-sold">已售出：${Number(p.sold||0)}</span>
+        ${stockBadge}
+      </div>
+      <div class="price">NT$ ${formatPrice(price)}</div>
+      <div class="cta">
+        <button class="btn primary" data-open-detail="1">查看商品</button>
+      </div>
+    </div>
+  `;
+  const btn = card.querySelector('.btn.primary');
+  if (btn){
+    btn.addEventListener('click',()=>openDetail(p));
+  }
+  return card;
+}
+
+function scheduleLimitedTimer(){
+  if (limitedTimer) return;
+  limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
+}
+
 async function loadProducts(){
   try{
     const res = await fetch('/api/products?active=true',{cache:'no-store'});
@@ -54,6 +115,7 @@ async function loadProducts(){
     rawItems = Array.isArray(data.items) ? data.items : [];
     try{ window.rawItems = rawItems; }catch(_){}
     populateDeityFilter(rawItems);
+    renderHotItems(rawItems);
     applyFilter();
     banner.style.display = rawItems.length ? 'none' : 'block';
     banner.textContent = rawItems.length ? '' : '目前沒有上架商品'; const sk=document.getElementById('skeleton'); if(sk && rawItems.length===0) sk.style.display='none';
@@ -101,6 +163,7 @@ function applyFilter(){
     if (price < min) return false;
     if (price > max) return false;
     if (category && p.category !== category) return false;
+    if (isLimitedExpired(p && p.limitedUntil)) return false;
     return true;
   });
 
@@ -112,6 +175,31 @@ function applyFilter(){
   renderList(viewItems);
 }
 
+function renderHotItems(items){
+  if (!hotSection || !hotList) return;
+  const list = (items || [])
+    .filter(p => p && !isLimitedExpired(p.limitedUntil))
+    .filter(p => Number(p.sold||0) > 0);
+  list.sort((a,b)=>{
+    const diff = Number(b.sold||0) - Number(a.sold||0);
+    if (diff !== 0) return diff;
+    return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
+  });
+  const top = list.slice(0, 6);
+  if (!top.length){
+    hotSection.style.display = 'none';
+    hotList.innerHTML = '';
+    return;
+  }
+  hotSection.style.display = '';
+  hotList.innerHTML = '';
+  top.forEach(p=>{
+    hotList.appendChild(buildProductCard(p, { hot:true }));
+  });
+  updateLimitedCountdowns(hotList);
+  scheduleLimitedTimer();
+}
+
 function renderList(items){
   listEl.innerHTML = '';
   if (!items.length){
@@ -120,38 +208,13 @@ function renderList(items){
   }
 
   for (const p of items){
-    const img = sanitizeImageUrl((p.images && p.images[0]) ? p.images[0] : '');
-    const price = minPrice(p);
-    const stockTotal = resolveTotalStock(p);
-    const stockBadge = stockTotal === null
-      ? ''
-      : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">庫存：${stockTotal}</span>`;
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.setAttribute('data-id', String(p.id || ''));
-    const deityBadge = p.deity ? `<span class="badge badge-deity">${escapeHtml(p.deity)}</span>` : '';
-    card.innerHTML = `
-      <div class="pic">${img?`<img src="${escapeHtml(img)}" alt="" loading="lazy" decoding="async">`:''}</div>
-      <div class="body">
-        <div class="name">${escapeHtml(p.name)}</div>
-        ${deityBadge ? `<div class="meta meta-top">${deityBadge}</div>` : ''}
-        <div class="meta meta-bottom">
-          <span class="badge badge-sold">已售出：${Number(p.sold||0)}</span>
-          ${stockBadge}
-        </div>
-        <div class="price">NT$ ${formatPrice(price)}</div>
-        <div class="cta">
-          <button class="btn primary" data-open-detail="1">查看商品</button>
-        </div>
-      </div>
-    `;
-    // 查看商品 -> 打開詳情
-    card.querySelector('.btn.primary').addEventListener('click',()=>openDetail(p));
-    // 加入卡片
+    const card = buildProductCard(p);
     listEl.appendChild(card);
-  const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
   }
+  const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
   refreshWishlistButtons();
+  updateLimitedCountdowns(listEl);
+  scheduleLimitedTimer();
 }
 
 document.getElementById('fDeity').addEventListener('change', applyFilter);
