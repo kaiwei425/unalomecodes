@@ -19,6 +19,18 @@
   }
   .backBtn:hover{border-color:#3b82f6;color:#3b82f6;}
   h1{font-size:22px;margin:12px 0 16px 0;letter-spacing:.5px}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px}
+  .tab-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 12px;border-radius:999px;
+    background:#0f172a;border:1px solid #263046;color:#e5e7eb;
+    font-size:13px;font-weight:700;cursor:pointer;
+    transition:all .18s ease;
+  }
+  .tab-btn:hover{border-color:#3b82f6;color:#dbeafe}
+  .tab-btn.active{background:#eab308;color:#111827;border-color:#eab308;box-shadow:0 6px 16px rgba(234,179,8,.25)}
+  .tab-count{font-size:12px;background:#111827;border:1px solid #263046;border-radius:999px;padding:2px 7px;color:#94a3b8}
+  .tab-btn.active .tab-count{background:#111827;color:#fef08a;border-color:#111827}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
   .bar input,.bar select{background:#0f172a;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:8px 10px}
   .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:14px 14px 8px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
@@ -79,6 +91,13 @@
   <div class="wrap">
     <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
     <h1>訂單管理（批次）</h1>
+    <div class="tabs" id="statusTabs">
+      <button class="tab-btn active" data-tab="all">全部 <span class="tab-count" data-tab="all">0</span></button>
+      <button class="tab-btn" data-tab="pending">待付款 <span class="tab-count" data-tab="pending">0</span></button>
+      <button class="tab-btn" data-tab="paid">已付款待出貨 <span class="tab-count" data-tab="paid">0</span></button>
+      <button class="tab-btn" data-tab="shipped">已寄件 <span class="tab-count" data-tab="shipped">0</span></button>
+      <button class="tab-btn" data-tab="done">訂單完成 <span class="tab-count" data-tab="done">0</span></button>
+    </div>
 <div class="bar">
       <input id="q" placeholder="搜尋 訂單編號 / 商品 / email / 門市 ...">
       <select id="statusSel">
@@ -152,6 +171,7 @@ const fmt = ts => ts ? new Date(ts).toLocaleString() : '';
 let ORDERS = [];
 let current = [];
 let selected = new Set();
+let activeTab = 'all';
 
 function toast(msg){
   const t = document.createElement('div');
@@ -170,6 +190,48 @@ function normalizeProof(u){
   u = String(u).trim();
   if (/^https?:\/\//i.test(u) || /^\/api\/proof(?:\.inline|\.view)?\//.test(u)) return u;
   return API_BASE + '/api/proof/' + encodeURIComponent(u);
+}
+
+function matchesQuery(order, q){
+  if (!q) return true;
+  try{
+    return JSON.stringify(order).toLowerCase().includes(q);
+  }catch(_){
+    return false;
+  }
+}
+
+function getStatusGroup(status){
+  const s = String(status || '').trim();
+  if (!s || s === 'pending' || s === '待付款' || s === 'waiting_verify') return 'pending';
+  if (s.includes('已付款待出貨')) return 'paid';
+  if (s.includes('已寄件') || s.includes('已出貨')) return 'shipped';
+  if (s.includes('已完成')) return 'done';
+  if (s.includes('付款') && !s.includes('已付款')) return 'pending';
+  return 'other';
+}
+
+function updateTabCounts(){
+  const q = $('#q').value.trim().toLowerCase();
+  const items = ORDERS.filter(o => matchesQuery(o, q));
+  const counts = { all: items.length, pending:0, paid:0, shipped:0, done:0 };
+  items.forEach(o=>{
+    const g = getStatusGroup(o.status);
+    if (counts[g] != null) counts[g]++;
+  });
+  document.querySelectorAll('.tab-count[data-tab]').forEach(el=>{
+    const key = el.getAttribute('data-tab');
+    el.textContent = String(counts[key] != null ? counts[key] : 0);
+  });
+}
+
+function setActiveTab(tabId){
+  activeTab = tabId || 'all';
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn=>{
+    const key = btn.getAttribute('data-tab');
+    if (key === activeTab) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
 }
 
 
@@ -196,11 +258,11 @@ async function loadOrders(){
 function applyFilter(){
   const q  = $('#q').value.trim().toLowerCase();
   const st = $('#statusSel').value;
-  let items = [...ORDERS];
-  if (st) items = items.filter(o=> String(o.status||'') === st);
-  if (q){
-    items = items.filter(o=> JSON.stringify(o).toLowerCase().includes(q));
+  let items = ORDERS.filter(o => matchesQuery(o, q));
+  if (activeTab !== 'all'){
+    items = items.filter(o => getStatusGroup(o.status) === activeTab);
   }
+  if (st) items = items.filter(o=> String(o.status||'') === st);
   current = items;
   $('#count').textContent = `共 ${items.length} 筆`;
   const sort = $('#sortSel') ? $('#sortSel').value : 'time_desc';
@@ -213,6 +275,7 @@ function applyFilter(){
 }
 
 function render(){
+  updateTabCounts();
   applyFilter();
   const rows = current.map(o=> {
     const buyer = o.buyer || {};
@@ -472,6 +535,15 @@ function syncHeaderCheckbox(){
 $('#reload').addEventListener('click', loadOrders);
 $('#q').addEventListener('input', render);
 $('#statusSel').addEventListener('change', render);
+document.querySelectorAll('.tab-btn[data-tab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const tab = btn.getAttribute('data-tab') || 'all';
+    setActiveTab(tab);
+    const sel = document.getElementById('statusSel');
+    if (sel) sel.value = '';
+    render();
+  });
+});
 
 // Row checkbox toggle
 document.addEventListener('change', e=>{
@@ -767,6 +839,7 @@ async function ensureAdminSession(){
 // init
 async function boot(){
   try{
+    setActiveTab(activeTab);
     if (await ensureAdminSession()) loadOrders();
   }catch(e){ console.error('init loadOrders error', e); }
 }

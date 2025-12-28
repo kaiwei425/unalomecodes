@@ -686,6 +686,39 @@ function base64UrlDecodeToBytes(b64){
   return bytes;
 }
 
+function escapeHtmlAttr(value){
+  return String(value || '')
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function redirectWithBody(location, headers){
+  const safeUrl = escapeHtmlAttr(location || '/');
+  const html = `<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0; url=${safeUrl}">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>轉跳中</title>
+</head>
+<body style="background:#0f172a;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
+  <div style="text-align:center;max-width:420px;padding:24px">
+    <div style="font-size:16px;margin-bottom:10px">登入完成，正在返回後台…</div>
+    <a href="${safeUrl}" style="color:#eab308;text-decoration:none;font-weight:700">若未自動跳轉，請點此返回</a>
+  </div>
+  <script>setTimeout(function(){ location.replace(${JSON.stringify(location || '/')}); }, 150);</script>
+</body>
+</html>`;
+  const h = new Headers(headers || {});
+  h.set('Content-Type', 'text/html; charset=utf-8');
+  h.set('Cache-Control', 'no-store');
+  h.set('Location', location || '/');
+  return new Response(html, { status:302, headers: h });
+}
+
 async function hmacSha256(secret, data){
   if (!secret) return null;
   const enc = new TextEncoder();
@@ -2196,12 +2229,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!env.GOOGLE_ADMIN_CLIENT_ID || !env.GOOGLE_ADMIN_CLIENT_SECRET) {
       return new Response('Admin Google OAuth not configured', { status:500 });
     }
-    const state = makeToken(24);
     const redirectRaw = url.searchParams.get('redirect') || '';
     let redirectPath = '/admin/';
     if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
       redirectPath = redirectRaw;
     }
+    const stateSecret = env.GOOGLE_ADMIN_CLIENT_SECRET || env.OAUTH_STATE_SECRET || env.ADMIN_JWT_SECRET || env.SESSION_SECRET || '';
+    const statePayload = { t: Math.floor(Date.now() / 1000), n: makeToken(12), r: redirectPath };
+    let state = await makeSignedState(statePayload, stateSecret);
+    if (!state) state = makeToken(24);
     const params = new URLSearchParams({
       client_id: env.GOOGLE_ADMIN_CLIENT_ID,
       redirect_uri: `${origin}/api/auth/google/admin/callback`,
@@ -2224,6 +2260,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const expectedState = cookies.admin_oauth_state || '';
     const clearStateCookie = 'admin_oauth_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
     const clearRedirectCookie = 'admin_oauth_redirect=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
+    const stateSecret = env.GOOGLE_ADMIN_CLIENT_SECRET || env.OAUTH_STATE_SECRET || env.ADMIN_JWT_SECRET || env.SESSION_SECRET || '';
+    const signedPayload = await verifySignedState(state, stateSecret, 600);
+    const stateValid = !!expectedState && state === expectedState;
     const redirectPath = (()=> {
       const raw = cookies.admin_oauth_redirect || '';
       if (raw) {
@@ -2232,9 +2271,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
         }catch(_){}
       }
+      const signedRedirect = signedPayload && signedPayload.r;
+      if (signedRedirect && typeof signedRedirect === 'string' && signedRedirect.startsWith('/') && !signedRedirect.startsWith('//')){
+        return signedRedirect;
+      }
       return '/admin/';
     })();
-    if (!code || !state || !expectedState || state !== expectedState) {
+    if (!code || !state || (!stateValid && !signedPayload)) {
       const h = new Headers();
       h.append('Set-Cookie', clearStateCookie);
       h.append('Set-Cookie', clearRedirectCookie);
@@ -2311,8 +2354,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       });
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
-      headers.append('Location', `${origin}${redirectPath}`);
-      return new Response(null, { status:302, headers });
+      const redirectUrl = `${origin}${redirectPath}`;
+      return redirectWithBody(redirectUrl, headers);
     }catch(err){
       console.error('Admin OAuth error', err);
       const h = new Headers();
