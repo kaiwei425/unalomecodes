@@ -531,6 +531,16 @@ function syncHeaderCheckbox(){
   updateSelCount();
 }
 
+function requireDeleteConfirm(message){
+  const tip = message || '此動作無法復原。';
+  const input = prompt(`為了刪除訂單，請輸入「刪除」確認。\n${tip}`);
+  if (input !== '刪除'){
+    toast('未輸入「刪除」，已取消');
+    return false;
+  }
+  return true;
+}
+
 // --- Events ---
 $('#reload').addEventListener('click', loadOrders);
 $('#q').addEventListener('input', render);
@@ -613,6 +623,7 @@ document.addEventListener('click', async e=>{
     const orderHint = titleCell ? titleCell.textContent.trim().slice(0, 60) : '';
     const ok = confirm(`確定要刪除訂單「${id}」嗎？\n${orderHint ? '商品：' + orderHint + '\n' : ''}此動作無法復原。`);
     if (!ok) return;
+    if (!requireDeleteConfirm(`訂單編號：${id}`)) return;
     try{
       const res = await authedFetch('/api/order/status', {
         method:'POST',
@@ -703,6 +714,7 @@ $('#markDone').addEventListener('click', async ()=>{
 // Batch: delete
 $('#batchDelete').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
+  if (!requireDeleteConfirm(`將刪除 ${selected.size} 筆訂單`)) return;
   let ok = 0;
   for (const id of selected){
     const res = await authedFetch('/api/order/status', {
