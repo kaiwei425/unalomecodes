@@ -7671,7 +7671,10 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     const ts = item.ts ? new Date(item.ts).toLocaleString('zh-TW', { hour12:false }) : '';
     const imageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || base;
     const imgUrl = item.imageUrl ? rewriteEmailImageUrl(item.imageUrl, imageHost) : '';
-    const esc = escapeHtmlEmail;
+    const esc = (val)=>{
+      const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+      return String(val || '').replace(/[&<>"']/g, m => map[m] || m);
+    };
     const subject = `[${siteName}] 新留言通知：${nick}`;
     const html = `
       <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:15px;padding:16px;background:#f5f7fb;">
