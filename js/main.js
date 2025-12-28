@@ -129,12 +129,13 @@ function renderList(items){
     const card = document.createElement('div');
     card.className = 'card';
     card.setAttribute('data-id', String(p.id || ''));
+    const deityBadge = p.deity ? `<span class="badge badge-deity">${escapeHtml(p.deity)}</span>` : '';
     card.innerHTML = `
       <div class="pic">${img?`<img src="${img}" alt="" loading="lazy" decoding="async">`:''}</div>
       <div class="body">
         <div class="name">${escapeHtml(p.name)}</div>
-        <div class="meta">
-          ${p.deity?`<span class="badge badge-deity">${escapeHtml(p.deity)}</span>`:""}
+        ${deityBadge ? `<div class="meta meta-top">${deityBadge}</div>` : ''}
+        <div class="meta meta-bottom">
           <span class="badge badge-sold">已售出：${Number(p.sold||0)}</span>
           ${stockBadge}
         </div>
