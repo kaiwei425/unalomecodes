@@ -87,6 +87,7 @@
     .step{margin:10px 0 2px;font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
     .q{font-size:20px;font-weight:800;margin:6px 0 16px}
     .footer{display:grid;gap:10px;margin-top:14px;grid-template-columns:1fr 1fr;}
+    .footer.single{grid-template-columns:1fr;}
     #resultBox .footer{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
     #resultBox .footer .btn{min-height:54px;font-size:14px;padding:12px 10px;text-align:center;white-space:normal}
     .result{padding:16px;border-radius:14px;background:#f9fafb;border:1px dashed rgba(0,0,0,0.08);white-space:pre-wrap;line-height:1.8;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
@@ -182,6 +183,9 @@
     <div class="card step-card" id="stepZod">
       <h2>你的星座？</h2>
       <div id="zodiacBox" class="chips" role="group" aria-label="zodiac"></div>
+      <div class="footer single">
+        <button id="prevStepBtn" class="btn">← 上一題</button>
+      </div>
     </div>
 
     <div class="card step-card" id="quizBox">
@@ -580,12 +584,18 @@ function renderQ(qNum){
     const wrap = document.createElement('div'); wrap.appendChild(btn);
     optsEl.appendChild(wrap);
   });
-  document.getElementById('prevBtn').style.display = currentStep>2 ? 'inline-flex' : 'none';
+  document.getElementById('prevBtn').style.display = currentStep>1 ? 'inline-flex' : 'none';
   document.getElementById('nextBtn').style.display = currentStep<TOTAL_STEPS-1 ? 'inline-flex' : 'none';
 }
 document.getElementById('prevBtn').onclick = ()=>{
   if (currentStep>0){ currentStep--; renderStep(); }
 };
+const prevStepBtn = document.getElementById('prevStepBtn');
+if (prevStepBtn){
+  prevStepBtn.onclick = ()=>{
+    if (currentStep>0){ currentStep--; renderStep(); }
+  };
+}
 document.getElementById('nextBtn').onclick = ()=>{
   if (currentStep<TOTAL_STEPS-1){ currentStep++; renderStep(); }
 };
