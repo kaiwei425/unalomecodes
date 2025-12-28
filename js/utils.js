@@ -9,6 +9,17 @@ function showToast(msg){
 
 function formatPrice(n){ return (Math.round(n)).toLocaleString('zh-TW'); }
 
+function sanitizeImageUrl(raw){
+  try{
+    const val = String(raw || '').trim();
+    if (!val) return '';
+    if (/^data:image\//i.test(val)) return val;
+    const u = new URL(val, window.location.origin);
+    if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+  }catch(_){}
+  return '';
+}
+
 const NAME_TO_CODE = {
   '招財女神':'ZF','魂魄勇':'HP','象神':'GA','四面神':'FM','坤平':'KP','澤度金':'ZD','迦樓羅':'JL',
   '徐祝老人':'XZ','五眼四耳':'WE','哈魯曼':'HM','猴神哈魯曼':'HM','拉胡':'RH','拉胡天神':'RH','崇迪':'CD','崇迪佛':'CD'

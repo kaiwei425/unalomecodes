@@ -8,6 +8,16 @@
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   }
+  function sanitizeImageUrl(raw){
+    try{
+      const val = String(raw || '').trim();
+      if (!val) return '';
+      if (/^data:image\//i.test(val)) return val;
+      const u = new URL(val, window.location.origin);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+    }catch(_){}
+    return '';
+  }
   function fmtDate(str){
     if (!str) return '';
     try{
@@ -63,7 +73,8 @@
       : [];
     const dateStr = fmtDate(order.createdAt || '');
     const itemCards = itemsLine.map(it=>{
-      const img = it.image ? `<img src="${escapeHtml(it.image)}" style="width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);">` : '';
+      const imgUrl = sanitizeImageUrl(it.image);
+      const img = imgUrl ? `<img src="${escapeHtml(imgUrl)}" style="width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);">` : '';
       return `<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px;background:#f8fafc;">
         ${img}
         <div style="font-size:13px;color:#334155;">${it.text}</div>

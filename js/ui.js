@@ -66,9 +66,10 @@ function openDetail(p){
   const big = document.getElementById('dlgBig');
   const thumbs = document.getElementById('dlgThumbs');
   thumbs.innerHTML = '';
-  const imgs = Array.isArray(p.images)?p.images:[];
-  big.loading='lazy'; big.decoding='async'; big.src = imgs[0] || '';
-  imgs.forEach((u)=>{
+  const imgs = Array.isArray(p.images) ? p.images : [];
+  const safeImgs = imgs.map(sanitizeImageUrl).filter(Boolean);
+  big.loading='lazy'; big.decoding='async'; big.src = safeImgs[0] || '';
+  safeImgs.forEach((u)=>{
     const t = document.createElement('img');
     t.src = u; t.alt = 'photo'; t.loading='lazy'; t.decoding='async';
     t.addEventListener('click',()=>{ big.src = u; });

@@ -35,11 +35,12 @@ function renderCart(){
       div.className = 'cartItem';
       const name = escapeHtml(it.name||'商品');
       const deity = escapeHtml(it.deity||'');
-      const img = escapeHtml(it.image||'');
+      const img = sanitizeImageUrl(it.image||'');
+      const imgSafe = img ? escapeHtml(img) : '';
       const unit = Number(it.price||0);
       const qty = Math.max(1, Number(it.qty||1));
       div.innerHTML = `\
-        <img src="${img||''}" alt="">\
+        <img src="${imgSafe||''}" alt="">\
         <div>\
           <div class="cartTitle">${name}</div>\
           <div class="muted">${deity}</div>\

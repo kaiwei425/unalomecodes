@@ -7,6 +7,16 @@
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   }
+  function sanitizeImageUrl(raw){
+    try{
+      const val = String(raw || '').trim();
+      if (!val) return '';
+      if (/^data:image\//i.test(val)) return val;
+      const u = new URL(val, window.location.origin);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+    }catch(_){}
+    return '';
+  }
 
   async function loadWishlist(){
     if (!statusEl) return;
@@ -44,7 +54,8 @@
     items.forEach(item=>{
       const div = document.createElement('div');
       div.className = 'item';
-      const img = (item.images && item.images[0]) ? `<img src="${escapeHtml(item.images[0])}" alt="">` : '';
+      const imgUrl = item.images && item.images[0] ? sanitizeImageUrl(item.images[0]) : '';
+      const img = imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="">` : '';
       const link = `/shop.html#id=${encodeURIComponent(item.id||'')}`;
       div.innerHTML = `
         ${img}

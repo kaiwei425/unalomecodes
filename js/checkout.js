@@ -1239,7 +1239,7 @@ function __cartPricing(includePendingDetail){
     }
   }
   function renderLookupImage(url, alt){
-    var finalUrl = rewriteLookupImageUrl(url);
+    var finalUrl = sanitizeImageUrl(rewriteLookupImageUrl(url));
     if (!finalUrl) return '<div class="ok-item-img placeholder"></div>';
     return '<div class="ok-item-img"><img src="'+ escapeHtml(finalUrl) +'" alt="'+ escapeHtml(alt || '商品圖片') +'" loading="lazy"></div>';
   }
@@ -1692,7 +1692,7 @@ function __cartPricing(includePendingDetail){
               const spec = it.variantName ? `（${it.variantName}）` : '';
               const qty  = Math.max(1, Number(it.qty||1));
               const unit = Number(it.price||0);
-              const img  = it.image || '';
+              const img  = sanitizeImageUrl(it.image || '');
               const total = unit * qty;
               const discount = Math.min(total, Math.max(0, discountForIndex(idx)));
               const finalTotal = Math.max(0, total - discount);

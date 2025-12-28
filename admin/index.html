@@ -94,6 +94,8 @@ html,body{
 </style>
 <script>document.documentElement.classList.add('admin-guard-hide');</script>
 <script src="/js/admin-guard.js" defer></script>
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<script src="/js/admin-shell.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -115,6 +117,29 @@ html,body{
       <a href="./fortune-stats.html">📊 日籤統計</a>
       <a href="./service-products.html">🕯 服務商品</a>
       <a href="./service-orders.html">🧾 服務訂單</a>
+    </div>
+  </div>
+
+  <div class="admin-stats" id="adminStats">
+    <div class="admin-stat-card">
+      <div class="admin-stat-title">商品總數</div>
+      <div class="admin-stat-value" data-stat="products-total">—</div>
+      <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-title">訂單總數</div>
+      <div class="admin-stat-value" data-stat="orders-total">—</div>
+      <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-title">會員數</div>
+      <div class="admin-stat-value" data-stat="members-total">—</div>
+      <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
+    </div>
+    <div class="admin-stat-card">
+      <div class="admin-stat-title">優惠券使用</div>
+      <div class="admin-stat-value" data-stat="coupons-used">—</div>
+      <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
     </div>
   </div>
 
@@ -202,5 +227,40 @@ html,body{
 
   <div class="footer">需要新增模組？保留此入口並加入新卡片連結即可。</div>
 </div>
+
+<script>
+(function(){
+  const box = document.getElementById('adminStats');
+  if (!box) return;
+  fetch('/api/admin/dashboard', { credentials:'include', cache:'no-store' })
+    .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data })=>{
+      if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');
+      const s = data.stats || {};
+      const set = (key, value) => {
+        const el = box.querySelector(`[data-stat="${key}"]`);
+        if (el) el.textContent = value;
+      };
+      const setSub = (key, value) => {
+        const el = box.querySelector(`[data-stat-sub="${key}"]`);
+        if (el) el.textContent = value;
+      };
+      set('products-total', s.products ? s.products.total : '—');
+      setSub('products-sub', s.products ? `上架 ${s.products.active || 0}｜低庫存 ${s.products.lowStock || 0}` : '—');
+      set('orders-total', s.orders ? s.orders.total : '—');
+      setSub('orders-sub', s.orders ? `待處理 ${s.orders.pending || 0}｜已付款 ${s.orders.paid || 0}` : '—');
+      set('members-total', s.members ? s.members.total : '—');
+      setSub('members-sub', s.members && s.members.approx ? '資料量較大，顯示估算' : '同步完成');
+      if (s.coupons){
+        set('coupons-used', `${s.coupons.used || 0}/${s.coupons.total || 0}`);
+        setSub('coupons-sub', s.coupons.approx ? '資料量較大，顯示估算' : '使用率統計');
+      }
+    })
+    .catch(()=>{
+      const subs = box.querySelectorAll('[data-stat-sub]');
+      subs.forEach(el => { el.textContent = '暫時無法載入'; });
+    });
+})();
+</script>
 </body>
 </html>

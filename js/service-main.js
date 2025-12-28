@@ -166,7 +166,8 @@
       }
       reviewListEl.innerHTML = items.map(item=>{
         const date = new Date(item.ts).toLocaleString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-        const img = item.imageUrl ? `<a href="${escapeHtml(item.imageUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(item.imageUrl)}" alt="" class="rvImage"></a>` : '';
+        const imgUrl = sanitizeImageUrl(item.imageUrl);
+        const img = imgUrl ? `<a href="${escapeHtml(imgUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(imgUrl)}" alt="" class="rvImage"></a>` : '';
         return `
           <div class="rvItem">
             ${img}
@@ -208,6 +209,17 @@
 
   function escapeHtml(str){
     return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] || m));
+  }
+  function sanitizeImageUrl(raw){
+    if (typeof window.sanitizeImageUrl === 'function') return window.sanitizeImageUrl(raw);
+    try{
+      const val = String(raw || '').trim();
+      if (!val) return '';
+      if (/^data:image\//i.test(val)) return val;
+      const u = new URL(val, window.location.origin);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+    }catch(_){}
+    return '';
   }
   function normalizeOrderSuffix(val){
     return String(val||'').replace(/[^0-9a-z]/ig,'').toUpperCase().slice(-5);
@@ -342,7 +354,7 @@
       cartListEl.innerHTML = cart.map(item => `
         <div class="svc-cart-item">
           <div class="info">
-            ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : ''}
+            ${sanitizeImageUrl(item.image) ? `<img src="${escapeHtml(sanitizeImageUrl(item.image))}" alt="">` : ''}
             <div>
               <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
               <div class="meta">${escapeHtml(item.optionName||'標準服務')}</div>
@@ -523,7 +535,7 @@
       const card = document.createElement('div');
       card.className = 'card service-card';
       card.innerHTML = `
-        <div class="pic">${cover ? `<img src="${escapeHtml(cover)}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
+        <div class="pic">${sanitizeImageUrl(cover) ? `<img src="${escapeHtml(sanitizeImageUrl(cover))}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
         <div class="body">
           <div class="name">${escapeHtml(service.name||'服務')}</div>
           <div class="meta"><span class="badge">已售出：${sold}</span></div>
@@ -599,12 +611,14 @@
     }
     const gallery = Array.isArray(service.gallery) && service.gallery.length ? service.gallery : (service.cover ? [service.cover] : []);
     if (detailHero){
-      detailHero.src = gallery[0] || service.cover || '';
+      const heroSrc = sanitizeImageUrl(gallery[0] || service.cover || '');
+      detailHero.src = heroSrc;
       detailHero.alt = service.name || '';
     }
     if (detailGallery){
       if (gallery.length){
-        detailGallery.innerHTML = gallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
+        const safeGallery = gallery.map(sanitizeImageUrl).filter(Boolean);
+        detailGallery.innerHTML = safeGallery.map(url => `<img src="${escapeHtml(url)}" alt="${escapeHtml(service.name||'')}" loading="lazy">`).join('');
         Array.from(detailGallery.querySelectorAll('img')).forEach(img=>{
           img.addEventListener('click', ()=>{
             if (detailHero) detailHero.src = img.getAttribute('src') || '';

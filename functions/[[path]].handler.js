@@ -39,6 +39,17 @@ const FORTUNE_FORMAT_VERSION = 5;
 const FORTUNE_STATS_PREFIX = 'FORTUNE_STATS:';
 const FORTUNE_STATS_SEEN_PREFIX = 'FORTUNE_STATS:SEEN:';
 const RATE_LIMIT_CACHE = new Map();
+
+function resolveOrderIndexLimit(env){
+  const raw = Number(env?.ORDER_INDEX_MAX || env?.ORDER_INDEX_LIMIT || 5000);
+  const limit = Number.isFinite(raw) ? raw : 5000;
+  return Math.max(200, Math.min(limit, 20000));
+}
+function trimOrderIndex(ids, env){
+  const max = resolveOrderIndexLimit(env);
+  if (Array.isArray(ids) && ids.length > max) ids.length = max;
+  return ids;
+}
 function resolveCorsOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   let selfOrigin = '';
@@ -1361,6 +1372,29 @@ function resolveAvailableStock(product, variantName){
   }
   return null;
 }
+function resolveTotalStockForProduct(product){
+  if (!product) return null;
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (variants.length){
+    let hasStock = false;
+    let sum = 0;
+    for (const v of variants){
+      if (v && v.stock !== undefined && v.stock !== null){
+        const n = Number(v.stock);
+        if (Number.isFinite(n)){
+          hasStock = true;
+          sum += n;
+        }
+      }
+    }
+    if (hasStock) return sum;
+  }
+  if (product.stock !== undefined && product.stock !== null){
+    const n = Number(product.stock);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return null;
+}
 async function buildItemFromProduct(env, productId, variantName, qty){
   const pid = String(productId || '').trim();
   if (!pid) return { ok:false, error:'missing_product_id' };
@@ -2295,6 +2329,97 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return json({ ok:false, error:String(e) }, 500);
     }
   }
+  if (pathname === '/api/admin/dashboard' && request.method === 'GET') {
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    const scanLimit = Math.max(50, Math.min(Number(env.ADMIN_STATS_LIMIT || 800) || 800, 2000));
+    const lowStockThreshold = Math.max(0, Number(env.LOW_STOCK_THRESHOLD || 3) || 3);
+    const stats = {
+      products: { total: 0, active: 0, lowStock: 0, approx: false },
+      orders: { total: 0, paid: 0, pending: 0, canceled: 0, approx: false },
+      members: { total: 0, approx: false },
+      coupons: { total: 0, used: 0, approx: false }
+    };
+
+    // Products
+    if (env.PRODUCTS){
+      let ids = [];
+      try{
+        const indexRaw = await env.PRODUCTS.get('INDEX');
+        ids = indexRaw ? JSON.parse(indexRaw) : [];
+        if (!Array.isArray(ids)) ids = [];
+      }catch(_){ ids = []; }
+      stats.products.total = ids.length;
+      const slice = ids.slice(0, scanLimit);
+      if (ids.length > slice.length) stats.products.approx = true;
+      for (const id of slice){
+        const raw = await env.PRODUCTS.get(`PRODUCT:${id}`);
+        if (!raw) continue;
+        try{
+          const p = JSON.parse(raw);
+          if (p.active === true) stats.products.active++;
+          const stockTotal = resolveTotalStockForProduct(p);
+          if (stockTotal !== null && stockTotal <= lowStockThreshold) stats.products.lowStock++;
+        }catch(_){}
+      }
+    }
+
+    // Orders
+    if (env.ORDERS){
+      let ids = [];
+      try{
+        const idxRaw = (await env.ORDERS.get(ORDER_INDEX_KEY)) || (await env.ORDERS.get('INDEX'));
+        ids = idxRaw ? JSON.parse(idxRaw) : [];
+        if (!Array.isArray(ids)) ids = [];
+      }catch(_){ ids = []; }
+      stats.orders.total = ids.length;
+      const slice = ids.slice(0, scanLimit);
+      if (ids.length > slice.length) stats.orders.approx = true;
+      for (const oid of slice){
+        const raw = await env.ORDERS.get(oid);
+        if (!raw) continue;
+        try{
+          const o = JSON.parse(raw);
+          if (statusIsPaid(o.status)) stats.orders.paid++;
+          else if (statusIsCanceled(o.status)) stats.orders.canceled++;
+          else stats.orders.pending++;
+        }catch(_){}
+      }
+    }
+
+    // Members
+    {
+      const store = getUserStore(env);
+      if (store && store.list){
+        try{
+          const iter = await store.list({ prefix:'USER:' });
+          const keys = Array.isArray(iter.keys) ? iter.keys : [];
+          stats.members.total = keys.length;
+          if (keys.length >= scanLimit) stats.members.approx = true;
+        }catch(_){}
+      }
+    }
+
+    // Coupons (approx via list)
+    if (env.COUPONS && env.COUPONS.list){
+      try{
+        const iter = await env.COUPONS.list({ prefix:'COUPON:' });
+        const keys = Array.isArray(iter.keys) ? iter.keys.slice(0, scanLimit) : [];
+        stats.coupons.total = keys.length;
+        if (iter.keys && iter.keys.length > keys.length) stats.coupons.approx = true;
+        for (const k of keys){
+          const raw = await env.COUPONS.get(k.name);
+          if (!raw) continue;
+          try{
+            const c = JSON.parse(raw);
+            if (c.used) stats.coupons.used++;
+          }catch(_){}
+        }
+      }catch(_){}
+    }
+    return json({ ok:true, stats, limits: { scanLimit, lowStockThreshold } });
+  }
   if (pathname === '/api/admin/users/reset-guardian' && request.method === 'POST') {
     {
       const guard = await requireAdminWrite(request, env);
@@ -2945,17 +3070,15 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
         'image/png',
         'image/webp',
         'image/gif',
-        'image/svg+xml',
         'application/pdf'
       ]);
-      const allowedProofExt = new Set(['jpg','jpeg','png','webp','gif','svg','pdf']);
+      const allowedProofExt = new Set(['jpg','jpeg','png','webp','gif','pdf']);
       const mimeByExt = {
         jpg: 'image/jpeg',
         jpeg: 'image/jpeg',
         png: 'image/png',
         webp: 'image/webp',
         gif: 'image/gif',
-        svg: 'image/svg+xml',
         pdf: 'application/pdf'
       };
       const validateUploadFile = (file) => {
@@ -2965,7 +3088,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
         if (ext === 'jpeg') ext = 'jpg';
         const mimeOk = mime ? allowedProofMime.has(mime) : false;
         const extOk = ext ? allowedProofExt.has(ext) : false;
-        if (!mimeOk && !extOk) return { ok:false, error:'只支援 JPG/PNG/WebP/GIF/SVG/PDF 檔案' };
+        if (!mimeOk && !extOk) return { ok:false, error:'只支援 JPG/PNG/WebP/GIF/PDF 檔案' };
         if (mime && !mimeOk) return { ok:false, error:'檔案類型不支援' };
         if (ext && !extOk) return { ok:false, error:'檔案副檔名不支援' };
         const size = Number(file.size || 0);
@@ -3333,7 +3456,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       }
     }
     ids.unshift(order.id);
-    if (ids.length > 1000) ids.length = 1000;
+    trimOrderIndex(ids, env);
     await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
 
     // Decrement inventory (variants 或 product-level)
@@ -3558,7 +3681,7 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
     let ids = [];
     if (idxRaw) { try { const parsed = JSON.parse(idxRaw); if (Array.isArray(parsed)) ids = parsed; } catch{} }
     ids.unshift(order.id);
-    if (ids.length > 1000) ids.length = 1000;
+    trimOrderIndex(ids, env);
     await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(ids));
     try {
       await decStockCounters(env, draft.items, order.productId, order.variantName, order.qty);
@@ -3859,10 +3982,23 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
   }
   try{
     const body = await request.json().catch(()=>({}));
+    const record = await getSessionUserRecord(request, env);
+    if (!record){
+      return new Response(JSON.stringify({ ok:false, error:'login_required' }), { status:401, headers: jsonHeaders });
+    }
+    const todayKey = taipeiDateKey();
+    const lastTs = Date.parse(record.quizCouponIssuedAt || record.quizCoupon?.ts || '');
+    if (!Number.isNaN(lastTs)){
+      const lastKey = taipeiDateKey(lastTs);
+      if (lastKey === todayKey){
+        return new Response(JSON.stringify({ ok:false, error:'daily_limit', dateKey: todayKey }), { status:429, headers: jsonHeaders });
+      }
+    }
     const ip = getClientIp(request) || 'unknown';
     const rateLimit = Math.max(1, Number(env.QUIZ_COUPON_RATE_LIMIT || 10) || 10);
     const windowSec = Math.max(30, Number(env.QUIZ_COUPON_WINDOW_SEC || 300) || 300);
-    const ok = await checkRateLimit(env, `rl:quiz_coupon:${ip}`, rateLimit, windowSec);
+    const rlKey = `rl:quiz_coupon:${record.id || ip}`;
+    const ok = await checkRateLimit(env, rlKey, rateLimit, windowSec);
     if (!ok){
       return new Response(JSON.stringify({ ok:false, error:'Too many requests' }), { status:429, headers: jsonHeaders });
     }
@@ -3898,6 +4034,17 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
       used: false
     };
     await saveCoupon(env, rec);
+    try{
+      if (body && body.quiz){
+        const quiz = normalizeQuizInput(body.quiz);
+        if (quiz) record.quiz = quiz;
+      }
+      record.quizCouponIssuedAt = now;
+      record.quizCouponIssuedKey = todayKey;
+      record.quizCouponIssuedCode = code;
+      record.quizCouponIssuedDeity = deityRaw;
+      await saveUserRecord(env, record);
+    }catch(_){}
     return new Response(JSON.stringify({ ok:true, code, deity: deityRaw, amount }), { status:200, headers: jsonHeaders });
   }catch(e){
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
@@ -5153,7 +5300,7 @@ if ((pathname === '/api/orders' || pathname === '/api/orders/lookup') && request
 
         // Rebuild INDEX for future fast loads
         if (!idxRaw && fallbackItems.length) {
-          const rebuilt = fallbackItems.map(it => it.id).slice(0, 1000);
+          const rebuilt = trimOrderIndex(fallbackItems.map(it => it.id), env);
           await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(rebuilt));
         }
       } catch {}
@@ -6626,7 +6773,9 @@ async function handleUpload(request, env, origin) {
       return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
     }
     const uploader = await getSessionUser(request, env);
-    const isAuthed = !!uploader;
+    const adminSession = await getAdminSession(request, env);
+    const isAuthed = !!uploader || !!adminSession;
+    const authTier = uploader ? 'user' : (adminSession ? 'admin' : 'anon');
     if (!isAuthed && String(env.UPLOAD_REQUIRE_AUTH || '') === '1') {
       return withCORS(json({ ok:false, error:"Login required" }, 401));
     }
@@ -6635,7 +6784,7 @@ async function handleUpload(request, env, origin) {
     const anonLimit = Math.max(1, Number(env.UPLOAD_ANON_LIMIT || 10) || 10);
     const authLimit = Math.max(1, Number(env.UPLOAD_AUTH_LIMIT || 60) || 60);
     const limit = isAuthed ? authLimit : anonLimit;
-    const ok = await checkRateLimit(env, `rl:upload:${isAuthed ? 'auth' : 'anon'}:${ip}`, limit, windowSec);
+    const ok = await checkRateLimit(env, `rl:upload:${authTier}:${ip}`, limit, windowSec);
     if (!ok){
       return withCORS(json({ ok:false, error:"Too many requests" }, 429));
     }

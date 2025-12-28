@@ -120,7 +120,7 @@ function renderList(items){
   }
 
   for (const p of items){
-    const img = (p.images && p.images[0]) ? p.images[0] : '';
+    const img = sanitizeImageUrl((p.images && p.images[0]) ? p.images[0] : '');
     const price = minPrice(p);
     const stockTotal = resolveTotalStock(p);
     const stockBadge = stockTotal === null
@@ -131,7 +131,7 @@ function renderList(items){
     card.setAttribute('data-id', String(p.id || ''));
     const deityBadge = p.deity ? `<span class="badge badge-deity">${escapeHtml(p.deity)}</span>` : '';
     card.innerHTML = `
-      <div class="pic">${img?`<img src="${img}" alt="" loading="lazy" decoding="async">`:''}</div>
+      <div class="pic">${img?`<img src="${escapeHtml(img)}" alt="" loading="lazy" decoding="async">`:''}</div>
       <div class="body">
         <div class="name">${escapeHtml(p.name)}</div>
         ${deityBadge ? `<div class="meta meta-top">${deityBadge}</div>` : ''}

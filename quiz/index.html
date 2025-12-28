@@ -652,8 +652,17 @@ function generateCoupon(code){
   return `UC-${code}-${y}${m}${d}-${rand(4)}-${rand(4)}`;
 }
 
-async function issueCoupon(deityCode, amount){
-  const payload = { deity: String(deityCode||'').toUpperCase(), amount: Number(amount||200) };
+async function ensureMemberLoginForCoupon(){
+  try{
+    const res = await fetch('/api/auth/me', { credentials:'include', cache:'no-store' });
+    if (res.ok) return true;
+  }catch(_){}
+  alert('請先登入會員才能領取優惠券，將為你導向登入頁。');
+  window.location.href = '/api/auth/google/login?redirect=/quiz/';
+  return false;
+}
+async function issueCoupon(deityCode, amount, quizPayload){
+  const payload = { deity: String(deityCode||'').toUpperCase(), amount: Number(amount||200), quiz: quizPayload || undefined };
   const headers = { 'Content-Type':'application/json' };
   // 直接呼叫本站新優惠券系統（公共 quiz 發券端點）
   const res = await fetch(`${COUPON_API}/issue-quiz`, {
@@ -663,9 +672,23 @@ async function issueCoupon(deityCode, amount){
     credentials: 'include',
     cache: 'no-store'
   });
-  if (!res.ok) throw new Error(`ISSUE_FAILED_${res.status}`);
-  const j = await res.json();
-  if (!j || !j.code) throw new Error('NO_CODE');
+  const j = await res.json().catch(()=>null);
+  if (res.status === 401){
+    const err = new Error('LOGIN_REQUIRED');
+    err.code = 'LOGIN_REQUIRED';
+    throw err;
+  }
+  if (res.status === 429 && j && j.error === 'daily_limit'){
+    const err = new Error('DAILY_LIMIT');
+    err.code = 'daily_limit';
+    throw err;
+  }
+  if (!res.ok || !j || !j.code){
+    const err = new Error((j && j.error) || `ISSUE_FAILED_${res.status}`);
+    err.code = (j && j.error) || 'ISSUE_FAILED';
+    err.status = res.status;
+    throw err;
+  }
   return j.code;
 }
 
@@ -808,24 +831,24 @@ async function showResult(){
     if (btn && !btn._bound){
       btn._bound = true;
       btn.addEventListener('click', async ()=>{
-        const key = `coupon_${code}`;
-          const box = document.getElementById('couponWrap');
+        if (!(await ensureMemberLoginForCoupon())) return;
+        const dateKey = taipeiDateKey(Date.now());
+        const key = `coupon_${code}_${dateKey}`;
+        const box = document.getElementById('couponWrap');
         let stored = null; try{ stored = JSON.parse(localStorage.getItem(key)||'null'); }catch(_){ stored = null; }
         // 僅沿用新系統（v2）正式券；舊資料一律重發
         let coupon = (stored && stored.version === 'v2' && stored.issued) ? stored.code : '';
         try{
           if (!coupon){
             // 單次向後端索取，若守護神代碼不符直接改用本地券碼，避免錯發
-            const real = await issueCoupon(code, 200);
+            const real = await issueCoupon(code, 200, quizProfile);
             if (!real || typeof real !== 'string') throw new Error('NO_CODE');
             const seg = (real.split('-')[1]||'').toUpperCase();
             if (seg && seg !== code){
-              console.warn('quiz coupon deity mismatch, using local coupon', { expected: code, got: seg, real });
-              coupon = generateCoupon(code); // 保證守護神正確
-            }else{
-              coupon = real;
+              console.warn('quiz coupon deity mismatch', { expected: code, got: seg, real });
             }
-            try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2' })); }catch(_){ }
+            coupon = real;
+            try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2', dateKey })); }catch(_){ }
           }
           // 顯示正式券碼（不再顯示任何臨時券提示）
           box.style.display = 'block';
@@ -873,25 +896,16 @@ async function showResult(){
             }
           }
         }catch(err){
-          // 後端發券失敗時，給出友善訊息並提供臨時碼（仍以正式券優先）
-          var fallback = generateCoupon(code);
-          box.style.display = 'block';
-          box.textContent = '目前系統暫時無法發放正式優惠碼，先提供臨時代碼：'+ fallback +'\n請稍後再試或聯繫客服協助。';
-          if (copyBtn){
-            copyBtn.style.display = 'inline-flex';
-            copyBtn.dataset.code = fallback;
+          if (err && err.code === 'LOGIN_REQUIRED'){
+            alert('請先登入會員才能領取優惠券，將為你導向登入頁。');
+            window.location.href = '/api/auth/google/login?redirect=/quiz/';
+            return;
           }
-          if (saveBtn){
-            saveBtn.style.display = 'inline-flex';
-            saveBtn.dataset.code = fallback;
+          if (err && err.code === 'daily_limit'){
+            alert('今天已領取過優惠券，請於台灣時間午夜 12 點後再領取。');
+            return;
           }
-          if (shopBtn){
-            const u = new URL(shopBtn.href, location.origin);
-            u.searchParams.set('coupon', fallback);
-            u.searchParams.set('deity', code);
-            u.searchParams.set('amount', '200');
-            shopBtn.href = u.toString();
-          }
+          alert('目前系統暫時無法發放優惠券，請稍後再試或聯繫客服。');
         }
       });
     }
