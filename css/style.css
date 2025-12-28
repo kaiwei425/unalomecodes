@@ -240,6 +240,34 @@ html,body{
   .card .body{padding:14px 14px 16px}
   .name{font-weight:800;font-size:16px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:44px;margin:0 0 8px;word-break:break-word;overflow:hidden;}
   .meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 8px;margin:0 0 8px;line-height:1.4;}
+  .card .meta .badge{
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    color:#334155;
+    font-weight:700;
+    border-radius:999px;
+    padding:3px 10px;
+  }
+  .card .meta .badge-deity{
+    background:linear-gradient(135deg,#fff7ed,#ffedd5);
+    border-color:#fed7aa;
+    color:#9a3412;
+  }
+  .card .meta .badge-sold{
+    background:#eef2ff;
+    border-color:#c7d2fe;
+    color:#4338ca;
+  }
+  .card .meta .badge-stock.ok{
+    background:#ecfdf3;
+    border-color:#86efac;
+    color:#166534;
+  }
+  .card .meta .badge-stock.zero{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#b91c1c;
+  }
   .price{font-weight:800;margin-top:6px;font-size:17px}
   .cta{display:flex;gap:8px;margin-top:12px}
   .btn{

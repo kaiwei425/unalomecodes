@@ -123,7 +123,9 @@ function renderList(items){
     const img = (p.images && p.images[0]) ? p.images[0] : '';
     const price = minPrice(p);
     const stockTotal = resolveTotalStock(p);
-    const stockBadge = stockTotal === null ? '' : `<span class="badge">庫存：${stockTotal}</span>`;
+    const stockBadge = stockTotal === null
+      ? ''
+      : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">庫存：${stockTotal}</span>`;
     const card = document.createElement('div');
     card.className = 'card';
     card.setAttribute('data-id', String(p.id || ''));
@@ -132,8 +134,8 @@ function renderList(items){
       <div class="body">
         <div class="name">${escapeHtml(p.name)}</div>
         <div class="meta">
-          ${p.deity?`<span class="badge">${escapeHtml(p.deity)}</span>`:""}
-          <span class="badge">已售出：${Number(p.sold||0)}</span>
+          ${p.deity?`<span class="badge badge-deity">${escapeHtml(p.deity)}</span>`:""}
+          <span class="badge badge-sold">已售出：${Number(p.sold||0)}</span>
           ${stockBadge}
         </div>
         <div class="price">NT$ ${formatPrice(price)}</div>
