@@ -6,19 +6,19 @@
     if (!wrap || wrap.dataset.adminShellApplied) return;
 
     var navItems = [
-      { href: '/admin/index.html', label: '總覽', icon: '🏠' },
-      { href: '/admin/products.html', label: '商品', icon: '📦' },
-      { href: '/admin/orders.html', label: '訂單', icon: '🧾' },
-      { href: '/admin/members.html', label: '會員', icon: '👤' },
-      { href: '/admin/coupons.html', label: '優惠券', icon: '🎟️' },
-      { href: '/admin/code-viewer.html', label: '留言', icon: '💬' },
-      { href: '/admin/fortune-stats.html', label: '日籤統計', icon: '📊' },
-      { href: '/admin/service-products.html', label: '服務商品', icon: '🕯️' },
-      { href: '/admin/service-orders.html', label: '服務訂單', icon: '🧿' }
+      { href: '/admin', label: '總覽', icon: '🏠' },
+      { href: '/admin/products', label: '商品', icon: '📦' },
+      { href: '/admin/orders', label: '訂單', icon: '🧾' },
+      { href: '/admin/members', label: '會員', icon: '👤' },
+      { href: '/admin/coupons', label: '優惠券', icon: '🎟️' },
+      { href: '/admin/code-viewer', label: '留言', icon: '💬' },
+      { href: '/admin/fortune-stats', label: '日籤統計', icon: '📊' },
+      { href: '/admin/service-products', label: '服務商品', icon: '🕯️' },
+      { href: '/admin/service-orders', label: '服務訂單', icon: '🧿' }
     ];
 
     var path = location.pathname.replace(/\/$/, '');
-    if (path === '/admin') path = '/admin/index.html';
+    if (path === '/admin') path = '/admin';
 
     var shell = document.createElement('div');
     shell.className = 'admin-shell';

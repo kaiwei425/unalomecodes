@@ -308,10 +308,10 @@
   function lineLogin(){
     try{
       const path = window.location.pathname + window.location.search + window.location.hash;
-      const redirectParam = encodeURIComponent(path || '/shop.html');
+      const redirectParam = encodeURIComponent(path || '/shop');
       window.location.href = `${lineLoginUrl}?redirect=${redirectParam}`;
     }catch(_){
-      window.location.href = `${lineLoginUrl}?redirect=%2Fshop.html`;
+      window.location.href = `${lineLoginUrl}?redirect=%2Fshop`;
     }
   }
 
@@ -450,10 +450,10 @@
     }
     try{
       const path = window.location.pathname + window.location.search + window.location.hash;
-      const redirectParam = encodeURIComponent(path || '/shop.html');
+      const redirectParam = encodeURIComponent(path || '/shop');
       window.location.href = `${loginUrl}?redirect=${redirectParam}`;
     }catch(_){
-      window.location.href = `${loginUrl}?redirect=%2Fshop.html`;
+      window.location.href = `${loginUrl}?redirect=%2Fshop`;
     }
   }
 

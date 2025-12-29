@@ -44,7 +44,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
     <h1>日籤領取統計</h1>
     <div class="muted">統計「每日唯一領取人數」（同一帳號同一天只計一次）。</div>
     <div class="bar">
@@ -126,7 +126,7 @@ if (daysInput) daysInput.addEventListener('change', loadStats);
 const loginGo = document.getElementById('loginGo');
 if (loginGo){
   loginGo.addEventListener('click', ()=>{
-    const redirect = encodeURIComponent('/admin/fortune-stats.html');
+    const redirect = encodeURIComponent('/admin/fortune-stats');
     window.location.href = `${API_BASE}/api/auth/google/admin/start?redirect=${redirect}`;
   });
 }

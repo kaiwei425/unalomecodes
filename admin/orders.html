@@ -103,7 +103,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="backLink"><a class="backBtn" href="./index.html">← 返回主選單</a></div>
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
     <h1>訂單管理（批次）</h1>
     <div class="tabs" id="statusTabs">
       <button class="tab-btn active" data-tab="all">全部 <span class="tab-count" data-tab="all">0</span></button>
@@ -1080,7 +1080,7 @@ let __autoTimer = setInterval(()=>{
   const btnGo = document.getElementById('loginGo');
   if (btnGo){
     btnGo.addEventListener('click', ()=>{
-      const redirect = encodeURIComponent('/admin/orders.html');
+      const redirect = encodeURIComponent('/admin/orders');
       window.location.href = `${API_BASE}/api/auth/google/admin/start?redirect=${redirect}`;
     });
   }

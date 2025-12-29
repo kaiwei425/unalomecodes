@@ -56,7 +56,7 @@
       div.className = 'item';
       const imgUrl = item.images && item.images[0] ? sanitizeImageUrl(item.images[0]) : '';
       const img = imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="">` : '';
-      const link = `/shop.html#id=${encodeURIComponent(item.id||'')}`;
+      const link = `/shop#id=${encodeURIComponent(item.id||'')}`;
       div.innerHTML = `
         ${img}
         <div class="meta">
@@ -92,7 +92,7 @@
     if (!backBtn) return;
     backBtn.addEventListener('click', ()=>{
       if (window.history.length > 1) history.back();
-      else window.location.href = '/shop.html';
+      else window.location.href = '/shop';
     });
   }
 

@@ -2238,7 +2238,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const state = makeToken(24);
     const redirectRaw = url.searchParams.get('redirect') || '';
-    let redirectPath = '/shop.html';
+    let redirectPath = '/shop';
     if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
       redirectPath = redirectRaw;
     }
@@ -2262,7 +2262,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return new Response('LINE OAuth not configured', { status:500 });
     }
     const redirectRaw = url.searchParams.get('redirect') || '';
-    let redirectPath = '/shop.html';
+    let redirectPath = '/shop';
     if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
       redirectPath = redirectRaw;
     }
@@ -2307,7 +2307,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (signedRedirect && typeof signedRedirect === 'string' && signedRedirect.startsWith('/') && !signedRedirect.startsWith('//')){
         return signedRedirect;
       }
-      return '/shop.html';
+      return '/shop';
     })();
     if (!code || !state || (!stateValid && !signedPayload)) {
       const h = new Headers();
@@ -2431,7 +2431,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded;
         }catch(_){}
       }
-      return '/shop.html';
+      return '/shop';
     })();
     if (!code || !state || !expectedState || state !== expectedState) {
       const h = new Headers();
@@ -2530,7 +2530,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return new Response('Admin Google OAuth not configured', { status:500 });
     }
     const redirectRaw = url.searchParams.get('redirect') || '';
-    let redirectPath = '/admin/';
+    let redirectPath = '/admin';
     if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
       redirectPath = redirectRaw;
     }
@@ -2575,7 +2575,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (signedRedirect && typeof signedRedirect === 'string' && signedRedirect.startsWith('/') && !signedRedirect.startsWith('//')){
         return signedRedirect;
       }
-      return '/admin/';
+      return '/admin';
     })();
     if (!code || !state || (!stateValid && !signedPayload)) {
       const h = new Headers();
@@ -3385,8 +3385,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
         const originUrl = env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com';
         const base = originUrl.replace(/\/$/, '');
-        const orderLinkAdmin = `${base}/${orderType === 'service' ? 'admin/service-orders.html' : 'admin/orders.html'}`;
-        const orderLinkCustomer = `${base}/account-orders.html`;
+        const orderLinkAdmin = `${base}/${orderType === 'service' ? 'admin/service-orders' : 'admin/orders'}`;
+        const orderLinkCustomer = `${base}/account-orders`;
         const buyerEmail = String(order?.buyer?.email || order?.buyer_email || order?.email || '').trim();
         const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
         const adminTo = Array.from(new Set(['bkkaiwei@gmail.com', ...adminRaw]));
@@ -5278,7 +5278,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
     const serviceLookupBase = env.SERVICE_LOOKUP_URL
       ? env.SERVICE_LOOKUP_URL.replace(/\/$/, '')
-      : `${primarySite}/service.html`;
+      : `${primarySite}/service`;
     const defaultLookupBase = (env.ORDER_LOOKUP_URL || primarySite).replace(/\/$/, '');
     const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || String(order?.method||'').includes('服務');
     const lookupUrl = order.id
@@ -8217,7 +8217,7 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     let origin = '';
     try{ origin = new URL(requestUrl).origin; }catch(_){}
     const base = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
-    const adminLink = `${base}/admin/code-viewer.html?code=${encodeURIComponent(item.code || '')}`;
+    const adminLink = `${base}/admin/code-viewer?code=${encodeURIComponent(item.code || '')}`;
     const nick = String(item.nick || '訪客').trim();
     const productName = String(item.productName || '').trim();
     const msg = String(item.msg || '').trim();

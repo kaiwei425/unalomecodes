@@ -71,7 +71,7 @@
     if (!backBtn) return;
     backBtn.addEventListener('click', ()=>{
       if (window.history.length > 1) history.back();
-      else window.location.href = '/shop.html';
+      else window.location.href = '/shop';
     });
   }
 
