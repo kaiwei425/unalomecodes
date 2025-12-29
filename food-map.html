@@ -530,8 +530,24 @@ async function loadRemote(){
   try{
     const res = await fetch('/api/foods',{cache:'no-store'});
     const data = await res.json().catch(()=>({}));
-    if (res.ok && Array.isArray(data.items) && data.items.length){
-      DATA = data.items;
+    if (res.ok && Array.isArray(data.items)){
+      if (data.items.length){
+        const map = new Map();
+        BASE_DATA.forEach(item=>{
+          if (item && item.id) map.set(item.id, item);
+        });
+        const extra = [];
+        data.items.forEach((item, idx)=>{
+          if (item && item.id){
+            map.set(item.id, item);
+          }else if (item){
+            extra.push(item);
+          }
+        });
+        DATA = [...map.values(), ...extra];
+      }else{
+        DATA = BASE_DATA.slice();
+      }
     }
   }catch(_){}
   if (!DATA.length){
