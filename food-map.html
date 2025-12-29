@@ -474,7 +474,9 @@ async function loadRemote(){
   try{
     const res = await fetch('/api/foods',{cache:'no-store'});
     const data = await res.json().catch(()=>({}));
-    if (res.ok && data.items){ DATA = data.items; }
+    if (res.ok && Array.isArray(data.items) && data.items.length){
+      DATA = data.items;
+    }
   }catch(_){}
   await refreshFavorites();
   initFilters();
