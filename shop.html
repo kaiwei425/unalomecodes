@@ -6013,12 +6013,18 @@ function escapeHtml(s) {
 #lineWarning .line-actions{display:flex;gap:10px;margin-top:10px;}
 #lineWarning .line-actions .btn{flex:1;}
 
-.guardian-badge{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:linear-gradient(135deg,#0f172a,#111827);border:1px solid rgba(148,163,184,0.35);color:#e2e8f0;box-shadow:0 12px 24px rgba(15,23,42,0.25);}
+.guardian-badge{position:relative;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:linear-gradient(135deg,#0f172a,#111827);border:1px solid rgba(148,163,184,0.35);color:#e2e8f0;box-shadow:0 12px 24px rgba(15,23,42,0.25);cursor:pointer;user-select:none;}
 .guardian-badge img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2));}
 .guardian-meta{display:flex;flex-direction:column;gap:2px;font-size:12px;}
 .guardian-meta strong{font-size:13px;font-weight:700;color:#f8fafc;}
-.fortune-btn{margin-top:2px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#0b1120;border:none;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(249,115,22,.35);}
-.fortune-btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;}
+.guardian-sub{font-size:11px;color:#94a3b8;}
+.guardian-alert{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid #111827;line-height:1;}
+.guardian-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:170px;display:none;flex-direction:column;gap:4px;padding:6px;border-radius:12px;background:#0b1022;border:1px solid rgba(148,163,184,.25);box-shadow:0 18px 36px rgba(0,0,0,.35);z-index:30;}
+.guardian-menu.guardian-menu--open{display:flex;}
+.guardian-menu a,
+.guardian-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:10px;background:transparent;border:0;color:#e2e8f0;font-size:12px;font-weight:700;text-decoration:none;text-align:left;cursor:pointer;}
+.guardian-menu a:hover,
+.guardian-menu button:hover{background:rgba(148,163,184,.12);}
 
 .fortune-dialog{border:none;border-radius:18px;padding:0;max-width:560px;width:92%;background:#0b1022;color:#e5e7eb;box-shadow:0 24px 60px rgba(0,0,0,.45);}
 .fortune-shell{padding:20px;display:grid;gap:16px;background:
@@ -6099,11 +6105,81 @@ function escapeHtml(s) {
   const fortuneShareBtn = document.getElementById('fortuneShareBtn');
   let lastFortune = null;
   let lastGuardianName = '';
+  let lastGuardianCode = '';
+  let midnightTimer = null;
+  const FORTUNE_KEY = '__fortune_last_date__';
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   const badgeIcon = (function(){
     if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
     return '/img/guardian-emblem.png'; // 請將圖檔放在此路徑
   })();
+  function getTaipeiDateKey(date){
+    try{
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(date || new Date());
+      const mapParts = {};
+      parts.forEach(part=>{
+        if (part.type !== 'literal') mapParts[part.type] = part.value;
+      });
+      if (!mapParts.year || !mapParts.month || !mapParts.day) return '';
+      return `${mapParts.year}-${mapParts.month}-${mapParts.day}`;
+    }catch(_){
+      return '';
+    }
+  }
+  function readFortuneKey(){
+    try{
+      return localStorage.getItem(FORTUNE_KEY) || '';
+    }catch(_){
+      return '';
+    }
+  }
+  function writeFortuneKey(key){
+    try{
+      localStorage.setItem(FORTUNE_KEY, key);
+    }catch(_){}
+  }
+  function shouldShowFortuneAlert(){
+    const today = getTaipeiDateKey(new Date());
+    if (!today) return false;
+    const last = readFortuneKey();
+    return last !== today;
+  }
+  function updateFortuneAlert(){
+    if (!badge) return;
+    const alertEl = badge.querySelector('[data-guardian-alert]');
+    if (!alertEl) return;
+    if (shouldShowFortuneAlert()){
+      alertEl.textContent = '1';
+      alertEl.style.display = 'flex';
+    }else{
+      alertEl.style.display = 'none';
+    }
+  }
+  function markFortuneClaimed(){
+    const today = getTaipeiDateKey(new Date());
+    if (!today) return;
+    writeFortuneKey(today);
+    updateFortuneAlert();
+  }
+  function getTaipeiNow(){
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+  }
+  function scheduleFortuneReset(){
+    clearTimeout(midnightTimer);
+    const nowTz = getTaipeiNow();
+    const next = new Date(nowTz);
+    next.setHours(24, 0, 0, 0);
+    const delay = Math.max(1000, next - nowTz);
+    midnightTimer = setTimeout(()=>{
+      updateFortuneAlert();
+      scheduleFortuneReset();
+    }, delay + 200);
+  }
   function showDialog(dlg){
     if (!dlg) return;
     if (typeof dlg.showModal === 'function') dlg.showModal();
@@ -6171,7 +6247,9 @@ function escapeHtml(s) {
         if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取日籤。');
         throw new Error((data && data.error) || '取得日籤失敗');
       }
-      renderFortune(data.fortune || null);
+      const fortune = data.fortune || null;
+      renderFortune(fortune);
+      if (fortune) markFortuneClaimed();
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
     }
@@ -6188,6 +6266,49 @@ function escapeHtml(s) {
     }
     showDialog(fortuneDialog);
     fetchFortune();
+  }
+  function openMenu(){
+    if (!badge) return;
+    const menu = badge.querySelector('[data-guardian-menu]');
+    if (!menu) return;
+    menu.classList.add('guardian-menu--open');
+    menu.setAttribute('aria-hidden', 'false');
+    badge.setAttribute('aria-expanded', 'true');
+  }
+  function closeMenu(){
+    if (!badge) return;
+    const menu = badge.querySelector('[data-guardian-menu]');
+    if (!menu) return;
+    menu.classList.remove('guardian-menu--open');
+    menu.setAttribute('aria-hidden', 'true');
+    badge.setAttribute('aria-expanded', 'false');
+  }
+  function toggleMenu(){
+    if (!badge) return;
+    const menu = badge.querySelector('[data-guardian-menu]');
+    if (!menu) return;
+    if (menu.classList.contains('guardian-menu--open')) closeMenu();
+    else openMenu();
+  }
+  function openRecommended(){
+    const code = lastGuardianCode;
+    const name = map[code] || '';
+    const panel = document.getElementById('guardianPanel');
+    if (panel){
+      panel.scrollIntoView({ behavior:'smooth', block:'start' });
+      panel.classList.add('guardian-panel--flash');
+      setTimeout(()=> panel.classList.remove('guardian-panel--flash'), 1600);
+      return;
+    }
+    const deitySelect = document.getElementById('fDeity');
+    if (deitySelect && name){
+      deitySelect.value = name;
+      deitySelect.dispatchEvent(new Event('change'));
+    }
+    const list = document.getElementById('list');
+    if (list){
+      list.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
   }
   async function loadImageFromUrl(url){
     if (!url) return null;
@@ -6359,12 +6480,12 @@ function escapeHtml(s) {
         return null;
       }
       const raw = localStorage.getItem('__lastQuizGuardian__');
-      if (raw){
-        const obj = JSON.parse(raw);
-        if (obj && obj.code) return obj;
-      }
-      return null;
-    }catch(_){ return null; }
+    if (raw){
+      const obj = JSON.parse(raw);
+      if (obj && obj.code) return obj;
+    }
+    return null;
+  }catch(_){ return null; }
   }
   function render(){
     if (!badge) return;
@@ -6380,11 +6501,65 @@ function escapeHtml(s) {
     }
     const code = String(g.code||'').toUpperCase();
     const name = map[code] || '守護神';
-    badge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><div class="guardian-meta"><strong>守護神：${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>領取日籤</button></div>`;
+    lastGuardianCode = code;
+    lastGuardianName = name;
+    badge.setAttribute('role', 'button');
+    badge.setAttribute('tabindex', '0');
+    badge.setAttribute('aria-haspopup', 'menu');
+    badge.setAttribute('aria-expanded', 'false');
+    badge.innerHTML = `
+      <span class="guardian-alert" data-guardian-alert aria-hidden="true">1</span>
+      <img src="${badgeIcon}" alt="守護神">
+      <div class="guardian-meta">
+        <strong>守護神：${name}</strong>
+        <span class="guardian-sub">點擊徽章開啟選單</span>
+      </div>
+      <div class="guardian-menu" data-guardian-menu role="menu" aria-hidden="true">
+        <button type="button" data-guardian-action="fortune">領取日籤</button>
+        <a href="/deity?code=${code}" data-guardian-action="intro">守護神介紹</a>
+        <button type="button" data-guardian-action="recommend">推薦商品</button>
+      </div>
+    `;
     badge.style.display = 'flex';
-    const btn = badge.querySelector('[data-fortune-btn]');
-    if (btn){
-      btn.addEventListener('click', openFortuneDialog);
+    updateFortuneAlert();
+    closeMenu();
+    if (!badge.dataset.guardianMenuBound){
+      badge.dataset.guardianMenuBound = '1';
+      badge.addEventListener('click', e=>{
+        const action = e.target.closest('[data-guardian-action]');
+        if (action){
+          const type = action.getAttribute('data-guardian-action');
+          if (type === 'fortune'){
+            openFortuneDialog();
+            closeMenu();
+            return;
+          }
+          if (type === 'recommend'){
+            openRecommended();
+            closeMenu();
+            return;
+          }
+          if (type === 'intro'){
+            closeMenu();
+            return;
+          }
+        }
+        if (e.target.closest('[data-guardian-menu]')) return;
+        toggleMenu();
+      });
+      badge.addEventListener('keydown', e=>{
+        if (e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          toggleMenu();
+        }
+        if (e.key === 'Escape'){
+          closeMenu();
+        }
+      });
+      document.addEventListener('click', e=>{
+        if (!badge.contains(e.target)) closeMenu();
+      });
+      window.addEventListener('blur', closeMenu);
     }
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
@@ -6393,6 +6568,7 @@ function escapeHtml(s) {
   // 若剛登入後端尚未回傳 guardian，稍後再補一次
   setTimeout(render, 800);
   render();
+  scheduleFortuneReset();
   if (fortuneClose){
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
   }
