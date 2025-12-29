@@ -419,7 +419,7 @@ html,body{
     padding:0;
     display:block;
   }
-  .footer-logos .logo-item--ecpay img{width:80%;height:80%;}
+  .footer-logos .logo-item--ecpay img{width:90%;height:90%;}
   .footer-social{display:flex;gap:8px;justify-content:center;margin-bottom:6px;}
   .footer-social .logo-item{
     width:32px;height:32px;border-radius:0;
