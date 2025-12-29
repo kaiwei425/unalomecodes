@@ -282,8 +282,11 @@ document.addEventListener('click', function(e){
   const qnaBadge = document.getElementById('adminQnaBadge');
   const userOrdersLink = panel ? panel.querySelector('#userOrdersLink') : null;
   const userQnaBadge = document.getElementById('userQnaBadge');
+  const userCouponsLink = panel ? panel.querySelector('#userCouponsLink') : null;
+  const userCouponBadge = document.getElementById('userCouponBadge');
   let qnaTimer = null;
   let userQnaTimer = null;
+  let userCouponTimer = null;
 
   async function openProfile(){
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
@@ -401,6 +404,18 @@ document.addEventListener('click', function(e){
     }
   }
 
+  function setUserCouponBadge(count){
+    if (!userCouponBadge) return;
+    const num = Number(count || 0) || 0;
+    if (num > 0){
+      userCouponBadge.textContent = String(num);
+      userCouponBadge.classList.add('show');
+    }else{
+      userCouponBadge.textContent = '0';
+      userCouponBadge.classList.remove('show');
+    }
+  }
+
   async function refreshQnaUnread(){
     if (!qnaBadge) return;
     try{
@@ -431,6 +446,21 @@ document.addEventListener('click', function(e){
     }
   }
 
+  async function refreshUserCouponUnread(){
+    if (!userCouponBadge) return;
+    try{
+      const res = await fetch('/api/me/coupons/unread', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        setUserCouponBadge(0);
+        return;
+      }
+      setUserCouponBadge(data.total || 0);
+    }catch(_){
+      setUserCouponBadge(0);
+    }
+  }
+
   async function clearQnaUnread(){
     try{
       await fetch('/api/admin/qna/unread', {
@@ -455,6 +485,18 @@ document.addEventListener('click', function(e){
     setUserQnaBadge(0);
   }
 
+  async function clearUserCouponUnread(){
+    try{
+      await fetch('/api/me/coupons/unread', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({ action:'clear' })
+      });
+    }catch(_){}
+    setUserCouponBadge(0);
+  }
+
   if (qnaLink){
     qnaLink.addEventListener('click', ()=>{
       clearQnaUnread();
@@ -463,6 +505,11 @@ document.addEventListener('click', function(e){
   if (userOrdersLink){
     userOrdersLink.addEventListener('click', ()=>{
       clearUserQnaUnread();
+    });
+  }
+  if (userCouponsLink){
+    userCouponsLink.addEventListener('click', ()=>{
+      clearUserCouponUnread();
     });
   }
 
@@ -485,12 +532,18 @@ document.addEventListener('click', function(e){
     window.authState.subscribe(user=>{
       if (user){
         refreshUserQnaUnread();
+        refreshUserCouponUnread();
         if (userQnaTimer) clearInterval(userQnaTimer);
         userQnaTimer = setInterval(refreshUserQnaUnread, 60000);
+        if (userCouponTimer) clearInterval(userCouponTimer);
+        userCouponTimer = setInterval(refreshUserCouponUnread, 60000);
       }else{
         setUserQnaBadge(0);
+        setUserCouponBadge(0);
         if (userQnaTimer) clearInterval(userQnaTimer);
         userQnaTimer = null;
+        if (userCouponTimer) clearInterval(userCouponTimer);
+        userCouponTimer = null;
       }
     });
   }

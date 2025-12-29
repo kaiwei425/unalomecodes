@@ -697,6 +697,40 @@ async function issueWelcomeCoupon(env, record){
     return null;
   }
 }
+async function getUserCouponUnread(env, record){
+  if (!record) return 0;
+  const rawCodes = [];
+  if (Array.isArray(record.coupons)) rawCodes.push(...record.coupons);
+  if (record.welcomeCoupon && record.welcomeCoupon.code) rawCodes.push(record.welcomeCoupon.code);
+  const codes = Array.from(new Set(
+    rawCodes.map(c => String(c || '').trim().toUpperCase()).filter(Boolean)
+  ));
+  if (!codes.length) return 0;
+  const seenAt = record.couponsSeenAt ? Date.parse(record.couponsSeenAt) : 0;
+  const nowTs = Date.now();
+  let total = 0;
+  for (const code of codes){
+    const rec = await readCoupon(env, code);
+    if (!rec) continue;
+    if (rec.used) continue;
+    if (rec.expireAt){
+      const exp = Date.parse(rec.expireAt);
+      if (!Number.isNaN(exp) && exp <= nowTs) continue;
+    }
+    let issuedAt = 0;
+    if (rec.issuedAt){
+      const parsed = Date.parse(rec.issuedAt);
+      if (!Number.isNaN(parsed)) issuedAt = parsed;
+    }
+    if (issuedAt){
+      if (issuedAt <= seenAt) continue;
+    }else if (seenAt){
+      continue;
+    }
+    total++;
+  }
+  return total;
+}
 async function revokeUserCoupons(env, record, opts = {}){
   const result = { total: 0, revoked: 0, codes: [] };
   if (!record) return result;
@@ -3507,6 +3541,27 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:false, error:'method not allowed' }, 405);
   }
 
+  if (pathname === '/api/me/coupons/unread') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (request.method === 'GET') {
+      const total = await getUserCouponUnread(env, record);
+      return json({ ok:true, total });
+    }
+    if (request.method === 'POST') {
+      let body = {};
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      const action = String(body.action || body.mode || '').toLowerCase();
+      if (action === 'clear' || action === 'reset' || action === 'read') {
+        record.couponsSeenAt = new Date().toISOString();
+        await saveUserRecord(env, record);
+        return json({ ok:true, total: 0 });
+      }
+      return json({ ok:false, error:'invalid action' }, 400);
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
   if (pathname === '/api/me/wishlist') {
     const record = await getSessionUserRecord(request, env);
     if (!record) return json({ ok:false, error:'unauthorized' }, 401);
@@ -3558,6 +3613,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const items = [];
       const nextCodes = [];
       let changed = false;
+      let recordChanged = false;
+      const markSeen = ['1','true','yes'].includes(String(url.searchParams.get('mark') || '').toLowerCase());
       const nowTs = Date.now();
       for (const code of codes){
         const rec = await readCoupon(env, code);
@@ -3589,6 +3646,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }
       if (changed){
         record.coupons = nextCodes.slice(0, 200);
+        recordChanged = true;
+      }
+      if (markSeen){
+        record.couponsSeenAt = new Date().toISOString();
+        recordChanged = true;
+      }
+      if (recordChanged){
         await saveUserRecord(env, record);
       }
       return json({ ok:true, items });

@@ -114,7 +114,7 @@
   async function load(){
     listEl.innerHTML = '<div class="muted">載入中…</div>';
     try{
-      const res = await fetch('/api/me/coupons',{credentials:'include',cache:'no-store'});
+      const res = await fetch('/api/me/coupons?mark=1',{credentials:'include',cache:'no-store'});
       const data = await res.json().catch(()=>({}));
       if (!res.ok || !data.ok) throw new Error(data.error||('HTTP '+res.status));
       items = Array.isArray(data.items) ? data.items : [];
