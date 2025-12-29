@@ -1397,7 +1397,7 @@
         memberMenuBadge.textContent = String(total);
         memberMenuBadge.classList.add('show');
       }else{
-        memberMenuBadge.textContent = '0';
+        memberMenuBadge.textContent = '';
         memberMenuBadge.classList.remove('show');
       }
     }
