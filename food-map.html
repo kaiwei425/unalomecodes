@@ -264,6 +264,25 @@ function buildInstagramEmbedUrl(input){
     return `${u.origin}${cleanPath}embed`;
   }catch(_){ return ''; }
 }
+function buildIntroText(item){
+  const intro = (item && item.intro) ? String(item.intro).trim() : '';
+  if (intro) return intro;
+  const parts = [];
+  const highlights = Array.isArray(item && item.highlights) ? item.highlights.filter(Boolean) : [];
+  if (highlights.length){
+    parts.push(`亮點：${highlights.join('、')}`);
+  }
+  const dishes = Array.isArray(item && item.dishes) ? item.dishes.filter(d=>d && (d.name || d.price)) : [];
+  if (dishes.length){
+    const dishLine = dishes.map(d=>{
+      const name = d.name ? String(d.name).trim() : '';
+      const price = d.price ? `฿${String(d.price).trim()}` : '';
+      return [name, price].filter(Boolean).join(' ');
+    }).filter(Boolean).join('、');
+    if (dishLine) parts.push(`推薦餐點：${dishLine}`);
+  }
+  return parts.join('。');
+}
 
 const cardsEl = document.getElementById('cards');
 const fCat = document.getElementById('fCat');
@@ -327,8 +346,7 @@ function render(){
     const coverUrl = safeUrl(item.cover);
     const coverImg = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}">` : '';
     const mapsUrl = safeUrl(item.maps);
-    const highlightText = (item.highlights || []).join('\n');
-    const dishText = (item.dishes || []).map(d=>`${d.name||''}｜${d.price||''}`).join('\n');
+    const introText = buildIntroText(item);
     const adminPanel = adminMode ? `
       <div class="admin-panel" data-admin-id="${safeId}">
         <div class="admin-grid">
@@ -341,11 +359,8 @@ function render(){
           <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>封面圖<input class="admin-input" data-admin-field="cover" value="${escapeHtml(item.cover || '')}"></label>
         </div>
-        <label class="admin-field">亮點（每行一個）
-          <textarea class="admin-textarea" data-admin-field="highlights">${escapeHtml(highlightText)}</textarea>
-        </label>
-        <label class="admin-field">餐點（每行：名稱｜價格）
-          <textarea class="admin-textarea" data-admin-field="dishes">${escapeHtml(dishText)}</textarea>
+        <label class="admin-field">店家介紹
+          <textarea class="admin-textarea" data-admin-field="intro">${escapeHtml(introText)}</textarea>
         </label>
         <div class="admin-actions">
           <button class="btn ghost" data-admin-save="${safeId}">儲存</button>
@@ -414,6 +429,8 @@ function render(){
           const el = wrap.querySelector(`[data-admin-field="${field}"]`);
           return el ? el.value.trim() : '';
         };
+        const introRaw = read('intro');
+        const introLines = introRaw.split(/\n+/).filter(Boolean);
         const payload = {
           id: id || undefined,
           name: read('name'),
@@ -424,11 +441,9 @@ function render(){
           maps: read('maps'),
           ig: read('ig'),
           cover: read('cover'),
-          highlights: read('highlights').split(/\n+/).filter(Boolean),
-          dishes: read('dishes').split(/\n+/).filter(Boolean).map(line=>{
-            const parts = line.split(/\s*[|｜]\s*/);
-            return { name: parts[0]||'', price: parts[1]||'' };
-          })
+          intro: introRaw,
+          highlights: introLines,
+          dishes: []
         };
         try{
           btn.disabled = true;
@@ -490,8 +505,7 @@ function openModal(id){
   if (!item) return;
   const body = document.getElementById('foodModalBody');
   const dlg = document.getElementById('foodModal');
-  const dishes = item.dishes?.map(d=>`<li>${escapeHtml(d.name)}｜฿${escapeHtml(d.price)}</li>`).join('') || '';
-  const highlights = (item.highlights||[]).map(h=>`<li>${escapeHtml(h)}</li>`).join('');
+  const introText = buildIntroText(item);
   const embedUrl = buildInstagramEmbedUrl(item.ig);
   const iframe = embedUrl ? `<iframe src="${escapeHtml(embedUrl)}" style="width:100%;min-height:420px;border:none;"></iframe>` : '';
   const mapsUrl = safeUrl(item.maps);
@@ -507,8 +521,10 @@ function openModal(id){
         <div><strong>地址：</strong>${escapeHtml(item.address || '')}</div>
         <div><strong>分類：</strong>${escapeHtml(item.category || '')}｜${escapeHtml(item.area || '')}｜價位：${escapeHtml(item.price || '')}</div>
       </div>
-      ${highlights ? `<div><strong>簡介：</strong><ul style="margin:6px 0 0 18px;color:#475569;">${highlights}</ul></div>` : ''}
-      ${dishes ? `<div><strong>餐點：</strong><ul style="margin:6px 0 0 18px;color:#475569;">${dishes}</ul></div>` : ''}
+      <div>
+        <strong>店家介紹：</strong>
+        <div style="margin:6px 0 0;color:#475569;white-space:pre-wrap;">${escapeHtml(introText || '暫無介紹')}</div>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn primary" style="flex:1;" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
         <button class="btn ghost" style="flex:1;" data-fav="${safeId}">加入收藏</button>
