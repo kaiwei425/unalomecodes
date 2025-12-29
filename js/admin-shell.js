@@ -37,7 +37,8 @@
       var a = document.createElement('a');
       a.href = item.href;
       a.setAttribute('data-nav', item.href);
-      a.textContent = item.icon + ' ' + item.label;
+      a.innerHTML = '<span class="nav-icon">' + item.icon + '</span>' +
+        '<span class="nav-label">' + item.label + '</span>';
       if (path === item.href) a.classList.add('active');
       nav.appendChild(a);
     });
@@ -58,6 +59,7 @@
     shell.appendChild(side);
     shell.appendChild(main);
     body.prepend(shell);
+    body.classList.add('admin-shell-applied');
   }catch(_){
     // ignore
   }
