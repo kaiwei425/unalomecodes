@@ -59,6 +59,14 @@
     .fav-btn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 12px rgba(15,23,42,.12);}
     .pill-inline{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);font-size:12px;}
     .tag-row{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;}
+    .admin-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:grid;gap:10px;}
+    .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;}
+    .admin-field{display:grid;gap:6px;font-size:12px;color:var(--muted);}
+    .admin-grid label{display:grid;gap:6px;font-size:12px;color:var(--muted);}
+    .admin-input{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;}
+    .admin-textarea{min-height:70px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;resize:vertical;}
+    .admin-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .admin-hint{font-size:11px;color:#ef4444;}
     @media(max-width:900px){
       .hero{grid-template-columns:1fr;}
     }
@@ -188,6 +196,45 @@ const BASE_DATA = [
     ig:'https://www.instagram.com/p/Cd8q1mAq8nz/',
     highlights:['酸白菜湯頭','手切梅花豬','包廂友善聚餐'],
     dishes:[{name:'酸菜白肉鍋', price:'650'},{name:'手切梅花豬', price:'380'}]
+  },
+  {
+    id:'bkk-street-001',
+    name:'Thip Samai Pad Thai',
+    category:'泰式料理',
+    area:'老城區',
+    price:'$',
+    address:'Maha Chai Rd, Bangkok',
+    maps:'https://maps.google.com/?q=Thip%20Samai%20Pad%20Thai',
+    cover:'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=900&q=60',
+    ig:'https://www.instagram.com/p/CLt7pp6H1W9/',
+    highlights:['招牌蝦油炒河粉','排隊熱門','晚間人潮多'],
+    dishes:[{name:'蝦油炒河粉', price:'120'},{name:'蛋包炒河粉', price:'150'}]
+  },
+  {
+    id:'bkk-dessert-002',
+    name:'Nana Coffee Roasters',
+    category:'咖啡廳',
+    area:'Ari',
+    price:'$$',
+    address:'Ari Soi 1, Bangkok',
+    maps:'https://maps.google.com/?q=Nana%20Coffee%20Roasters%20Ari',
+    cover:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=60',
+    ig:'https://www.instagram.com/p/CbX8YgRr6zm/',
+    highlights:['冠軍咖啡豆','可拍照打卡','空間寬敞'],
+    dishes:[{name:'手沖咖啡', price:'160'},{name:'巴斯克蛋糕', price:'180'}]
+  },
+  {
+    id:'bkk-thai-002',
+    name:'Nara Thai Cuisine',
+    category:'泰式料理',
+    area:'Siam',
+    price:'$$',
+    address:'Siam Paragon, Bangkok',
+    maps:'https://maps.google.com/?q=Nara%20Thai%20Cuisine%20Siam%20Paragon',
+    cover:'https://images.unsplash.com/photo-1504674900247-0877df9cc845?auto=format&fit=crop&w=900&q=60',
+    ig:'https://www.instagram.com/p/Cn4NBBsr4dA/',
+    highlights:['招牌綠咖哩','多人套餐友善','商場內好抵達'],
+    dishes:[{name:'綠咖哩雞', price:'260'},{name:'月亮蝦餅', price:'280'}]
   }
 ];
 
@@ -229,6 +276,24 @@ const btnAdmin = document.getElementById('btnAdmin');
 
 let DATA = BASE_DATA.slice();
 let favs = [];
+let adminMode = false;
+const ADMIN_KEY = 'foodMapAdminMode';
+
+function getAdminMode(){
+  try{
+    const params = new URLSearchParams(location.search);
+    if (params.get('admin') === '1') return true;
+    return localStorage.getItem(ADMIN_KEY) === '1';
+  }catch(_){
+    return false;
+  }
+}
+function setAdminMode(next){
+  adminMode = !!next;
+  try{ localStorage.setItem(ADMIN_KEY, adminMode ? '1' : '0'); }catch(_){}
+  document.body.classList.toggle('admin-editing', adminMode);
+  if (btnAdmin) btnAdmin.textContent = adminMode ? '完成編輯' : '管理編輯';
+}
 
 function initFilters(){
   fCat.innerHTML = '<option value=\"\">全部分類</option>';
@@ -262,6 +327,32 @@ function render(){
     const coverUrl = safeUrl(item.cover);
     const coverImg = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}">` : '';
     const mapsUrl = safeUrl(item.maps);
+    const highlightText = (item.highlights || []).join('\n');
+    const dishText = (item.dishes || []).map(d=>`${d.name||''}｜${d.price||''}`).join('\n');
+    const adminPanel = adminMode ? `
+      <div class="admin-panel" data-admin-id="${safeId}">
+        <div class="admin-grid">
+          <label>店名<input class="admin-input" data-admin-field="name" value="${safeName}"></label>
+          <label>分類<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
+          <label>地區<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
+          <label>價位<input class="admin-input" data-admin-field="price" value="${escapeHtml(item.price || '')}"></label>
+          <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
+          <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
+          <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
+          <label>封面圖<input class="admin-input" data-admin-field="cover" value="${escapeHtml(item.cover || '')}"></label>
+        </div>
+        <label class="admin-field">亮點（每行一個）
+          <textarea class="admin-textarea" data-admin-field="highlights">${escapeHtml(highlightText)}</textarea>
+        </label>
+        <label class="admin-field">餐點（每行：名稱｜價格）
+          <textarea class="admin-textarea" data-admin-field="dishes">${escapeHtml(dishText)}</textarea>
+        </label>
+        <div class="admin-actions">
+          <button class="btn ghost" data-admin-save="${safeId}">儲存</button>
+        </div>
+        <div class="admin-hint">需管理員權限，資料會直接寫入資料庫。</div>
+      </div>
+    ` : '';
     return `<article class="card">
       <div class="cover">${coverImg}</div>
       <div class="card-body">
@@ -278,6 +369,7 @@ function render(){
           <button class="btn primary" data-open="${safeId}">查看店家資訊</button>
           <a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">地圖導航</a>
         </div>
+        ${adminPanel}
       </div>
     </article>`;
   }).join('');
@@ -312,6 +404,55 @@ function render(){
       }
     };
   });
+  if (adminMode){
+    cardsEl.querySelectorAll('[data-admin-save]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const wrap = btn.closest('[data-admin-id]');
+        if (!wrap) return;
+        const id = wrap.getAttribute('data-admin-id');
+        const read = (field)=>{
+          const el = wrap.querySelector(`[data-admin-field="${field}"]`);
+          return el ? el.value.trim() : '';
+        };
+        const payload = {
+          id: id || undefined,
+          name: read('name'),
+          category: read('category'),
+          area: read('area'),
+          price: read('price'),
+          address: read('address'),
+          maps: read('maps'),
+          ig: read('ig'),
+          cover: read('cover'),
+          highlights: read('highlights').split(/\n+/).filter(Boolean),
+          dishes: read('dishes').split(/\n+/).filter(Boolean).map(line=>{
+            const parts = line.split(/\s*[|｜]\s*/);
+            return { name: parts[0]||'', price: parts[1]||'' };
+          })
+        };
+        try{
+          btn.disabled = true;
+          const res = await fetch('/api/foods', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            credentials:'include',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(()=>({}));
+          if (res.status === 401){
+            alert('需要管理員權限才能編輯。');
+            return;
+          }
+          if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+          await loadRemote();
+        }catch(err){
+          alert('儲存失敗：' + (err.message||err));
+        }finally{
+          btn.disabled = false;
+        }
+      };
+    });
+  }
 }
 
 // 按鈕事件
@@ -320,8 +461,10 @@ function render(){
   if (btn.id === 'btnBack') btn.onclick = ()=> history.back();
 });
 if (btnFav) btnFav.onclick = ()=> openFavList();
-if (btnAdmin) btnAdmin.onclick = ()=> openAdminEditor();
+if (btnAdmin) btnAdmin.onclick = ()=>{ setAdminMode(!adminMode); render(); };
 
+adminMode = getAdminMode();
+setAdminMode(adminMode);
 initFilters();
 render();
 [kwInput, fCat, fArea, fPrice].forEach(el=> el.addEventListener('input', render));
@@ -461,147 +604,6 @@ async function removeFav(id){
   }
 }
 
-// 管理編輯（後端）
-function openAdminEditor(){
-  const dlg = document.getElementById('foodModal');
-  const body = document.getElementById('foodModalBody');
-  const options = ['<option value="">新增</option>'].concat(
-    DATA.map(d=>`<option value="${escapeHtml(d.id || '')}">${escapeHtml(d.name || '')}</option>`)
-  ).join('');
-  body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div style="font-size:18px;font-weight:800;">管理編輯（預覽即編輯）</div>
-        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
-      </div>
-      <select id="admSelect">${options}</select>
-      <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:flex-start;">
-        <div id="admPreview" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 16px 32px rgba(15,23,42,.08);padding:12px;display:grid;gap:10px;">
-          <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;height:160px;">
-            <img id="pvCover" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-            <div id="pvName" style="font-weight:800;font-size:17px;">店名</div>
-            <div class="pill-inline">推薦</div>
-          </div>
-          <div class="tag-row" id="pvTags"></div>
-          <div class="info" id="pvAddr">地址</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a class="btn primary" style="flex:1;" id="pvMaps" target="_blank" rel="noopener">開啟 Google Maps</a>
-            <button class="btn ghost" style="flex:1;" disabled>加入收藏</button>
-          </div>
-        </div>
-        <div style="display:grid;gap:8px;">
-          <input id="admId" placeholder="ID（留空自動）">
-          <input id="admName" placeholder="店名">
-          <input id="admCategory" placeholder="分類">
-          <input id="admArea" placeholder="地區">
-          <input id="admPrice" placeholder="價位（$ / $$ / $$$）">
-          <input id="admAddress" placeholder="地址">
-          <input id="admMaps" placeholder="Google Maps 連結">
-          <input id="admIg" placeholder="IG 影片連結">
-          <input id="admCover" placeholder="封面圖 URL">
-          <textarea id="admHighlights" placeholder="亮點（以換行分隔）" style="min-height:80px;"></textarea>
-          <textarea id="admDishes" placeholder="餐點（每行：名稱｜價格）" style="min-height:80px;"></textarea>
-          <button class="btn primary" id="admSave" style="width:100%;">儲存</button>
-          <div style="font-size:12px;color:#ef4444;">需管理員登入，資料會直接寫入遠端資料庫（KV）。</div>
-        </div>
-      </div>
-    </div>
-  `;
-  dlg.showModal();
-  document.getElementById('foodClose').onclick = ()=> dlg.close();
-  const sel = document.getElementById('admSelect');
-  const inputs = {
-    id: document.getElementById('admId'),
-    name: document.getElementById('admName'),
-    category: document.getElementById('admCategory'),
-    area: document.getElementById('admArea'),
-    price: document.getElementById('admPrice'),
-    address: document.getElementById('admAddress'),
-    maps: document.getElementById('admMaps'),
-    ig: document.getElementById('admIg'),
-    cover: document.getElementById('admCover'),
-    highlights: document.getElementById('admHighlights'),
-    dishes: document.getElementById('admDishes')
-  };
-  const pv = {
-    cover: document.getElementById('pvCover'),
-    name: document.getElementById('pvName'),
-    tags: document.getElementById('pvTags'),
-    addr: document.getElementById('pvAddr'),
-    maps: document.getElementById('pvMaps')
-  };
-  function renderPreview(){
-    const coverUrl = safeUrl(inputs.cover.value);
-    pv.cover.src = coverUrl || '';
-    pv.name.textContent = inputs.name.value || '店名';
-    pv.addr.textContent = inputs.address.value || '地址';
-    const mapsUrl = safeUrl(inputs.maps.value);
-    pv.maps.href = mapsUrl || '#';
-    pv.tags.innerHTML = [
-      inputs.category.value,
-      inputs.area.value,
-      inputs.price.value ? `價位：${inputs.price.value}` : ''
-    ].filter(Boolean).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('');
-  }
-  function fill(id){
-    const it = DATA.find(x=>x.id===id) || {};
-    inputs.id.value = it.id || '';
-    inputs.name.value = it.name||'';
-    inputs.category.value = it.category||'';
-    inputs.area.value = it.area||'';
-    inputs.price.value = it.price||'';
-    inputs.address.value = it.address||'';
-    inputs.maps.value = it.maps||'';
-    inputs.ig.value = it.ig||'';
-    inputs.cover.value = it.cover||'';
-    inputs.highlights.value = (it.highlights||[]).join('\n');
-    const dishLines = (it.dishes||[]).map(d=>`${d.name||''}｜${d.price||''}`).join('\n');
-    inputs.dishes.value = dishLines;
-    renderPreview();
-  }
-  fill(sel.value);
-  sel.onchange = ()=> fill(sel.value);
-  Object.values(inputs).forEach(el=>{ if (el) el.addEventListener('input', renderPreview); });
-  document.getElementById('admSave').onclick = async ()=>{
-    const payload = {
-      id: inputs.id.value.trim() || undefined,
-      name: inputs.name.value.trim(),
-      category: inputs.category.value.trim(),
-      area: inputs.area.value.trim(),
-      price: inputs.price.value.trim(),
-      address: inputs.address.value.trim(),
-      maps: inputs.maps.value.trim(),
-      ig: inputs.ig.value.trim(),
-      cover: inputs.cover.value.trim(),
-      highlights: inputs.highlights.value.split(/\n+/).filter(Boolean),
-      dishes: inputs.dishes.value.split(/\n+/).filter(Boolean).map(line=>{
-        const parts = line.split(/\s*[|｜]\s*/);
-        return { name: parts[0]||'', price: parts[1]||'' };
-      })
-    };
-    try{
-      const res = await fetch('/api/foods', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json().catch(()=>({}));
-      if (res.status === 401){
-        alert('需要管理員權限才能編輯。');
-        return;
-      }
-      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-      alert('已儲存');
-      dlg.close();
-      await loadRemote();
-    }catch(err){
-      alert('儲存失敗：' + (err.message||err));
-    }
-  };
-}
 </script>
 </body>
 </html>
