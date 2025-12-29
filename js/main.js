@@ -280,7 +280,10 @@ document.addEventListener('click', function(e){
   const statusEl = document.getElementById('profileStatus');
   const qnaLink = panel ? panel.querySelector('#adminQnaLink') : null;
   const qnaBadge = document.getElementById('adminQnaBadge');
+  const userOrdersLink = panel ? panel.querySelector('#userOrdersLink') : null;
+  const userQnaBadge = document.getElementById('userQnaBadge');
   let qnaTimer = null;
+  let userQnaTimer = null;
 
   async function openProfile(){
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
@@ -386,6 +389,18 @@ document.addEventListener('click', function(e){
     }
   }
 
+  function setUserQnaBadge(count){
+    if (!userQnaBadge) return;
+    const num = Number(count || 0) || 0;
+    if (num > 0){
+      userQnaBadge.textContent = String(num);
+      userQnaBadge.classList.add('show');
+    }else{
+      userQnaBadge.textContent = '0';
+      userQnaBadge.classList.remove('show');
+    }
+  }
+
   async function refreshQnaUnread(){
     if (!qnaBadge) return;
     try{
@@ -401,6 +416,21 @@ document.addEventListener('click', function(e){
     }
   }
 
+  async function refreshUserQnaUnread(){
+    if (!userQnaBadge) return;
+    try{
+      const res = await fetch('/api/me/qna/unread', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        setUserQnaBadge(0);
+        return;
+      }
+      setUserQnaBadge(data.total || 0);
+    }catch(_){
+      setUserQnaBadge(0);
+    }
+  }
+
   async function clearQnaUnread(){
     try{
       await fetch('/api/admin/qna/unread', {
@@ -413,9 +443,26 @@ document.addEventListener('click', function(e){
     setQnaBadge(0);
   }
 
+  async function clearUserQnaUnread(){
+    try{
+      await fetch('/api/me/qna/unread', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({ action:'clear' })
+      });
+    }catch(_){}
+    setUserQnaBadge(0);
+  }
+
   if (qnaLink){
     qnaLink.addEventListener('click', ()=>{
       clearQnaUnread();
+    });
+  }
+  if (userOrdersLink){
+    userOrdersLink.addEventListener('click', ()=>{
+      clearUserQnaUnread();
     });
   }
 
@@ -430,6 +477,20 @@ document.addEventListener('click', function(e){
         setQnaBadge(0);
         if (qnaTimer) clearInterval(qnaTimer);
         qnaTimer = null;
+      }
+    });
+  }
+
+  if (window.authState && typeof window.authState.subscribe === 'function'){
+    window.authState.subscribe(user=>{
+      if (user){
+        refreshUserQnaUnread();
+        if (userQnaTimer) clearInterval(userQnaTimer);
+        userQnaTimer = setInterval(refreshUserQnaUnread, 60000);
+      }else{
+        setUserQnaBadge(0);
+        if (userQnaTimer) clearInterval(userQnaTimer);
+        userQnaTimer = null;
       }
     });
   }

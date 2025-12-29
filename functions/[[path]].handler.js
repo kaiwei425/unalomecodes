@@ -323,6 +323,109 @@ async function clearAdminQnaUnread(env, fallback){
   }catch(_){}
   return 0;
 }
+
+function userUnreadKey(userId){
+  return `QNA_USER_UNREAD:${userId}`;
+}
+
+function userOrderUnreadKey(userId, orderId){
+  return `QNA_USER_ORDER_UNREAD:${userId}:${orderId}`;
+}
+
+async function getUserUnreadTotal(env, userId, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store || !userId) return 0;
+  try{
+    const raw = await store.get(userUnreadKey(userId));
+    const num = Number(raw || 0);
+    return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0;
+  }catch(_){
+    return 0;
+  }
+}
+
+async function getUserUnreadForOrder(env, userId, orderId, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store || !userId || !orderId) return 0;
+  try{
+    const raw = await store.get(userOrderUnreadKey(userId, orderId));
+    const num = Number(raw || 0);
+    return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0;
+  }catch(_){
+    return 0;
+  }
+}
+
+async function incrementUserUnreadForOrder(env, userId, orderId, delta, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store || !userId || !orderId) return 0;
+  const add = Number(delta || 1) || 1;
+  const total = await getUserUnreadTotal(env, userId, store);
+  const orderCount = await getUserUnreadForOrder(env, userId, orderId, store);
+  const nextTotal = Math.max(0, total + add);
+  const nextOrder = Math.max(0, orderCount + add);
+  try{
+    await store.put(userUnreadKey(userId), String(nextTotal));
+    await store.put(userOrderUnreadKey(userId, orderId), String(nextOrder));
+  }catch(_){}
+  return nextTotal;
+}
+
+async function findUserIdByEmail(env, email){
+  const val = String(email || '').trim().toLowerCase();
+  if (!val) return '';
+  const store = getUserStore(env);
+  if (!store || !store.list) return '';
+  try{
+    const iter = await store.list({ prefix:'USER:' });
+    for (const key of (iter.keys || [])){
+      if (!key || !key.name) continue;
+      try{
+        const raw = await store.get(key.name);
+        if (!raw) continue;
+        const obj = JSON.parse(raw);
+        const e = String(obj && obj.email || '').trim().toLowerCase();
+        if (e && e === val){
+          return String(obj.id || key.name.replace(/^USER:/,'')).trim();
+        }
+      }catch(_){}
+    }
+  }catch(_){}
+  return '';
+}
+
+async function clearUserUnreadForOrder(env, userId, orderId, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store || !userId || !orderId) return 0;
+  const total = await getUserUnreadTotal(env, userId, store);
+  const orderCount = await getUserUnreadForOrder(env, userId, orderId, store);
+  const nextTotal = Math.max(0, total - orderCount);
+  try{
+    await store.put(userUnreadKey(userId), String(nextTotal));
+    await store.put(userOrderUnreadKey(userId, orderId), '0');
+  }catch(_){}
+  return nextTotal;
+}
+
+async function clearUserUnreadAll(env, userId, fallback){
+  const store = getQnaMetaStore(env, fallback);
+  if (!store || !userId) return 0;
+  try{
+    await store.put(userUnreadKey(userId), '0');
+  }catch(_){}
+  if (store.list){
+    try{
+      const prefix = `QNA_USER_ORDER_UNREAD:${userId}:`;
+      const iter = await store.list({ prefix });
+      for (const key of (iter.keys || [])){
+        if (key && key.name){
+          await store.put(key.name, '0');
+        }
+      }
+    }catch(_){}
+  }
+  return 0;
+}
 function redactOrderForPublic(order){
   const out = Object.assign({}, order || {});
   if (out.buyer){
@@ -3210,6 +3313,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     if (request.method === 'GET'){
       const items = await loadOrderQna(store, orderId);
+      if (!isAdminUser && record){
+        if (!order?.buyer?.uid){
+          order.buyer = order.buyer || {};
+          order.buyer.uid = record.id;
+          try{ await store.put(orderId, JSON.stringify(order)); }catch(_){}
+        }
+        await clearUserUnreadForOrder(env, record.id, orderId, store);
+      }
       return json({ ok:true, orderId, items: items.map(sanitizeQnaItem) });
     }
     const items = await loadOrderQna(store, orderId);
@@ -3284,6 +3395,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
       }catch(_){}
 
+      if (role === 'admin') {
+        let uid = order?.buyer?.uid || '';
+        if (!uid && buyerEmail){
+          uid = await findUserIdByEmail(env, buyerEmail);
+          if (uid){
+            order.buyer = order.buyer || {};
+            order.buyer.uid = uid;
+            try{ await store.put(orderId, JSON.stringify(order)); }catch(_){}
+          }
+        }
+        if (uid) await incrementUserUnreadForOrder(env, uid, orderId, 1, store);
+      }
+
       return json({ ok:true, item: sanitizeQnaItem(item) });
     }
     if (request.method === 'PATCH'){
@@ -3335,6 +3459,48 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (action === 'clear' || action === 'reset' || action === 'read') {
         const unread = await clearAdminQnaUnread(env, env.ORDERS || env.SERVICE_ORDERS || null);
         return json({ ok:true, unread });
+      }
+      return json({ ok:false, error:'invalid action' }, 400);
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/me/qna/unread') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    const store = getQnaMetaStore(env, env.ORDERS || env.SERVICE_ORDERS || null);
+    if (request.method === 'GET') {
+      const total = await getUserUnreadTotal(env, record.id, store);
+      const detail = String(url.searchParams.get('detail') || '') === '1';
+      if (!detail || !store || !store.list){
+        return json({ ok:true, total });
+      }
+      const prefix = `QNA_USER_ORDER_UNREAD:${record.id}:`;
+      const iter = await store.list({ prefix });
+      const map = {};
+      for (const key of (iter.keys || [])){
+        if (!key || !key.name) continue;
+        const orderId = key.name.replace(prefix, '');
+        try{
+          const raw = await store.get(key.name);
+          const num = Number(raw || 0);
+          if (Number.isFinite(num) && num > 0) map[orderId] = Math.floor(num);
+        }catch(_){}
+      }
+      return json({ ok:true, total, orders: map });
+    }
+    if (request.method === 'POST') {
+      let body = {};
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      const action = String(body.action || body.mode || '').toLowerCase();
+      const orderId = String(body.orderId || body.id || '').trim();
+      if (action === 'clear' && orderId){
+        const total = await clearUserUnreadForOrder(env, record.id, orderId, store);
+        return json({ ok:true, total });
+      }
+      if (action === 'clear' || action === 'reset' || action === 'read'){
+        const total = await clearUserUnreadAll(env, record.id, store);
+        return json({ ok:true, total });
       }
       return json({ ok:false, error:'invalid action' }, 400);
     }

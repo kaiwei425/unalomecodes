@@ -19,7 +19,7 @@
       const orderId = String(order.id || order.orderId || '').trim();
       div.setAttribute('data-order-id', orderId);
       div.innerHTML = `
-        <div class="order-id">${escapeHtml(orderId)}</div>
+        <div class="order-id">${escapeHtml(orderId)}<span class="qna-unread" data-qna-unread="1">0</span></div>
         <div class="order-meta">狀態：
           <span class="badge-status">${status}</span>
         </div>
@@ -136,6 +136,42 @@
     return true;
   }
 
+  async function fetchUnreadMap(){
+    const res = await fetch('/api/me/qna/unread?detail=1', { credentials:'include', cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false) return {};
+    return data.orders || {};
+  }
+
+  function applyUnreadMap(map){
+    const orders = document.querySelectorAll('.order-item[data-order-id]');
+    orders.forEach(card=>{
+      const orderId = card.getAttribute('data-order-id') || '';
+      const badge = card.querySelector('[data-qna-unread]');
+      if (!badge) return;
+      const count = Number(map[orderId] || 0) || 0;
+      if (count > 0){
+        badge.textContent = String(count);
+        badge.classList.add('show');
+      }else{
+        badge.textContent = '0';
+        badge.classList.remove('show');
+      }
+    });
+  }
+
+  async function clearUnreadForOrder(orderId){
+    if (!orderId) return;
+    try{
+      await fetch('/api/me/qna/unread', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({ action:'clear', orderId })
+      });
+    }catch(_){}
+  }
+
   async function loadAccountData(){
     if (!statusEl) return;
     statusEl.textContent = '載入資料中…';
@@ -158,6 +194,10 @@
       if (gridEl) gridEl.style.display = 'grid';
       renderOrders(physicalEl, Array.isArray(ordersData.orders?.physical) ? ordersData.orders.physical : [], '尚無實體商品訂單');
       renderOrders(serviceEl, Array.isArray(ordersData.orders?.service) ? ordersData.orders.service : [], '尚無服務型商品訂單');
+      try{
+        const map = await fetchUnreadMap();
+        applyUnreadMap(map);
+      }catch(_){}
     }catch(_){
       statusEl.textContent = '讀取資料失敗，請稍後再試。';
     }
@@ -193,6 +233,12 @@
       }else{
         body.style.display = 'block';
         await loadQnaInto(root);
+        const orderId = root.getAttribute('data-order-id') || '';
+        await clearUnreadForOrder(orderId);
+        try{
+          const map = await fetchUnreadMap();
+          applyUnreadMap(map);
+        }catch(_){}
       }
       return;
     }
@@ -214,6 +260,11 @@
         await postQna(orderId, text);
         input.value = '';
         await loadQnaInto(root);
+        await clearUnreadForOrder(orderId);
+        try{
+          const map = await fetchUnreadMap();
+          applyUnreadMap(map);
+        }catch(_){}
       }catch(err){
         alert(err.message || '送出失敗');
       }finally{
@@ -241,6 +292,11 @@
         await patchQna(orderId, msgId, text);
         const root = editBtn.closest('.order-item');
         await loadQnaInto(root);
+        await clearUnreadForOrder(orderId);
+        try{
+          const map = await fetchUnreadMap();
+          applyUnreadMap(map);
+        }catch(_){}
       }catch(err){
         alert(err.message || '更新失敗');
       }
@@ -257,6 +313,11 @@
         await deleteQna(orderId, msgId);
         const root = delBtn.closest('.order-item');
         await loadQnaInto(root);
+        await clearUnreadForOrder(orderId);
+        try{
+          const map = await fetchUnreadMap();
+          applyUnreadMap(map);
+        }catch(_){}
       }catch(err){
         alert(err.message || '刪除失敗');
       }
