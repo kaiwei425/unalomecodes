@@ -529,11 +529,6 @@ document.addEventListener('click', function(e){
       clearQnaUnread();
     });
   }
-  if (userOrdersLink){
-    userOrdersLink.addEventListener('click', ()=>{
-      clearUserQnaUnread();
-    });
-  }
   if (userCouponsLink){
     userCouponsLink.addEventListener('click', ()=>{
       clearUserCouponUnread();
