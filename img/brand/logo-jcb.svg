@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 80" role="img" aria-label="JCB">
+  <rect x="8" y="8" width="36" height="64" rx="6" fill="#003B7A"/>
+  <rect x="52" y="8" width="36" height="64" rx="6" fill="#0A8F3D"/>
+  <rect x="96" y="8" width="36" height="64" rx="6" fill="#D22630"/>
+  <text x="26" y="54" font-family="Arial Black, Arial, sans-serif" font-size="36" text-anchor="middle" fill="#fff">J</text>
+  <text x="70" y="54" font-family="Arial Black, Arial, sans-serif" font-size="36" text-anchor="middle" fill="#fff">C</text>
+  <text x="114" y="54" font-family="Arial Black, Arial, sans-serif" font-size="36" text-anchor="middle" fill="#fff">B</text>
+</svg>
