@@ -270,6 +270,8 @@ document.addEventListener('click', function(e){
 (function(){
   const toggle = document.getElementById('memberMenuBtn');
   const panel = document.getElementById('memberMenuPanel');
+  const arrow = document.getElementById('memberMenuArrow');
+  const memberMenuBadge = document.getElementById('memberMenuBadge');
   const profileLink = panel ? panel.querySelector('a[data-profile]') : null;
   const dlg = document.getElementById('profileDialog');
   const nameInput = document.getElementById('profileName');
@@ -284,6 +286,8 @@ document.addEventListener('click', function(e){
   const userQnaBadge = document.getElementById('userQnaBadge');
   const userCouponsLink = panel ? panel.querySelector('#userCouponsLink') : null;
   const userCouponBadge = document.getElementById('userCouponBadge');
+  let userQnaCount = 0;
+  let userCouponCount = 0;
   let qnaTimer = null;
   let userQnaTimer = null;
   let userCouponTimer = null;
@@ -353,13 +357,20 @@ document.addEventListener('click', function(e){
   }
 
   if (toggle && panel){
+    const setArrow = (isOpen)=>{
+      if (arrow){
+        arrow.textContent = isOpen ? '▴' : '▾';
+      }else{
+        toggle.textContent = isOpen ? '會員中心 ▴' : '會員中心 ▾';
+      }
+    };
     const close = ()=>{
       panel.style.display = 'none';
-      toggle.textContent = '會員中心 ▾';
+      setArrow(false);
     };
     const open = ()=>{
       panel.style.display = 'block';
-      toggle.textContent = '會員中心 ▴';
+      setArrow(true);
     };
     toggle.addEventListener('click', (ev)=>{
       ev.stopPropagation();
@@ -392,9 +403,22 @@ document.addEventListener('click', function(e){
     }
   }
 
+  function setMemberMenuBadge(){
+    if (!memberMenuBadge) return;
+    const total = (Number(userQnaCount || 0) || 0) + (Number(userCouponCount || 0) || 0);
+    if (total > 0){
+      memberMenuBadge.textContent = String(total);
+      memberMenuBadge.classList.add('show');
+    }else{
+      memberMenuBadge.textContent = '0';
+      memberMenuBadge.classList.remove('show');
+    }
+  }
+
   function setUserQnaBadge(count){
     if (!userQnaBadge) return;
     const num = Number(count || 0) || 0;
+    userQnaCount = num;
     if (num > 0){
       userQnaBadge.textContent = String(num);
       userQnaBadge.classList.add('show');
@@ -402,11 +426,13 @@ document.addEventListener('click', function(e){
       userQnaBadge.textContent = '0';
       userQnaBadge.classList.remove('show');
     }
+    setMemberMenuBadge();
   }
 
   function setUserCouponBadge(count){
     if (!userCouponBadge) return;
     const num = Number(count || 0) || 0;
+    userCouponCount = num;
     if (num > 0){
       userCouponBadge.textContent = String(num);
       userCouponBadge.classList.add('show');
@@ -414,6 +440,7 @@ document.addEventListener('click', function(e){
       userCouponBadge.textContent = '0';
       userCouponBadge.classList.remove('show');
     }
+    setMemberMenuBadge();
   }
 
   async function refreshQnaUnread(){

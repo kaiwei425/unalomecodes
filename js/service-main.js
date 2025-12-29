@@ -1261,6 +1261,8 @@
   (function(){
     const toggle = document.getElementById('memberMenuBtnSvc');
     const panel = document.getElementById('memberMenuPanelSvc');
+    const arrow = document.getElementById('memberMenuArrowSvc');
+    const memberMenuBadge = document.getElementById('memberMenuBadgeSvc');
     const profileLink = panel ? panel.querySelector('a[data-profile]') : null;
     const dlg = document.getElementById('profileDialogSvc');
     const nameInput = document.getElementById('profileNameSvc');
@@ -1269,6 +1271,17 @@
     const saveBtn = document.getElementById('profileSaveSvc');
     const closeBtn = document.getElementById('profileCloseSvc');
     const statusEl = document.getElementById('profileStatusSvc');
+    const qnaLink = panel ? panel.querySelector('#adminQnaLinkSvc') : null;
+    const qnaBadge = document.getElementById('adminQnaBadgeSvc');
+    const userOrdersLink = panel ? panel.querySelector('#userOrdersLinkSvc') : null;
+    const userQnaBadge = document.getElementById('userQnaBadgeSvc');
+    const userCouponsLink = panel ? panel.querySelector('#userCouponsLinkSvc') : null;
+    const userCouponBadge = document.getElementById('userCouponBadgeSvc');
+    let userQnaCount = 0;
+    let userCouponCount = 0;
+    let qnaTimer = null;
+    let userQnaTimer = null;
+    let userCouponTimer = null;
 
     async function openProfile(){
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
@@ -1336,13 +1349,20 @@
     }
 
     if (toggle && panel){
+      const setArrow = (isOpen)=>{
+        if (arrow){
+          arrow.textContent = isOpen ? '▴' : '▾';
+        }else{
+          toggle.textContent = isOpen ? '會員中心 ▴' : '會員中心 ▾';
+        }
+      };
       const close = ()=>{
         panel.style.display = 'none';
-        toggle.textContent = '會員中心 ▾';
+        setArrow(false);
       };
       const open = ()=>{
         panel.style.display = 'block';
-        toggle.textContent = '會員中心 ▴';
+        setArrow(true);
       };
       toggle.addEventListener('click', (ev)=>{
         ev.stopPropagation();
@@ -1369,6 +1389,191 @@
         }
       });
     }
+
+    function setMemberMenuBadge(){
+      if (!memberMenuBadge) return;
+      const total = (Number(userQnaCount || 0) || 0) + (Number(userCouponCount || 0) || 0);
+      if (total > 0){
+        memberMenuBadge.textContent = String(total);
+        memberMenuBadge.classList.add('show');
+      }else{
+        memberMenuBadge.textContent = '0';
+        memberMenuBadge.classList.remove('show');
+      }
+    }
+
+    function setUserQnaBadge(count){
+      if (!userQnaBadge) return;
+      const num = Number(count || 0) || 0;
+      userQnaCount = num;
+      if (num > 0){
+        userQnaBadge.textContent = String(num);
+        userQnaBadge.classList.add('show');
+      }else{
+        userQnaBadge.textContent = '0';
+        userQnaBadge.classList.remove('show');
+      }
+      setMemberMenuBadge();
+    }
+
+    function setUserCouponBadge(count){
+      if (!userCouponBadge) return;
+      const num = Number(count || 0) || 0;
+      userCouponCount = num;
+      if (num > 0){
+        userCouponBadge.textContent = String(num);
+        userCouponBadge.classList.add('show');
+      }else{
+        userCouponBadge.textContent = '0';
+        userCouponBadge.classList.remove('show');
+      }
+      setMemberMenuBadge();
+    }
+
+    function setQnaBadge(count){
+      if (!qnaBadge) return;
+      const num = Number(count || 0) || 0;
+      if (num > 0){
+        qnaBadge.textContent = String(num);
+        qnaBadge.classList.add('show');
+      }else{
+        qnaBadge.textContent = '0';
+        qnaBadge.classList.remove('show');
+      }
+    }
+
+    async function refreshQnaUnread(){
+      if (!qnaBadge) return;
+      try{
+        const res = await fetch('/api/admin/qna/unread', { credentials:'include', cache:'no-store' });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data || data.ok === false){
+          setQnaBadge(0);
+          return;
+        }
+        setQnaBadge(data.unread || 0);
+      }catch(_){
+        setQnaBadge(0);
+      }
+    }
+
+    async function refreshUserQnaUnread(){
+      if (!userQnaBadge) return;
+      try{
+        const res = await fetch('/api/me/qna/unread', { credentials:'include', cache:'no-store' });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data || data.ok === false){
+          setUserQnaBadge(0);
+          return;
+        }
+        setUserQnaBadge(data.total || 0);
+      }catch(_){
+        setUserQnaBadge(0);
+      }
+    }
+
+    async function refreshUserCouponUnread(){
+      if (!userCouponBadge) return;
+      try{
+        const res = await fetch('/api/me/coupons/unread', { credentials:'include', cache:'no-store' });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data || data.ok === false){
+          setUserCouponBadge(0);
+          return;
+        }
+        setUserCouponBadge(data.total || 0);
+      }catch(_){
+        setUserCouponBadge(0);
+      }
+    }
+
+    async function clearQnaUnread(){
+      try{
+        await fetch('/api/admin/qna/unread', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ action:'clear' })
+        });
+      }catch(_){}
+      setQnaBadge(0);
+    }
+
+    async function clearUserQnaUnread(){
+      try{
+        await fetch('/api/me/qna/unread', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ action:'clear' })
+        });
+      }catch(_){}
+      setUserQnaBadge(0);
+    }
+
+    async function clearUserCouponUnread(){
+      try{
+        await fetch('/api/me/coupons/unread', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ action:'clear' })
+        });
+      }catch(_){}
+      setUserCouponBadge(0);
+    }
+
+    if (qnaLink){
+      qnaLink.addEventListener('click', ()=>{
+        clearQnaUnread();
+      });
+    }
+    if (userOrdersLink){
+      userOrdersLink.addEventListener('click', ()=>{
+        clearUserQnaUnread();
+      });
+    }
+    if (userCouponsLink){
+      userCouponsLink.addEventListener('click', ()=>{
+        clearUserCouponUnread();
+      });
+    }
+
+    if (window.authState && typeof window.authState.onAdmin === 'function'){
+      window.authState.onAdmin(isAdmin=>{
+        if (!qnaLink || !qnaBadge) return;
+        if (isAdmin){
+          refreshQnaUnread();
+          if (qnaTimer) clearInterval(qnaTimer);
+          qnaTimer = setInterval(refreshQnaUnread, 60000);
+        }else{
+          setQnaBadge(0);
+          if (qnaTimer) clearInterval(qnaTimer);
+          qnaTimer = null;
+        }
+      });
+    }
+
+    if (window.authState && typeof window.authState.subscribe === 'function'){
+      window.authState.subscribe(user=>{
+        if (user){
+          refreshUserQnaUnread();
+          refreshUserCouponUnread();
+          if (userQnaTimer) clearInterval(userQnaTimer);
+          userQnaTimer = setInterval(refreshUserQnaUnread, 60000);
+          if (userCouponTimer) clearInterval(userCouponTimer);
+          userCouponTimer = setInterval(refreshUserCouponUnread, 60000);
+        }else{
+          setUserQnaBadge(0);
+          setUserCouponBadge(0);
+          if (userQnaTimer) clearInterval(userQnaTimer);
+          userQnaTimer = null;
+          if (userCouponTimer) clearInterval(userCouponTimer);
+          userCouponTimer = null;
+        }
+      });
+    }
+
     if (closeBtn){
       closeBtn.addEventListener('click', ()=>{
         if (dlg && typeof dlg.close === 'function') dlg.close();

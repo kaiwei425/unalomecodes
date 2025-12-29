@@ -126,16 +126,18 @@
     const orders = document.querySelectorAll('.order-item[data-order-id]');
     orders.forEach(card=>{
       const orderId = card.getAttribute('data-order-id') || '';
-      const badge = card.querySelector('[data-qna-unread]');
-      if (!badge) return;
       const count = Number(map[orderId] || 0) || 0;
-      if (count > 0){
-        badge.textContent = String(count);
-        badge.classList.add('show');
-      }else{
-        badge.textContent = '0';
-        badge.classList.remove('show');
-      }
+      const badges = card.querySelectorAll('[data-qna-unread]');
+      if (!badges.length) return;
+      badges.forEach(badge=>{
+        if (count > 0){
+          badge.textContent = String(count);
+          badge.classList.add('show');
+        }else{
+          badge.textContent = '0';
+          badge.classList.remove('show');
+        }
+      });
     });
   }
 
@@ -220,7 +222,7 @@
       ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
       ${itemCards}
       <div class="order-qna" data-qna="1">
-        <button type="button" class="qna-toggle" data-qna-toggle="1">訂單問與答</button>
+        <button type="button" class="qna-toggle" data-qna-toggle="1">訂單問與答 <span class="qna-unread" data-qna-unread="1">0</span></button>
         <span class="qna-status" data-qna-status="1"></span>
         <div class="qna-body" data-qna-body="1">
           <div class="qna-list" data-qna-list="1"></div>

@@ -201,6 +201,20 @@ html,body{
   justify-content:center;
 }
 .member-menu button:hover{border-color:rgba(24,161,104,.35);}
+.member-menu button .member-menu-badge{
+  min-width:18px;
+  height:18px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#ef4444;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.member-menu button .member-menu-badge.show{display:inline-flex;}
 .member-menu-panel{
   position:absolute;
   right:0;
