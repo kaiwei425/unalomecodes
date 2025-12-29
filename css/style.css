@@ -395,13 +395,13 @@ html,body{
     justify-content:center;
     align-items:center;
     margin:0 auto 12px;
-    max-width:900px;
+    max-width:100%;
     overflow-x:auto;
     padding:2px 6px 6px;
     -webkit-overflow-scrolling:touch;
   }
   .footer-logos .logo-item{
-    width:84px;height:36px;border-radius:8px;
+    width:80px;height:32px;border-radius:8px;
     display:inline-flex;align-items:center;justify-content:center;
     background:#fff;border:1px solid #d1d5db;color:#1f2937;
     transition:transform .15s ease, box-shadow .15s ease;
@@ -412,12 +412,15 @@ html,body{
   .footer-logos .logo-item:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(15,23,42,.12)}
   .footer-logos img{
     width:auto;height:auto;
-    max-width:64px;
-    max-height:22px;
+    max-width:60px;
+    max-height:20px;
     object-fit:contain;
     padding:6px 8px;
     display:block;
   }
+  .footer-social{display:flex;gap:8px;justify-content:center;margin-bottom:6px;}
+  .footer-social .logo-item{width:34px;height:34px;border-radius:10px;box-shadow:none;}
+  .footer-social img{max-width:18px;max-height:18px;padding:6px;}
 
   /* 詳情 Dialog（白底） */
   dialog{border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--fg);max-width:920px;width:96%;box-shadow:0 18px 60px rgba(15,23,42,.25);}
