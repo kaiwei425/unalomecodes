@@ -15,6 +15,21 @@
   .brand img{width:36px;height:36px;border-radius:9999px;object-fit:cover;border:1px solid #222}
   .brand h1{font-size:18px;margin:0;font-weight:700}
   .brand p{margin:0;color:var(--muted);font-size:12px}
+  .backLink{margin:0 0 12px;}
+  .backBtn{display:inline-flex;align-items:center;gap:6px;background:#0c142b;border:1px solid rgba(148,163,184,.3);color:#e5e7eb;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;}
+  .list-section{margin:12px 0 18px;}
+  .list-head{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .list-head h2{margin:0;font-size:18px;font-weight:800;color:#fff;}
+  .list-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+  @media(min-width:720px){.list-grid{grid-template-columns:repeat(2,1fr);}}
+  @media(min-width:980px){.list-grid{grid-template-columns:repeat(3,1fr);}}
+  .list-card{display:grid;gap:8px;background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.15);border-radius:16px;padding:12px;text-decoration:none;color:#e5e7eb;transition:transform .15s ease,border-color .15s ease;}
+  .list-card:hover{transform:translateY(-2px);border-color:rgba(148,163,184,.35);}
+  .list-img{width:100%;height:160px;border-radius:12px;background:#0b1022;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .list-img img{width:100%;height:100%;object-fit:cover;}
+  .list-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;}
+  .list-code{font-size:12px;color:#a7f3d0;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:3px 8px;border-radius:999px;}
+  .list-desc{color:#cbd5e1;font-size:13px;line-height:1.7;}
   .hero{display:grid;grid-template-columns: 1fr;gap:16px;margin-top:8px}
   .card{background:rgba(17,24,39,.75);backdrop-filter: blur(8px);border:1px solid rgba(148,163,184,.15);border-radius:16px; overflow:hidden}
   .imgbox{position:relative;aspect-ratio:16/9;background:#0b1022}
@@ -56,6 +71,17 @@
       <h1>神祇介紹</h1>
     </div>
   </div>
+  <div class="backLink">
+    <a class="backBtn" href="/shop">← 返回商品館</a>
+  </div>
+
+  <section class="list-section" id="deityListSection">
+    <div class="list-head">
+      <h2>完整神祇列表</h2>
+      <div class="muted">點選神祇查看完整介紹與故事</div>
+    </div>
+    <div class="list-grid" id="deityListGrid"></div>
+  </section>
 
   <div class="hero">
     <div class="card" id="heroCard">
@@ -268,6 +294,7 @@
   };
 
   const params = new URLSearchParams(location.search);
+  const DEITY_ORDER = ['FM','GA','CD','KP','HP','XZ','WE','HM','RH','JL','ZD','ZF'];
   // temple guide rendering function
   function renderTempleGuide(code){
     const box = document.getElementById('templeGuide');
@@ -345,10 +372,21 @@
 
   async function loadDeity(){
     if (!code){
-      $('#deityName').textContent='神祇未指定';
-      $('#deityDesc').textContent='請在網址後加上 ?code=GA 等參數';
+      const listSection = document.getElementById('deityListSection');
+      const heroSection = document.querySelector('.hero');
+      const gridSection = document.querySelector('.grid');
+      if (heroSection) heroSection.style.display = 'none';
+      if (gridSection) gridSection.style.display = 'none';
+      if (listSection) listSection.style.display = 'block';
+      renderDeityList();
       return;
     }
+    const listSection = document.getElementById('deityListSection');
+    const heroSection = document.querySelector('.hero');
+    const gridSection = document.querySelector('.grid');
+    if (listSection) listSection.style.display = 'none';
+    if (heroSection) heroSection.style.display = '';
+    if (gridSection) gridSection.style.display = '';
     try{
       let j=null;
       try{ j = await fetchJson(`${API_BASE}/getDeity?code=${encodeURIComponent(code)}&detail=full`); }
@@ -385,6 +423,38 @@
   function guessName(code){
     const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
     return map[code] || '守護神';
+  }
+  function shortDesc(text, len=88){
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return '點擊查看完整介紹與故事分享。';
+    return clean.length > len ? clean.slice(0, len) + '…' : clean;
+  }
+  function renderDeityList(){
+    const grid = document.getElementById('deityListGrid');
+    if (!grid) return;
+    const items = DEITY_ORDER.map(code=>({
+      code,
+      name: guessName(code),
+      img: LOCAL_IMG[code] || '',
+      desc: shortDesc(LOCAL_DESC[code] || '')
+    }));
+    if (!items.length){
+      grid.innerHTML = '<div class="muted">尚無神祇資料</div>';
+      return;
+    }
+    grid.innerHTML = items.map(it=>{
+      const img = it.img ? `<img src="${it.img}" alt="${escapeHtml(it.name)}">` : '';
+      return `
+        <a class="list-card" href="/deity?code=${encodeURIComponent(it.code)}">
+          <div class="list-img">${img}</div>
+          <div class="list-title">
+            <span>${escapeHtml(it.name)}</span>
+            <span class="list-code">${escapeHtml(it.code)}</span>
+          </div>
+          <div class="list-desc">${escapeHtml(it.desc)}</div>
+        </a>
+      `;
+    }).join('');
   }
 
   // 產生卡片截圖並顯示在下方（長按可存）
