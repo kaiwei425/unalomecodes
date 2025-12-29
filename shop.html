@@ -106,7 +106,6 @@
     <div class="tools-box">
       <h4>泰國旅遊 / 寺廟小工具</h4>
       <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;">敬請期待更多實用小工具。</div>
-      <div class="guardian-panel" id="guardianPanel" style="display:none;"></div>
     </div>
 </aside>
     <div class="main">
@@ -246,6 +245,21 @@
           <button type="button" class="fortune-share-btn" id="fortuneShareBtn">自動截圖分享</button>
         </div>
       </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="guardianRecommendDialog" class="guardian-recommend-dialog">
+  <div class="guardian-recommend-shell">
+    <div class="guardian-recommend-head">
+      <div>
+        <div class="guardian-recommend-title">守護神推薦商品</div>
+        <div class="guardian-recommend-sub" id="guardianRecommendName">—</div>
+      </div>
+      <button type="button" class="guardian-recommend-close" id="guardianRecommendClose">✕</button>
+    </div>
+    <div class="guardian-recommend-list" id="guardianRecommendList">
+      <div class="guardian-recommend-empty">推薦商品載入中…</div>
     </div>
   </div>
 </dialog>
@@ -694,12 +708,7 @@
     a.className = 'side-link quiz-link-btn';
     a.textContent = '🔮 測驗與您有緣的守護神';
     if (tools){
-      var panel = tools.querySelector('#guardianPanel');
-      if (panel){
-        tools.insertBefore(a, panel);
-      }else{
-        tools.appendChild(a);
-      }
+      tools.appendChild(a);
     } else {
       side.appendChild(a);
     }
@@ -6031,6 +6040,21 @@ function escapeHtml(s) {
 .guardian-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:10px;background:transparent;border:0;color:#e2e8f0;font-size:12px;font-weight:700;text-decoration:none;text-align:left;cursor:pointer;}
 .guardian-menu a:hover,
 .guardian-menu button:hover{background:rgba(148,163,184,.12);}
+.guardian-recommend-dialog{border:none;border-radius:18px;padding:0;max-width:520px;width:92%;background:#0b1022;color:#e5e7eb;box-shadow:0 24px 60px rgba(0,0,0,.45);}
+.guardian-recommend-shell{padding:18px;display:grid;gap:14px;background:
+  radial-gradient(circle at 15% 10%, rgba(253,224,71,.08), transparent 35%),
+  radial-gradient(circle at 80% 0%, rgba(56,189,248,.12), transparent 40%),
+  #0b1022;border-radius:18px;border:1px solid rgba(148,163,184,0.2);}
+.guardian-recommend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.guardian-recommend-title{font-size:18px;font-weight:800;}
+.guardian-recommend-sub{font-size:12px;color:#94a3b8;}
+.guardian-recommend-close{border:none;background:rgba(255,255,255,.1);color:#e2e8f0;border-radius:999px;width:28px;height:28px;cursor:pointer;}
+.guardian-recommend-list{display:grid;gap:8px;}
+.guardian-recommend-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:rgba(15,23,42,.55);color:#e2e8f0;font-size:13px;cursor:pointer;text-align:left;}
+.guardian-recommend-item:hover{background:rgba(148,163,184,.12);}
+.guardian-recommend-item span{flex:1;}
+.guardian-recommend-item em{font-style:normal;font-weight:700;color:#fbbf24;}
+.guardian-recommend-empty{padding:12px;border-radius:12px;border:1px dashed rgba(148,163,184,.3);color:#94a3b8;font-size:13px;text-align:center;}
 
 .fortune-dialog{border:none;border-radius:18px;padding:0;max-width:560px;width:92%;background:#0b1022;color:#e5e7eb;box-shadow:0 24px 60px rgba(0,0,0,.45);}
 .fortune-shell{padding:20px;display:grid;gap:16px;background:
@@ -6109,11 +6133,14 @@ function escapeHtml(s) {
   const fortuneMeta = document.getElementById('fortuneMeta');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabel');
   const fortuneShareBtn = document.getElementById('fortuneShareBtn');
-  const guardianPanel = document.getElementById('guardianPanel');
+  const recommendDialog = document.getElementById('guardianRecommendDialog');
+  const recommendClose = document.getElementById('guardianRecommendClose');
+  const recommendName = document.getElementById('guardianRecommendName');
+  const recommendList = document.getElementById('guardianRecommendList');
   let lastFortune = null;
   let lastGuardianName = '';
   let lastGuardianCode = '';
-  let panelRetry = 0;
+  let recommendRetry = 0;
   let currentRecommendItems = [];
   let midnightTimer = null;
   const FORTUNE_KEY = '__fortune_last_date__';
@@ -6195,63 +6222,62 @@ function escapeHtml(s) {
     if (!name || !items.length) return [];
     return items.filter(p => p && String(p.deity||'').trim() === name);
   }
-  function renderGuardianPanel(){
-    if (!guardianPanel) return;
-    const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function'
-      ? window.authState.isLoggedIn()
-      : false;
-    if (!loggedIn){
-      guardianPanel.style.display = 'none';
-      return;
-    }
+  function renderRecommendDialog(){
+    if (!recommendDialog || !recommendList) return;
     const g = readGuardian();
     if (!g){
-      guardianPanel.style.display = 'none';
+      if (recommendName) recommendName.textContent = '尚未完成測驗';
+      recommendList.innerHTML = '<div class="guardian-recommend-empty">請先完成守護神測驗後再查看推薦商品。</div>';
       return;
     }
     const code = String(g.code||'').toUpperCase();
     const name = map[code] || '守護神';
+    if (recommendName) recommendName.textContent = name;
     const ready = Array.isArray(window.rawItems) && window.rawItems.length;
     const items = getRecommendedItems(code);
-    currentRecommendItems = items.slice(0, 3);
-    let listHtml = '';
+    currentRecommendItems = items.slice(0, 6);
     if (!ready){
-      listHtml = '<div class="guardian-item muted" style="cursor:default;">推薦商品載入中…</div>';
-      if (panelRetry < 8){
-        panelRetry += 1;
-        setTimeout(renderGuardianPanel, 600);
+      recommendList.innerHTML = '<div class="guardian-recommend-empty">推薦商品載入中…</div>';
+      if (recommendRetry < 8){
+        recommendRetry += 1;
+        setTimeout(renderRecommendDialog, 600);
       }
-    }else if (!currentRecommendItems.length){
-      listHtml = '<div class="guardian-item muted" style="cursor:default;">暫無推薦商品</div>';
-    }else{
-      listHtml = currentRecommendItems.map((p, idx)=>(
-        `<button type="button" class="guardian-item" data-guardian-item="${idx}">
-          <span>${escapeHtml(p.name || '未命名商品')}</span>
-          <em>查看</em>
-        </button>`
-      )).join('');
+      return;
     }
-    guardianPanel.innerHTML = `
-      <div class="tool-card">
-        <div class="guardian-panel-title">守護神個人化</div>
-        <div class="guardian-panel-name">${escapeHtml(name)} <span class="guardian-panel-code">${escapeHtml(code)}</span></div>
-        <div class="guardian-panel-desc">依測驗結果推薦對應神祇商品。</div>
-        <div class="guardian-panel-list">
-          <div class="guardian-panel-list-title">推薦商品</div>
-          ${listHtml}
-        </div>
-      </div>
-    `;
-    guardianPanel.style.display = '';
-    guardianPanel.querySelectorAll('[data-guardian-item]').forEach(btn=>{
+    if (!currentRecommendItems.length){
+      recommendList.innerHTML = '<div class="guardian-recommend-empty">暫無推薦商品</div>';
+      return;
+    }
+    recommendList.innerHTML = currentRecommendItems.map((p, idx)=>(
+      `<button type="button" class="guardian-recommend-item" data-recommend-item="${idx}">
+        <span>${escapeHtml(p.name || '未命名商品')}</span>
+        <em>查看</em>
+      </button>`
+    )).join('');
+    recommendList.querySelectorAll('[data-recommend-item]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        const idx = Number(btn.getAttribute('data-guardian-item'));
+        const idx = Number(btn.getAttribute('data-recommend-item'));
         const item = currentRecommendItems[idx];
         if (item && typeof openDetail === 'function'){
           openDetail(item);
         }
       });
     });
+  }
+  function openRecommendDialog(){
+    const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+      ? window.authState.isLoggedIn()
+      : false;
+    if (!loggedIn){
+      if (window.authState && typeof window.authState.promptLogin === 'function'){
+        window.authState.promptLogin('請先登入後再查看推薦商品。');
+      }
+      return;
+    }
+    if (!recommendDialog) return;
+    recommendRetry = 0;
+    showDialog(recommendDialog);
+    renderRecommendDialog();
   }
   function showDialog(dlg){
     if (!dlg) return;
@@ -6364,25 +6390,7 @@ function escapeHtml(s) {
     else openMenu();
   }
   function openRecommended(){
-    renderGuardianPanel();
-    const code = lastGuardianCode;
-    const name = map[code] || '';
-    const panel = document.getElementById('guardianPanel');
-    if (panel){
-      panel.scrollIntoView({ behavior:'smooth', block:'start' });
-      panel.classList.add('guardian-panel--flash');
-      setTimeout(()=> panel.classList.remove('guardian-panel--flash'), 1600);
-      return;
-    }
-    const deitySelect = document.getElementById('fDeity');
-    if (deitySelect && name){
-      deitySelect.value = name;
-      deitySelect.dispatchEvent(new Event('change'));
-    }
-    const list = document.getElementById('list');
-    if (list){
-      list.scrollIntoView({ behavior:'smooth', block:'start' });
-    }
+    openRecommendDialog();
   }
   async function loadImageFromUrl(url){
     if (!url) return null;
@@ -6597,7 +6605,6 @@ function escapeHtml(s) {
     badge.style.display = 'flex';
     updateFortuneAlert();
     closeMenu();
-    renderGuardianPanel();
     if (!badge.dataset.guardianMenuBound){
       badge.dataset.guardianMenuBound = '1';
       badge.addEventListener('click', e=>{
@@ -6646,6 +6653,9 @@ function escapeHtml(s) {
   scheduleFortuneReset();
   if (fortuneClose){
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
+  }
+  if (recommendClose){
+    recommendClose.addEventListener('click', ()=> closeDialog(recommendDialog));
   }
   if (fortuneShareBtn){
     fortuneShareBtn.addEventListener('click', shareFortuneImage);
