@@ -106,6 +106,7 @@
     <div class="tools-box">
       <h4>泰國旅遊 / 寺廟小工具</h4>
       <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;">敬請期待更多實用小工具。</div>
+      <div class="guardian-panel" id="guardianPanel" style="display:none;"></div>
     </div>
 </aside>
     <div class="main">
@@ -693,7 +694,12 @@
     a.className = 'side-link quiz-link-btn';
     a.textContent = '🔮 測驗與您有緣的守護神';
     if (tools){
-      tools.appendChild(a);
+      var panel = tools.querySelector('#guardianPanel');
+      if (panel){
+        tools.insertBefore(a, panel);
+      }else{
+        tools.appendChild(a);
+      }
     } else {
       side.appendChild(a);
     }
@@ -6103,9 +6109,12 @@ function escapeHtml(s) {
   const fortuneMeta = document.getElementById('fortuneMeta');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabel');
   const fortuneShareBtn = document.getElementById('fortuneShareBtn');
+  const guardianPanel = document.getElementById('guardianPanel');
   let lastFortune = null;
   let lastGuardianName = '';
   let lastGuardianCode = '';
+  let panelRetry = 0;
+  let currentRecommendItems = [];
   let midnightTimer = null;
   const FORTUNE_KEY = '__fortune_last_date__';
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
@@ -6179,6 +6188,70 @@ function escapeHtml(s) {
       updateFortuneAlert();
       scheduleFortuneReset();
     }, delay + 200);
+  }
+  function getRecommendedItems(code){
+    const name = map[code] || '';
+    const items = Array.isArray(window.rawItems) ? window.rawItems : [];
+    if (!name || !items.length) return [];
+    return items.filter(p => p && String(p.deity||'').trim() === name);
+  }
+  function renderGuardianPanel(){
+    if (!guardianPanel) return;
+    const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function'
+      ? window.authState.isLoggedIn()
+      : false;
+    if (!loggedIn){
+      guardianPanel.style.display = 'none';
+      return;
+    }
+    const g = readGuardian();
+    if (!g){
+      guardianPanel.style.display = 'none';
+      return;
+    }
+    const code = String(g.code||'').toUpperCase();
+    const name = map[code] || '守護神';
+    const ready = Array.isArray(window.rawItems) && window.rawItems.length;
+    const items = getRecommendedItems(code);
+    currentRecommendItems = items.slice(0, 3);
+    let listHtml = '';
+    if (!ready){
+      listHtml = '<div class="guardian-item muted" style="cursor:default;">推薦商品載入中…</div>';
+      if (panelRetry < 8){
+        panelRetry += 1;
+        setTimeout(renderGuardianPanel, 600);
+      }
+    }else if (!currentRecommendItems.length){
+      listHtml = '<div class="guardian-item muted" style="cursor:default;">暫無推薦商品</div>';
+    }else{
+      listHtml = currentRecommendItems.map((p, idx)=>(
+        `<button type="button" class="guardian-item" data-guardian-item="${idx}">
+          <span>${escapeHtml(p.name || '未命名商品')}</span>
+          <em>查看</em>
+        </button>`
+      )).join('');
+    }
+    guardianPanel.innerHTML = `
+      <div class="tool-card">
+        <div class="guardian-panel-title">守護神個人化</div>
+        <div class="guardian-panel-name">${escapeHtml(name)} <span class="guardian-panel-code">${escapeHtml(code)}</span></div>
+        <div class="guardian-panel-desc">依測驗結果推薦對應神祇商品。</div>
+        <div class="guardian-panel-list">
+          <div class="guardian-panel-list-title">推薦商品</div>
+          ${listHtml}
+        </div>
+      </div>
+    `;
+    guardianPanel.style.display = '';
+    guardianPanel.querySelectorAll('[data-guardian-item]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const idx = Number(btn.getAttribute('data-guardian-item'));
+        const item = currentRecommendItems[idx];
+        if (item && typeof openDetail === 'function'){
+          openDetail(item);
+        }
+      });
+    });
   }
   function showDialog(dlg){
     if (!dlg) return;
@@ -6291,6 +6364,7 @@ function escapeHtml(s) {
     else openMenu();
   }
   function openRecommended(){
+    renderGuardianPanel();
     const code = lastGuardianCode;
     const name = map[code] || '';
     const panel = document.getElementById('guardianPanel');
@@ -6523,6 +6597,7 @@ function escapeHtml(s) {
     badge.style.display = 'flex';
     updateFortuneAlert();
     closeMenu();
+    renderGuardianPanel();
     if (!badge.dataset.guardianMenuBound){
       badge.dataset.guardianMenuBound = '1';
       badge.addEventListener('click', e=>{
