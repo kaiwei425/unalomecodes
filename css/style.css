@@ -419,20 +419,20 @@ html,body{
     padding:0;
     display:block;
   }
+  .footer-logos .logo-item--ecpay img{width:80%;height:80%;}
   .footer-social{display:flex;gap:8px;justify-content:center;margin-bottom:6px;}
   .footer-social .logo-item{
-    width:44px;height:44px;border-radius:12px;
+    width:32px;height:32px;border-radius:0;
     display:inline-flex;align-items:center;justify-content:center;
-    background:#fff;border:1px solid #e2e8f0;color:#1f2937;
-    box-shadow:0 4px 12px rgba(15,23,42,.08);
-    overflow:hidden;
+    background:transparent;border:none;color:#1f2937;
+    box-shadow:none;overflow:hidden;
   }
   .footer-social img{
     width:100%;height:100%;
-    max-width:32px;
-    max-height:32px;
+    max-width:none;
+    max-height:none;
     object-fit:contain;
-    padding:6px;
+    padding:0;
     display:block;
   }
 
