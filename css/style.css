@@ -411,8 +411,8 @@ html,body{
   }
   .footer-logos .logo-item:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(15,23,42,.12)}
   .footer-logos img{
-    width:100%;
-    height:100%;
+    width:80%;
+    height:80%;
     max-width:none;
     max-height:none;
     object-fit:contain;
@@ -420,8 +420,21 @@ html,body{
     display:block;
   }
   .footer-social{display:flex;gap:8px;justify-content:center;margin-bottom:6px;}
-  .footer-social .logo-item{width:34px;height:34px;border-radius:10px;box-shadow:none;}
-  .footer-social img{max-width:18px;max-height:18px;padding:6px;}
+  .footer-social .logo-item{
+    width:44px;height:44px;border-radius:12px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid #e2e8f0;color:#1f2937;
+    box-shadow:0 4px 12px rgba(15,23,42,.08);
+    overflow:hidden;
+  }
+  .footer-social img{
+    width:100%;height:100%;
+    max-width:32px;
+    max-height:32px;
+    object-fit:contain;
+    padding:6px;
+    display:block;
+  }
 
   /* 詳情 Dialog（白底） */
   dialog{border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--fg);max-width:920px;width:96%;box-shadow:0 18px 60px rgba(15,23,42,.25);}
