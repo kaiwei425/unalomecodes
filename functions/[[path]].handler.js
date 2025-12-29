@@ -1931,6 +1931,30 @@ function statusIsCanceled(s){
   if (cancelHints.some(k => v.includes(k))) return true;
   return /\b(cancel|failed|void|refund|chargeback)\b/i.test(v);
 }
+function toTs(value){
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  const ts = Date.parse(value);
+  return Number.isNaN(ts) ? 0 : ts;
+}
+function getOrderCreatedTs(order){
+  return toTs(order?.createdAt || order?.updatedAt || order?.ts || '');
+}
+function getOrderPaidTs(order){
+  return toTs(
+    order?.payment?.paidAt ||
+    order?.payment?.paid_at ||
+    order?.paidAt ||
+    order?.paid_at ||
+    order?.updatedAt ||
+    order?.createdAt ||
+    ''
+  );
+}
+function getOrderAmount(order){
+  const amt = Number(order?.amount ?? order?.total ?? order?.totalAmount ?? order?.price ?? 0);
+  return Number.isFinite(amt) ? amt : 0;
+}
 function extractCouponCodes(coupon){
   if (!coupon) return [];
   const raw = Array.isArray(coupon.codes) && coupon.codes.length ? coupon.codes : (coupon.code ? [coupon.code] : []);
@@ -2755,6 +2779,45 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       members: { total: 0, approx: false },
       coupons: { total: 0, used: 0, approx: false }
     };
+    const nowTs = Date.now();
+    const todayKey = taipeiDateKey(nowTs);
+    const last7Ts = nowTs - 7 * 86400000;
+    const last30Ts = nowTs - 30 * 86400000;
+    const makePeriods = ()=>({ today: 0, last7: 0, last30: 0 });
+    const addPeriods = (obj, ts, value = 1)=>{
+      if (!ts) return;
+      if (taipeiDateKey(ts) === todayKey) obj.today += value;
+      if (ts >= last7Ts) obj.last7 += value;
+      if (ts >= last30Ts) obj.last30 += value;
+    };
+    const topPhysicalMap = new Map();
+    const topServiceMap = new Map();
+    const lowStockItems = [];
+    const reports = {
+      physical: {
+        revenue: makePeriods(),
+        orders: makePeriods(),
+        status: { paid: 0, pending: 0, canceled: 0 },
+        topItems: [],
+        lowStock: [],
+        approx: false
+      },
+      service: {
+        revenue: makePeriods(),
+        orders: makePeriods(),
+        status: { paid: 0, pending: 0, canceled: 0 },
+        topItems: [],
+        approx: false
+      }
+    };
+    const addTop = (map, key, payload)=>{
+      if (!key) return;
+      const current = map.get(key) || { id: payload.id || '', name: payload.name || key, qty: 0, amount: 0, image: payload.image || '' };
+      current.qty += Number(payload.qty || 0) || 0;
+      current.amount += Number(payload.amount || 0) || 0;
+      if (!current.image && payload.image) current.image = payload.image;
+      map.set(key, current);
+    };
 
     // Products
     if (env.PRODUCTS){
@@ -2774,7 +2837,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           const p = JSON.parse(raw);
           if (p.active === true) stats.products.active++;
           const stockTotal = resolveTotalStockForProduct(p);
-          if (stockTotal !== null && stockTotal <= lowStockThreshold) stats.products.lowStock++;
+          if (stockTotal !== null && stockTotal <= lowStockThreshold){
+            stats.products.lowStock++;
+            lowStockItems.push({
+              id,
+              name: p.name || p.title || p.productName || '商品',
+              stock: stockTotal,
+              active: p.active === true
+            });
+          }
         }catch(_){}
       }
     }
@@ -2795,10 +2866,98 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (!raw) continue;
         try{
           const o = JSON.parse(raw);
-          if (statusIsPaid(o.status)) stats.orders.paid++;
-          else if (statusIsCanceled(o.status)) stats.orders.canceled++;
+          const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
+          const isCanceled = statusIsCanceled(o.status);
+          if (isPaid) stats.orders.paid++;
+          else if (isCanceled) stats.orders.canceled++;
           else stats.orders.pending++;
+
+          if (isPaid) reports.physical.status.paid++;
+          else if (isCanceled) reports.physical.status.canceled++;
+          else reports.physical.status.pending++;
+
+          const createdTs = getOrderCreatedTs(o);
+          addPeriods(reports.physical.orders, createdTs, 1);
+
+          if (isPaid){
+            const paidTs = getOrderPaidTs(o) || createdTs;
+            const amount = getOrderAmount(o);
+            if (amount > 0) addPeriods(reports.physical.revenue, paidTs, amount);
+            const items = Array.isArray(o.items) ? o.items : [];
+            for (const it of items){
+              const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+              const unit = Number(it.price ?? it.unitPrice ?? it.amount ?? 0) || 0;
+              let total = Number(it.total ?? it.amountTotal ?? 0) || 0;
+              if (!total && unit) total = unit * qty;
+              const name = it.productName || it.name || o.productName || o.name || '商品';
+              const id = it.productId || it.id || '';
+              const image = it.image || it.cover || it.thumb || '';
+              addTop(topPhysicalMap, String(id || name), {
+                id: String(id || ''),
+                name,
+                qty,
+                amount: total || 0,
+                image
+              });
+            }
+          }
         }catch(_){}
+      }
+    }
+
+    // Service orders (report only)
+    {
+      const svcStore = env.SERVICE_ORDERS || env.ORDERS;
+      if (svcStore){
+        let ids = [];
+        try{
+          const idxRaw = await svcStore.get('SERVICE_ORDER_INDEX');
+          ids = idxRaw ? JSON.parse(idxRaw) : [];
+          if (!Array.isArray(ids)) ids = [];
+        }catch(_){ ids = []; }
+        const slice = ids.slice(0, scanLimit);
+        if (ids.length > slice.length) reports.service.approx = true;
+        for (const oid of slice){
+          const raw = await svcStore.get(oid);
+          if (!raw) continue;
+          try{
+            const o = JSON.parse(raw);
+            const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
+            const isCanceled = statusIsCanceled(o.status);
+            if (isPaid) reports.service.status.paid++;
+            else if (isCanceled) reports.service.status.canceled++;
+            else reports.service.status.pending++;
+
+            const createdTs = getOrderCreatedTs(o);
+            addPeriods(reports.service.orders, createdTs, 1);
+
+            if (isPaid){
+              const paidTs = getOrderPaidTs(o) || createdTs;
+              const amount = getOrderAmount(o);
+              if (amount > 0) addPeriods(reports.service.revenue, paidTs, amount);
+              const rawItems = Array.isArray(o.items) && o.items.length
+                ? o.items
+                : [{ name: o.serviceName || o.productName || '服務商品', qty: o.qty || 1, total: amount }];
+              for (const it of rawItems){
+                const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+                const unit = Number(it.price ?? it.unitPrice ?? it.amount ?? 0) || 0;
+                let total = Number(it.total ?? it.amountTotal ?? 0) || 0;
+                if (!total && unit) total = unit * qty;
+                if (!total && amount) total = amount / rawItems.length;
+                const name = it.name || o.serviceName || o.productName || '服務商品';
+                const id = o.serviceId || it.serviceId || '';
+                const image = it.image || it.cover || o.cover || '';
+                addTop(topServiceMap, String(id || name), {
+                  id: String(id || ''),
+                  name,
+                  qty,
+                  amount: total || 0,
+                  image
+                });
+              }
+            }
+          }catch(_){}
+        }
       }
     }
 
@@ -2832,7 +2991,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
       }catch(_){}
     }
-    return json({ ok:true, stats, limits: { scanLimit, lowStockThreshold } });
+    reports.physical.approx = stats.orders.approx || stats.products.approx;
+    reports.physical.topItems = Array.from(topPhysicalMap.values())
+      .sort((a,b)=> (b.qty - a.qty) || (b.amount - a.amount))
+      .slice(0, 10);
+    reports.physical.lowStock = lowStockItems
+      .sort((a,b)=> (a.stock - b.stock) || String(a.name).localeCompare(String(b.name), 'zh-Hant'))
+      .slice(0, 10);
+    reports.service.topItems = Array.from(topServiceMap.values())
+      .sort((a,b)=> (b.qty - a.qty) || (b.amount - a.amount))
+      .slice(0, 10);
+    return json({ ok:true, stats, reports, limits: { scanLimit, lowStockThreshold } });
   }
   if (pathname === '/api/admin/users/reset-guardian' && request.method === 'POST') {
     {
