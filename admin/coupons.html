@@ -217,6 +217,11 @@
     NAME_TO_CODE[plain] = code;
   });
   const TYPE_LABELS = { DEITY:'神祇券', ALL:'全館券', SHIP:'免運券' };
+  function escapeHtml(input){
+    return String(input ?? '').replace(/[&<>"']/g, (m)=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
   function toISO(val){
     if (!val) return undefined;
     const dt = new Date(val);
@@ -312,7 +317,10 @@
         const msg = (data && (data.error || data.reason)) || ('HTTP '+resp.status);
         throw new Error(msg);
       }
-      resBox.innerHTML = `優惠碼：${data.code} <br>類型：${TYPE_LABELS[type]||type}｜守護神：${data.deity || deity}｜折抵：NT$ ${Number(data.amount||amount)}`;
+      resBox.innerHTML = [
+        `優惠碼：${escapeHtml(data.code)}`,
+        `類型：${escapeHtml(TYPE_LABELS[type]||type)}｜守護神：${escapeHtml(data.deity || deity)}｜折抵：NT$ ${Number(data.amount||amount)}`
+      ].join('<br>');
       resBox.style.display='block';
       try{ navigator.clipboard.writeText(data.code); }catch(_){}
     }catch(err){
@@ -403,15 +411,15 @@
         const issued = fmtDate(c.issuedAt);
         const usedAt = fmtDate(c.usedAt);
         return `<tr>
-          <td style="font-weight:800;">${c.code||''}</td>
-          <td>${TYPE_LABELS[(c.type||'DEITY').toUpperCase()] || (c.type||'DEITY')}</td>
-          <td>${c.deity||''}</td>
+          <td style="font-weight:800;">${escapeHtml(c.code||'')}</td>
+          <td>${escapeHtml(TYPE_LABELS[(c.type||'DEITY').toUpperCase()] || (c.type||'DEITY'))}</td>
+          <td>${escapeHtml(c.deity||'')}</td>
           <td>NT$ ${Number(c.amount||0)}</td>
           <td>${fmtDate(c.startAt)||''}</td>
           <td>${fmtDate(c.expireAt)||''}</td>
           <td>${issued}</td>
           <td class="${usedCls}">${usedText}</td>
-          <td>${c.orderId||''}</td>
+          <td>${escapeHtml(c.orderId||'')}</td>
           <td>${usedAt||''}</td>
         </tr>`;
       }).join('');
@@ -431,14 +439,14 @@
       const usedText = c.used ? '已使用' : '未使用';
       const usedCls = c.used ? 'status-used' : 'status-new';
       return `<tr>
-        <td style="font-weight:800;">${c.code||''}</td>
-        <td>${TYPE_LABELS[(c.type||'').toUpperCase()]||c.type||''}</td>
+        <td style="font-weight:800;">${escapeHtml(c.code||'')}</td>
+        <td>${escapeHtml(TYPE_LABELS[(c.type||'').toUpperCase()]||c.type||'')}</td>
         <td>NT$ ${Number(c.amount||0)}</td>
         <td>${fmtDate(c.issuedAt)||''}</td>
         <td>${fmtDate(c.startAt)||''}</td>
         <td>${fmtDate(c.expireAt)||''}</td>
         <td class="${usedCls}">${usedText}</td>
-        <td>${c.orderId||''}</td>
+        <td>${escapeHtml(c.orderId||'')}</td>
         <td>${fmtDate(c.usedAt)||''}</td>
       </tr>`;
     }).join('');

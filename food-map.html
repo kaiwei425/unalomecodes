@@ -840,7 +840,16 @@ function initFilters(){
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
   fCat.innerHTML = '<option value=\"\">全部分類</option>';
   fArea.innerHTML= '<option value=\"\">全部地區</option>';
-  const cats = Array.from(new Set(source.map(d=>mapCategory(d.category)).filter(Boolean))).sort();
+  const order = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','其他'];
+  const cats = Array.from(new Set(source.map(d=>mapCategory(d.category)).filter(Boolean)))
+    .sort((a,b)=>{
+      const ai = order.indexOf(a);
+      const bi = order.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
   if (catTabs){
     catTabs.innerHTML = '';
     const tabAll = document.createElement('button');
@@ -874,10 +883,18 @@ function mapCategory(value){
   if (!v) return '';
   if (v.includes('日式')) return '日式料理';
   if (v.includes('泰式')) return '泰式料理';
-  if (v.includes('餐酒') || v.includes('全日') || v.includes('早午餐')) return '餐酒館';
-  if (v.includes('酒吧') || v.includes('精釀')) return '酒吧';
+  if (v.includes('義式')) return '義式料理';
+  if (v.includes('中式')) return '中式料理';
+  if (v.includes('港點')) return '港點';
+  if (v.includes('餐酒')) return '餐酒館';
   if (v.includes('咖啡')) return '咖啡廳';
-  if (v.includes('甜點') || v.includes('果汁') || v.includes('小吃') || v.includes('港點') || v.includes('街')) return '甜點小吃';
+  if (v.includes('酒吧') || v.includes('精釀')) return '酒吧';
+  if (v.includes('早午餐') || v.includes('全日')) return '早午餐';
+  if (v.includes('甜點') || v.includes('果汁') || v.includes('烘焙')) return '甜點';
+  if (v.includes('小吃') || v.includes('在地') || v.includes('麵店') || v.includes('宵夜')) return '小吃';
+  if (v.includes('火鍋')) return '中式料理';
+  if (v.includes('燒臘') || v.includes('烤鴨')) return '中式料理';
+  if (v.includes('牛排')) return '餐酒館';
   return '其他';
 }
 
@@ -889,17 +906,6 @@ function render(){
   const sort = fSort ? fSort.value : '';
   const hasFilters = !!(kw || cat || area || price);
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
-  const mapCategory = (value)=>{
-    const v = String(value || '');
-    if (!v) return '';
-    if (v.includes('日式')) return '日式料理';
-    if (v.includes('泰式')) return '泰式料理';
-    if (v.includes('餐酒') || v.includes('全日') || v.includes('早午餐')) return '餐酒館';
-    if (v.includes('酒吧') || v.includes('精釀')) return '酒吧';
-    if (v.includes('咖啡')) return '咖啡廳';
-    if (v.includes('甜點') || v.includes('果汁') || v.includes('小吃') || v.includes('港點') || v.includes('街')) return '甜點小吃';
-    return '其他';
-  };
   let list = source.filter(item=>{
     const hay = [
       item.name,

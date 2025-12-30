@@ -7,14 +7,14 @@
 
     var navItems = [
       { href: '/admin', label: '總覽', icon: '🏠' },
-      { href: '/admin/products', label: '商品', icon: '📦' },
-      { href: '/admin/orders', label: '訂單', icon: '🧾' },
+      { href: '/admin/orders', label: '訂單管理', icon: '🧾' },
+      { href: '/admin/products', label: '商品管理', icon: '📦' },
+      { href: '/admin/service-products', label: '服務商品', icon: '🕯️' },
+      { href: '/admin/service-orders', label: '服務訂單', icon: '🧿' },
       { href: '/admin/members', label: '會員', icon: '👤' },
       { href: '/admin/coupons', label: '優惠券', icon: '🎟️' },
       { href: '/admin/code-viewer', label: '留言', icon: '💬' },
-      { href: '/admin/fortune-stats', label: '日籤統計', icon: '📊' },
-      { href: '/admin/service-products', label: '服務商品', icon: '🕯️' },
-      { href: '/admin/service-orders', label: '服務訂單', icon: '🧿' }
+      { href: '/admin/fortune-stats', label: '日籤統計', icon: '📊' }
     ];
 
     var path = location.pathname.replace(/\/$/, '');
@@ -53,7 +53,28 @@
 
     var main = document.createElement('main');
     main.className = 'admin-main';
+
+    var topbar = document.createElement('div');
+    topbar.className = 'admin-topbar';
+    var topbarTitle = document.createElement('div');
+    topbarTitle.className = 'admin-topbar-title';
+    var h1 = wrap.querySelector('h1');
+    topbarTitle.textContent = (h1 && h1.textContent) ? h1.textContent.trim() : (document.title || '後台管理');
+    var topbarActions = document.createElement('div');
+    topbarActions.className = 'admin-topbar-actions';
+    var linkShop = document.createElement('a');
+    linkShop.href = '/shop';
+    linkShop.textContent = '前台首頁';
+    var linkHome = document.createElement('a');
+    linkHome.href = '/admin';
+    linkHome.textContent = '後台總覽';
+    topbarActions.appendChild(linkHome);
+    topbarActions.appendChild(linkShop);
+    topbar.appendChild(topbarTitle);
+    topbar.appendChild(topbarActions);
+
     wrap.dataset.adminShellApplied = '1';
+    main.appendChild(topbar);
     main.appendChild(wrap);
 
     shell.appendChild(side);

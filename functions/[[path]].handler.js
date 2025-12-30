@@ -7634,7 +7634,7 @@ async function handleUpload(request, env, origin) {
     const adminSession = await getAdminSession(request, env);
     const isAuthed = !!uploader || !!adminSession;
     const authTier = uploader ? 'user' : (adminSession ? 'admin' : 'anon');
-    if (!isAuthed && String(env.UPLOAD_REQUIRE_AUTH || '') === '1') {
+    if (!isAuthed) {
       return withCORS(json({ ok:false, error:"Login required" }, 401));
     }
     const ip = getClientIp(request) || 'unknown';
