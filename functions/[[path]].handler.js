@@ -3418,6 +3418,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           maps: String(body.maps||'').trim(),
           ig: String(body.ig||'').trim(),
           cover: String(body.cover||'').trim(),
+          coverPos: String(body.coverPos || body.cover_pos || '').trim(),
           highlights: Array.isArray(body.highlights) ? body.highlights : [],
           dishes: Array.isArray(body.dishes) ? body.dishes : [],
           updatedAt: now

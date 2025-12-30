@@ -69,8 +69,8 @@
     .admin-hint{font-size:11px;color:#64748b;}
     .admin-upload{display:grid;gap:8px;width:100%;}
     .admin-file{width:100%;font-size:12px;}
-    .admin-preview{width:100%;height:140px;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-    .admin-preview img{width:100%;height:100%;object-fit:contain;display:block;}
+    .admin-preview{width:100%;height:160px;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+    .admin-preview img{width:100%;height:100%;object-fit:cover;display:block;touch-action:none;user-select:none;}
     .admin-preview-empty{font-size:12px;color:#94a3b8;}
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
@@ -646,6 +646,15 @@ function safeUrl(input){
   }catch(_){}
   return '';
 }
+function safeObjectPosition(input){
+  const raw = String(input || '').trim();
+  const m = raw.match(/^(\d{1,3}(?:\.\d+)?)%\\s+(\d{1,3}(?:\.\d+)?)%$/);
+  if (!m) return '50% 50%';
+  const x = Math.max(0, Math.min(100, Number(m[1])));
+  const y = Math.max(0, Math.min(100, Number(m[2])));
+  if (Number.isNaN(x) || Number.isNaN(y)) return '50% 50%';
+  return `${x}% ${y}%`;
+}
 function buildInstagramEmbedUrl(input){
   const raw = safeUrl(input);
   if (!raw) return '';
@@ -701,6 +710,62 @@ async function uploadCoverFile(file){
   const first = Array.isArray(data.files) ? data.files[0] : null;
   if (!first || !first.url) throw new Error('Upload failed');
   return first.url;
+}
+
+function initCoverPositionControls(scope){
+  const root = scope && scope.querySelectorAll ? scope : cardsEl;
+  if (!root) return;
+  const previews = root.querySelectorAll('[data-admin-preview="cover"]');
+  previews.forEach(previewEl=>{
+    const img = previewEl.querySelector('img');
+    if (!img) return;
+    const wrap = previewEl.closest('[data-admin-id]');
+    if (!wrap) return;
+    const posInput = wrap.querySelector('[data-admin-field="coverPos"]');
+    const setPos = (pos)=>{
+      const safe = safeObjectPosition(pos);
+      img.style.objectPosition = safe;
+      if (posInput) posInput.value = safe;
+    };
+    setPos(posInput && posInput.value ? posInput.value : '50% 50%');
+    let dragging = null;
+    const onDown = (ev)=>{
+      if (ev.button !== undefined && ev.button !== 0) return;
+      const rect = previewEl.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const pos = safeObjectPosition(img.style.objectPosition || '50% 50%');
+      const [xStr,yStr] = pos.split(' ');
+      dragging = {
+        startX: ev.clientX,
+        startY: ev.clientY,
+        startPosX: parseFloat(xStr),
+        startPosY: parseFloat(yStr),
+        width: rect.width,
+        height: rect.height
+      };
+      img.setPointerCapture && img.setPointerCapture(ev.pointerId);
+      previewEl.style.cursor = 'grabbing';
+    };
+    const onMove = (ev)=>{
+      if (!dragging) return;
+      const dx = ev.clientX - dragging.startX;
+      const dy = ev.clientY - dragging.startY;
+      const nx = Math.max(0, Math.min(100, dragging.startPosX + (dx / dragging.width) * 100));
+      const ny = Math.max(0, Math.min(100, dragging.startPosY + (dy / dragging.height) * 100));
+      setPos(`${nx.toFixed(1)}% ${ny.toFixed(1)}%`);
+    };
+    const onUp = ()=>{
+      if (!dragging) return;
+      dragging = null;
+      previewEl.style.cursor = 'grab';
+    };
+    img.style.cursor = 'grab';
+    img.addEventListener('pointerdown', onDown);
+    img.addEventListener('pointermove', onMove);
+    img.addEventListener('pointerup', onUp);
+    img.addEventListener('pointercancel', onUp);
+    img.addEventListener('pointerleave', onUp);
+  });
 }
 
 const cardsEl = document.getElementById('cards');
@@ -815,8 +880,10 @@ function render(){
     const safeId = escapeHtml(item.id || '');
     const safeName = escapeHtml(item.name || '');
     const coverUrl = safeUrl(item.cover);
-    const coverImg = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}">` : '';
-    const coverPreview = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}">` : '<div class="admin-preview-empty">尚未上傳</div>';
+    const coverPos = safeObjectPosition(item.coverPos || item.cover_pos);
+    const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
+    const coverImg = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}"${coverStyle}>` : '';
+    const coverPreview = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}"${coverStyle}>` : '<div class="admin-preview-empty">尚未上傳</div>';
     const mapsUrl = safeUrl(item.maps);
     const introText = buildIntroText(item);
     const adminPanel = adminMode ? `
@@ -835,7 +902,9 @@ function render(){
               <div>
                 <input class="admin-file" data-admin-file="cover" type="file" accept="image/*">
                 <input type="hidden" class="admin-input" data-admin-field="cover" value="${escapeHtml(item.cover || '')}">
+                <input type="hidden" class="admin-input" data-admin-field="coverPos" value="${escapeHtml(coverPos)}">
                 <div class="admin-upload-hint">選擇圖片後會自動上傳</div>
+                <div class="admin-upload-hint">拖曳圖片可調整顯示位置</div>
                 <div class="admin-upload-status" data-admin-status="cover"></div>
               </div>
             </div>
@@ -923,6 +992,7 @@ function render(){
           maps: read('maps'),
           ig: read('ig'),
           cover: read('cover'),
+          coverPos: read('coverPos'),
           intro: introRaw,
           highlights: introLines,
           dishes: []
@@ -957,20 +1027,24 @@ function render(){
         if (!wrap) return;
         const previewEl = wrap.querySelector('[data-admin-preview="cover"]');
         const hidden = wrap.querySelector('[data-admin-field="cover"]');
+        const posInput = wrap.querySelector('[data-admin-field="coverPos"]');
         const statusEl = wrap.querySelector('[data-admin-status="cover"]');
         const setStatus = (text)=>{ if (statusEl) statusEl.textContent = text || ''; };
         setStatus('上傳中…');
         try{
           const url = await uploadCoverFile(file);
           if (hidden) hidden.value = url;
-          if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="">`;
+          if (posInput && !posInput.value) posInput.value = '50% 50%';
+          if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="object-position:${escapeHtml(posInput ? posInput.value : '50% 50%')};">`;
           setStatus('已上傳');
+          initCoverPositionControls(previewEl);
         }catch(err){
           setStatus('上傳失敗');
           alert('封面圖上傳失敗：' + (err.message||err));
         }
       };
     });
+    initCoverPositionControls();
   }
 }
 
