@@ -75,6 +75,19 @@
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
     .admin-cover{grid-column:1 / -1;}
+    .modal-body{padding:16px;display:grid;gap:14px;background:#fff;max-height:80vh;overflow:auto;}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+    .modal-title{font-size:18px;font-weight:800;color:#0f172a;}
+    .modal-close{border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;color:#0f172a;font-weight:700;}
+    .modal-tags{display:flex;gap:6px;flex-wrap:wrap;}
+    .modal-chip{background:#f8fafc;border:1px solid #e2e8f0;color:#334155;border-radius:999px;padding:4px 10px;font-size:12px;}
+    .modal-embed{border-radius:14px;overflow:hidden;background:#f8fafc;border:1px solid #e2e8f0;}
+    .modal-embed-inner{max-width:420px;margin:0 auto;}
+    .modal-embed iframe{width:100%;aspect-ratio:9/16;border:0;display:block;background:#fff;}
+    .modal-section{display:grid;gap:6px;font-size:13px;color:#334155;line-height:1.7;}
+    .modal-section strong{color:#0f172a;}
+    .modal-actions{display:flex;gap:10px;flex-wrap:wrap;}
+    .modal-actions .btn{flex:1;min-width:150px;}
     .empty-state{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:24px;text-align:center;color:var(--muted);box-shadow:var(--shadow);}
     .empty-state h3{margin:0 0 6px;font-size:18px;color:var(--text);}
     .empty-state p{margin:0 0 14px;font-size:13px;}
@@ -144,7 +157,7 @@
     <div class="cards" id="cards"></div>
   </main>
 
-  <dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:720px;width:95%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
+  <dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
     <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
   </dialog>
 
@@ -1126,27 +1139,35 @@ function openModal(id){
   const dlg = document.getElementById('foodModal');
   const introText = buildIntroText(item);
   const embedUrl = buildInstagramEmbedUrl(item.ig);
-  const iframe = embedUrl ? `<iframe src="${escapeHtml(embedUrl)}" style="width:100%;min-height:420px;border:none;"></iframe>` : '';
+  const iframe = embedUrl ? `<iframe src="${escapeHtml(embedUrl)}" allowfullscreen></iframe>` : '';
   const mapsUrl = safeUrl(item.maps);
   const safeId = escapeHtml(item.id || '');
+  const tags = [item.category, item.area, item.price ? `價位 ${item.price}` : '']
+    .filter(Boolean)
+    .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
+    .join('');
   body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-        <div style="font-size:18px;font-weight:800;">${escapeHtml(item.name || '')}</div>
-        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+    <div class="modal-body">
+      <div class="modal-head">
+        <div class="modal-title">${escapeHtml(item.name || '')}</div>
+        <button id="foodClose" class="modal-close">關閉</button>
       </div>
-      <div style="border-radius:12px;overflow:hidden;background:#f8fafc;">${iframe || '<div style="padding:20px;color:#94a3b8;">無 IG 影片</div>'}</div>
-      <div style="font-size:14px;color:#0f172a;line-height:1.7;">
-        <div><strong>地址：</strong>${escapeHtml(item.address || '')}</div>
-        <div><strong>分類：</strong>${escapeHtml(item.category || '')}｜${escapeHtml(item.area || '')}｜價位：${escapeHtml(item.price || '')}</div>
+      <div class="modal-tags">${tags}</div>
+      <div class="modal-embed">
+        <div class="modal-embed-inner">
+          ${iframe || '<div style="padding:20px;color:#94a3b8;text-align:center;">無 IG 影片</div>'}
+        </div>
       </div>
-      <div>
-        <strong>店家介紹：</strong>
-        <div style="margin:6px 0 0;color:#475569;white-space:pre-wrap;">${escapeHtml(introText || '暫無介紹')}</div>
+      <div class="modal-section">
+        <div><strong>地址：</strong>${escapeHtml(item.address || '') || '暫無地址'}</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn primary" style="flex:1;" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
-        <button class="btn ghost" style="flex:1;" data-fav="${safeId}">加入收藏</button>
+      <div class="modal-section">
+        <strong>店家介紹</strong>
+        <div style="white-space:pre-wrap;color:#475569;">${escapeHtml(introText || '暫無介紹')}</div>
+      </div>
+      <div class="modal-actions">
+        <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
+        <button class="btn ghost" data-fav="${safeId}">加入收藏</button>
       </div>
     </div>
   `;
