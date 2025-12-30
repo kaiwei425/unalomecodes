@@ -40,7 +40,7 @@
     .filter-select{appearance:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-family:inherit;color:var(--text);box-shadow:0 6px 14px rgba(15,23,42,.06);}
     .cards{display:grid;gap:14px;margin:18px 0 32px;}
     .card{display:grid;grid-template-columns:190px 1fr;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);}
-    .cover{position:relative;border-radius:14px;overflow:hidden;background:#0f172a;height:140px;}
+    .cover{position:relative;border-radius:14px;overflow:hidden;background:#0f172a;aspect-ratio:4/5;width:100%;}
     .cover img{width:100%;height:100%;object-fit:cover;}
     .card-body{display:grid;gap:8px;align-content:start;}
     .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
@@ -69,7 +69,7 @@
     .admin-hint{font-size:11px;color:#64748b;}
     .admin-upload{display:grid;gap:8px;width:100%;}
     .admin-file{width:100%;font-size:12px;}
-    .admin-preview{width:100%;height:160px;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+    .admin-preview{width:100%;aspect-ratio:4/5;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;touch-action:none;cursor:grab;}
     .admin-preview img{width:100%;height:100%;object-fit:cover;display:block;touch-action:none;user-select:none;}
     .admin-preview-empty{font-size:12px;color:#94a3b8;}
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
@@ -83,7 +83,7 @@
     }
     @media(max-width:720px){
       .card{grid-template-columns:1fr;}
-      .cover{height:180px;}
+      .cover{aspect-ratio:4/5;}
       .admin-grid{grid-template-columns:1fr;}
     }
   </style>
@@ -713,12 +713,19 @@ async function uploadCoverFile(file){
 }
 
 function initCoverPositionControls(scope){
-  const root = scope && scope.querySelectorAll ? scope : cardsEl;
-  if (!root) return;
-  const previews = root.querySelectorAll('[data-admin-preview="cover"]');
+  const getPreviews = (node)=>{
+    if (!node) return Array.from(cardsEl.querySelectorAll('[data-admin-preview="cover"]'));
+    if (node.matches && node.matches('[data-admin-preview="cover"]')) return [node];
+    if (node.querySelectorAll) return Array.from(node.querySelectorAll('[data-admin-preview="cover"]'));
+    return [];
+  };
+  const previews = getPreviews(scope);
   previews.forEach(previewEl=>{
     const img = previewEl.querySelector('img');
     if (!img) return;
+    if (img.dataset.dragReady === '1') return;
+    img.dataset.dragReady = '1';
+    img.draggable = false;
     const wrap = previewEl.closest('[data-admin-id]');
     if (!wrap) return;
     const posInput = wrap.querySelector('[data-admin-field="coverPos"]');
@@ -729,42 +736,45 @@ function initCoverPositionControls(scope){
     };
     setPos(posInput && posInput.value ? posInput.value : '50% 50%');
     let dragging = null;
-    const onDown = (ev)=>{
-      if (ev.button !== undefined && ev.button !== 0) return;
+    const startDrag = (clientX, clientY)=>{
       const rect = previewEl.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const pos = safeObjectPosition(img.style.objectPosition || '50% 50%');
       const [xStr,yStr] = pos.split(' ');
       dragging = {
-        startX: ev.clientX,
-        startY: ev.clientY,
+        startX: clientX,
+        startY: clientY,
         startPosX: parseFloat(xStr),
         startPosY: parseFloat(yStr),
         width: rect.width,
         height: rect.height
       };
-      img.setPointerCapture && img.setPointerCapture(ev.pointerId);
       previewEl.style.cursor = 'grabbing';
     };
-    const onMove = (ev)=>{
+    const moveDrag = (clientX, clientY)=>{
       if (!dragging) return;
-      const dx = ev.clientX - dragging.startX;
-      const dy = ev.clientY - dragging.startY;
+      const dx = clientX - dragging.startX;
+      const dy = clientY - dragging.startY;
       const nx = Math.max(0, Math.min(100, dragging.startPosX + (dx / dragging.width) * 100));
       const ny = Math.max(0, Math.min(100, dragging.startPosY + (dy / dragging.height) * 100));
       setPos(`${nx.toFixed(1)}% ${ny.toFixed(1)}%`);
     };
-    const onUp = ()=>{
+    const endDrag = ()=>{
       if (!dragging) return;
       dragging = null;
       previewEl.style.cursor = 'grab';
     };
-    img.style.cursor = 'grab';
-    img.addEventListener('pointerdown', onDown);
-    img.addEventListener('pointermove', onMove);
-    img.addEventListener('pointerup', onUp);
-    img.addEventListener('pointercancel', onUp);
-    img.addEventListener('pointerleave', onUp);
+    previewEl.addEventListener('pointerdown', (ev)=>{
+      if (ev.button !== undefined && ev.button !== 0) return;
+      ev.preventDefault();
+      startDrag(ev.clientX, ev.clientY);
+      previewEl.setPointerCapture && previewEl.setPointerCapture(ev.pointerId);
+    });
+    previewEl.addEventListener('pointermove', (ev)=>{ if (dragging) moveDrag(ev.clientX, ev.clientY); });
+    previewEl.addEventListener('pointerup', endDrag);
+    previewEl.addEventListener('pointercancel', endDrag);
+    previewEl.addEventListener('pointerleave', endDrag);
+    previewEl.addEventListener('dragstart', (ev)=> ev.preventDefault());
   });
 }
 
@@ -1037,6 +1047,17 @@ function render(){
           if (posInput && !posInput.value) posInput.value = '50% 50%';
           if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="object-position:${escapeHtml(posInput ? posInput.value : '50% 50%')};">`;
           setStatus('已上傳');
+          const card = wrap.closest('.card');
+          if (card){
+            const coverImg = card.querySelector('.cover img');
+            if (coverImg){
+              coverImg.src = url;
+              coverImg.style.objectPosition = posInput ? posInput.value : '50% 50%';
+            }else{
+              const coverBox = card.querySelector('.cover');
+              if (coverBox) coverBox.innerHTML = `<img src="${escapeHtml(url)}" alt="">`;
+            }
+          }
           initCoverPositionControls(previewEl);
         }catch(err){
           setStatus('上傳失敗');
