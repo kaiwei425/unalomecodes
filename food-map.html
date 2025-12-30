@@ -38,6 +38,9 @@
     .search-icon{font-size:16px;color:var(--accent);}
     .filter-row{display:flex;gap:8px;flex-wrap:wrap;}
     .filter-select{appearance:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-family:inherit;color:var(--text);box-shadow:0 6px 14px rgba(15,23,42,.06);}
+    .cat-tabs{display:flex;gap:8px;flex-wrap:nowrap;margin-top:10px;overflow-x:auto;padding-bottom:4px;}
+    .cat-tab{border:1px solid #ffd7c7;background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
+    .cat-tab.active{background:#ffedd5;border-color:#fb923c;color:#ea580c;}
     .cards{display:grid;gap:14px;margin:18px 0 32px;}
     .card{display:grid;grid-template-columns:190px 1fr;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);}
     .cover{position:relative;border-radius:14px;overflow:hidden;background:#0f172a;aspect-ratio:4/5;width:100%;}
@@ -129,6 +132,7 @@
             <span class="search-icon">🔍</span>
             <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
           </div>
+          <div class="cat-tabs" id="catTabs"></div>
           <div class="filter-row">
             <select id="fCat" class="filter-select">
               <option value="">全部分類</option>
@@ -798,6 +802,7 @@ const fArea = document.getElementById('fArea');
 const fPrice = document.getElementById('fPrice');
 const fSort = document.getElementById('fSort');
 const kwInput = document.getElementById('kw');
+const catTabs = document.getElementById('catTabs');
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
 const btnAdmin = document.getElementById('btnAdmin');
@@ -835,10 +840,45 @@ function initFilters(){
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
   fCat.innerHTML = '<option value=\"\">全部分類</option>';
   fArea.innerHTML= '<option value=\"\">全部地區</option>';
-  const cats = Array.from(new Set(source.map(d=>d.category).filter(Boolean))).sort();
+  const cats = Array.from(new Set(source.map(d=>mapCategory(d.category)).filter(Boolean))).sort();
+  if (catTabs){
+    catTabs.innerHTML = '';
+    const tabAll = document.createElement('button');
+    tabAll.type = 'button';
+    tabAll.className = 'cat-tab';
+    tabAll.textContent = '全部分類';
+    tabAll.dataset.value = '';
+    catTabs.appendChild(tabAll);
+    cats.forEach(c=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cat-tab';
+      btn.textContent = c;
+      btn.dataset.value = c;
+      catTabs.appendChild(btn);
+    });
+    catTabs.querySelectorAll('.cat-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        fCat.value = btn.dataset.value || '';
+        render();
+      });
+    });
+  }
   cats.forEach(c=>{ const opt=document.createElement('option');opt.value=c;opt.textContent=c;fCat.appendChild(opt); });
   const areas = Array.from(new Set(source.map(d=>d.area).filter(Boolean))).sort();
   areas.forEach(a=>{ const opt=document.createElement('option');opt.value=a;opt.textContent=a;fArea.appendChild(opt); });
+}
+
+function mapCategory(value){
+  const v = String(value || '');
+  if (!v) return '';
+  if (v.includes('日式')) return '日式料理';
+  if (v.includes('泰式')) return '泰式料理';
+  if (v.includes('餐酒') || v.includes('全日') || v.includes('早午餐')) return '餐酒館';
+  if (v.includes('酒吧') || v.includes('精釀')) return '酒吧';
+  if (v.includes('咖啡')) return '咖啡廳';
+  if (v.includes('甜點') || v.includes('果汁') || v.includes('小吃') || v.includes('港點') || v.includes('街')) return '甜點小吃';
+  return '其他';
 }
 
 function render(){
@@ -849,6 +889,17 @@ function render(){
   const sort = fSort ? fSort.value : '';
   const hasFilters = !!(kw || cat || area || price);
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
+  const mapCategory = (value)=>{
+    const v = String(value || '');
+    if (!v) return '';
+    if (v.includes('日式')) return '日式料理';
+    if (v.includes('泰式')) return '泰式料理';
+    if (v.includes('餐酒') || v.includes('全日') || v.includes('早午餐')) return '餐酒館';
+    if (v.includes('酒吧') || v.includes('精釀')) return '酒吧';
+    if (v.includes('咖啡')) return '咖啡廳';
+    if (v.includes('甜點') || v.includes('果汁') || v.includes('小吃') || v.includes('港點') || v.includes('街')) return '甜點小吃';
+    return '其他';
+  };
   let list = source.filter(item=>{
     const hay = [
       item.name,
@@ -859,7 +910,7 @@ function render(){
       item.ig
     ].filter(Boolean).join(' ').toLowerCase();
     if (kw && !hay.includes(kw)) return false;
-    if (cat && item.category !== cat) return false;
+    if (cat && mapCategory(item.category) !== cat) return false;
     if (area && item.area !== area) return false;
     if (price && item.price !== price) return false;
     return true;
@@ -881,6 +932,12 @@ function render(){
       return 0;
     });
   }
+  if (catTabs){
+    catTabs.querySelectorAll('.cat-tab').forEach(btn=>{
+      const val = btn.dataset.value || '';
+      btn.classList.toggle('active', val === (fCat.value || ''));
+    });
+  }
   if (!list.length){
     cardsEl.innerHTML = `
       <div class="empty-state">
@@ -896,7 +953,8 @@ function render(){
     return;
   }
   cardsEl.innerHTML = list.map(item=>{
-    const tags = [item.category, item.area, item.price ? `價位：${item.price}` : '']
+    const displayCat = mapCategory(item.category) || item.category;
+    const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
       .join('');
@@ -949,7 +1007,7 @@ function render(){
         <div class="card-head">
           <div>
             <div class="card-title">${safeName}</div>
-            <div class="card-sub">${escapeHtml(item.category || '')} · ${escapeHtml(item.area || '')}${item.price ? ` · 價位 ${escapeHtml(item.price)}` : ''}</div>
+            <div class="card-sub">${escapeHtml(displayCat || '')} · ${escapeHtml(item.area || '')}${item.price ? ` · 價位 ${escapeHtml(item.price)}` : ''}</div>
           </div>
           <button class="fav-btn" data-fav="${safeId}" title="收藏">${liked?'★':'☆'}</button>
         </div>
@@ -1143,7 +1201,8 @@ function openModal(id){
   const iframe = embedUrl ? `<iframe src="${escapeHtml(embedUrl)}" allowfullscreen></iframe>` : '';
   const mapsUrl = safeUrl(item.maps);
   const safeId = escapeHtml(item.id || '');
-  const tags = [item.category, item.area, item.price ? `價位 ${item.price}` : '']
+  const displayCat = mapCategory(item.category) || item.category;
+  const tags = [displayCat, item.area, item.price ? `價位 ${item.price}` : '']
     .filter(Boolean)
     .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
     .join('');
@@ -1223,7 +1282,7 @@ function openFavList(){
           ${list.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
             <div>
               <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
-              <div style="color:#64748b;font-size:12px;">${escapeHtml(it.category || '')}｜${escapeHtml(it.area || '')}</div>
+              <div style="color:#64748b;font-size:12px;">${escapeHtml(mapCategory(it.category) || it.category || '')}｜${escapeHtml(it.area || '')}</div>
             </div>
             <div style="display:flex;gap:6px;">
               <button class="btn ghost" style="padding:6px 10px;font-size:12px;" data-open="${escapeHtml(it.id || '')}">查看</button>
