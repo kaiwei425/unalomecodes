@@ -67,6 +67,12 @@
     .admin-textarea{min-height:70px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;resize:vertical;}
     .admin-actions{display:flex;gap:8px;flex-wrap:wrap;}
     .admin-hint{font-size:11px;color:#64748b;}
+    .admin-upload{display:grid;gap:8px;}
+    .admin-preview{width:100%;height:120px;border-radius:12px;border:1px dashed var(--line);background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .admin-preview img{width:100%;height:100%;object-fit:cover;display:block;}
+    .admin-preview-empty{font-size:12px;color:#94a3b8;}
+    .admin-upload-hint{font-size:11px;color:#94a3b8;}
+    .admin-upload-status{font-size:11px;color:#64748b;}
     .empty-state{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:24px;text-align:center;color:var(--muted);box-shadow:var(--shadow);}
     .empty-state h3{margin:0 0 6px;font-size:18px;color:var(--text);}
     .empty-state p{margin:0 0 14px;font-size:13px;}
@@ -118,6 +124,12 @@
               <option value="$">$（≤200）</option>
               <option value="$$">$$（200–500）</option>
               <option value="$$$">$$$（500+）</option>
+            </select>
+            <select id="fSort" class="filter-select">
+              <option value="">排序</option>
+              <option value="name_asc">店名 A→Z</option>
+              <option value="price_asc">價位 低→高</option>
+              <option value="price_desc">價位 高→低</option>
             </select>
           </div>
         </div>
@@ -374,6 +386,246 @@ const BASE_DATA = [
     cover:'https://scontent.cdninstagram.com/v/t51.82787-15/537562167_17898312249284647_1179392906476088868_n.jpg?stp=cmp1_dst-jpg_e35_s640x640_tt6&_nc_cat=102&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiQ0xJUFMuYmVzdF9pbWFnZV91cmxnZW4uQzMifQ%3D%3D&_nc_ohc=78NWbxgKNWIQ7kNvwEKtkLB&_nc_oc=AdnSTnh7xY4l0dLZzycsQ8VHtSjYlU7pg7f_E_MjcHlFgUYwu-FsK18VmgScHAvMPmA46CZ-2m2bGLT-TjZldVGd&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=HzzCh1kVUXCh-U7oElyZ9g&oh=00_AfkEh48-hZgbXy2Z5Q60v1bCPJ5LI16o3IXV3fPiSdp98g&oe=69589512',
     ig:'https://www.instagram.com/p/DNml4fisMxi/',
     intro:'二訪在曼谷最愛的燒鳥店\n這間去年底來吃過一次之後就一直念念不忘\n最近又跟朋友去吃一次\n燒鳥功力真的沒話說\n每道都烤的超完美\n裡面也有酒喝到飽的set\n這家在日本也有很多店超有名\n來曼谷就能體驗的到了！'
+  },
+  {
+    id:'bkk-dessert-001',
+    name:'moone rolls',
+    category:'甜點 / 烘焙',
+    area:'Central World',
+    price:'$',
+    address:'Central World 6F, Bangkok',
+    maps:'https://maps.google.com/?q=moone%20rolls%20central%20world',
+    cover:'',
+    ig:'https://www.instagram.com/p/DMwgGjeTufa/',
+    intro:'曼谷一開幕就爆紅的瑞士捲 在central world\n最近去central world 6樓 發現了一間很可愛的小店\n看到不少人在排隊\n現場試吃了4種口味\n有249铢的「原味香草瑞士卷」、249铢的「可可覆盆子瑞士卷」、299铢的「斑斓糯米饭瑞士卷」和299铢的「伯爵牛奶布丁瑞士卷」\n我個人是最愛可可覆盆子\n酸酸甜甜的超級好吃\n這間讓我覺得最值得來的地方是\n因為整個店都是透明玻璃隔間\n所以可以看到師傅在裡面現做的過程\n整個很療癒 體驗感又滿滿\n然後那個保冰袋也超可愛超實用\n拿去送禮剛剛好！\n🏠 moone rolls\n📍central world 6F'
+  },
+  {
+    id:'cm-thai-001',
+    name:'Mae–Jin',
+    category:'泰式料理',
+    area:'Chiang Mai',
+    price:'$',
+    address:'ช้างเผือก โครงการ The Wall Nimmanahaeminda Road, เมือง Chiang Mai 50300',
+    maps:'https://maps.google.com/?q=Mae%20Jin%20Chiang%20Mai',
+    cover:'',
+    ig:'https://www.instagram.com/p/DMRmmAbzEkn/',
+    intro:'繼上一家在清邁soup o-cha local泰菜\n這個老闆娘說她在maya square 旁邊還有一間店\n這家店的裝潢很漂亮 店內也很舒服\n我個人很愛他們的海鮮冬蔭功媽媽麵\n記得蛋還沒熟的時候就要拌麵一起吃 超讚！\n然後招牌爆炒墨魚也一定要點 很鮮很下飯\n然後甜點可以試試榴槤糯米飯 我覺得很好吃\n這間就在清邁市中心\n吃完直接去酒吧繼續喝\n🏠Mae–Jin\n📍ช้างเผือก โครงการ The Wall Nimmanahaeminda Road, เมือง Chiang Mai 50300'
+  },
+  {
+    id:'cm-thai-002',
+    name:'ซุปโอชา Soup O-Cha 心心汤',
+    category:'泰式料理',
+    area:'Chiang Mai',
+    price:'$',
+    address:'Chang Phueak, Mueang Chiang Mai District, Chiang Mai 50300',
+    maps:'https://maps.google.com/?q=Soup%20O-Cha%20Chiang%20Mai',
+    cover:'',
+    ig:'https://www.instagram.com/p/DMJ4IS0zwOK/',
+    intro:'最近新發現的🇹🇭清邁高CP值local小店\nGoogle review有4.8顆星\n這次來清邁玩 找到這間便宜又好吃的泰菜\n從開頭的那個脆皮豬 就知道這間會有多好吃\n裡面每道泰菜都1-200元泰銖\n飲料甜點更是便宜 都不到50元泰銖\n我個人最喜歡那道炒河粉加半熟蛋 整個超頂\n推薦給來清邁玩的人可以去試試\n老闆娘很喜歡台灣的歌手\n所以裡面會看到老闆娘跟台灣歌手的合照😂😂\n\n🏠ซุปโอชา Soup O-Cha 心心汤\n📍Chang Phueak, Mueang Chiang Mai District, Chiang Mai 50300'
+  },
+  {
+    id:'bkk-smoothie-001',
+    name:'ร้านเจ๊หมูสะพานหัน Mummy pig fruit Smoothie',
+    category:'果汁 / 甜點',
+    area:'Phra Nakhon',
+    price:'$',
+    address:'570 Chakkraphet Rd, Wang Burapha Phirom, Phra Nakhon, Bangkok 10200',
+    maps:'https://maps.google.com/?q=Mummy%20pig%20fruit%20Smoothie%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DLwIwR2TTFn/',
+    intro:'這個阿嬤的水果冰沙攤根本是在做功德吧！\n每杯的水果都超大超新鮮 然後都不用50泰銖\n而且還不是什麼促銷活動\n這個阿嬤在這裡一直都賣這個價錢\n超級佛心！！\n然後冰沙還可以調整甜度\n這間超級推薦！\n旁邊還有很多小吃攤販\n可以一次來這邊滿足所有需求！\n🏠ร้านเจ๊หมูสะพานหัน Mummy pig fruit Smoothie (น้ำผลไม้ปั่น กาแฟสด เครป)\n📍570 Chakkraphet Rd, Wang Burapha Phirom, Phra Nakhon, Bangkok 10200'
+  },
+  {
+    id:'chonburi-jp-001',
+    name:'KatsudonKitazawa',
+    category:'日式料理 / 定食',
+    area:'Bangsaen',
+    price:'$$',
+    address:'Bangsaen Sai 4 Nuea, Saen Suk, Chon Buri District, Chon Buri 20130, Thailand',
+    maps:'https://maps.google.com/?q=KatsudonKitazawa%20Bangsaen',
+    cover:'',
+    ig:'https://www.instagram.com/p/DLoZ5VIzuLT/',
+    intro:'去離曼谷最近的海邊住一晚超級夢幻\n搭車離曼谷只要1小時\n我非常建議可以去那邊住上一晚\n海邊超漂亮 東西很好吃 咖啡廳超夢幻\n\nไปนอนค้างคืนที่ทะเลใกล้กรุงเทพฯคือฝันมาก\nนั่งรถแค่ชั่วโมงเดียวจากกรุงเทพฯก็ถึง\nแนะนำเลยว่าควรไปนอนสักคืน\nทะเลสวยมากจริง ๆ\n\n🏠KatsudonKitazawa\n📍Bangsaen Sai 4 Nuea, Saen Suk, Chon Buri District, Chon Buri 20130, Thailand\n\n🏠Casa Tropika Bangsaen\n📍1, Rob Khao Sam Muk, Saen Suk, Chon Buri District, Chon Buri 20130, Thailand'
+  },
+  {
+    id:'chonburi-cafe-001',
+    name:'Casa Tropika Bangsaen',
+    category:'咖啡廳 / 景點',
+    area:'Bangsaen',
+    price:'$$',
+    address:'1, Rob Khao Sam Muk, Saen Suk, Chon Buri District, Chon Buri 20130, Thailand',
+    maps:'https://maps.google.com/?q=Casa%20Tropika%20Bangsaen',
+    cover:'',
+    ig:'https://www.instagram.com/p/DLoZ5VIzuLT/',
+    intro:'去離曼谷最近的海邊住一晚超級夢幻\n搭車離曼谷只要1小時\n我非常建議可以去那邊住上一晚\n海邊超漂亮 東西很好吃 咖啡廳超夢幻\n\nไปนอนค้างคืนที่ทะเลใกล้กรุงเทพฯคือฝันมาก\nนั่งรถแค่ชั่วโมงเดียวจากกรุงเทพฯก็ถึง\nแนะนำเลยว่าควรไปนอนสักคืน\nทะเลสวยมากจริง ๆ\n\n🏠KatsudonKitazawa\n📍Bangsaen Sai 4 Nuea, Saen Suk, Chon Buri District, Chon Buri 20130, Thailand\n\n🏠Casa Tropika Bangsaen\n📍1, Rob Khao Sam Muk, Saen Suk, Chon Buri District, Chon Buri 20130, Thailand'
+  },
+  {
+    id:'bkk-thai-006',
+    name:'Lim Pork Leg Buffet',
+    category:'泰式料理 / 豬腳飯',
+    area:'Phra Khanong',
+    price:'$',
+    address:'44, 6 ถ. พระรามที่ 4 แขวงพระโขนง พระโขนง กรุงเทพมหานคร 10110',
+    maps:'https://maps.google.com/?q=Lim%20Pork%20Leg%20Buffet%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DLRPTjdzUSS/',
+    intro:'曼谷🇹🇭79元就可以無限吃豬腳飯\n這間最近在曼谷爆紅\n不僅是豬腳滷的很入味又很軟爛\n重點是價格超便宜\n79元一盤就可以無限續吃\n然後配菜跟白飯都可以自己夾\n只要把整份吃完\n就可以再去跟老闆要一盤肉\n整個超級划算！\n\n🏠Lim Pork Leg Buffet\n📍44, 6 ถ. พระรามที่ 4 แขวงพระโขนง พระโขนง กรุงเทพมหานคร 10110'
+  },
+  {
+    id:'bkk-dessert-002',
+    name:'ละเลงเนย #สาขา1 : Laleng Noei @ตลาดห้วยขวาง',
+    category:'甜點 / 小吃',
+    area:'Huai Khwang',
+    price:'$',
+    address:'ตลาดห้วยขวาง ดินแดง Din Daeng, Bangkok 10400, Thailand',
+    maps:'https://maps.google.com/?q=Laleng%20Noei%20Huai%20Kwang',
+    cover:'',
+    ig:'https://www.instagram.com/p/DLEPEggTYu0/',
+    intro:'這是我在曼谷🇹🇭吃過最好吃的奶油煎餅\nแพนเค้กเนยที่อร่อยที่สุดที่ฉันเคยกิน\n上次去象神廟拜拜完\n想說去Huai Khwang夜市走走\n然後看到這間店大排長龍\n就跟著去排了\n吃了就知道為什麼要排隊了！\n真的超好吃一口接一口完全停不下來\n這間來曼谷一定要來試試！\n\n🏠ละเลงเนย #สาขา1 : Laleng Noei @ตลาดห้วยขวาง\n📍ตลาดห้วยขวาง ดินแดง Din Daeng, Bangkok 10400, Thailand'
+  },
+  {
+    id:'bkk-omakase-001',
+    name:'Kushiro Omakase and Japanese Dining',
+    category:'日式料理 / Omakase',
+    area:'Ratchada',
+    price:'$$$',
+    address:'Ratchada32, แขวงจันทรเกษม เขตจตุจักร กรุงเทพมหานคร 10900',
+    maps:'https://maps.google.com/?q=Kushiro%20Omakase%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DKyV3luzVjC/',
+    intro:'曼谷超高CP值omakase google評論4.9顆星\n這次是我第二次去吃這間\n上次朋友帶我去過一次就覺得超讚\n然後就找朋友再一起去一次！\n這間有兩種價位\n1500泰銖12道菜\n2000泰銖15道菜\n每道都很好吃很好玩\n廚師會給滿滿的情緒價值\n兩個小時用餐時間體驗感滿滿\n絕對會再來回訪！\n\n🏠Kushiro Omakase and Japanese Dining\n📍Ratchada32, แขวงจันทรเกษม เขตจตุจักร กรุงเทพมหานคร 10900'
+  },
+  {
+    id:'bkk-omakase-002',
+    name:'Mizuki Omakase',
+    category:'日式料理 / Omakase',
+    area:'Sukhumvit',
+    price:'$$$',
+    address:'15 1 ชั้น4 Sukhumvit 31, Khlong Toei Nuea, Watthana, Bangkok 10110',
+    maps:'https://maps.google.com/?q=Mizuki%20Omakase%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DQdfqHCk1sI/',
+    intro:'萬聖節怎麼過？先來曼谷吃omakase吧！\n這間omakase我收藏很久了\n這次趁萬聖節推出新菜單趕快來試試\n真的每道我都很愛\n日料海鮮控的一定要來試試\n從入口踏進來就超有萬聖節感\n這次的主題燈光昏暗 佈景像月球\n整個氛圍神秘到不行\n不只味蕾饗宴 連視覺都包了\n而且地點也很方便\nEMSPHERE 對面巷子走幾步就到了\n\n🏠Mizuki Omakase\n📍15 1 ชั้น4 Sukhumvit 31, Khlong Toei Nuea, Watthana, Bangkok 10110'
+  },
+  {
+    id:'khaoyai-cafe-001',
+    name:'Dong House Khaoyai',
+    category:'咖啡廳 / 景點',
+    area:'Khao Yai',
+    price:'$$',
+    address:'8 ตำบล วังกะทะ อำเภอปากช่อง นครราชสีมา 30130',
+    maps:'https://maps.google.com/?q=Dong%20House%20Khaoyai',
+    cover:'',
+    ig:'https://www.instagram.com/p/DKqmhMkpcoq/',
+    intro:'🇹🇭童話故事般的咖啡廳 就像來到瑞士的山上\n這次來考艾走走\n沒有去太多景點\n這裡是一個適合來放鬆身心靈的地方\n山上的空氣很清新\n整個氣溫也很舒適\n挑一兩個咖啡廳坐下一整天\n或躺在草皮上的懶人椅\nChill整天\n這裡的飲料跟甜點我給10分\n入場費50元泰銖\n可以抵消費\n🏠Dong House Khaoyai\n📍8 ตำบล วังกะทะ อำเภอปากช่อง นครราชสีมา 30130'
+  },
+  {
+    id:'bkk-bar-001',
+    name:'BrewDog Ploenchit',
+    category:'酒吧 / 精釀啤酒',
+    area:'Phloen Chit',
+    price:'$$',
+    address:'Canvas Building, ถนน เพลินจิต แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+    maps:'https://maps.google.com/?q=BrewDog%20Ploenchit',
+    cover:'',
+    ig:'https://www.instagram.com/p/DKdvXEATrEt/',
+    intro:'曼谷超大份鵝肝牛排只要270元你敢信！\n這間在BTS Phloen Chit出來就到的英式精釀啤酒酒吧\n每到假日一定滿滿的泰國人\n搭配現場的live band 大家都超嗨\n尤其晚上11點過後有點微醺之後\n就會起來一起跳舞\n這裏有16種精釀啤酒可以選\n12種是來自brewdog 英國公司\n另外4種是會輪替當地品牌\n啤酒很好喝～～\n最屌的是餐點都很讚\n點了鵝肝牛排只要270 有嚇到\n而且還很好吃 整個CP值超高\n樓上還可以玩飛鏢機\n來曼谷超推薦來這間吧！\n🏠BrewDog Ploenchit\n📍Canvas Building, ถนน เพลินจิต แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330'
+  },
+  {
+    id:'bkk-italian-002',
+    name:'Vento Di Mare Italian Restaurant',
+    category:'義式料理 / 海鮮',
+    area:'Sathon',
+    price:'$$$',
+    address:'1098, 2 Rama IV Rd, Thung Maha Mek, Sathon, Bangkok 10120',
+    maps:'https://maps.google.com/?q=Vento%20Di%20Mare%20Italian%20Restaurant%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DKWtT20TA1I/',
+    intro:'泰國名人都愛的曼谷義大利海鮮餐館\n滿滿Amalfi Coast Vibe\n這間不止整個氛圍浪漫\n餐點也都超高水準\n海鮮類料理都超級新鮮\n進去就可以看到四個大水缸\n我個人最愛那道和牛肋眼搭配鵝肝\n整個味道有夠搭 一吃就愛上\n燉飯水準也很高！我個人超愛吃燉飯！\n我是看到總理有來吃過跟著來開箱😂😂\n\n🏠Vento Di Mare Italian Restaurant\n📍1098, 2 Rama IV Rd, Thung Maha Mek, Sathon, Bangkok 10120'
+  },
+  {
+    id:'bkk-udon-001',
+    name:'Shiori Udon Ginza',
+    category:'日式料理 / 烏龍麵',
+    area:'Siam',
+    price:'$$',
+    address:'354 อาคาร สยามเซ็นเตอร์, ถ. พระรามที่ 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330',
+    maps:'https://maps.google.com/?q=Shiori%20Udon%20Ginza%20Siam%20Center',
+    cover:'',
+    ig:'https://www.instagram.com/p/DKQ3gx8TlWZ/',
+    intro:'曼谷Siam center裡超彈牙烏龍麵\n他們招牌uni 奶油明太子薄烏龍麵\n麵條現做然後冰鎮\n非常滑順有彈性\n完美吸附濃郁醬汁\n份量也滿多的可以兩個人一起吃\n推薦加點海膽 味道超搭\n地點就在 BTS Siam 站的 Siam center 內，逛街、美食一次滿足，吃飽還能順路逛逛後面的特色小店\n🏠Shiori Udon Ginza\n📍354 อาคาร สยามเซ็นเตอร์, ถ. พระรามที่ 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330'
+  },
+  {
+    id:'bkk-steak-001',
+    name:'Sexy Cow Prime Steak & Seafood',
+    category:'牛排 / 海鮮',
+    area:'Lumphini',
+    price:'$$$',
+    address:'Tower G Floor The Millennia, 62 ซ.หลังสวน แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330',
+    maps:'https://maps.google.com/?q=Sexy%20Cow%20Prime%20Steak%20%26%20Seafood%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DJ1UWRPTEMm/',
+    intro:'這間在曼谷的牛排海鮮餐廳真的猛\n進門坐下要先挑牛排刀\n然後我點澳洲熟成和牛\n炭火烤到外酥內嫩\n海鹽加下去直接爆鮮\n蟹肉義大利麵也超推\n藏紅花醬＋滿滿蟹肉\n甜點還有火焰可麗餅\n整間儀式感拉滿\n約會或慶生都超適合！\n\n🏠Sexy Cow Prime Steak & Seafood\n📍Tower G Floor The Millennia, 62 ซ.หลังสวน แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330'
+  },
+  {
+    id:'bkk-snack-001',
+    name:'Wat Arun Khanom Bueang',
+    category:'小吃 / 甜點',
+    area:'Wat Arun',
+    price:'$',
+    address:'101 133 ถนน วังเดิม แขวงวัดอรุณ เขตบางกอกใหญ่ กรุงเทพมหานคร 10600',
+    maps:'https://maps.google.com/?q=Wat%20Arun%20Khanom%20Bueang',
+    cover:'',
+    ig:'https://www.instagram.com/p/DJvZBkKzqJS/',
+    intro:'曼谷最好吃的椰子煎餅 เครปมะพร้าวขูดที่อร่อยที่สุดในกรุงเทพฯ\n這間在鄭王廟附近\n在泰國超級紅\n大份每片 50฿，小份只要 10฿！\n口味有甜有鹹，也可以混搭\n配料像是椰子絲、蛋絲、白芝麻、白胡椒、香菜等\n椰子絲都是現刨的超新鮮\n甜甜的奶油內餡滑順綿密搭上脆餅超涮嘴\n紅到連電視台都來採訪\n\n🏠Wat Arun Khanom Bueang\n📍101 133 ถนน วังเดิม แขวงวัดอรุณ เขตบางกอกใหญ่ กรุงเทพมหานคร 10600'
+  },
+  {
+    id:'bkk-thai-007',
+    name:'Chef Gae Moo Krob เฮียแกะ',
+    category:'泰式料理 / 燒肉',
+    area:'Khlong Toei',
+    price:'$',
+    address:'100 1047 ซอย เคหะคลองเตย Khlong Toei, Bangkok 10110',
+    maps:'https://maps.google.com/?q=Chef%20Gae%20Moo%20Krob%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DJeHG6KTulM/',
+    intro:'隱身在曼谷最大貧民窟的超強脆皮燒肉打拋豬\n這一間在曼谷Khlong toei區\n當時政府開始開發Khlong Toei港口（คลองเตย港），大量來自鄉村的低收入勞工湧入曼谷謀生。他們沒有足夠金錢租屋，只能在港口附近非法搭建簡易房屋。久而久之，這個聚落逐漸擴大，形成今日的邊緣社區。\n要找到這間店不容易\n要先穿越很多小巷子\n但其實這裡不像外界傳的那麽危險\n我覺得泰國人都很友善\n我進去裡面走的時候遇到很多很友善的泰國人\n主動跟我聊天 還幫我帶路\n我覺得在這裡可以感受最純真的泰國人\n這家老闆說他之前在亞洲很多地方當過廚師\n後來回來這裡開店\n因為脆皮燒肉很厲害所以聞名而來的人很多！\n但如果介意環境不好的不建議來😂\n🏠Chef Gae Moo Krob เฮียแกะ\n📍100 1047 ซอย เคหะคลองเตย Khlong Toei, Bangkok 10110'
+  },
+  {
+    id:'bkk-brunch-004',
+    name:'CINCIN - Brunch | Dinner & Wine',
+    category:'早午餐 / 餐酒館',
+    area:'Nuan Chan',
+    price:'$$',
+    address:'158 Pradit Manutham Rd, Nuan Chan, Bueng Kum, Bangkok 10230',
+    maps:'https://maps.google.com/?q=CINCIN%20Brunch%20Dinner%20Wine%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DJVpge0TTMn/',
+    intro:'曼谷一開幕就爆紅的brunch\n這裡4月份才開幕\n就直接成了最紅的打卡地點\n整個歐風設計風格真的超級美\n光來這邊拍照就可以拍一整天了\n重點是他們的食物還很好吃\nThe ground園區裡面還有一間咖啡廳也超讚\n近期去過的咖啡廳我覺得最值得二訪的\n咖啡很好喝 甜點類也很好吃\n坐在戶外區喝咖啡氣氛超好\n質感跟氛圍都滿分！\n絕對是曼谷必來的地方！！\n🏠 CINCIN - Brunch | Dinner & Wine\n📍 158 Pradit Manutham Rd, Nuan Chan, Bueng Kum, Bangkok 10230\n☕️ BeanBoys\n📍 35/20 Pradit Manutham Rd, Nuan Chan, Bueng Kum, Bangkok 10230'
+  },
+  {
+    id:'bkk-cafe-007',
+    name:'BeanBoys',
+    category:'咖啡廳',
+    area:'Nuan Chan',
+    price:'$$',
+    address:'35/20 Pradit Manutham Rd, Nuan Chan, Bueng Kum, Bangkok 10230',
+    maps:'https://maps.google.com/?q=BeanBoys%20Pradit%20Manutham',
+    cover:'',
+    ig:'https://www.instagram.com/p/DJVpge0TTMn/',
+    intro:'曼谷一開幕就爆紅的brunch\n這裡4月份才開幕\n就直接成了最紅的打卡地點\n整個歐風設計風格真的超級美\n光來這邊拍照就可以拍一整天了\n重點是他們的食物還很好吃\nThe ground園區裡面還有一間咖啡廳也超讚\n近期去過的咖啡廳我覺得最值得二訪的\n咖啡很好喝 甜點類也很好吃\n坐在戶外區喝咖啡氣氛超好\n質感跟氛圍都滿分！\n絕對是曼谷必來的地方！！\n🏠 CINCIN - Brunch | Dinner & Wine\n📍 158 Pradit Manutham Rd, Nuan Chan, Bueng Kum, Bangkok 10230\n☕️ BeanBoys\n📍 35/20 Pradit Manutham Rd, Nuan Chan, Bueng Kum, Bangkok 10230'
+  },
+  {
+    id:'bkk-chinese-001',
+    name:'Fish Head Tang Chua Li（陳泉利）',
+    category:'中式料理 / 海鮮',
+    area:'Talat Noi',
+    price:'$$',
+    address:'2216 Khao Lam Rd, Talat Noi, Samphanthawong, Bangkok 10100',
+    maps:'https://maps.google.com/?q=Fish%20Head%20Tang%20Chua%20Li%20Bangkok',
+    cover:'',
+    ig:'https://www.instagram.com/p/DI0K55TzygG/',
+    intro:'曼谷老字號魚頭爐火鍋 泰式蚵仔煎 咖喱蟹\n這間在曼谷華南蓬火車站附近\n之前跟朋友搭車要去唐人街的路上\n意外看到這間店\n就叫司機馬上停車讓我們下去吃\n裡面的菜我們都超愛\n雖然是潮汕餐點\n但裡面的菜單都結合泰國料理\n他們的泰式蚵仔煎很讚 蚵仔都超大顆\n重點是他們的招牌魚頭爐\n湯頭有夠好喝 魚肉也很嫩\n這間滿推薦來吃吃看的～\n🏠Fish Head Tang Chua Li（陳泉利）\n📍2216 Khao Lam Rd, Talat Noi, Samphanthawong, Bangkok 10100'
   }
 ];
 
@@ -409,7 +661,7 @@ function buildIntroText(item){
   const parts = [];
   const highlights = Array.isArray(item && item.highlights) ? item.highlights.filter(Boolean) : [];
   if (highlights.length){
-    parts.push(`亮點：${highlights.join('、')}`);
+    parts.push(`${highlights.join('、')}`);
   }
   const dishes = Array.isArray(item && item.dishes) ? item.dishes.filter(d=>d && (d.name || d.price)) : [];
   if (dishes.length){
@@ -418,15 +670,41 @@ function buildIntroText(item){
       const price = d.price ? `฿${String(d.price).trim()}` : '';
       return [name, price].filter(Boolean).join(' ');
     }).filter(Boolean).join('、');
-    if (dishLine) parts.push(`推薦餐點：${dishLine}`);
+    if (dishLine) parts.push(`${dishLine}`);
   }
   return parts.join('。');
+}
+
+const nameCollator = (typeof Intl !== 'undefined' && Intl.Collator)
+  ? new Intl.Collator('zh-Hant', { numeric:true, sensitivity:'base' })
+  : null;
+const priceRank = (val)=>{
+  if (val === '$') return 1;
+  if (val === '$$') return 2;
+  if (val === '$$$') return 3;
+  return 99;
+};
+
+async function uploadCoverFile(file){
+  const fd = new FormData();
+  fd.append('file', file, file.name || 'cover.jpg');
+  const res = await fetch('/api/upload', {
+    method:'POST',
+    body: fd,
+    credentials:'include'
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+  const first = Array.isArray(data.files) ? data.files[0] : null;
+  if (!first || !first.url) throw new Error('Upload failed');
+  return first.url;
 }
 
 const cardsEl = document.getElementById('cards');
 const fCat = document.getElementById('fCat');
 const fArea = document.getElementById('fArea');
 const fPrice = document.getElementById('fPrice');
+const fSort = document.getElementById('fSort');
 const kwInput = document.getElementById('kw');
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
@@ -442,6 +720,7 @@ function resetFilters(){
   if (fCat) fCat.value = '';
   if (fArea) fArea.value = '';
   if (fPrice) fPrice.value = '';
+  if (fSort) fSort.value = '';
 }
 
 function getAdminMode(){
@@ -475,6 +754,7 @@ function render(){
   const cat = fCat.value;
   const area= fArea.value;
   const price= fPrice.value;
+  const sort = fSort ? fSort.value : '';
   const hasFilters = !!(kw || cat || area || price);
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
   let list = source.filter(item=>{
@@ -494,6 +774,20 @@ function render(){
   });
   if (!list.length && !hasFilters && BASE_DATA.length){
     list = BASE_DATA.slice();
+  }
+  if (sort){
+    list = list.slice().sort((a,b)=>{
+      if (sort === 'name_asc'){
+        const an = a.name || '';
+        const bn = b.name || '';
+        return nameCollator ? nameCollator.compare(an, bn) : an.localeCompare(bn);
+      }
+      if (sort === 'price_asc' || sort === 'price_desc'){
+        const diff = priceRank(a.price) - priceRank(b.price);
+        return sort === 'price_desc' ? -diff : diff;
+      }
+      return 0;
+    });
   }
   if (!list.length){
     cardsEl.innerHTML = `
@@ -519,6 +813,7 @@ function render(){
     const safeName = escapeHtml(item.name || '');
     const coverUrl = safeUrl(item.cover);
     const coverImg = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}">` : '';
+    const coverPreview = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}">` : '<div class="admin-preview-empty">尚未上傳</div>';
     const mapsUrl = safeUrl(item.maps);
     const introText = buildIntroText(item);
     const adminPanel = adminMode ? `
@@ -531,7 +826,17 @@ function render(){
           <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
-          <label>封面圖<input class="admin-input" data-admin-field="cover" value="${escapeHtml(item.cover || '')}"></label>
+          <label>封面圖
+            <div class="admin-upload">
+              <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
+              <div>
+                <input class="admin-file" data-admin-file="cover" type="file" accept="image/*">
+                <input type="hidden" class="admin-input" data-admin-field="cover" value="${escapeHtml(item.cover || '')}">
+                <div class="admin-upload-hint">選擇圖片後會自動上傳</div>
+                <div class="admin-upload-status" data-admin-status="cover"></div>
+              </div>
+            </div>
+          </label>
         </div>
         <label class="admin-field">店家介紹
           <textarea class="admin-textarea" data-admin-field="intro">${escapeHtml(introText)}</textarea>
@@ -641,6 +946,28 @@ function render(){
         }
       };
     });
+    cardsEl.querySelectorAll('[data-admin-file="cover"]').forEach(input=>{
+      input.onchange = async ()=>{
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const wrap = input.closest('[data-admin-id]');
+        if (!wrap) return;
+        const previewEl = wrap.querySelector('[data-admin-preview="cover"]');
+        const hidden = wrap.querySelector('[data-admin-field="cover"]');
+        const statusEl = wrap.querySelector('[data-admin-status="cover"]');
+        const setStatus = (text)=>{ if (statusEl) statusEl.textContent = text || ''; };
+        setStatus('上傳中…');
+        try{
+          const url = await uploadCoverFile(file);
+          if (hidden) hidden.value = url;
+          if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="">`;
+          setStatus('已上傳');
+        }catch(err){
+          setStatus('上傳失敗');
+          alert('封面圖上傳失敗：' + (err.message||err));
+        }
+      };
+    });
   }
 }
 
@@ -657,7 +984,7 @@ setAdminMode(adminMode);
 initFilters();
 resetFilters();
 render();
-[kwInput, fCat, fArea, fPrice].forEach(el=> el.addEventListener('input', render));
+[kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', render));
 
 // 讀取遠端資料與收藏
 async function loadRemote(){
