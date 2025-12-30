@@ -59,20 +59,22 @@
     .fav-btn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 12px rgba(15,23,42,.12);}
     .pill-inline{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);font-size:12px;}
     .tag-row{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;}
-    .admin-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:grid;gap:10px;}
-    .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;}
+    .admin-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:grid;gap:10px;min-width:0;}
+    .admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
     .admin-field{display:grid;gap:6px;font-size:12px;color:var(--muted);}
-    .admin-grid label{display:grid;gap:6px;font-size:12px;color:var(--muted);}
-    .admin-input{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;}
-    .admin-textarea{min-height:70px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;resize:vertical;}
+    .admin-grid label{display:grid;gap:6px;font-size:12px;color:var(--muted);min-width:0;}
+    .admin-input{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;}
+    .admin-textarea{min-height:90px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;resize:vertical;width:100%;box-sizing:border-box;}
     .admin-actions{display:flex;gap:8px;flex-wrap:wrap;}
     .admin-hint{font-size:11px;color:#64748b;}
-    .admin-upload{display:grid;gap:8px;}
-    .admin-preview{width:100%;height:120px;border-radius:12px;border:1px dashed var(--line);background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-    .admin-preview img{width:100%;height:100%;object-fit:cover;display:block;}
+    .admin-upload{display:grid;gap:8px;width:100%;}
+    .admin-file{width:100%;font-size:12px;}
+    .admin-preview{width:100%;height:140px;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .admin-preview img{width:100%;height:100%;object-fit:contain;display:block;}
     .admin-preview-empty{font-size:12px;color:#94a3b8;}
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
+    .admin-cover{grid-column:1 / -1;}
     .empty-state{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:24px;text-align:center;color:var(--muted);box-shadow:var(--shadow);}
     .empty-state h3{margin:0 0 6px;font-size:18px;color:var(--text);}
     .empty-state p{margin:0 0 14px;font-size:13px;}
@@ -82,6 +84,7 @@
     @media(max-width:720px){
       .card{grid-template-columns:1fr;}
       .cover{height:180px;}
+      .admin-grid{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -826,7 +829,7 @@ function render(){
           <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
-          <label>封面圖
+          <label class="admin-cover">封面圖
             <div class="admin-upload">
               <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
               <div>
