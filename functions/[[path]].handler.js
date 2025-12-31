@@ -3746,15 +3746,30 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (guard) return guard;
     }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const ids = Array.isArray(body.ids) ? body.ids.map(v=>String(v||'').trim()).filter(Boolean) : [];
     const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit') || 300) || 300));
     const force = String(url.searchParams.get('force') || '').toLowerCase() === 'true';
-    const items = await listFoods(env, limit);
+    let items = [];
+    if (ids.length){
+      for (const id of ids){
+        const item = await readFood(env, id);
+        if (item) items.push(item);
+      }
+    }else{
+      items = await listFoods(env, limit);
+    }
     let updated = 0;
     let checked = 0;
     let failed = 0;
+    let skipped = 0;
     for (const item of items){
       checked += 1;
-      if (!force && parseLatLngPair(item.lat, item.lng)) continue;
+      if (!force && parseLatLngPair(item.lat, item.lng)){
+        skipped += 1;
+        continue;
+      }
       const coords = await resolveFoodCoords(env, item);
       if (coords){
         item.lat = coords.lat;
@@ -3766,7 +3781,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         failed += 1;
       }
     }
-    return json({ ok:true, checked, updated, failed });
+    return json({ ok:true, checked, updated, failed, skipped, total: items.length });
   }
 
   if (pathname === '/api/foods/sync' && request.method === 'POST'){

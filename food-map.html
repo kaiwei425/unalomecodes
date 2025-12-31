@@ -2483,10 +2483,35 @@ if (btnGeo) btnGeo.onclick = async ()=>{
   btnGeo.disabled = true;
   btnGeo.textContent = '定位中...';
   try{
-    const res = await fetch('/api/foods/geocode', { method:'POST', credentials:'include' });
-    const data = await res.json().catch(()=>({}));
-    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-    showToast(`已補定位 ${data.updated || 0} 間`);
+    const missing = (Array.isArray(DATA) ? DATA : [])
+      .filter(it=> it && !it.deleted && !parseLatLngPair(it.lat, it.lng))
+      .map(it=> String(it.id || '').trim())
+      .filter(Boolean);
+    if (!missing.length){
+      showToast('全部已定位');
+      return;
+    }
+    const total = missing.length;
+    const batchSize = 12;
+    let done = 0;
+    let updated = 0;
+    let failed = 0;
+    while (done < total){
+      const batch = missing.slice(done, done + batchSize);
+      btnGeo.textContent = `定位中... ${Math.min(done + batch.length, total)}/${total}`;
+      const res = await fetch('/api/foods/geocode', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({ ids: batch })
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+      updated += Number(data.updated || 0);
+      failed += Number(data.failed || 0);
+      done += batch.length;
+    }
+    showToast(`已補定位 ${updated} 間${failed ? `，失敗 ${failed} 間` : ''}`);
     await loadRemote();
   }catch(err){
     alert('補定位失敗：' + (err.message||err));
