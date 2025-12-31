@@ -664,6 +664,11 @@ async function saveFood(env, obj){
   await env.FOODS.put(foodKey(obj.id), JSON.stringify(obj));
   return obj;
 }
+async function deleteFood(env, id){
+  if (!env.FOODS || !id) return false;
+  await env.FOODS.delete(foodKey(id));
+  return true;
+}
 async function listFoods(env, limit){
   const out = [];
   if (!env.FOODS || !env.FOODS.list) return out;
@@ -3475,6 +3480,23 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       const items = await listFoods(env, 300);
       return json({ ok:true, items });
+    }
+    if (request.method === 'DELETE'){
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+      }
+      if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+      let id = url.searchParams.get('id') || '';
+      if (!id){
+        try{
+          const body = await request.json().catch(()=>({}));
+          id = String(body.id || '').trim();
+        }catch(_){}
+      }
+      if (!id) return json({ ok:false, error:'missing id' }, 400);
+      await deleteFood(env, id);
+      return json({ ok:true, id });
     }
     if (request.method === 'POST'){
       {

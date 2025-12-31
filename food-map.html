@@ -1189,6 +1189,7 @@ function render(){
         <div class="admin-actions">
           <button class="btn ghost" data-admin-save="${safeId}">儲存</button>
           <button class="btn ghost" data-admin-cancel>取消</button>
+          ${item.id ? '<button class="btn ghost" data-admin-delete>刪除</button>' : ''}
           <span class="admin-msg" data-admin-msg></span>
         </div>
         <div class="admin-hint">管理模式：儲存後會直接寫入資料庫。</div>
@@ -1314,6 +1315,42 @@ function render(){
           await loadRemote();
         }catch(err){
           alert('儲存失敗：' + (err.message||err));
+        }finally{
+          btn.disabled = false;
+        }
+      };
+    });
+    cardsEl.querySelectorAll('[data-admin-delete]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const wrap = btn.closest('[data-admin-id]');
+        if (!wrap) return;
+        const id = wrap.getAttribute('data-admin-id');
+        if (!id) return;
+        if (!confirm('確定要刪除這筆餐廳嗎？刪除後無法復原。')) return;
+        const msgEl = wrap.querySelector('[data-admin-msg]');
+        const setMsg = (text)=>{
+          if (!msgEl) return;
+          msgEl.textContent = text || '';
+          if (text) setTimeout(()=>{ if (msgEl) msgEl.textContent = ''; }, 2000);
+        };
+        try{
+          btn.disabled = true;
+          const res = await fetch(`/api/foods?id=${encodeURIComponent(id)}`, {
+            method:'DELETE',
+            credentials:'include'
+          });
+          const data = await res.json().catch(()=>({}));
+          if (res.status === 401){
+            alert('需要管理員權限才能刪除。');
+            return;
+          }
+          if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+          setMsg('已刪除');
+          showToast('已刪除');
+          editingId = '';
+          await loadRemote();
+        }catch(err){
+          alert('刪除失敗：' + (err.message||err));
         }finally{
           btn.disabled = false;
         }
