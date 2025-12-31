@@ -1760,7 +1760,12 @@ function openModal(id){
   const displayCat = mapCategory(item.category) || item.category;
   const tags = [
     displayCat,
-    item.area,
+    item.area
+  ]
+    .filter(Boolean)
+    .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
+    .join('');
+  const metaTags = [
     item.price ? `價位 ${item.price}` : '',
     hoursText ? `營業 ${hoursText}` : ''
   ]
@@ -1786,6 +1791,7 @@ function openModal(id){
         </div>` : ''}
       <div class="modal-section">
         <div><strong>地址：</strong>${escapeHtml(item.address || '') || '暫無地址'}</div>
+        ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
       </div>
       <div class="modal-section">
         <strong>店家介紹</strong>
