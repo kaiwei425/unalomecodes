@@ -8721,7 +8721,11 @@ async function resizeImage(url, env, origin){
     addHost(env.SITE_URL);
     const extraHosts = (env.IMG_PROXY_HOSTS || env.IMG_PROXY_ALLOWLIST || '').split(',').map(s=>s.trim()).filter(Boolean);
     extraHosts.forEach(addHost);
-    if (allowHosts.size && !allowHosts.has(targetUrl.host)) {
+    const allowSuffixes = [
+      '.cdninstagram.com'
+    ];
+    const isAllowedSuffix = allowSuffixes.some(sfx => targetUrl.host.endsWith(sfx));
+    if (allowHosts.size && !allowHosts.has(targetUrl.host) && !isAllowedSuffix) {
       return withCORS(json({ ok:false, error:"Target host not allowed" }, 400));
     }
 
