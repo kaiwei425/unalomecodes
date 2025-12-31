@@ -2526,15 +2526,31 @@ if (btnSync) btnSync.onclick = async ()=>{
   btnSync.disabled = true;
   btnSync.textContent = '同步中...';
   try{
-    const res = await fetch('/api/foods/sync', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      credentials:'include',
-      body: JSON.stringify({ items: Array.isArray(BASE_DATA) ? BASE_DATA : [] })
-    });
-    const data = await res.json().catch(()=>({}));
-    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-    showToast(`已同步 ${data.saved || 0} 筆`);
+    const allItems = Array.isArray(BASE_DATA) ? BASE_DATA : [];
+    if (!allItems.length){
+      showToast('沒有資料可同步');
+      return;
+    }
+    const batchSize = 25;
+    let saved = 0;
+    let updated = 0;
+    let failed = 0;
+    for (let i = 0; i < allItems.length; i += batchSize){
+      const batch = allItems.slice(i, i + batchSize);
+      btnSync.textContent = `同步中... ${Math.min(i + batch.length, allItems.length)}/${allItems.length}`;
+      const res = await fetch('/api/foods/sync', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({ items: batch })
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+      saved += Number(data.saved || 0);
+      updated += Number(data.updated || 0);
+      failed += Number(data.failed || 0);
+    }
+    showToast(`已同步 新增${saved} / 更新${updated}${failed ? ` / 失敗${failed}` : ''}`);
     await loadRemote();
   }catch(err){
     alert('同步失敗：' + (err.message||err));

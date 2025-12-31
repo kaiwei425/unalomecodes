@@ -3794,6 +3794,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     try{ body = await request.json().catch(()=>({})); }catch(_){}
     const items = Array.isArray(body.items) ? body.items : [];
     if (!items.length) return json({ ok:false, error:'missing items' }, 400);
+    const geocode = String(body.geocode || url.searchParams.get('geocode') || '').toLowerCase() === 'true';
     const limit = Math.min(items.length, 1000);
     let saved = 0;
     let updated = 0;
@@ -3804,7 +3805,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (!incoming || !incoming.id){ failed += 1; continue; }
         const existing = await readFood(env, incoming.id);
         const obj = mergeFoodRecord(existing, incoming);
-        if (!parseLatLngPair(obj.lat, obj.lng)){
+        if (geocode && !parseLatLngPair(obj.lat, obj.lng)){
           const coords = await resolveFoodCoords(env, obj);
           if (coords){
             obj.lat = coords.lat;
@@ -3819,7 +3820,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         failed += 1;
       }
     }
-    return json({ ok:true, saved, updated, failed, total: limit });
+    return json({ ok:true, saved, updated, failed, total: limit, geocode });
   }
 
   if (pathname === '/api/me/orders' && request.method === 'GET') {
