@@ -1385,7 +1385,7 @@ const priceRank = (val)=>{
   if (val === '$$$') return 3;
   return 99;
 };
-const ALLOW_IG_COVER = false;
+const ALLOW_IG_COVER = true;
 const coverCache = new Map();
 const coverPending = new Set();
 let coverRefreshTimer = null;

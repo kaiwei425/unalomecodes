@@ -850,22 +850,26 @@ function normalizeFoodPayload(payload, fallbackId){
     lng: body.lng
   };
 }
-function mergeFoodRecord(existing, incoming){
+function mergeFoodRecord(existing, incoming, options){
   const out = Object.assign({}, existing || {});
+  const preserveExisting = !!(options && options.preserveExisting);
   if (!incoming) return out;
   const assignIf = (key, val)=>{
     if (val === undefined || val === null) return;
     if (typeof val === 'string'){
       const v = val.trim();
       if (!v) return;
+      if (preserveExisting && String(out[key] || '').trim()) return;
       out[key] = v;
       return;
     }
     if (Array.isArray(val)){
       if (!val.length) return;
+      if (preserveExisting && Array.isArray(out[key]) && out[key].length) return;
       out[key] = val;
       return;
     }
+    if (preserveExisting && out[key] !== undefined && out[key] !== null && out[key] !== '') return;
     out[key] = val;
   };
   assignIf('name', incoming.name);
@@ -885,8 +889,10 @@ function mergeFoodRecord(existing, incoming){
   assignIf('dishes', incoming.dishes);
   const latPair = parseLatLngPair(incoming.lat, incoming.lng);
   if (latPair){
-    out.lat = latPair.lat;
-    out.lng = latPair.lng;
+    if (!preserveExisting || !parseLatLngPair(out.lat, out.lng)){
+      out.lat = latPair.lat;
+      out.lng = latPair.lng;
+    }
   }
   out.id = incoming.id || out.id;
   out.deleted = false;
@@ -3821,7 +3827,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const incoming = normalizeFoodPayload(raw);
         if (!incoming || !incoming.id){ failed += 1; continue; }
         const existing = await readFood(env, incoming.id);
-        const obj = mergeFoodRecord(existing, incoming);
+        const obj = mergeFoodRecord(existing, incoming, { preserveExisting: true });
         if (geocode && !parseLatLngPair(obj.lat, obj.lng)){
           const coords = await resolveFoodCoords(env, obj);
           if (coords){
