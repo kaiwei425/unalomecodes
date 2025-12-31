@@ -289,7 +289,7 @@ const BASE_DATA = [
     name:'The Secret Mookrata Sukhumvit 22',
     category:'泰式燒烤 / 宵夜',
     area:'Sukhumvit 22',
-    price:'$',
+    price:'$$',
     address:'Sukhumvit Alley 22, Khwaeng Khlong Tan, Khlong Toei, Bangkok 10110',
     maps:'https://maps.google.com/?q=The%20Secret%20Mookrata%20Sukhumvit%2022',
     cover:'https://scontent.cdninstagram.com/v/t51.82787-15/566286877_17904726588284647_2403826914159708826_n.jpg?stp=cmp1_dst-jpg_e35_s640x640_tt6&_nc_cat=104&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiQ0xJUFMuYmVzdF9pbWFnZV91cmxnZW4uQzMifQ%3D%3D&_nc_ohc=nrp2o5Yxi_kQ7kNvwGLyOp1&_nc_oc=AdlS-D3KsABBTsq54TzqP27PxdNs45MpAQTUTvTVswDEcw69iYCWHsgjlni2poENzTBVK0C0Eipb4ON5J2APPrtJ&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=abadoYmd2y--mbG4pSnJkA&oh=00_AfkchTcN5AQgGlz3AScHDBOnSCD3YwSVOFnfrLv48FIq9g&oe=6958AD4C',
@@ -421,7 +421,7 @@ const BASE_DATA = [
     name:'moone rolls',
     category:'甜點 / 烘焙',
     area:'Central World',
-    price:'$',
+    price:'$$',
     address:'Central World 6F, Bangkok',
     maps:'https://maps.google.com/?q=moone%20rolls%20central%20world',
     cover:'',
@@ -541,7 +541,7 @@ const BASE_DATA = [
     name:'Dong House Khaoyai',
     category:'咖啡廳 / 景點',
     area:'Khao Yai',
-    price:'$$',
+    price:'$',
     address:'8 ตำบล วังกะทะ อำเภอปากช่อง นครราชสีมา 30130',
     maps:'https://maps.google.com/?q=Dong%20House%20Khaoyai',
     cover:'',
@@ -1452,9 +1452,7 @@ function openModal(id){
   const dlg = document.getElementById('foodModal');
   const introText = buildIntroText(item);
   const ytEmbed = buildYouTubeEmbedUrl(item.youtube);
-  const igEmbed = buildInstagramEmbedUrl(item.ig);
-  const embedUrl = ytEmbed || igEmbed;
-  const iframe = embedUrl ? `<iframe src="${escapeHtml(embedUrl)}" allowfullscreen></iframe>` : '';
+  const iframe = ytEmbed ? `<iframe src="${escapeHtml(ytEmbed)}" allowfullscreen></iframe>` : '';
   const embedClass = ytEmbed ? 'modal-embed yt' : 'modal-embed';
   const igComment = String(item.igComment || '').trim();
   const mapsUrl = safeUrl(item.maps);
@@ -1473,7 +1471,7 @@ function openModal(id){
       <div class="modal-tags">${tags}</div>
       <div class="${embedClass}">
         <div class="modal-embed-inner">
-          ${iframe || '<div style="padding:20px;color:#94a3b8;text-align:center;">無影片</div>'}
+          ${iframe || '<div style="padding:20px;color:#94a3b8;text-align:center;">尚未提供 YouTube 影片</div>'}
         </div>
       </div>
       ${igComment ? `
