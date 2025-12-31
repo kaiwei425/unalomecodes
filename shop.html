@@ -6047,6 +6047,7 @@ function escapeHtml(s) {
 .guardian-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:10px;background:transparent;border:0;color:#e2e8f0;font-size:12px;font-weight:700;text-decoration:none;text-align:left;cursor:pointer;}
 .guardian-menu a:hover,
 .guardian-menu button:hover{background:rgba(148,163,184,.12);}
+.guardian-menu-badge{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1;}
 .guardian-recommend-dialog{border:none;border-radius:18px;padding:0;max-width:520px;width:92%;background:#0b1022;color:#e5e7eb;box-shadow:0 24px 60px rgba(0,0,0,.45);}
 .guardian-recommend-shell{padding:18px;display:grid;gap:14px;background:
   radial-gradient(circle at 15% 10%, rgba(253,224,71,.08), transparent 35%),
@@ -6195,12 +6196,18 @@ function escapeHtml(s) {
   function updateFortuneAlert(){
     if (!badge) return;
     const alertEl = badge.querySelector('[data-guardian-alert]');
+    const menuBadge = badge.querySelector('[data-guardian-menu-badge]');
     if (!alertEl) return;
     if (shouldShowFortuneAlert()){
       alertEl.textContent = '1';
       alertEl.style.display = 'flex';
+      if (menuBadge){
+        menuBadge.textContent = '1';
+        menuBadge.style.display = 'flex';
+      }
     }else{
       alertEl.style.display = 'none';
+      if (menuBadge) menuBadge.style.display = 'none';
     }
   }
   function markFortuneClaimed(){
@@ -6604,7 +6611,7 @@ function escapeHtml(s) {
         <span class="guardian-sub">點擊徽章開啟選單</span>
       </div>
       <div class="guardian-menu" data-guardian-menu role="menu" aria-hidden="true">
-        <button type="button" data-guardian-action="fortune">領取日籤</button>
+        <button type="button" data-guardian-action="fortune">領取日籤 <span class="guardian-menu-badge" data-guardian-menu-badge aria-hidden="true">1</span></button>
         <a href="/deity?code=${code}" data-guardian-action="intro">守護神介紹</a>
         <button type="button" data-guardian-action="recommend">推薦商品</button>
       </div>
