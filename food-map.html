@@ -950,8 +950,22 @@ function buildInstagramEmbedUrl(input){
   }catch(_){ return ''; }
 }
 function buildYouTubeEmbedUrl(input){
-  const raw = safeUrl(input);
-  if (!raw) return '';
+  const rawInput = String(input || '').trim();
+  if (!rawInput) return '';
+  let raw = rawInput;
+  const iframeMatch = raw.match(/src=["']([^"']+)["']/i);
+  if (iframeMatch) raw = iframeMatch[1];
+  const urlMatch = raw.match(/https?:\/\/[^\s<>"']+/i);
+  if (urlMatch) raw = urlMatch[0];
+  if (!/^https?:\/\//i.test(raw)){
+    if (/^(www\.)?(youtube\.com|youtu\.be)\//i.test(raw)){
+      raw = `https://${raw.replace(/^www\./i, '')}`;
+    }else if (/^[a-zA-Z0-9_-]{11}$/.test(raw)){
+      raw = `https://youtu.be/${raw}`;
+    }else{
+      return '';
+    }
+  }
   try{
     const u = new URL(raw);
     const host = (u.hostname || '').toLowerCase();
@@ -1750,7 +1764,7 @@ function openModal(id){
   const body = document.getElementById('foodModalBody');
   const dlg = document.getElementById('foodModal');
   const introText = buildIntroText(item);
-  const ytEmbed = buildYouTubeEmbedUrl(item.youtube);
+  const ytEmbed = buildYouTubeEmbedUrl(item.youtube || item.ig);
   const iframe = ytEmbed ? `<iframe src="${escapeHtml(ytEmbed)}" allowfullscreen></iframe>` : '';
   const embedClass = ytEmbed ? 'modal-embed yt' : 'modal-embed';
   const igComment = String(item.igComment || '').trim();
