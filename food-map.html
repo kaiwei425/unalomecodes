@@ -1622,6 +1622,28 @@ let googleReady = false;
 let googleMapsKey = GOOGLE_MAPS_KEY;
 let foodBooted = false;
 
+function safeRender(){
+  try{
+    render();
+  }catch(err){
+    if (!cardsEl) return;
+    const fallback = Array.isArray(BASE_DATA) ? BASE_DATA : [];
+    if (!fallback.length){
+      cardsEl.innerHTML = '<div class="empty-state"><h3>目前沒有餐廳資料</h3><p>請重新整理或稍後再試。</p></div>';
+      return;
+    }
+    cardsEl.innerHTML = fallback.map(item=>`
+      <article class="card">
+        <div class="cover"></div>
+        <div class="card-body">
+          <div class="card-title">${escapeHtml(item.name || '')}</div>
+          <div class="card-addr">${escapeHtml(item.address || '')}</div>
+        </div>
+      </article>
+    `).join('');
+  }
+}
+
 function updateMapPreview(coords, label){
   if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
   if (googleReady && googleMap && googleMarker){
@@ -1670,6 +1692,10 @@ async function getGoogleMapsKey(){
     if (res.ok && data && data.ok && data.key){
       googleMapsKey = data.key;
       return googleMapsKey;
+    }
+    if (nearbyMapEl){
+      const msg = res.status ? `無法讀取 Google Maps Key（HTTP ${res.status}）` : '無法讀取 Google Maps Key';
+      nearbyMapEl.textContent = msg;
     }
   }catch(_){}
   return '';
@@ -1768,7 +1794,7 @@ function initFilters(){
     catTabs.querySelectorAll('.cat-tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         fCat.value = btn.dataset.value || '';
-        render();
+        safeRender();
       });
     });
   }
@@ -2099,7 +2125,7 @@ function render(){
     `;
     const clearBtn = document.getElementById('clearFiltersBtn');
     if (clearBtn){
-      clearBtn.onclick = ()=>{ resetFilters(); render(); };
+      clearBtn.onclick = ()=>{ resetFilters(); safeRender(); };
     }
     return;
   }
@@ -2221,7 +2247,7 @@ function render(){
         }
         if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
         favs = data.favorites || [];
-        render();
+        safeRender();
       }catch(err){
         alert('收藏失敗：'+ (err.message||err));
       }
@@ -2232,7 +2258,7 @@ function render(){
       btn.onclick = ()=>{
         const id = btn.getAttribute('data-edit') || '';
         editingId = (editingId === id) ? '' : id;
-        render();
+        safeRender();
         const card = cardsEl.querySelector(`[data-card-id="${escapeSelectorValue(id)}"]`);
         if (card) card.scrollIntoView({ behavior:'smooth', block:'start' });
       };
@@ -2338,7 +2364,7 @@ function render(){
       btn.onclick = ()=>{
         editingId = '';
         if (newItem) newItem = null;
-        render();
+        safeRender();
       };
     });
     cardsEl.querySelectorAll('[data-admin-file="cover"]').forEach(input=>{
@@ -2416,25 +2442,25 @@ if (btnAdd) btnAdd.onclick = ()=>{
         };
       }
   editingId = newItem.__tempId;
-  render();
+        safeRender();
   if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
 };
 
 function bootFoodMap(){
   if (foodBooted) return;
   foodBooted = true;
-  checkAdmin().then(()=>{ render(); });
+  checkAdmin().then(()=>{ safeRender(); });
   initFilters();
   resetFilters();
-  render();
-  [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', render));
+  safeRender();
+  [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', safeRender));
   void loadGoogleMaps();
   loadRemote();
   setTimeout(()=>{
     if (cardsEl && !cardsEl.children.length && Array.isArray(BASE_DATA) && BASE_DATA.length){
       DATA = BASE_DATA.slice();
       initFilters();
-      render();
+      safeRender();
     }
   }, 800);
 }
@@ -2553,7 +2579,7 @@ async function loadRemote(){
   }
   await refreshFavorites();
   initFilters();
-  render();
+  safeRender();
 }
 
 // Modal：店家資訊
@@ -2629,7 +2655,7 @@ async function refreshFavorites(){
     const j = await r.json().catch(()=>({}));
     if (r.ok && Array.isArray(j.favorites)){
       favs = j.favorites;
-      render();
+        safeRender();
     }
     return r.ok;
   }catch(_){ return false; }
@@ -2647,7 +2673,7 @@ async function toggleFav(id){
     if (res.status === 401){ alert('請先登入後再收藏'); return; }
     if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
     favs = data.favorites || [];
-    render();
+    safeRender();
   }catch(err){
     alert('收藏失敗：' + (err.message||err));
   }
@@ -2699,7 +2725,7 @@ async function removeFav(id){
     if (res.status === 401){ alert('請先登入後再操作'); return; }
     if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
     favs = data.favorites || [];
-    render();
+    safeRender();
     const dlg = document.getElementById('foodModal');
     if (dlg.open) openFavList();
   }catch(err){

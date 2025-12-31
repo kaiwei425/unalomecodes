@@ -8740,7 +8740,7 @@ async function geocodePlace(request, url, env){
 
 /* ========== /api/maps-key (Frontend maps key) ========== */
 async function getMapsKey(request, env){
-  const key = (env.GOOGLE_MAPS_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || "").trim();
+  const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || "").trim();
   if (!key) return withCORS(json({ ok:false, error:"Missing key" }, 404));
   const allowed = isAllowedOrigin(request, env, env.MAPS_KEY_ORIGINS || "");
   if (!allowed) return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
