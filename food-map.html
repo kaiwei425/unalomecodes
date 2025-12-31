@@ -1012,7 +1012,7 @@ async function checkAdmin(){
 }
 
 function initFilters(){
-  const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
+  const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object' && !item.deleted) : [];
   fCat.innerHTML = '<option value=\"\">全部分類</option>';
   fArea.innerHTML= '<option value=\"\">全部地區</option>';
   const order = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','其他'];
@@ -1461,12 +1461,16 @@ async function loadRemote(){
         const extra = [];
         data.items.forEach((item, idx)=>{
           if (item && item.id){
+            if (item.deleted) {
+              map.delete(item.id);
+              return;
+            }
             map.set(item.id, item);
-          }else if (item){
+          }else if (item && !item.deleted){
             extra.push(item);
           }
         });
-        DATA = [...map.values(), ...extra];
+        DATA = [...map.values(), ...extra].filter(it=>it && !it.deleted);
       }else{
         DATA = BASE_DATA.slice();
       }
