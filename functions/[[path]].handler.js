@@ -3517,6 +3517,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           area: String(body.area||'').trim(),
           price: String(body.price||'').trim(),
           address: String(body.address||'').trim(),
+          hours: String(body.hours||'').trim(),
           maps: String(body.maps||'').trim(),
           ig: String(body.ig||'').trim(),
           youtube: String(body.youtube||'').trim(),
