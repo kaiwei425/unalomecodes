@@ -1711,13 +1711,16 @@ async function loadRemote(){
           if (item && item.id) map.set(item.id, item);
         });
         const extra = [];
-        data.items.forEach((item, idx)=>{
+        data.items.forEach((item)=>{
           if (item && item.id){
             if (item.deleted) {
               map.delete(item.id);
               return;
             }
-            map.set(item.id, item);
+            const base = map.get(item.id) || {};
+            const merged = { ...base, ...item };
+            if (!merged.hours && base.hours) merged.hours = base.hours;
+            map.set(item.id, merged);
           }else if (item && !item.deleted){
             extra.push(item);
           }
