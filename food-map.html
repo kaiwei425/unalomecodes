@@ -1266,18 +1266,37 @@ function buildIntroText(item){
 function buildCardSnippet(item){
   const text = (item && item.intro) ? String(item.intro) : buildIntroText(item);
   if (!text) return '';
-  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const filtered = lines.filter(l=>{
+  const lines = text.replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const cleaned = lines.filter(l=>{
     if (!l) return false;
     if (/^(#|@|🏠|📍|⏰)/.test(l)) return false;
     if (/^https?:\/\//i.test(l)) return false;
     return true;
-  });
-  const snippetLines = filtered.slice(0,2);
-  let snippet = snippetLines.join(' ');
+  }).join(' ');
+  if (!cleaned) return '';
+  const withBreaks = cleaned.replace(/([。！？!?])\s*/g, '$1\n').replace(/(\.)\s+/g, '$1\n');
+  const sentences = withBreaks.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!sentences.length) return '';
+  const keywords = ['必點','必吃','必訪','必來','推薦','超級','超好吃','最好','最愛','招牌','特色','值得','人氣','排隊','限定','只有','開到','便宜','高CP','氛圍','拍照','夜景','米其林','必比登'];
+  const scored = sentences.map((s, idx)=>{
+    let score = 0;
+    keywords.forEach(k=>{ if (s.includes(k)) score += 3; });
+    if (s.length >= 12 && s.length <= 60) score += 2;
+    if (/[A-Za-z]/.test(s)) score -= 1;
+    return { s, idx, score };
+  }).sort((a,b)=> b.score - a.score);
+  const picked = [];
+  for (const it of scored){
+    if (picked.length >= 2) break;
+    if (!picked.find(p=>p.idx === it.idx)) picked.push(it);
+  }
+  const ordered = picked.sort((a,b)=> a.idx - b.idx).map(p=>p.s);
+  const fallback = sentences.slice(0,2);
+  const final = ordered.length ? ordered : fallback;
+  let snippet = final.join(' ');
   snippet = snippet.replace(/\s+/g,' ').trim();
   if (!snippet) return '';
-  if (snippet.length > 90) snippet = snippet.slice(0, 90) + '…';
+  if (snippet.length > 120) snippet = snippet.slice(0, 120) + '…';
   return snippet;
 }
 let toastTimer = null;
