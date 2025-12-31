@@ -47,16 +47,14 @@
     box-shadow:0 10px 20px rgba(234,88,12,0.12);
     transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
   }
-  .tool-link::after{
-    content:"→";
-    font-weight:700;
-    color:#f97316;
-  }
   .tool-link:hover{
     transform:translateY(-1px);
     border-color:#fdba74;
     box-shadow:0 14px 24px rgba(234,88,12,0.16);
   }
+  .tool-link-title{display:flex;align-items:center;gap:8px;}
+  .tool-link-dot{width:10px;height:10px;border-radius:999px;background:#fb923c;box-shadow:0 0 0 4px rgba(251,146,60,.18);}
+  .tool-link-badge{font-size:11px;font-weight:700;color:#9a3412;background:rgba(251,146,60,.18);padding:4px 8px;border-radius:999px;border:1px solid rgba(251,146,60,.45);}
   .dlgIg{margin-top:12px;}
   .dlgIg iframe{width:100%;border:none;border-radius:16px;min-height:420px;background:#fff;}
   #filterBar{
@@ -140,7 +138,10 @@
     <div class="tools-box">
       <h4>泰國旅遊 / 寺廟小工具</h4>
       <div class="list">
-        <a href="/food-map" class="tool-link">泰國美食地圖</a>
+        <a href="/food-map" class="tool-link">
+          <span class="tool-link-title"><span class="tool-link-dot"></span>泰國美食地圖</span>
+          <span class="tool-link-badge">入口</span>
+        </a>
       </div>
       <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;">敬請期待更多實用小工具。</div>
     </div>

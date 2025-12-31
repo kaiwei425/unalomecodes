@@ -42,6 +42,9 @@
     .top-actions .btn{padding:6px 12px;font-size:12px;}
     .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:10px;align-items:stretch;}
     .hero-left{display:grid;gap:12px;}
+    .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .title-ig{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 8px 16px rgba(15,23,42,.08);text-decoration:none;}
+    .title-ig img{width:16px;height:16px;display:block;}
     .hero-panel{background:linear-gradient(135deg, rgba(255,90,60,.12), rgba(255,138,0,.08));border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:8px;}
     .hero-right{background:#fff;border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:10px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
@@ -129,6 +132,10 @@
     .empty-state h3{margin:0 0 6px;font-size:18px;color:var(--text);}
     .empty-state p{margin:0 0 14px;font-size:13px;}
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#0f172a;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;display:none;z-index:999;box-shadow:0 12px 24px rgba(15,23,42,.25);}
+    .count-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 14px;flex-wrap:wrap;}
+    .count-total{font-size:13px;font-weight:700;color:#0f172a;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
+    .count-tags{display:flex;gap:6px;flex-wrap:wrap;}
+    .count-pill{font-size:12px;color:#475569;border:1px solid #e2e8f0;border-radius:999px;padding:4px 10px;background:#fff;}
     @media(max-width:900px){
       .hero{grid-template-columns:1fr;}
       .filter-row{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -167,7 +174,12 @@
       <div class="hero">
         <div class="hero-left">
           <div>
-            <h1>泰國美食地圖</h1>
+            <div class="title-row">
+              <h1>泰國美食地圖</h1>
+              <a class="title-ig" href="https://www.instagram.com/bkkaiwei/" target="_blank" rel="noopener" aria-label="Instagram bkkaiwei">
+                <img src="/img/brand/logo-instagram.png" alt="Instagram">
+              </a>
+            </div>
             <div class="sub">精選 IG 影音＋地圖導航，快速找到你要的餐廳</div>
           </div>
           <div class="hero-panel">
@@ -218,6 +230,10 @@
   </header>
 
   <main class="wrap">
+    <div class="count-bar">
+      <div class="count-total" id="totalCount">共 0 間</div>
+      <div class="count-tags" id="categoryCounts"></div>
+    </div>
     <div class="cards" id="cards"></div>
   </main>
 
@@ -1595,6 +1611,8 @@ const nearbyInput = document.getElementById('nearbyInput');
 const nearbyStatus = document.getElementById('nearbyStatus');
 const nearbyList = document.getElementById('nearbyList');
 const nearbyMapEl = document.getElementById('nearbyMap');
+const totalCountEl = document.getElementById('totalCount');
+const categoryCountsEl = document.getElementById('categoryCounts');
 
 let googleMap = null;
 let googleMarker = null;
@@ -1689,6 +1707,7 @@ let favs = [];
 let isAdmin = false;
 let editingId = '';
 let newItem = null;
+const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','其他'];
 
 function resetFilters(){
   if (kwInput) kwInput.value = '';
@@ -1713,11 +1732,10 @@ function initFilters(){
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object' && !item.deleted) : [];
   fCat.innerHTML = '<option value=\"\">全部分類</option>';
   fArea.innerHTML= '<option value=\"\">全部地區</option>';
-  const order = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','其他'];
   const cats = Array.from(new Set(source.map(d=>mapCategory(d.category)).filter(Boolean)))
     .sort((a,b)=>{
-      const ai = order.indexOf(a);
-      const bi = order.indexOf(b);
+      const ai = CATEGORY_ORDER.indexOf(a);
+      const bi = CATEGORY_ORDER.indexOf(b);
       if (ai === -1 && bi === -1) return a.localeCompare(b);
       if (ai === -1) return 1;
       if (bi === -1) return -1;
@@ -1769,6 +1787,34 @@ function mapCategory(value){
   if (v.includes('燒臘') || v.includes('烤鴨')) return '中式料理';
   if (v.includes('牛排')) return '餐酒館';
   return '其他';
+}
+
+function renderSummary(currentList){
+  if (!totalCountEl || !categoryCountsEl) return;
+  const allItems = Array.isArray(DATA) ? DATA.filter(item=>item && !item.deleted) : [];
+  const totalAll = allItems.length;
+  const shown = Array.isArray(currentList) ? currentList.length : totalAll;
+  totalCountEl.textContent = (shown !== totalAll && totalAll)
+    ? `目前顯示 ${shown} 間 / 共 ${totalAll} 間`
+    : `共 ${totalAll} 間`;
+
+  const counts = new Map();
+  allItems.forEach(item=>{
+    const cat = mapCategory(item.category) || item.category || '其他';
+    counts.set(cat, (counts.get(cat) || 0) + 1);
+  });
+  const cats = Array.from(counts.keys()).sort((a,b)=>{
+    const ai = CATEGORY_ORDER.indexOf(a);
+    const bi = CATEGORY_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+  categoryCountsEl.innerHTML = cats.map(cat=>{
+    const count = counts.get(cat) || 0;
+    return `<span class="count-pill">${escapeHtml(cat)} ${count}/${totalAll}</span>`;
+  }).join('');
 }
 
 const GEO_CACHE_KEY = 'food_map_geo_cache_v1';
@@ -2141,6 +2187,7 @@ function render(){
     </article>`;
   }).join('');
   list.forEach(item=> ensureCover(item));
+  renderSummary(list);
   // 綁定卡片按鈕
   cardsEl.querySelectorAll('button[data-open]').forEach(btn=>{
     btn.onclick = (ev)=>{
