@@ -42,6 +42,20 @@
     .cat-tabs{display:flex;gap:6px;flex-wrap:nowrap;margin:4px 0 2px;overflow-x:auto;padding-bottom:2px;}
     .cat-tab{border:1px solid #ffd7c7;background:#fff;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
     .cat-tab.active{background:#ffedd5;border-color:#fb923c;color:#ea580c;}
+    .nearby-panel{background:#fff;border:1px dashed rgba(255,90,60,.25);border-radius:14px;padding:10px;display:grid;gap:8px;box-shadow:0 10px 20px rgba(15,23,42,.05);}
+    .nearby-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .nearby-title{font-size:12px;font-weight:800;color:#0f172a;}
+    .nearby-input{display:grid;grid-template-columns:1fr auto;gap:8px;}
+    .nearby-input input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;font-family:inherit;background:#fff;}
+    .nearby-status{font-size:11px;color:var(--muted);}
+    .nearby-list{display:grid;gap:8px;}
+    .nearby-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;}
+    .nearby-name{font-size:13px;font-weight:700;color:#0f172a;}
+    .nearby-meta{font-size:11px;color:#64748b;}
+    .nearby-actions{display:flex;gap:6px;flex-shrink:0;}
+    .nearby-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #ffd7c7;background:#fff7f2;color:#d9480f;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;}
+    .nearby-btn.primary{background:linear-gradient(135deg,#ff6a3d 0%, #ff9a2f 100%);color:#fff;border-color:transparent;}
+    .nearby-empty{font-size:12px;color:#94a3b8;padding:6px 0;text-align:center;}
     .cards{display:grid;gap:14px;margin:18px 0 32px;}
     .card{display:grid;grid-template-columns:190px 1fr;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);}
     .cover{position:relative;border-radius:14px;overflow:hidden;background:#0f172a;aspect-ratio:4/5;width:100%;}
@@ -114,6 +128,10 @@
       .cover{aspect-ratio:4/5;}
       .admin-grid{grid-template-columns:1fr;}
       .filter-row{grid-template-columns:1fr;}
+      .nearby-input{grid-template-columns:1fr;}
+      .nearby-item{flex-direction:column;align-items:flex-start;}
+      .nearby-actions{width:100%;}
+      .nearby-actions .nearby-btn{flex:1;}
     }
   </style>
 </head>
@@ -164,6 +182,18 @@
               <option value="price_asc">價位 低→高</option>
               <option value="price_desc">價位 高→低</option>
             </select>
+          </div>
+          <div class="nearby-panel">
+            <div class="nearby-head">
+              <div class="nearby-title">📍 附近推薦</div>
+              <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
+            </div>
+            <div class="nearby-input">
+              <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
+              <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
+            </div>
+            <div class="nearby-status" id="nearbyStatus">尚未搜尋附近餐廳</div>
+            <div class="nearby-list" id="nearbyList"></div>
           </div>
         </div>
       </div>
@@ -1542,6 +1572,11 @@ const catTabs = document.getElementById('catTabs');
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
 const btnAdd = document.getElementById('btnAdd');
+const nearbyUse = document.getElementById('nearbyUse');
+const nearbySearch = document.getElementById('nearbySearch');
+const nearbyInput = document.getElementById('nearbyInput');
+const nearbyStatus = document.getElementById('nearbyStatus');
+const nearbyList = document.getElementById('nearbyList');
 
 let DATA = BASE_DATA.slice();
 let favs = [];
@@ -1628,6 +1663,201 @@ function mapCategory(value){
   if (v.includes('燒臘') || v.includes('烤鴨')) return '中式料理';
   if (v.includes('牛排')) return '餐酒館';
   return '其他';
+}
+
+const GEO_CACHE_KEY = 'food_map_geo_cache_v1';
+const GEO_CACHE_TTL = 1000 * 60 * 60 * 24 * 45;
+const geoCache = (()=>{ try{ return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}') || {}; }catch(_){ return {}; } })();
+let geoSaveTimer = null;
+const geoQueryCache = new Map();
+const geoQueryPending = new Map();
+
+function markGeoCacheDirty(){
+  if (geoSaveTimer) return;
+  geoSaveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache)); }catch(_){}
+    geoSaveTimer = null;
+  }, 1200);
+}
+function parseLatLngPair(lat, lng){
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return null;
+  if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return null;
+  return { lat: latNum, lng: lngNum };
+}
+function extractLatLngFromText(text){
+  const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
+  return m ? parseLatLngPair(m[1], m[2]) : null;
+}
+function extractLatLngFromMaps(url){
+  const raw = safeUrl(url);
+  if (!raw) return null;
+  try{
+    const u = new URL(raw);
+    const atMatch = u.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (atMatch) return parseLatLngPair(atMatch[1], atMatch[2]);
+    const q = u.searchParams.get('q') || u.searchParams.get('query') || u.searchParams.get('ll') || '';
+    const pair = extractLatLngFromText(q);
+    if (pair) return pair;
+    return null;
+  }catch(_){
+    return extractLatLngFromText(raw);
+  }
+}
+function extractMapsQuery(url){
+  const raw = safeUrl(url);
+  if (!raw) return '';
+  try{
+    const u = new URL(raw);
+    const q = u.searchParams.get('q') || u.searchParams.get('query') || '';
+    return q || '';
+  }catch(_){
+    return '';
+  }
+}
+function storeCoords(item, coords){
+  if (!coords || !item) return null;
+  if (item.id){
+    geoCache[item.id] = { lat: coords.lat, lng: coords.lng, ts: Date.now() };
+    markGeoCacheDirty();
+  }
+  item.lat = coords.lat;
+  item.lng = coords.lng;
+  return coords;
+}
+function getCachedCoords(item){
+  if (!item) return null;
+  const own = parseLatLngPair(item.lat, item.lng);
+  if (own) return own;
+  const cached = item.id ? geoCache[item.id] : null;
+  if (cached && Number.isFinite(cached.lat) && Number.isFinite(cached.lng)){
+    if (!cached.ts || (Date.now() - cached.ts) < GEO_CACHE_TTL){
+      return parseLatLngPair(cached.lat, cached.lng);
+    }
+  }
+  const fromMaps = extractLatLngFromMaps(item.maps);
+  if (fromMaps) return storeCoords(item, fromMaps);
+  return null;
+}
+async function geocodeQuery(query){
+  const q = String(query || '').trim();
+  if (!q) return null;
+  const key = q.toLowerCase();
+  if (geoQueryCache.has(key)) return geoQueryCache.get(key);
+  if (geoQueryPending.has(key)) return geoQueryPending.get(key);
+  const task = fetch(`/api/geo?q=${encodeURIComponent(q)}`, { cache:'no-store' })
+    .then(res=>res.json().catch(()=>({ ok:false })))
+    .then(data=>{
+      if (data && data.ok && Number.isFinite(data.lat) && Number.isFinite(data.lng)){
+        const coords = { lat: Number(data.lat), lng: Number(data.lng) };
+        geoQueryCache.set(key, coords);
+        return coords;
+      }
+      return null;
+    })
+    .catch(()=>null)
+    .finally(()=>{ geoQueryPending.delete(key); });
+  geoQueryPending.set(key, task);
+  return task;
+}
+function buildGeocodeQuery(item){
+  const fromMap = extractMapsQuery(item.maps);
+  if (fromMap) return fromMap;
+  const addr = String(item.address || '').trim();
+  if (addr) return addr;
+  const name = String(item.name || '').trim();
+  if (!name) return '';
+  const area = String(item.area || '').trim();
+  const suffix = area ? ` ${area} Thailand` : ' Thailand';
+  return name + suffix;
+}
+async function resolveItemCoords(item){
+  const cached = getCachedCoords(item);
+  if (cached) return cached;
+  const query = buildGeocodeQuery(item);
+  if (!query) return null;
+  const coords = await geocodeQuery(query);
+  return coords ? storeCoords(item, coords) : null;
+}
+function haversineKm(a, b){
+  const r = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const h = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng/2) ** 2;
+  return 2 * r * Math.asin(Math.sqrt(h));
+}
+function formatDistance(km){
+  if (!Number.isFinite(km)) return '';
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(km < 10 ? 1 : 0)} km`;
+}
+function getActiveItems(){
+  const source = Array.isArray(DATA) && DATA.length ? DATA : BASE_DATA;
+  return source.filter(item=>item && !item.deleted);
+}
+async function getNearbyRestaurants(origin, limit=5){
+  const items = getActiveItems();
+  const resolved = [];
+  const pending = [];
+  items.forEach(item=>{
+    const coords = getCachedCoords(item);
+    if (coords) resolved.push({ item, coords });
+    else pending.push(item);
+  });
+  let lookups = 0;
+  const maxLookup = 18;
+  for (const item of pending){
+    if (lookups >= maxLookup && resolved.length >= limit) break;
+    lookups += 1;
+    const coords = await resolveItemCoords(item);
+    if (coords) resolved.push({ item, coords });
+  }
+  const ranked = resolved
+    .map(entry=>({
+      item: entry.item,
+      distance: haversineKm(origin, entry.coords)
+    }))
+    .filter(entry=>Number.isFinite(entry.distance))
+    .sort((a,b)=>a.distance - b.distance)
+    .slice(0, limit);
+  return ranked;
+}
+function renderNearbyList(list, label){
+  if (!nearbyList) return;
+  if (!list.length){
+    nearbyList.innerHTML = '<div class="nearby-empty">附近沒有可用的推薦店家</div>';
+    return;
+  }
+  nearbyList.innerHTML = list.map(entry=>{
+    const item = entry.item;
+    const mapsUrl = safeUrl(item.maps);
+    const displayCat = mapCategory(item.category) || item.category || '';
+    const distance = formatDistance(entry.distance);
+    return `
+      <div class="nearby-item">
+        <div>
+          <div class="nearby-name">${escapeHtml(item.name || '')}</div>
+          <div class="nearby-meta">${escapeHtml(distance)} · ${escapeHtml(displayCat)} · ${escapeHtml(item.area || '')}</div>
+        </div>
+        <div class="nearby-actions">
+          <button class="nearby-btn primary" type="button" data-nearby-open="${escapeHtml(item.id || '')}">查看</button>
+          ${mapsUrl ? `<a class="nearby-btn" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">導航</a>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  nearbyList.querySelectorAll('[data-nearby-open]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-nearby-open');
+      if (id) openModal(id);
+    });
+  });
+  if (nearbyStatus && label){
+    nearbyStatus.textContent = `已找到靠近「${label}」的 ${list.length} 間店家`;
+  }
 }
 
 function render(){
@@ -2015,6 +2245,65 @@ initFilters();
 resetFilters();
 render();
 [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', render));
+
+async function runNearby(origin, label){
+  if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
+  if (nearbyStatus) nearbyStatus.textContent = '正在整理附近餐廳…';
+  if (nearbyList) nearbyList.innerHTML = '';
+  try{
+    const list = await getNearbyRestaurants(origin, 5);
+    renderNearbyList(list, label || '目前位置');
+    if (!list.length && nearbyStatus){
+      nearbyStatus.textContent = '附近暫時沒有可用的店家資料';
+    }
+  }catch(_){
+    if (nearbyStatus) nearbyStatus.textContent = '附近搜尋失敗，請稍後再試';
+  }
+}
+if (nearbyUse){
+  nearbyUse.addEventListener('click', ()=>{
+    if (!navigator.geolocation){
+      if (nearbyStatus) nearbyStatus.textContent = '此瀏覽器不支援定位';
+      return;
+    }
+    if (nearbyStatus) nearbyStatus.textContent = '定位中…';
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        runNearby(coords, '我的位置');
+      },
+      ()=>{
+        if (nearbyStatus) nearbyStatus.textContent = '定位失敗，請允許位置權限';
+      },
+      { enableHighAccuracy:true, timeout: 8000, maximumAge: 60000 }
+    );
+  });
+}
+if (nearbySearch){
+  const runSearch = async ()=>{
+    const query = nearbyInput ? nearbyInput.value.trim() : '';
+    if (!query){
+      if (nearbyStatus) nearbyStatus.textContent = '請先輸入飯店名稱或地址';
+      return;
+    }
+    if (nearbyStatus) nearbyStatus.textContent = '搜尋位置中…';
+    const coords = await geocodeQuery(query);
+    if (!coords){
+      if (nearbyStatus) nearbyStatus.textContent = '找不到此位置，請換個關鍵字';
+      return;
+    }
+    runNearby(coords, query);
+  };
+  nearbySearch.addEventListener('click', runSearch);
+  if (nearbyInput){
+    nearbyInput.addEventListener('keydown', (ev)=>{
+      if (ev.key === 'Enter'){
+        ev.preventDefault();
+        runSearch();
+      }
+    });
+  }
+}
 
 // 讀取遠端資料與收藏
 async function loadRemote(){

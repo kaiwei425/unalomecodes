@@ -7716,6 +7716,9 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
   }
   return deleteStories(url, env);
 }
+    if (pathname === "/api/geo" && request.method === "GET") {
+      return geocodePlace(request, url, env);
+    }
     // Image resize proxy
     if (pathname === "/api/img" && request.method === "GET") {
       return resizeImage(url, env, origin);
@@ -8677,6 +8680,59 @@ async function deleteStories(url, env){
   }
   await env.STORIES.put(idxKey, JSON.stringify([]));
   return withCORS(json({ ok:true, deleted: n }));
+}
+
+/* ========== /api/geo (Geocode helper) ========== */
+async function geocodePlace(request, url, env){
+  const q = (url.searchParams.get("q") || "").trim();
+  if (!q) return withCORS(json({ ok:false, error:"Missing q" }, 400));
+  if (q.length > 180) return withCORS(json({ ok:false, error:"Query too long" }, 400));
+  const ip = getClientIp(request) || 'unknown';
+  const ok = await checkRateLimit(env, `rl:geo:${ip}`, 60, 60);
+  if (!ok) return withCORS(json({ ok:false, error:"Too many requests" }, 429));
+
+  const store = env.GEO_CACHE || env.GEOCODE_CACHE || null;
+  const cacheKey = `GEO:${q.toLowerCase()}`;
+  if (store && typeof store.get === "function"){
+    try{
+      const cached = await store.get(cacheKey);
+      if (cached){
+        const data = JSON.parse(cached);
+        if (data && Number.isFinite(data.lat) && Number.isFinite(data.lng)){
+          return withCORS(json({ ok:true, lat:data.lat, lng:data.lng, display_name:data.display_name || "", cached:true }));
+        }
+      }
+    }catch(_){}
+  }
+
+  const endpoint = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+  const ua = env.GEO_USER_AGENT || env.GEOCODE_USER_AGENT || "unalomecodes-food-map/1.0 (contact: support@unalomecodes.com)";
+  const res = await fetch(endpoint, {
+    headers: {
+      "User-Agent": ua,
+      "Accept": "application/json"
+    }
+  });
+  if (!res.ok){
+    return withCORS(json({ ok:false, error:"Geocode failed" }, 502));
+  }
+  const data = await res.json().catch(()=>null);
+  if (!Array.isArray(data) || !data.length){
+    return withCORS(json({ ok:false, error:"Not found" }, 404));
+  }
+  const first = data[0] || {};
+  const lat = Number(first.lat);
+  const lng = Number(first.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)){
+    return withCORS(json({ ok:false, error:"Invalid response" }, 502));
+  }
+  const payload = { ok:true, lat, lng, display_name: first.display_name || "" };
+  if (store && typeof store.put === "function"){
+    try{
+      await store.put(cacheKey, JSON.stringify(payload), { expirationTtl: 60 * 60 * 24 * 30 });
+    }catch(_){}
+  }
+  return withCORS(json(payload));
 }
 
 
