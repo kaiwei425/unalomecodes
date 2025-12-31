@@ -139,6 +139,7 @@
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#0f172a;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;display:none;z-index:999;box-shadow:0 12px 24px rgba(15,23,42,.25);}
     .count-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 14px;flex-wrap:wrap;}
     .count-total{font-size:13px;font-weight:700;color:#0f172a;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
+    .count-sync{font-size:11px;font-weight:700;color:#d9480f;background:#fff7f2;border:1px dashed #ffd7c7;border-radius:999px;padding:5px 10px;display:none;}
     .count-tags{display:none;}
     .count-pill{font-size:12px;color:#475569;border:1px solid #e2e8f0;border-radius:999px;padding:4px 10px;background:#fff;}
     @media(max-width:900px){
@@ -244,6 +245,7 @@
   <main class="wrap">
     <div class="count-bar">
       <div class="count-total" id="totalCount">共 0 間</div>
+      <div class="count-sync" id="countSync">更新中...</div>
       <div class="count-tags" id="categoryCounts"></div>
     </div>
     <div class="cat-tabs" id="catTabs"></div>
@@ -251,7 +253,7 @@
   </main>
   <footer class="page-footer">
     <div class="wrap footer-inner">
-      <div>© 2025 unalomecodes. All rights reserved.</div>
+      <div>© 2025-2026 unalomecodes. All rights reserved.</div>
       <div>營業時間與資訊可能變動，請以店家公告為準。</div>
     </div>
   </footer>
@@ -1637,10 +1639,14 @@ const nearbyStatus = document.getElementById('nearbyStatus');
 const nearbyList = document.getElementById('nearbyList');
 const nearbyMapEl = document.getElementById('nearbyMap');
 const totalCountEl = document.getElementById('totalCount');
+const countSyncEl = document.getElementById('countSync');
 const categoryCountsEl = document.getElementById('categoryCounts');
 
 const GOOGLE_MAPS_KEY = '';
 const GOOGLE_MAPS_LANG = 'zh-TW';
+
+const FOOD_CACHE_KEY = 'food-map-cache-v2';
+const FOOD_CACHE_TTL = 1000 * 60 * 60 * 6;
 
 let googleMap = null;
 let googleMarker = null;
@@ -1668,6 +1674,36 @@ function safeRender(){
 function showLoadingState(){
   if (!cardsEl) return;
   cardsEl.innerHTML = '<div class="empty-state"><h3>載入中...</h3><p>正在抓取最新資料。</p></div>';
+}
+
+function setSyncIndicator(loading){
+  if (!countSyncEl) return;
+  countSyncEl.style.display = loading ? 'inline-flex' : 'none';
+}
+
+function loadCacheData(){
+  try{
+    const raw = localStorage.getItem(FOOD_CACHE_KEY);
+    if (!raw) return false;
+    const cached = JSON.parse(raw);
+    if (!cached || !Array.isArray(cached.items) || !cached.ts) return false;
+    if ((Date.now() - cached.ts) > FOOD_CACHE_TTL) return false;
+    DATA = cached.items.filter(it=>it && !it.deleted);
+    dataReady = true;
+    safeRender();
+    return true;
+  }catch(_){
+    return false;
+  }
+}
+
+function saveCacheData(items){
+  try{
+    localStorage.setItem(FOOD_CACHE_KEY, JSON.stringify({
+      ts: Date.now(),
+      items
+    }));
+  }catch(_){}
 }
 
 function setNearbyCollapsed(collapsed){
@@ -2632,7 +2668,9 @@ function bootFoodMap(){
   foodBooted = true;
   dataLoading = true;
   dataReady = false;
-  showLoadingState();
+  const usedCache = loadCacheData();
+  if (!usedCache) showLoadingState();
+  setSyncIndicator(true);
   showNearbyToggle(false);
   setNearbyCollapsed(false);
   checkAdmin().then(()=>{ safeRender(); });
@@ -2732,16 +2770,19 @@ if (nearbyToggle){
 // 讀取遠端資料與收藏
 async function loadRemote(){
   dataLoading = true;
+  setSyncIndicator(true);
   if (!dataReady) showLoadingState();
   try{
     const res = await fetch('/api/foods',{cache:'no-store'});
     const data = await res.json().catch(()=>({}));
     if (res.ok && Array.isArray(data.items)){
       DATA = data.items.filter(it=>it && !it.deleted);
+      saveCacheData(DATA);
     }
   }catch(_){}
   dataReady = true;
   dataLoading = false;
+  setSyncIndicator(false);
   await refreshFavorites();
   initFilters();
   safeRender();
