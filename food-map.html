@@ -59,6 +59,7 @@
     .nearby-input input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;font-family:inherit;background:#fff;}
     .nearby-status{font-size:11px;color:var(--muted);}
     .nearby-list{display:grid;gap:8px;}
+    .nearby-map{height:180px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;text-align:center;padding:8px;}
     .nearby-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;}
     .nearby-name{font-size:13px;font-weight:700;color:#0f172a;}
     .nearby-meta{font-size:11px;color:#64748b;}
@@ -142,6 +143,7 @@
       .nearby-item{flex-direction:column;align-items:flex-start;}
       .nearby-actions{width:100%;}
       .nearby-actions .nearby-btn{flex:1;}
+      .nearby-map{height:160px;}
     }
   </style>
 </head>
@@ -202,14 +204,15 @@
               <div class="nearby-title">📍 附近推薦</div>
               <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
             </div>
-            <div class="nearby-input">
-              <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
-              <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
-            </div>
-            <div class="nearby-status" id="nearbyStatus">尚未搜尋附近餐廳</div>
-            <div class="nearby-list" id="nearbyList"></div>
+          <div class="nearby-input">
+            <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
+            <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
           </div>
+          <div class="nearby-map" id="nearbyMap">尚未設定 Google Maps API Key</div>
+          <div class="nearby-status" id="nearbyStatus">尚未搜尋附近餐廳</div>
+          <div class="nearby-list" id="nearbyList"></div>
         </div>
+      </div>
       </div>
     </div>
   </header>
@@ -1591,6 +1594,95 @@ const nearbySearch = document.getElementById('nearbySearch');
 const nearbyInput = document.getElementById('nearbyInput');
 const nearbyStatus = document.getElementById('nearbyStatus');
 const nearbyList = document.getElementById('nearbyList');
+const nearbyMapEl = document.getElementById('nearbyMap');
+
+let googleMap = null;
+let googleMarker = null;
+let googleGeocoder = null;
+let googleAutocomplete = null;
+let googleReady = false;
+let googleMapsKey = GOOGLE_MAPS_KEY;
+
+function updateMapPreview(coords, label){
+  if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
+  if (googleReady && googleMap && googleMarker){
+    googleMap.setCenter(coords);
+    googleMap.setZoom(14);
+    googleMarker.setPosition(coords);
+  }else if (nearbyMapEl){
+    nearbyMapEl.textContent = label ? `已定位：${label}` : '已取得位置';
+  }
+}
+function initGoogleMaps(){
+  if (!window.google || !window.google.maps) return;
+  googleReady = true;
+  if (!nearbyMapEl) return;
+  nearbyMapEl.textContent = '';
+  googleMap = new google.maps.Map(nearbyMapEl, {
+    center: { lat: 13.7563, lng: 100.5018 },
+    zoom: 12,
+    disableDefaultUI: true,
+    zoomControl: true,
+    gestureHandling: 'greedy'
+  });
+  googleMarker = new google.maps.Marker({ map: googleMap });
+  googleGeocoder = new google.maps.Geocoder();
+  if (nearbyInput){
+    googleAutocomplete = new google.maps.places.Autocomplete(nearbyInput, {
+      types: ['geocode', 'establishment'],
+      componentRestrictions: { country: 'th' }
+    });
+    googleAutocomplete.addListener('place_changed', ()=>{
+      const place = googleAutocomplete.getPlace();
+      const loc = place && place.geometry && place.geometry.location;
+      if (!loc) return;
+      const coords = { lat: loc.lat(), lng: loc.lng() };
+      const label = place.formatted_address || place.name || nearbyInput.value.trim();
+      updateMapPreview(coords, label);
+      runNearby(coords, label);
+    });
+  }
+}
+async function getGoogleMapsKey(){
+  if (googleMapsKey) return googleMapsKey;
+  try{
+    const res = await fetch('/api/maps-key', { cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data && data.ok && data.key){
+      googleMapsKey = data.key;
+      return googleMapsKey;
+    }
+  }catch(_){}
+  return '';
+}
+async function loadGoogleMaps(){
+  const key = await getGoogleMapsKey();
+  if (!key) return;
+  if (window.google && window.google.maps){
+    initGoogleMaps();
+    return;
+  }
+  if (document.getElementById('googleMapsScript')) return;
+  const script = document.createElement('script');
+  script.id = 'googleMapsScript';
+  script.async = true;
+  script.defer = true;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initGoogleMaps&language=${encodeURIComponent(GOOGLE_MAPS_LANG)}`;
+  document.head.appendChild(script);
+}
+window.initGoogleMaps = initGoogleMaps;
+
+function geocodeWithGoogle(query){
+  if (!googleReady || !googleGeocoder) return Promise.resolve(null);
+  return new Promise(resolve=>{
+    googleGeocoder.geocode({ address: query }, (results, status)=>{
+      if (status !== 'OK' || !results || !results[0]) return resolve(null);
+      const loc = results[0].geometry.location;
+      if (!loc) return resolve(null);
+      resolve({ lat: loc.lat(), lng: loc.lng(), label: results[0].formatted_address || query });
+    });
+  });
+}
 
 let DATA = BASE_DATA.slice();
 let favs = [];
@@ -1682,6 +1774,8 @@ function mapCategory(value){
 const GEO_CACHE_KEY = 'food_map_geo_cache_v1';
 const NEARBY_MAX_KM = 20;
 const NEARBY_LOOKUP_LIMIT = 10;
+const GOOGLE_MAPS_KEY = '';
+const GOOGLE_MAPS_LANG = 'zh-TW';
 const GEO_CACHE_TTL = 1000 * 60 * 60 * 24 * 45;
 const geoCache = (()=>{ try{ return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}') || {}; }catch(_){ return {}; } })();
 let geoSaveTimer = null;
@@ -2276,6 +2370,7 @@ initFilters();
 resetFilters();
 render();
 [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', render));
+void loadGoogleMaps();
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
@@ -2306,6 +2401,7 @@ if (nearbyUse){
     navigator.geolocation.getCurrentPosition(
       (pos)=>{
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        updateMapPreview(coords, '我的位置');
         runNearby(coords, '我的位置');
       },
       ()=>{
@@ -2323,12 +2419,21 @@ if (nearbySearch){
       return;
     }
     if (nearbyStatus) nearbyStatus.textContent = '搜尋位置中…';
-    const coords = await geocodeQuery(query);
+    let coords = null;
+    let label = query;
+    if (googleReady){
+      const result = await geocodeWithGoogle(query);
+      coords = result ? { lat: result.lat, lng: result.lng } : null;
+      label = result && result.label ? result.label : query;
+    }else{
+      coords = await geocodeQuery(query);
+    }
     if (!coords){
       if (nearbyStatus) nearbyStatus.textContent = '找不到此位置，請換個關鍵字';
       return;
     }
-    runNearby(coords, query);
+    updateMapPreview(coords, label);
+    runNearby(coords, label);
   };
   nearbySearch.addEventListener('click', runSearch);
   if (nearbyInput){

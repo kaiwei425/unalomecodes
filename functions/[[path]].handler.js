@@ -7716,6 +7716,9 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
   }
   return deleteStories(url, env);
 }
+    if (pathname === "/api/maps-key" && request.method === "GET") {
+      return getMapsKey(request, env);
+    }
     if (pathname === "/api/geo" && request.method === "GET") {
       return geocodePlace(request, url, env);
     }
@@ -8733,6 +8736,15 @@ async function geocodePlace(request, url, env){
     }catch(_){}
   }
   return withCORS(json(payload));
+}
+
+/* ========== /api/maps-key (Frontend maps key) ========== */
+async function getMapsKey(request, env){
+  const key = (env.GOOGLE_MAPS_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || "").trim();
+  if (!key) return withCORS(json({ ok:false, error:"Missing key" }, 404));
+  const allowed = isAllowedOrigin(request, env, env.MAPS_KEY_ORIGINS || "");
+  if (!allowed) return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
+  return withCORS(json({ ok:true, key }));
 }
 
 
