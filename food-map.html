@@ -1898,6 +1898,8 @@ function extractLatLngFromMaps(url){
     const u = new URL(raw);
     const atMatch = u.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (atMatch) return parseLatLngPair(atMatch[1], atMatch[2]);
+    const dataMatch = raw.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if (dataMatch) return parseLatLngPair(dataMatch[1], dataMatch[2]);
     const q = u.searchParams.get('q') || u.searchParams.get('query') || u.searchParams.get('ll') || '';
     const pair = extractLatLngFromText(q);
     if (pair) return pair;
@@ -1916,6 +1918,19 @@ function extractMapsQuery(url){
   }catch(_){
     return '';
   }
+}
+function extractPlaceNameFromMapsUrl(url){
+  const raw = safeUrl(url);
+  if (!raw) return '';
+  try{
+    const u = new URL(raw);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const idx = parts.indexOf('place');
+    if (idx !== -1 && parts[idx + 1]){
+      return decodeURIComponent(parts[idx + 1]).replace(/\+/g, ' ');
+    }
+  }catch(_){}
+  return '';
 }
 function storeCoords(item, coords){
   if (!coords || !item) return null;
@@ -1968,6 +1983,8 @@ async function geocodeQuery(query){
 function buildGeocodeQuery(item){
   const fromMap = extractMapsQuery(item.maps);
   if (fromMap) return fromMap;
+  const place = extractPlaceNameFromMapsUrl(item.maps);
+  if (place) return place;
   const addr = String(item.address || '').trim();
   if (addr) return addr;
   const name = String(item.name || '').trim();

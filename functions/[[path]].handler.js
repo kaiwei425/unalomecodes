@@ -670,6 +670,8 @@ function extractLatLngFromMapsUrl(raw){
     const u = new URL(url);
     const atMatch = u.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (atMatch) return parseLatLngPair(atMatch[1], atMatch[2]);
+    const dataMatch = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if (dataMatch) return parseLatLngPair(dataMatch[1], dataMatch[2]);
     const q = u.searchParams.get('q') || u.searchParams.get('query') || u.searchParams.get('ll') || '';
     const pair = extractLatLngFromText(q);
     if (pair) return pair;
@@ -687,6 +689,19 @@ function extractMapsQuery(raw){
   }catch(_){
     return '';
   }
+}
+function extractPlaceNameFromMapsUrl(raw){
+  const url = String(raw || '').trim();
+  if (!url) return '';
+  try{
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const idx = parts.indexOf('place');
+    if (idx !== -1 && parts[idx + 1]){
+      return decodeURIComponent(parts[idx + 1]).replace(/\+/g, ' ');
+    }
+  }catch(_){}
+  return '';
 }
 async function expandMapsShortUrl(raw){
   const url = String(raw || '').trim();
@@ -769,6 +784,8 @@ async function geocodeQueryForFood(env, query){
 function buildFoodGeocodeQuery(food, mapsUrl){
   const fromMaps = extractMapsQuery(mapsUrl);
   if (fromMaps) return fromMaps;
+  const place = extractPlaceNameFromMapsUrl(mapsUrl);
+  if (place) return place;
   const address = String(food.address || '').trim();
   if (address) return address;
   const name = String(food.name || '').trim();
