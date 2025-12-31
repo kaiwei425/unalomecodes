@@ -70,10 +70,10 @@
     .admin-textarea{min-height:90px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;resize:vertical;width:100%;box-sizing:border-box;}
     .admin-actions{display:flex;gap:8px;flex-wrap:wrap;}
     .admin-hint{font-size:11px;color:#64748b;}
-    .admin-upload{display:grid;gap:8px;width:100%;}
+    .admin-upload{display:grid;gap:8px;width:100%;justify-items:start;}
     .admin-file{width:100%;font-size:12px;}
-    .admin-preview{width:100%;aspect-ratio:4/5;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;touch-action:none;cursor:grab;}
-    .admin-preview img{width:100%;height:100%;object-fit:cover;display:block;touch-action:none;user-select:none;}
+    .admin-preview{width:100%;max-width:220px;aspect-ratio:4/5;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;touch-action:none;cursor:grab;pointer-events:auto;}
+    .admin-preview img{width:100%;height:100%;object-fit:cover;display:block;touch-action:none;user-select:none;pointer-events:auto;}
     .admin-preview-empty{font-size:12px;color:#94a3b8;}
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
@@ -666,12 +666,17 @@ function safeUrl(input){
 }
 function safeObjectPosition(input){
   const raw = String(input || '').trim();
-  const m = raw.match(/^(\d{1,3}(?:\.\d+)?)%\\s+(\d{1,3}(?:\.\d+)?)%$/);
+  const m = raw.match(/^(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/);
   if (!m) return '50% 50%';
   const x = Math.max(0, Math.min(100, Number(m[1])));
   const y = Math.max(0, Math.min(100, Number(m[2])));
   if (Number.isNaN(x) || Number.isNaN(y)) return '50% 50%';
   return `${x}% ${y}%`;
+}
+function escapeSelectorValue(input){
+  const raw = String(input ?? '');
+  if (typeof CSS !== 'undefined' && CSS.escape) return CSS.escape(raw);
+  return raw.replace(/["\\]/g, '\\$&').replace(/\s/g, '\\ ');
 }
 function buildInstagramEmbedUrl(input){
   const raw = safeUrl(input);
@@ -714,6 +719,9 @@ const priceRank = (val)=>{
   if (val === '$$$') return 3;
   return 99;
 };
+const coverCache = new Map();
+const coverPending = new Set();
+let coverRefreshTimer = null;
 
 async function uploadCoverFile(file){
   const fd = new FormData();
@@ -754,6 +762,7 @@ function initCoverPositionControls(scope){
     };
     setPos(posInput && posInput.value ? posInput.value : '50% 50%');
     let dragging = null;
+    let dragMoved = false;
     const startDrag = (clientX, clientY)=>{
       const rect = previewEl.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
@@ -767,12 +776,15 @@ function initCoverPositionControls(scope){
         width: rect.width,
         height: rect.height
       };
+      dragMoved = false;
+      previewEl.dataset.dragging = '0';
       previewEl.style.cursor = 'grabbing';
     };
     const moveDrag = (clientX, clientY)=>{
       if (!dragging) return;
       const dx = clientX - dragging.startX;
       const dy = clientY - dragging.startY;
+      if (!dragMoved && (Math.abs(dx) + Math.abs(dy) > 2)) dragMoved = true;
       const nx = Math.max(0, Math.min(100, dragging.startPosX + (dx / dragging.width) * 100));
       const ny = Math.max(0, Math.min(100, dragging.startPosY + (dy / dragging.height) * 100));
       setPos(`${nx.toFixed(1)}% ${ny.toFixed(1)}%`);
@@ -781,19 +793,138 @@ function initCoverPositionControls(scope){
       if (!dragging) return;
       dragging = null;
       previewEl.style.cursor = 'grab';
+      if (dragMoved) {
+        previewEl.dataset.dragging = '1';
+        setTimeout(()=>{ previewEl.dataset.dragging = '0'; }, 0);
+      }
+      dragMoved = false;
     };
-    previewEl.addEventListener('pointerdown', (ev)=>{
-      if (ev.button !== undefined && ev.button !== 0) return;
-      ev.preventDefault();
-      startDrag(ev.clientX, ev.clientY);
-      previewEl.setPointerCapture && previewEl.setPointerCapture(ev.pointerId);
-    });
-    previewEl.addEventListener('pointermove', (ev)=>{ if (dragging) moveDrag(ev.clientX, ev.clientY); });
-    previewEl.addEventListener('pointerup', endDrag);
-    previewEl.addEventListener('pointercancel', endDrag);
-    previewEl.addEventListener('pointerleave', endDrag);
+    const onClick = (ev)=>{
+      if (previewEl.dataset.dragging === '1') {
+        ev.preventDefault();
+        ev.stopPropagation();
+        previewEl.dataset.dragging = '0';
+      }
+    };
+    previewEl.addEventListener('click', onClick);
+    if (typeof window !== 'undefined' && 'PointerEvent' in window){
+      previewEl.addEventListener('pointerdown', (ev)=>{
+        if (ev.button !== undefined && ev.button !== 0) return;
+        ev.preventDefault();
+        startDrag(ev.clientX, ev.clientY);
+        previewEl.setPointerCapture && previewEl.setPointerCapture(ev.pointerId);
+      });
+      previewEl.addEventListener('pointermove', (ev)=>{ if (dragging) moveDrag(ev.clientX, ev.clientY); });
+      previewEl.addEventListener('pointerup', endDrag);
+      previewEl.addEventListener('pointercancel', endDrag);
+      previewEl.addEventListener('pointerleave', endDrag);
+    }else{
+      const onMouseMove = (ev)=>{ if (dragging) moveDrag(ev.clientX, ev.clientY); };
+      const onMouseUp = ()=>{
+        endDrag();
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+      previewEl.addEventListener('mousedown', (ev)=>{
+        if (ev.button !== 0) return;
+        ev.preventDefault();
+        startDrag(ev.clientX, ev.clientY);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+      const onTouchMove = (ev)=>{
+        if (!dragging) return;
+        const t = ev.touches && ev.touches[0];
+        if (t) moveDrag(t.clientX, t.clientY);
+      };
+      const onTouchEnd = ()=>{
+        endDrag();
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+        window.removeEventListener('touchcancel', onTouchEnd);
+      };
+      previewEl.addEventListener('touchstart', (ev)=>{
+        const t = ev.touches && ev.touches[0];
+        if (!t) return;
+        ev.preventDefault();
+        startDrag(t.clientX, t.clientY);
+        window.addEventListener('touchmove', onTouchMove, { passive:false });
+        window.addEventListener('touchend', onTouchEnd);
+        window.addEventListener('touchcancel', onTouchEnd);
+      }, { passive:false });
+    }
     previewEl.addEventListener('dragstart', (ev)=> ev.preventDefault());
   });
+}
+
+function findCardById(id){
+  if (!cardsEl || !id) return null;
+  const safe = escapeSelectorValue(id);
+  return cardsEl.querySelector(`[data-card-id="${safe}"]`);
+}
+
+function applyCoverToDom(item, url){
+  if (!item) return;
+  const cover = safeUrl(url);
+  if (!cover) return;
+  item.cover = cover;
+  const pos = safeObjectPosition(item.coverPos || item.cover_pos || '50% 50%');
+  const card = findCardById(item.id);
+  if (!card) return;
+  const coverBox = card.querySelector('.cover');
+  if (coverBox){
+    let img = coverBox.querySelector('img');
+    if (!img){
+      img = document.createElement('img');
+      img.alt = item.name || '';
+      coverBox.innerHTML = '';
+      coverBox.appendChild(img);
+    }
+    img.src = cover;
+    img.style.objectPosition = pos;
+  }
+  const previewEl = card.querySelector('[data-admin-preview="cover"]');
+  if (previewEl){
+    const posInput = card.querySelector('[data-admin-field="coverPos"]');
+    if (posInput && !posInput.value) posInput.value = pos;
+    const hidden = card.querySelector('[data-admin-field="cover"]');
+    if (hidden && !hidden.value) hidden.value = cover;
+    previewEl.innerHTML = `<img src="${escapeHtml(cover)}" alt="" style="object-position:${escapeHtml(pos)};">`;
+    initCoverPositionControls(previewEl);
+  }
+}
+
+function ensureCover(item){
+  if (!item || safeUrl(item.cover)) return;
+  const igUrl = safeUrl(item.ig);
+  if (!igUrl) return;
+  let cacheKey = igUrl;
+  try{
+    const u = new URL(igUrl);
+    u.search = '';
+    u.hash = '';
+    cacheKey = u.href;
+  }catch(_){}
+  if (coverCache.has(cacheKey)){
+    const cached = coverCache.get(cacheKey);
+    if (cached) applyCoverToDom(item, cached);
+    return;
+  }
+  if (coverPending.has(cacheKey)) return;
+  coverPending.add(cacheKey);
+  fetch(`/api/ig/cover?url=${encodeURIComponent(cacheKey)}`, { cache:'no-store' })
+    .then(async (res)=>{
+      const data = await res.json().catch(()=>({}));
+      const cover = data && data.cover ? safeUrl(data.cover) : '';
+      if (res.ok && cover){
+        coverCache.set(cacheKey, cover);
+        applyCoverToDom(item, cover);
+      }else{
+        coverCache.set(cacheKey, '');
+      }
+    })
+    .catch(()=>{ coverCache.set(cacheKey, ''); })
+    .finally(()=>{ coverPending.delete(cacheKey); });
 }
 
 const cardsEl = document.getElementById('cards');
@@ -1007,7 +1138,7 @@ function render(){
         <div class="admin-hint">管理模式：儲存後會直接寫入資料庫。</div>
       </div>
     ` : '';
-    return `<article class="card">
+    return `<article class="card" data-card-id="${String(item.id || '').replace(/"/g,'&quot;')}">
       <div class="cover">${coverImg}</div>
       <div class="card-body">
         <div class="card-head">
@@ -1027,6 +1158,7 @@ function render(){
       </div>
     </article>`;
   }).join('');
+  list.forEach(item=> ensureCover(item));
   // 綁定卡片按鈕
   cardsEl.querySelectorAll('button[data-open]').forEach(btn=>{
     btn.onclick = (ev)=>{
@@ -1123,18 +1255,25 @@ function render(){
           const url = await uploadCoverFile(file);
           if (hidden) hidden.value = url;
           if (posInput && !posInput.value) posInput.value = '50% 50%';
-          if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="object-position:${escapeHtml(posInput ? posInput.value : '50% 50%')};">`;
+          const posVal = posInput ? posInput.value : '50% 50%';
+          if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="object-position:${escapeHtml(posVal)};">`;
           setStatus('已上傳');
           const card = wrap.closest('.card');
           if (card){
             const coverImg = card.querySelector('.cover img');
             if (coverImg){
               coverImg.src = url;
-              coverImg.style.objectPosition = posInput ? posInput.value : '50% 50%';
+              coverImg.style.objectPosition = posVal;
             }else{
               const coverBox = card.querySelector('.cover');
-              if (coverBox) coverBox.innerHTML = `<img src="${escapeHtml(url)}" alt="">`;
+              if (coverBox) coverBox.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="object-position:${escapeHtml(posVal)};">`;
             }
+          }
+          const id = wrap.getAttribute('data-admin-id');
+          const target = DATA.find(it=>it.id === id);
+          if (target){
+            target.cover = url;
+            target.coverPos = posVal;
           }
           initCoverPositionControls(previewEl);
         }catch(err){

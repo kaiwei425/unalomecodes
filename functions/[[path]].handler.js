@@ -160,6 +160,45 @@ function maskEmail(val){
   const domain = s.slice(idx);
   return head + '***' + domain;
 }
+function decodeHtmlEntities(val){
+  return String(val || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+function extractMetaImage(html){
+  const text = String(html || '');
+  const patterns = [
+    /property=["']og:image["']\s+content=["']([^"']+)["']/i,
+    /content=["']([^"']+)["']\s+property=["']og:image["']/i,
+    /property=["']og:image:secure_url["']\s+content=["']([^"']+)["']/i,
+    /content=["']([^"']+)["']\s+property=["']og:image:secure_url["']/i,
+    /name=["']twitter:image["']\s+content=["']([^"']+)["']/i,
+    /content=["']([^"']+)["']\s+name=["']twitter:image["']/i
+  ];
+  for (const re of patterns){
+    const m = text.match(re);
+    if (m && m[1]) return decodeHtmlEntities(m[1]);
+  }
+  return '';
+}
+function normalizeInstagramPostUrl(raw){
+  const input = String(raw || '').trim();
+  if (!input) return '';
+  try{
+    const u = new URL(input);
+    const host = (u.hostname || '').toLowerCase();
+    if (!host.endsWith('instagram.com')) return '';
+    if (!/^\/(p|reel|tv)\//.test(u.pathname)) return '';
+    u.search = '';
+    u.hash = '';
+    return u.origin + u.pathname;
+  }catch(_){
+    return '';
+  }
+}
 
 async function findOrderByIdForQna(env, orderId){
   const id = String(orderId || '').trim();
@@ -3388,6 +3427,41 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }
     }
     return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/ig/cover' && request.method === 'GET') {
+    const headers = jsonHeadersFor(request, env);
+    const targetRaw = url.searchParams.get('url') || url.searchParams.get('u') || '';
+    const target = normalizeInstagramPostUrl(targetRaw);
+    if (!target) {
+      return new Response(JSON.stringify({ ok:false, error:'invalid_url' }), { status:400, headers });
+    }
+    const ip = getClientIp(request) || '0.0.0.0';
+    const allowed = await checkRateLimit(env, `rl:igcover:${ip}`, 40, 60);
+    if (!allowed) {
+      return new Response(JSON.stringify({ ok:false, error:'rate_limited' }), { status:429, headers });
+    }
+    try{
+      const resp = await fetch(target, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      });
+      if (!resp.ok) {
+        return new Response(JSON.stringify({ ok:false, error:'fetch_failed' }), { status:502, headers });
+      }
+      const html = await resp.text();
+      const cover = extractMetaImage(html);
+      if (!cover) {
+        return new Response(JSON.stringify({ ok:false, error:'not_found' }), { status:404, headers });
+      }
+      headers['Cache-Control'] = 'public, max-age=3600';
+      return new Response(JSON.stringify({ ok:true, cover }), { status:200, headers });
+    }catch(err){
+      return new Response(JSON.stringify({ ok:false, error:'fetch_error' }), { status:502, headers });
+    }
   }
 
   // Food map data (list / admin upsert)
