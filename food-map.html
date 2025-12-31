@@ -134,7 +134,7 @@
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#0f172a;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;display:none;z-index:999;box-shadow:0 12px 24px rgba(15,23,42,.25);}
     .count-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 14px;flex-wrap:wrap;}
     .count-total{font-size:13px;font-weight:700;color:#0f172a;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
-    .count-tags{display:flex;gap:6px;flex-wrap:wrap;}
+    .count-tags{display:none;}
     .count-pill{font-size:12px;color:#475569;border:1px solid #e2e8f0;border-radius:999px;padding:4px 10px;background:#fff;}
     @media(max-width:900px){
       .hero{grid-template-columns:1fr;}
@@ -1859,6 +1859,7 @@ function renderSummary(currentList){
 const GEO_CACHE_KEY = 'food_map_geo_cache_v1';
 const NEARBY_MAX_KM = 20;
 const NEARBY_LOOKUP_LIMIT = 10;
+const NEARBY_LOOKUP_MAX = 40;
 const GEO_CACHE_TTL = 1000 * 60 * 60 * 24 * 45;
 const geoCache = (()=>{ try{ return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}') || {}; }catch(_){ return {}; } })();
 let geoSaveTimer = null;
@@ -2025,12 +2026,19 @@ async function getNearbyRestaurants(origin, limit=5){
   let ranked = filterRankByDistance(origin, resolved);
   if (ranked.length >= limit || !pending.length) return ranked.slice(0, limit);
 
-  const batch = pending.slice(0, NEARBY_LOOKUP_LIMIT);
-  const coordsList = await Promise.all(batch.map(item=> resolveItemCoords(item)));
-  coordsList.forEach((coords, idx)=>{
-    if (coords) resolved.push({ item: batch[idx], coords });
-  });
-  ranked = filterRankByDistance(origin, resolved);
+  let offset = 0;
+  let looked = 0;
+  const maxLookups = Math.max(NEARBY_LOOKUP_MAX, limit * 6);
+  while (ranked.length < limit && offset < pending.length && looked < maxLookups){
+    const batch = pending.slice(offset, offset + NEARBY_LOOKUP_LIMIT);
+    offset += NEARBY_LOOKUP_LIMIT;
+    looked += batch.length;
+    const coordsList = await Promise.all(batch.map(item=> resolveItemCoords(item)));
+    coordsList.forEach((coords, idx)=>{
+      if (coords) resolved.push({ item: batch[idx], coords });
+    });
+    ranked = filterRankByDistance(origin, resolved);
+  }
   return ranked.slice(0, limit);
 }
 function renderNearbyList(list, label){
