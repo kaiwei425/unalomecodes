@@ -51,6 +51,7 @@
     .card-title{font-size:18px;font-weight:800;margin:0;}
     .card-sub{font-size:12px;color:var(--muted);}
     .card-addr{font-size:13px;color:#475569;}
+    .card-desc{font-size:13px;color:#334155;line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
     .card-tags{display:flex;flex-wrap:wrap;gap:6px;}
     .tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:var(--pill);color:#c2410c;font-weight:700;border:1px solid rgba(255,90,60,.25);font-size:12px;}
     .badge-hot{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(255,90,60,.12);color:var(--accent);font-weight:700;font-size:11px;}
@@ -1262,6 +1263,23 @@ function buildIntroText(item){
   }
   return parts.join('。');
 }
+function buildCardSnippet(item){
+  const text = (item && item.intro) ? String(item.intro) : buildIntroText(item);
+  if (!text) return '';
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const filtered = lines.filter(l=>{
+    if (!l) return false;
+    if (/^(#|@|🏠|📍|⏰)/.test(l)) return false;
+    if (/^https?:\/\//i.test(l)) return false;
+    return true;
+  });
+  const snippetLines = filtered.slice(0,2);
+  let snippet = snippetLines.join(' ');
+  snippet = snippet.replace(/\s+/g,' ').trim();
+  if (!snippet) return '';
+  if (snippet.length > 90) snippet = snippet.slice(0, 90) + '…';
+  return snippet;
+}
 let toastTimer = null;
 function showToast(text){
   const el = document.getElementById('saveToast');
@@ -1667,8 +1685,9 @@ function render(){
     const isNew = !!item.__tempId;
     const editKey = item.__tempId || item.id || '';
     const safeName = escapeHtml(item.name || (isNew ? '（新餐廳）' : ''));
-    const coverUrl = safeUrl(item.cover);
+    let coverUrl = safeUrl(item.cover);
     const isIgCover = isIgCoverUrl(coverUrl);
+    if (isIgCover && !ALLOW_IG_COVER) coverUrl = '';
     const coverThumb = coverUrl && !isIgCover ? buildThumbUrl(coverUrl, 520) : '';
     const coverPos = safeObjectPosition(item.coverPos || item.cover_pos);
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
@@ -1679,6 +1698,7 @@ function render(){
     const coverPreview = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}"${coverStyle}>` : '<div class="admin-preview-empty">尚未上傳</div>';
     const mapsUrl = safeUrl(item.maps);
     const introText = buildIntroText(item);
+    const snippet = buildCardSnippet(item);
     const isEditing = canEdit && editingId === editKey;
     const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
@@ -1736,6 +1756,7 @@ function render(){
         </div>
         <div class="card-tags">${tags}<span class="badge-hot">推薦</span></div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
+        ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
           ${item.id ? `<button class="btn primary" data-open="${safeId}">查看店家資訊</button>` : '<span class="mini">新增完成後會顯示操作按鈕</span>'}
           ${item.id ? `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">地圖導航</a>` : ''}
