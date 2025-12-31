@@ -1611,7 +1611,7 @@ const btnFav = document.getElementById('btnFav');
 const btnAdd = document.getElementById('btnAdd');
 const btnGeo = document.getElementById('btnGeo');
 const btnGeoList = document.getElementById('btnGeoList');
-const btnHours = document.getElementById('btnHours');
+let btnHours = document.getElementById('btnHours');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
 const nearbyInput = document.getElementById('nearbyInput');
@@ -1772,7 +1772,19 @@ async function checkAdmin(){
   if (btnAdd) btnAdd.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnGeo) btnGeo.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnGeoList) btnGeoList.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (!btnHours && isAdmin){
+    const actions = document.querySelector('.top-actions');
+    if (actions){
+      const btn = document.createElement('button');
+      btn.className = 'btn ghost pill';
+      btn.id = 'btnHours';
+      btn.textContent = '補營業時間';
+      actions.appendChild(btn);
+      btnHours = btn;
+    }
+  }
   if (btnHours) btnHours.style.display = isAdmin ? 'inline-flex' : 'none';
+  bindHoursButton();
 }
 
 function initFilters(){
@@ -2049,12 +2061,12 @@ async function getNearbyRestaurants(origin, limit=5){
     else pending.push(item);
   });
   let ranked = filterRankByDistance(origin, resolved);
-  if (ranked.length >= limit || !pending.length) return ranked.slice(0, limit);
+  if (!pending.length) return ranked.slice(0, limit);
 
   let offset = 0;
   let looked = 0;
   const maxLookups = Math.max(NEARBY_LOOKUP_MAX, limit * 6);
-  while (ranked.length < limit && offset < pending.length && looked < maxLookups){
+  while (offset < pending.length && looked < maxLookups){
     const batch = pending.slice(offset, offset + NEARBY_LOOKUP_LIMIT);
     offset += NEARBY_LOOKUP_LIMIT;
     looked += batch.length;
@@ -2539,7 +2551,10 @@ if (btnGeo) btnGeo.onclick = async ()=>{
   }
 };
 if (btnGeoList) btnGeoList.onclick = ()=> openMissingGeoList();
-if (btnHours) btnHours.onclick = async ()=>{
+function bindHoursButton(){
+  if (!btnHours || btnHours.dataset.bound === '1') return;
+  btnHours.dataset.bound = '1';
+  btnHours.onclick = async ()=>{
   if (!isAdmin) return;
   if (!confirm('要更新所有餐廳的營業時間嗎？會以最新資料覆蓋。')) return;
   btnHours.disabled = true;
@@ -2578,7 +2593,9 @@ if (btnHours) btnHours.onclick = async ()=>{
     btnHours.disabled = false;
     btnHours.textContent = '補營業時間';
   }
-};
+  };
+}
+bindHoursButton();
 
 function bootFoodMap(){
   if (foodBooted) return;
