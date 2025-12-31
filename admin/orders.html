@@ -9,90 +9,76 @@
 <link rel="canonical" href="https://shop.unalomecodes.com/admin/orders">
 <title>訂單管理（批次）｜unalomecodes</title>
 <style>
-  :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--brand:#eab308;}
-  html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1022,#0f172a);color:#e5e7eb;font-family:ui-sans-serif,system-ui,-apple-system;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
-  .wrap{max-width:1100px;margin:0 auto;padding:20px;}
+  :root{--bg:#f4f5f7;--card:#ffffff;--muted:#64748b;--brand:#f97316;--line:#e5e7eb;--text:#0f172a;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:"Space Grotesk",system-ui,-apple-system;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px;}
   .backLink{margin-bottom:10px;}
-  .backBtn{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:6px 12px;border-radius:999px;
-    background:#111827;border:1px solid #263046;color:#e5e7eb;
-    text-decoration:none;font-weight:700;font-size:13px;
-    transition:all .18s ease;
-  }
-  .backBtn:hover{border-color:#3b82f6;color:#3b82f6;}
-  h1{font-size:22px;margin:12px 0 16px 0;letter-spacing:.5px}
+  .backBtn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--text);text-decoration:none;font-weight:700;font-size:13px;transition:all .18s ease;}
+  .backBtn:hover{border-color:#fb923c;color:#ea580c;}
+  h1{font-size:22px;margin:12px 0 16px 0;letter-spacing:.2px}
   .tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px}
-  .tab-btn{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 12px;border-radius:999px;
-    background:#0f172a;border:1px solid #263046;color:#e5e7eb;
-    font-size:13px;font-weight:700;cursor:pointer;
-    transition:all .18s ease;
-  }
-  .tab-btn:hover{border-color:#3b82f6;color:#dbeafe}
-  .tab-btn.active{background:#eab308;color:#111827;border-color:#eab308;box-shadow:0 6px 16px rgba(234,179,8,.25)}
-  .tab-count{font-size:12px;background:#111827;border:1px solid #263046;border-radius:999px;padding:2px 7px;color:#94a3b8}
-  .tab-btn.active .tab-count{background:#111827;color:#fef08a;border-color:#111827}
+  .tab-btn{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;transition:all .18s ease;}
+  .tab-btn:hover{border-color:#fb923c;color:#ea580c;background:#fff7ed}
+  .tab-btn.active{background:#fff7ed;color:#ea580c;border-color:#fb923c;box-shadow:0 6px 16px rgba(251,146,60,.18)}
+  .tab-count{font-size:12px;background:#f8fafc;border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:#64748b}
+  .tab-btn.active .tab-count{background:#fff;color:#ea580c;border-color:#fb923c}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
-  .bar input,.bar select{background:#0f172a;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:8px 10px}
-  .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:14px 14px 8px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:8px 10px;border-bottom:1px dashed rgba(255,255,255,.06);vertical-align:top}
-  th{color:#94a3b8;font-weight:700;text-align:left;background:#0f172a;position:sticky;top:0}
-  tbody tr:hover{background:#0f172a}
-  .badge{display:inline-block;background:#0f172a;border:1px solid #263046;color:#eab308;border-radius:9999px;padding:2px 8px;font-size:12px}
-  .btn{display:inline-flex;align-items:center;gap:6px;background:#111827;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:6px 10px;cursor:pointer}
-  .btn:hover{border-color:#3b475f}
-  .btn.gold{background:#eab308;color:#111827;border-color:#eab308}
-  .btn.danger{border-color:#d33;color:#ffb0b0}
-  .muted{color:#94a3b8}
+  .bar input,.bar select{background:#fff;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 10px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(15,23,42,.08)}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+  th,td{padding:8px 10px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+  th{color:#64748b;font-weight:700;text-align:left;background:#f8fafc;position:sticky;top:0}
+  tbody tr:hover{background:#f8fafc}
+  .badge{display:inline-block;background:#fff7ed;border:1px solid #fed7aa;color:#ea580c;border-radius:9999px;padding:2px 8px;font-size:12px}
+  .btn{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:6px 10px;cursor:pointer}
+  .btn:hover{border-color:#cbd5f5}
+  .btn.gold{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border-color:#f97316}
+  .btn.danger{border-color:#fecaca;color:#dc2626;background:#fff5f5}
+  .muted{color:#64748b}
   .grid{display:grid;grid-template-columns:1fr;gap:10px}
   @media(min-width:900px){ .grid{grid-template-columns:1fr} }
-  .toast{position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,.85);color:#fff;padding:10px 12px;border-radius:10px;z-index:9999}
+  .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 12px;border-radius:10px;z-index:9999}
   .selbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px}
-  .selbar .count{color:#eab308}
+  .selbar .count{color:#ea580c}
   .checkbox{transform:scale(1.2)}
-  dialog.qna-dialog{border:none;border-radius:16px;padding:0;background:#0f172a;color:#e5e7eb;border:1px solid #1f2937;max-width:560px;width:95%}
-  .qna-head{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center}
+  dialog.qna-dialog{border:none;border-radius:16px;padding:0;background:#fff;color:var(--text);border:1px solid var(--line);max-width:560px;width:95%}
+  .qna-head{padding:16px 18px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
   .qna-body{padding:16px 18px;display:grid;gap:10px}
   .qna-list{max-height:320px;overflow:auto;display:grid;gap:8px}
-  .qna-item{border:1px solid #1f2937;border-radius:12px;padding:10px;background:#111827}
-  .qna-item.admin{border-color:#facc15;background:#1f1a0b}
-  .qna-meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#94a3b8;margin-bottom:6px}
-  .qna-text{white-space:pre-wrap;font-size:13px;color:#e5e7eb}
+  .qna-item{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+  .qna-item.admin{border-color:#f59e0b;background:#fff7ed}
+  .qna-meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#64748b;margin-bottom:6px}
+  .qna-text{white-space:pre-wrap;font-size:13px;color:var(--text)}
   .qna-actions{display:flex;gap:6px;margin-top:6px}
-  .qna-actions button{border:1px solid #334155;background:#0f172a;color:#e5e7eb;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer}
-  .qna-form textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid #334155;background:#0b1022;color:#e5e7eb;padding:8px}
+  .qna-actions button{border:1px solid #e2e8f0;background:#fff;color:var(--text);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer}
+  .qna-form textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:var(--text);padding:8px}
 
-  /* status badge colors */
-  .badge.status-paid{ border-color:#f59e0b; color:#f59e0b; background:rgba(245,158,11,.08) }
-  .badge.status-shipped{ border-color:#60a5fa; color:#60a5fa; background:rgba(96,165,250,.08) }
-  .badge.status-done{ border-color:#34d399; color:#34d399; background:rgba(52,211,153,.08) }
-  .badge.status-pending{ border-color:#94a3b8; color:#94a3b8; background:rgba(148,163,184,.08) }
-  .badge.status-cancel{ border-color:#f87171; color:#f87171; background:rgba(248,113,113,.08) }
-  .badge.status-fail{ border-color:#fb7185; color:#fb7185; background:rgba(251,113,133,.08) }
+  .badge.status-paid{ border-color:#f59e0b; color:#b45309; background:rgba(245,158,11,.12) }
+  .badge.status-shipped{ border-color:#60a5fa; color:#1d4ed8; background:rgba(96,165,250,.12) }
+  .badge.status-done{ border-color:#34d399; color:#047857; background:rgba(52,211,153,.12) }
+  .badge.status-pending{ border-color:#94a3b8; color:#475569; background:rgba(148,163,184,.12) }
+  .badge.status-cancel{ border-color:#f87171; color:#b91c1c; background:rgba(248,113,113,.12) }
+  .badge.status-fail{ border-color:#fb7185; color:#be123c; background:rgba(251,113,133,.12) }
 
-  /* login overlay */
-  #loginGate{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:100000}
-  #loginCard{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:24px;min-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  #loginGate{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;z-index:100000}
+  #loginCard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;min-width:280px;box-shadow:0 12px 30px rgba(15,23,42,.18)}
   #loginCard h2{margin:0 0 10px 0;font-size:18px}
-  #loginCard input{width:100%;background:#0f172a;border:1px solid #263046;color:#e5e7eb;border-radius:10px;padding:8px 10px;margin-top:8px}
-  #loginCard .hint{color:#94a3b8;font-size:12px;margin-top:6px}
+  #loginCard input{width:100%;background:#fff;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 10px;margin-top:8px}
+  #loginCard .hint{color:#64748b;font-size:12px;margin-top:6px}
   #loginCard .row{display:flex;gap:8px;margin-top:12px}
   #loginCard .row .btn{flex:1}
   tr.mail-ok td:nth-child(7)::after{
     content:'（已寄信）';
     margin-left:6px;
     font-size:12px;
-    color:#60a5fa;
+    color:#1d4ed8;
     font-weight:600;
   }
   tr.mail-fail td:nth-child(7)::after{
     content:'（尚未寄信）';
     margin-left:6px;
     font-size:12px;
-    color:#fbbf24;
+    color:#f59e0b;
   }
   html.admin-guard-hide{visibility:hidden;}
 </style>

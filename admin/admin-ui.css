@@ -117,6 +117,9 @@
   font-family:"Space Grotesk", "Segoe UI", system-ui, sans-serif;
 }
 
+.admin-shell-applied .backLink{display:none;}
+.admin-shell-applied .wrap > h1{margin-top:0;}
+
 .admin-topbar{
   display:flex;
   align-items:center;
