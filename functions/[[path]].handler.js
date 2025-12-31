@@ -30,6 +30,9 @@ const jsonHeaders = {
   'Cache-Control': 'no-store'
 };
 
+const FOODS_LIST_TTL = 60 * 1000;
+const FOODS_LIST_CACHE = { ts: 0, items: null };
+
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
 const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
@@ -1036,18 +1039,32 @@ async function deleteFood(env, id){
   await env.FOODS.delete(foodKey(id));
   return true;
 }
-async function listFoods(env, limit){
+async function listFoods(env, limit, opts = {}){
   const out = [];
   if (!env.FOODS || !env.FOODS.list) return out;
+  const useCache = opts.cache !== false;
+  const now = Date.now();
+  if (useCache && FOODS_LIST_CACHE.items && (now - FOODS_LIST_CACHE.ts) < FOODS_LIST_TTL){
+    const cached = FOODS_LIST_CACHE.items;
+    return cached.slice(0, limit || cached.length);
+  }
   const iter = await env.FOODS.list({ prefix:'FOOD:' });
   const keys = Array.isArray(iter.keys) ? iter.keys.slice(0, limit||200) : [];
-  for (const k of keys){
-    const raw = await env.FOODS.get(k.name);
-    if (!raw) continue;
-    try{
-      const obj = JSON.parse(raw);
-      if (obj && obj.id) out.push(obj);
-    }catch(_){}
+  const chunkSize = 30;
+  for (let i = 0; i < keys.length; i += chunkSize){
+    const chunk = keys.slice(i, i + chunkSize);
+    const raws = await Promise.all(chunk.map(k=> env.FOODS.get(k.name)));
+    raws.forEach((raw)=>{
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        if (obj && obj.id) out.push(obj);
+      }catch(_){}
+    });
+  }
+  if (useCache){
+    FOODS_LIST_CACHE.items = out;
+    FOODS_LIST_CACHE.ts = now;
   }
   return out;
 }
@@ -3845,8 +3862,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/foods') {
     if (request.method === 'GET'){
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
-      const items = await listFoods(env, 300);
-      return json({ ok:true, items });
+      const items = await listFoods(env, 300, { cache: true });
+      return jsonWithHeaders({ ok:true, items }, 200, {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
+      });
     }
     if (request.method === 'DELETE'){
       {
@@ -8690,6 +8709,13 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8" }
+  });
+}
+
+function jsonWithHeaders(data, status = 200, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: Object.assign({ "Content-Type": "application/json; charset=utf-8" }, headers)
   });
 }
 
