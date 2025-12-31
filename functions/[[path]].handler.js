@@ -703,6 +703,139 @@ function extractPlaceNameFromMapsUrl(raw){
   }catch(_){}
   return '';
 }
+function parseHmToMinutes(hm){
+  const m = String(hm || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+  if (h < 0 || h > 47 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+function parseTimeToken(raw){
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  const m = text.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!m) return null;
+  let h = Number(m[1]);
+  let min = Number(m[2] || '0');
+  const ap = (m[3] || '').toUpperCase();
+  if (ap === 'PM' && h < 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  if (h < 0 || h > 47 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+function formatMinutes(mins){
+  if (!Number.isFinite(mins)) return '';
+  const norm = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(norm / 60);
+  const m = Math.floor(norm % 60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function buildRangeFromMinutes(minOpen, maxClose){
+  if (!Number.isFinite(minOpen) || !Number.isFinite(maxClose)) return '';
+  const openText = formatMinutes(minOpen);
+  const closeText = formatMinutes(maxClose);
+  return `${openText}-${closeText}`;
+}
+function deriveHoursFromPeriods(periods){
+  if (!Array.isArray(periods) || !periods.length) return '';
+  let minOpen = null;
+  let maxClose = null;
+  for (const p of periods){
+    if (!p || !p.open || !p.open.time) continue;
+    const openMin = parseHmToMinutes(`${String(p.open.time).slice(0,2)}:${String(p.open.time).slice(2)}`);
+    if (!Number.isFinite(openMin)) continue;
+    let closeMin = null;
+    if (p.close && p.close.time){
+      closeMin = parseHmToMinutes(`${String(p.close.time).slice(0,2)}:${String(p.close.time).slice(2)}`);
+    }
+    if (!Number.isFinite(closeMin)){
+      minOpen = 0;
+      maxClose = 1440;
+      break;
+    }
+    let daySpan = 0;
+    if (Number.isFinite(p.open.day) && Number.isFinite(p.close.day)){
+      daySpan = p.close.day - p.open.day;
+      if (daySpan < 0) daySpan += 7;
+    }
+    const closeAdj = closeMin + daySpan * 1440;
+    minOpen = (minOpen === null) ? openMin : Math.min(minOpen, openMin);
+    maxClose = (maxClose === null) ? closeAdj : Math.max(maxClose, closeAdj);
+  }
+  if (minOpen === null || maxClose === null) return '';
+  return buildRangeFromMinutes(minOpen, maxClose);
+}
+function deriveHoursFromWeekdayText(list){
+  if (!Array.isArray(list) || !list.length) return '';
+  let minOpen = null;
+  let maxClose = null;
+  for (const row of list){
+    const text = String(row || '');
+    if (/24\s*hours|24\s*小時|24小時/i.test(text)){
+      minOpen = 0;
+      maxClose = 1440;
+      break;
+    }
+    const parts = text.split(/–|-|—/).map(s=>s.trim());
+    if (parts.length < 2) continue;
+    const left = parts[0].replace(/^.*?:/, '').trim();
+    const right = parts[1].trim();
+    const openMin = parseTimeToken(left);
+    const closeMin = parseTimeToken(right);
+    if (!Number.isFinite(openMin) || !Number.isFinite(closeMin)) continue;
+    minOpen = (minOpen === null) ? openMin : Math.min(minOpen, openMin);
+    maxClose = (maxClose === null) ? closeMin : Math.max(maxClose, closeMin);
+  }
+  if (minOpen === null || maxClose === null) return '';
+  return buildRangeFromMinutes(minOpen, maxClose);
+}
+function normalizeHoursFallback(text){
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  const m = raw.match(/(\d{1,2}:\d{2})/);
+  if (m && /開始|open/i.test(raw)){
+    return `${m[1]}-23:00`;
+  }
+  return raw;
+}
+function hasNormalizedHours(text){
+  return /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(String(text || ''));
+}
+async function fetchPlaceId(env, query){
+  const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
+  if (!key || !query) return '';
+  const endpoint = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id&key=${encodeURIComponent(key)}`;
+  const res = await fetch(endpoint);
+  if (!res.ok) return '';
+  const data = await res.json().catch(()=>null);
+  if (!data || data.status !== 'OK' || !Array.isArray(data.candidates) || !data.candidates.length) return '';
+  return data.candidates[0].place_id || '';
+}
+async function fetchPlaceDetails(env, placeId){
+  const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
+  if (!key || !placeId) return null;
+  const endpoint = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=opening_hours&key=${encodeURIComponent(key)}&language=en`;
+  const res = await fetch(endpoint);
+  if (!res.ok) return null;
+  const data = await res.json().catch(()=>null);
+  if (!data || data.status !== 'OK' || !data.result) return null;
+  return data.result.opening_hours || null;
+}
+async function resolveFoodHours(env, food){
+  const query = buildFoodGeocodeQuery(food, food.maps) || '';
+  if (!query) return '';
+  const placeId = await fetchPlaceId(env, query);
+  if (!placeId) return '';
+  const opening = await fetchPlaceDetails(env, placeId);
+  if (!opening) return '';
+  const fromPeriods = deriveHoursFromPeriods(opening.periods);
+  if (fromPeriods) return fromPeriods;
+  const fromText = deriveHoursFromWeekdayText(opening.weekday_text);
+  if (fromText) return fromText;
+  return '';
+}
 async function expandMapsShortUrl(raw){
   const url = String(raw || '').trim();
   if (!url) return '';
@@ -3797,6 +3930,54 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (coords){
         item.lat = coords.lat;
         item.lng = coords.lng;
+        item.updatedAt = new Date().toISOString();
+        await saveFood(env, item);
+        updated += 1;
+      }else{
+        failed += 1;
+      }
+    }
+    return json({ ok:true, checked, updated, failed, skipped, total: items.length });
+  }
+
+  if (pathname === '/api/foods/hours' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
+    if (!key) return json({ ok:false, error:'missing google maps key' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const ids = Array.isArray(body.ids) ? body.ids.map(v=>String(v||'').trim()).filter(Boolean) : [];
+    const limit = Math.max(1, Math.min(300, Number(body.limit || url.searchParams.get('limit') || 100) || 100));
+    const force = String(body.force || url.searchParams.get('force') || '').toLowerCase() === 'true';
+    let items = [];
+    if (ids.length){
+      for (const id of ids){
+        const item = await readFood(env, id);
+        if (item) items.push(item);
+      }
+    }else{
+      items = await listFoods(env, limit);
+    }
+    let updated = 0;
+    let checked = 0;
+    let failed = 0;
+    let skipped = 0;
+    for (const item of items){
+      checked += 1;
+      if (!force && hasNormalizedHours(item.hours)){
+        skipped += 1;
+        continue;
+      }
+      let hours = await resolveFoodHours(env, item);
+      if (!hours){
+        hours = normalizeHoursFallback(item.hours);
+      }
+      if (hours && String(hours || '').trim()){
+        item.hours = hours;
         item.updatedAt = new Date().toISOString();
         await saveFood(env, item);
         updated += 1;
