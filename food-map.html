@@ -2365,12 +2365,27 @@ if (btnAdd) btnAdd.onclick = ()=>{
   if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
 };
 
-checkAdmin().then(()=>{ render(); });
-initFilters();
-resetFilters();
-render();
-[kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', render));
-void loadGoogleMaps();
+function bootFoodMap(){
+  checkAdmin().then(()=>{ render(); });
+  initFilters();
+  resetFilters();
+  render();
+  [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', render));
+  void loadGoogleMaps();
+  loadRemote();
+  setTimeout(()=>{
+    if (cardsEl && !cardsEl.children.length && Array.isArray(BASE_DATA) && BASE_DATA.length){
+      DATA = BASE_DATA.slice();
+      initFilters();
+      render();
+    }
+  }, 800);
+}
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', bootFoodMap);
+}else{
+  bootFoodMap();
+}
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
@@ -2485,7 +2500,6 @@ async function loadRemote(){
   initFilters();
   render();
 }
-loadRemote();
 
 // Modal：店家資訊
 function openModal(id){
