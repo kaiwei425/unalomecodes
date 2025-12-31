@@ -1631,27 +1631,25 @@ let googleAutocomplete = null;
 let googleReady = false;
 let googleMapsKey = GOOGLE_MAPS_KEY;
 let foodBooted = false;
+let dataReady = false;
+let dataLoading = false;
 
 function safeRender(){
+  if (dataLoading && !dataReady){
+    showLoadingState();
+    return;
+  }
   try{
     render();
   }catch(err){
     if (!cardsEl) return;
-    const fallback = Array.isArray(BASE_DATA) ? BASE_DATA : [];
-    if (!fallback.length){
-      cardsEl.innerHTML = '<div class="empty-state"><h3>目前沒有餐廳資料</h3><p>請重新整理或稍後再試。</p></div>';
-      return;
-    }
-    cardsEl.innerHTML = fallback.map(item=>`
-      <article class="card">
-        <div class="cover"></div>
-        <div class="card-body">
-          <div class="card-title">${escapeHtml(item.name || '')}</div>
-          <div class="card-addr">${escapeHtml(item.address || '')}</div>
-        </div>
-      </article>
-    `).join('');
+    cardsEl.innerHTML = '<div class="empty-state"><h3>載入失敗</h3><p>請重新整理或稍後再試。</p></div>';
   }
+}
+
+function showLoadingState(){
+  if (!cardsEl) return;
+  cardsEl.innerHTML = '<div class="empty-state"><h3>載入中...</h3><p>正在抓取最新資料。</p></div>';
 }
 
 function updateMapPreview(coords, label){
@@ -2048,7 +2046,7 @@ function getNearbyFromCached(origin, limit=5){
   return ranked.slice(0, limit);
 }
 function getActiveItems(){
-  const source = Array.isArray(DATA) && DATA.length ? DATA : BASE_DATA;
+  const source = Array.isArray(DATA) ? DATA : [];
   return source.filter(item=>item && !item.deleted);
 }
 async function getNearbyRestaurants(origin, limit=5){
@@ -2148,9 +2146,6 @@ function render(){
     if (price && item.price !== price) return false;
     return true;
   });
-  if (!list.length && !hasFilters && BASE_DATA.length){
-    list = BASE_DATA.slice();
-  }
   if (sort){
     list = list.slice().sort((a,b)=>{
       if (sort === 'name_asc'){
@@ -2600,20 +2595,15 @@ bindHoursButton();
 function bootFoodMap(){
   if (foodBooted) return;
   foodBooted = true;
+  dataLoading = true;
+  dataReady = false;
+  showLoadingState();
   checkAdmin().then(()=>{ safeRender(); });
   initFilters();
   resetFilters();
-  safeRender();
   [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', safeRender));
   void loadGoogleMaps();
   loadRemote();
-  setTimeout(()=>{
-    if (cardsEl && !cardsEl.children.length && Array.isArray(BASE_DATA) && BASE_DATA.length){
-      DATA = BASE_DATA.slice();
-      initFilters();
-      safeRender();
-    }
-  }, 800);
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
 window.addEventListener('load', bootFoodMap);
@@ -2697,45 +2687,17 @@ if (nearbySearch){
 
 // 讀取遠端資料與收藏
 async function loadRemote(){
+  dataLoading = true;
+  if (!dataReady) showLoadingState();
   try{
     const res = await fetch('/api/foods',{cache:'no-store'});
     const data = await res.json().catch(()=>({}));
     if (res.ok && Array.isArray(data.items)){
-      if (data.items.length){
-        const map = new Map();
-        BASE_DATA.forEach(item=>{
-          if (item && item.id) map.set(item.id, item);
-        });
-        const extra = [];
-        data.items.forEach((item)=>{
-          if (item && item.id){
-            if (item.deleted) {
-              map.delete(item.id);
-              return;
-            }
-            const base = map.get(item.id) || {};
-            const merged = { ...base, ...item };
-            const fillMissing = (key)=>{
-              const val = merged[key];
-              if (val === undefined || val === null) merged[key] = base[key];
-              else if (typeof val === 'string' && !val.trim()) merged[key] = base[key];
-              else if (Array.isArray(val) && !val.length) merged[key] = base[key];
-            };
-            ['hours','ig','youtube','cover','coverPos','intro','address','maps','category','area','price','igComment'].forEach(fillMissing);
-            map.set(item.id, merged);
-          }else if (item && !item.deleted){
-            extra.push(item);
-          }
-        });
-        DATA = [...map.values(), ...extra].filter(it=>it && !it.deleted);
-      }else{
-        DATA = BASE_DATA.slice();
-      }
+      DATA = data.items.filter(it=>it && !it.deleted);
     }
   }catch(_){}
-  if (!DATA.length){
-    DATA = BASE_DATA.slice();
-  }
+  dataReady = true;
+  dataLoading = false;
   await refreshFavorites();
   initFilters();
   safeRender();
