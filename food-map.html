@@ -166,7 +166,7 @@
           </div>
         </div>
         <div class="top-actions">
-          <button class="btn ghost pill" id="btnBack">← 返回上一頁</button>
+          <button class="btn ghost pill" id="btnBack">返回首頁</button>
           <button class="btn ghost pill" id="btnFav">收藏清單</button>
           <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
         </div>
@@ -1620,6 +1620,7 @@ let googleGeocoder = null;
 let googleAutocomplete = null;
 let googleReady = false;
 let googleMapsKey = GOOGLE_MAPS_KEY;
+let foodBooted = false;
 
 function updateMapPreview(coords, label){
   if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return;
@@ -1674,8 +1675,12 @@ async function getGoogleMapsKey(){
   return '';
 }
 async function loadGoogleMaps(){
+  if (nearbyMapEl) nearbyMapEl.textContent = '正在載入 Google Maps…';
   const key = await getGoogleMapsKey();
-  if (!key) return;
+  if (!key){
+    if (nearbyMapEl) nearbyMapEl.textContent = '尚未設定 Google Maps API Key';
+    return;
+  }
   if (window.google && window.google.maps){
     initGoogleMaps();
     return;
@@ -1685,6 +1690,9 @@ async function loadGoogleMaps(){
   script.id = 'googleMapsScript';
   script.async = true;
   script.defer = true;
+  script.onerror = () => {
+    if (nearbyMapEl) nearbyMapEl.textContent = 'Google Maps 載入失敗';
+  };
   script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initGoogleMaps&language=${encodeURIComponent(GOOGLE_MAPS_LANG)}`;
   document.head.appendChild(script);
 }
@@ -2383,7 +2391,7 @@ function render(){
 // 按鈕事件
 [btnBack, btnFav, btnAdd].forEach(btn=>{
   if (!btn) return;
-  if (btn.id === 'btnBack') btn.onclick = ()=> history.back();
+  if (btn.id === 'btnBack') btn.onclick = ()=> { window.location.href = '/shop'; };
 });
 if (btnFav) btnFav.onclick = ()=> openFavList();
 if (btnAdd) btnAdd.onclick = ()=>{
@@ -2413,6 +2421,8 @@ if (btnAdd) btnAdd.onclick = ()=>{
 };
 
 function bootFoodMap(){
+  if (foodBooted) return;
+  foodBooted = true;
   checkAdmin().then(()=>{ render(); });
   initFilters();
   resetFilters();
@@ -2428,11 +2438,8 @@ function bootFoodMap(){
     }
   }, 800);
 }
-if (document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', bootFoodMap);
-}else{
-  bootFoodMap();
-}
+document.addEventListener('DOMContentLoaded', bootFoodMap);
+window.addEventListener('load', bootFoodMap);
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
