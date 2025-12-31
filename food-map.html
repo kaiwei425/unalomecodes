@@ -1614,6 +1614,9 @@ const nearbyMapEl = document.getElementById('nearbyMap');
 const totalCountEl = document.getElementById('totalCount');
 const categoryCountsEl = document.getElementById('categoryCounts');
 
+const GOOGLE_MAPS_KEY = '';
+const GOOGLE_MAPS_LANG = 'zh-TW';
+
 let googleMap = null;
 let googleMarker = null;
 let googleGeocoder = null;
@@ -1854,8 +1857,6 @@ function renderSummary(currentList){
 const GEO_CACHE_KEY = 'food_map_geo_cache_v1';
 const NEARBY_MAX_KM = 20;
 const NEARBY_LOOKUP_LIMIT = 10;
-const GOOGLE_MAPS_KEY = '';
-const GOOGLE_MAPS_LANG = 'zh-TW';
 const GEO_CACHE_TTL = 1000 * 60 * 60 * 24 * 45;
 const geoCache = (()=>{ try{ return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}') || {}; }catch(_){ return {}; } })();
 let geoSaveTimer = null;
