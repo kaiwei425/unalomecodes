@@ -1387,7 +1387,7 @@ const priceRank = (val)=>{
   if (val === '$$$') return 3;
   return 99;
 };
-const ALLOW_IG_COVER = true;
+const ALLOW_IG_COVER = false;
 const coverCache = new Map();
 const coverPending = new Set();
 let coverRefreshTimer = null;
@@ -2700,7 +2700,13 @@ async function loadRemote(){
             }
             const base = map.get(item.id) || {};
             const merged = { ...base, ...item };
-            if (!merged.hours && base.hours) merged.hours = base.hours;
+            const fillMissing = (key)=>{
+              const val = merged[key];
+              if (val === undefined || val === null) merged[key] = base[key];
+              else if (typeof val === 'string' && !val.trim()) merged[key] = base[key];
+              else if (Array.isArray(val) && !val.length) merged[key] = base[key];
+            };
+            ['hours','ig','youtube','cover','coverPos','intro','address','maps','category','area','price','igComment'].forEach(fillMissing);
             map.set(item.id, merged);
           }else if (item && !item.deleted){
             extra.push(item);
