@@ -3,9 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="泰國美食地圖與推薦清單，快速搜尋與收藏喜愛的泰國餐廳與小吃。">
+  <meta name="description" content="台灣人來泰國必用的美食入口：曼谷/清邁/華欣餐廳推薦、IG 影片、地圖導航、附近搜尋與收藏清單，一頁規劃今天吃什麼。">
   <link rel="canonical" href="https://shop.unalomecodes.com/food-map">
-  <title>泰國美食地圖｜unalomecodes</title>
+  <title>unalomecodes 泰國美食地圖｜台灣旅客泰國必吃推薦</title>
+  <link rel="icon" href="/img/logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="/img/logo.png">
+  <meta property="og:title" content="unalomecodes 泰國美食地圖｜台灣旅客泰國必吃推薦">
+  <meta property="og:description" content="台灣人來泰國必用的美食入口：曼谷/清邁/華欣餐廳推薦、IG 影片、地圖導航、附近搜尋與收藏清單，一頁規劃今天吃什麼。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shop.unalomecodes.com/food-map">
+  <meta property="og:image" content="https://shop.unalomecodes.com/img/logo.png">
+  <meta name="twitter:card" content="summary">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
     :root{
@@ -32,8 +40,10 @@
     .sub{margin:4px 0 0;font-size:13px;color:var(--muted);}
     .top-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;}
     .top-actions .btn{padding:6px 12px;font-size:12px;}
-    .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:12px;margin-top:10px;align-items:stretch;}
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:10px;align-items:stretch;}
+    .hero-left{display:grid;gap:12px;}
     .hero-panel{background:linear-gradient(135deg, rgba(255,90,60,.12), rgba(255,138,0,.08));border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:8px;}
+    .hero-right{background:#fff;border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:10px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
     .searchbox input{border:none;outline:none;font-size:13px;width:100%;font-family:inherit;background:transparent;}
     .search-icon{font-size:16px;color:var(--accent);}
@@ -153,37 +163,41 @@
         </div>
       </div>
       <div class="hero">
-        <div>
-          <h1>泰國美食地圖</h1>
-          <div class="sub">精選 IG 影音＋地圖導航，快速找到你要的餐廳</div>
+        <div class="hero-left">
+          <div>
+            <h1>泰國美食地圖</h1>
+            <div class="sub">精選 IG 影音＋地圖導航，快速找到你要的餐廳</div>
+          </div>
+          <div class="hero-panel">
+            <div class="searchbox">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
+            </div>
+            <div class="cat-tabs" id="catTabs"></div>
+            <div class="filter-row">
+              <select id="fCat" class="filter-select">
+                <option value="">全部分類</option>
+              </select>
+              <select id="fArea" class="filter-select">
+                <option value="">全部地區</option>
+              </select>
+              <select id="fPrice" class="filter-select">
+                <option value="">全部價位</option>
+                <option value="$">$（≤200）</option>
+                <option value="$$">$$（200-1000）</option>
+                <option value="$$$">$$$（1000+）</option>
+              </select>
+              <select id="fSort" class="filter-select">
+                <option value="">排序</option>
+                <option value="name_asc">店名 A→Z</option>
+                <option value="price_asc">價位 低→高</option>
+                <option value="price_desc">價位 高→低</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="hero-panel">
-          <div class="searchbox">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
-          </div>
-          <div class="cat-tabs" id="catTabs"></div>
-          <div class="filter-row">
-            <select id="fCat" class="filter-select">
-              <option value="">全部分類</option>
-            </select>
-            <select id="fArea" class="filter-select">
-              <option value="">全部地區</option>
-            </select>
-            <select id="fPrice" class="filter-select">
-              <option value="">全部價位</option>
-              <option value="$">$（≤200）</option>
-              <option value="$$">$$（200-1000）</option>
-              <option value="$$$">$$$（1000+）</option>
-            </select>
-            <select id="fSort" class="filter-select">
-              <option value="">排序</option>
-              <option value="name_asc">店名 A→Z</option>
-              <option value="price_asc">價位 低→高</option>
-              <option value="price_desc">價位 高→低</option>
-            </select>
-          </div>
-          <div class="nearby-panel">
+        <div class="hero-right">
+          <div class="nearby-panel" style="border:none;padding:0;box-shadow:none;">
             <div class="nearby-head">
               <div class="nearby-title">📍 附近推薦</div>
               <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
@@ -1666,6 +1680,8 @@ function mapCategory(value){
 }
 
 const GEO_CACHE_KEY = 'food_map_geo_cache_v1';
+const NEARBY_MAX_KM = 20;
+const NEARBY_LOOKUP_LIMIT = 10;
 const GEO_CACHE_TTL = 1000 * 60 * 60 * 24 * 45;
 const geoCache = (()=>{ try{ return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}') || {}; }catch(_){ return {}; } })();
 let geoSaveTimer = null;
@@ -1746,9 +1762,12 @@ async function geocodeQuery(query){
   const key = q.toLowerCase();
   if (geoQueryCache.has(key)) return geoQueryCache.get(key);
   if (geoQueryPending.has(key)) return geoQueryPending.get(key);
-  const task = fetch(`/api/geo?q=${encodeURIComponent(q)}`, { cache:'no-store' })
+  const controller = new AbortController();
+  const timeout = setTimeout(()=> controller.abort(), 3500);
+  const task = fetch(`/api/geo?q=${encodeURIComponent(q)}`, { cache:'no-store', signal: controller.signal })
     .then(res=>res.json().catch(()=>({ ok:false })))
     .then(data=>{
+      clearTimeout(timeout);
       if (data && data.ok && Number.isFinite(data.lat) && Number.isFinite(data.lng)){
         const coords = { lat: Number(data.lat), lng: Number(data.lng) };
         geoQueryCache.set(key, coords);
@@ -1794,6 +1813,25 @@ function formatDistance(km){
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(km < 10 ? 1 : 0)} km`;
 }
+function filterRankByDistance(origin, entries){
+  return entries
+    .map(entry=>({
+      item: entry.item,
+      distance: haversineKm(origin, entry.coords)
+    }))
+    .filter(entry=>Number.isFinite(entry.distance) && entry.distance <= NEARBY_MAX_KM)
+    .sort((a,b)=>a.distance - b.distance);
+}
+function getNearbyFromCached(origin, limit=5){
+  const items = getActiveItems();
+  const resolved = [];
+  items.forEach(item=>{
+    const coords = getCachedCoords(item);
+    if (coords) resolved.push({ item, coords });
+  });
+  const ranked = filterRankByDistance(origin, resolved);
+  return ranked.slice(0, limit);
+}
 function getActiveItems(){
   const source = Array.isArray(DATA) && DATA.length ? DATA : BASE_DATA;
   return source.filter(item=>item && !item.deleted);
@@ -1807,23 +1845,16 @@ async function getNearbyRestaurants(origin, limit=5){
     if (coords) resolved.push({ item, coords });
     else pending.push(item);
   });
-  let lookups = 0;
-  const maxLookup = 18;
-  for (const item of pending){
-    if (lookups >= maxLookup && resolved.length >= limit) break;
-    lookups += 1;
-    const coords = await resolveItemCoords(item);
-    if (coords) resolved.push({ item, coords });
-  }
-  const ranked = resolved
-    .map(entry=>({
-      item: entry.item,
-      distance: haversineKm(origin, entry.coords)
-    }))
-    .filter(entry=>Number.isFinite(entry.distance))
-    .sort((a,b)=>a.distance - b.distance)
-    .slice(0, limit);
-  return ranked;
+  let ranked = filterRankByDistance(origin, resolved);
+  if (ranked.length >= limit || !pending.length) return ranked.slice(0, limit);
+
+  const batch = pending.slice(0, NEARBY_LOOKUP_LIMIT);
+  const coordsList = await Promise.all(batch.map(item=> resolveItemCoords(item)));
+  coordsList.forEach((coords, idx)=>{
+    if (coords) resolved.push({ item: batch[idx], coords });
+  });
+  ranked = filterRankByDistance(origin, resolved);
+  return ranked.slice(0, limit);
 }
 function renderNearbyList(list, label){
   if (!nearbyList) return;
@@ -1856,7 +1887,7 @@ function renderNearbyList(list, label){
     });
   });
   if (nearbyStatus && label){
-    nearbyStatus.textContent = `已找到靠近「${label}」的 ${list.length} 間店家`;
+    nearbyStatus.textContent = `已找到 ${NEARBY_MAX_KM}km 內靠近「${label}」的 ${list.length} 間店家`;
   }
 }
 
@@ -2248,13 +2279,18 @@ render();
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
-  if (nearbyStatus) nearbyStatus.textContent = '正在整理附近餐廳…';
+  if (nearbyStatus) nearbyStatus.textContent = `正在整理 ${NEARBY_MAX_KM}km 內的附近餐廳…`;
   if (nearbyList) nearbyList.innerHTML = '';
+  const cachedList = getNearbyFromCached(origin, 5);
+  if (cachedList.length){
+    renderNearbyList(cachedList, label || '目前位置');
+    if (nearbyStatus) nearbyStatus.textContent = `先顯示 ${cachedList.length} 間，正在補充附近餐廳…`;
+  }
   try{
     const list = await getNearbyRestaurants(origin, 5);
     renderNearbyList(list, label || '目前位置');
     if (!list.length && nearbyStatus){
-      nearbyStatus.textContent = '附近暫時沒有可用的店家資料';
+      nearbyStatus.textContent = `附近 ${NEARBY_MAX_KM}km 內沒有可用的店家資料`;
     }
   }catch(_){
     if (nearbyStatus) nearbyStatus.textContent = '附近搜尋失敗，請稍後再試';
