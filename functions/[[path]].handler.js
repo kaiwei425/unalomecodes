@@ -652,6 +652,150 @@ function makeCouponCode(deity){
 
 // Foods helpers (for food map)
 function foodKey(id){ return `FOOD:${id}`; }
+function parseLatLngPair(lat, lng){
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return null;
+  if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return null;
+  return { lat: latNum, lng: lngNum };
+}
+function extractLatLngFromText(text){
+  const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
+  return m ? parseLatLngPair(m[1], m[2]) : null;
+}
+function extractLatLngFromMapsUrl(raw){
+  const url = String(raw || '').trim();
+  if (!url) return null;
+  try{
+    const u = new URL(url);
+    const atMatch = u.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (atMatch) return parseLatLngPair(atMatch[1], atMatch[2]);
+    const q = u.searchParams.get('q') || u.searchParams.get('query') || u.searchParams.get('ll') || '';
+    const pair = extractLatLngFromText(q);
+    if (pair) return pair;
+    return null;
+  }catch(_){
+    return extractLatLngFromText(url);
+  }
+}
+function extractMapsQuery(raw){
+  const url = String(raw || '').trim();
+  if (!url) return '';
+  try{
+    const u = new URL(url);
+    return u.searchParams.get('q') || u.searchParams.get('query') || '';
+  }catch(_){
+    return '';
+  }
+}
+async function expandMapsShortUrl(raw){
+  const url = String(raw || '').trim();
+  if (!url) return '';
+  try{
+    const u = new URL(url);
+    const host = (u.hostname || '').toLowerCase();
+    const isShort = host === 'maps.app.goo.gl' || host === 'goo.gl' || host === 'g.page';
+    if (!isShort && !host.endsWith('goo.gl')) return '';
+    const res = await fetch(url, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; unalomecodes-food-map/1.0)'
+      }
+    });
+    return res && res.url ? res.url : '';
+  }catch(_){
+    return '';
+  }
+}
+async function readGeoCache(env, key){
+  const store = env.GEO_CACHE || env.GEOCODE_CACHE || null;
+  if (!store || !key || typeof store.get !== 'function') return null;
+  try{
+    const cached = await store.get(`GEO:${String(key).toLowerCase()}`);
+    if (!cached) return null;
+    const data = JSON.parse(cached);
+    if (data && Number.isFinite(data.lat) && Number.isFinite(data.lng)){
+      return { lat: Number(data.lat), lng: Number(data.lng) };
+    }
+  }catch(_){}
+  return null;
+}
+async function writeGeoCache(env, key, coords){
+  const store = env.GEO_CACHE || env.GEOCODE_CACHE || null;
+  if (!store || !key || !coords || typeof store.put !== 'function') return;
+  const payload = { lat: coords.lat, lng: coords.lng, display_name: coords.display_name || '' };
+  try{
+    await store.put(`GEO:${String(key).toLowerCase()}`, JSON.stringify(payload), { expirationTtl: 60 * 60 * 24 * 30 });
+  }catch(_){}
+}
+async function geocodeByGoogle(query, env){
+  const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
+  if (!key) return null;
+  const endpoint = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${encodeURIComponent(key)}&language=th`;
+  const res = await fetch(endpoint);
+  if (!res.ok) return null;
+  const data = await res.json().catch(()=>null);
+  if (!data || data.status !== 'OK' || !Array.isArray(data.results) || !data.results.length) return null;
+  const loc = data.results[0] && data.results[0].geometry && data.results[0].geometry.location;
+  if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) return null;
+  return { lat: Number(loc.lat), lng: Number(loc.lng), display_name: data.results[0].formatted_address || '' };
+}
+async function geocodeByNominatim(query, env){
+  const endpoint = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+  const ua = env.GEO_USER_AGENT || env.GEOCODE_USER_AGENT || 'unalomecodes-food-map/1.0 (contact: support@unalomecodes.com)';
+  const res = await fetch(endpoint, {
+    headers: {
+      'User-Agent': ua,
+      'Accept': 'application/json'
+    }
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(()=>null);
+  if (!Array.isArray(data) || !data.length) return null;
+  const first = data[0] || {};
+  const lat = Number(first.lat);
+  const lng = Number(first.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng, display_name: first.display_name || '' };
+}
+async function geocodeQueryForFood(env, query){
+  const cached = await readGeoCache(env, query);
+  if (cached) return cached;
+  let coords = await geocodeByGoogle(query, env);
+  if (!coords) coords = await geocodeByNominatim(query, env);
+  if (coords) await writeGeoCache(env, query, coords);
+  return coords;
+}
+function buildFoodGeocodeQuery(food, mapsUrl){
+  const fromMaps = extractMapsQuery(mapsUrl);
+  if (fromMaps) return fromMaps;
+  const address = String(food.address || '').trim();
+  if (address) return address;
+  const name = String(food.name || '').trim();
+  if (!name) return '';
+  const area = String(food.area || '').trim();
+  const suffix = area ? ` ${area} Thailand` : ' Thailand';
+  return name + suffix;
+}
+async function resolveFoodCoords(env, food){
+  if (!food) return null;
+  const own = parseLatLngPair(food.lat, food.lng);
+  if (own) return own;
+  let mapsUrl = String(food.maps || '').trim();
+  let coords = extractLatLngFromMapsUrl(mapsUrl);
+  if (coords) return coords;
+  if (mapsUrl){
+    const expanded = await expandMapsShortUrl(mapsUrl);
+    if (expanded){
+      coords = extractLatLngFromMapsUrl(expanded);
+      if (coords) return coords;
+      mapsUrl = expanded;
+    }
+  }
+  const query = buildFoodGeocodeQuery(food, mapsUrl);
+  if (!query) return null;
+  return await geocodeQueryForFood(env, query);
+}
 async function readFood(env, id){
   if (!env.FOODS) return null;
   try{
@@ -663,6 +807,73 @@ async function saveFood(env, obj){
   if (!env.FOODS || !obj || !obj.id) return null;
   await env.FOODS.put(foodKey(obj.id), JSON.stringify(obj));
   return obj;
+}
+function normalizeFoodPayload(payload, fallbackId){
+  const body = payload || {};
+  const id = String(body.id || fallbackId || '').trim();
+  if (!id) return null;
+  return {
+    id,
+    name: String(body.name||'').trim(),
+    category: String(body.category||'').trim(),
+    area: String(body.area||'').trim(),
+    price: String(body.price||'').trim(),
+    address: String(body.address||'').trim(),
+    hours: String(body.hours||'').trim(),
+    maps: String(body.maps||'').trim(),
+    ig: String(body.ig||'').trim(),
+    youtube: String(body.youtube||'').trim(),
+    igComment: String(body.igComment||'').trim(),
+    cover: String(body.cover||'').trim(),
+    coverPos: String(body.coverPos || body.cover_pos || '').trim(),
+    intro: String(body.intro||'').trim(),
+    highlights: Array.isArray(body.highlights) ? body.highlights : [],
+    dishes: Array.isArray(body.dishes) ? body.dishes : [],
+    lat: body.lat,
+    lng: body.lng
+  };
+}
+function mergeFoodRecord(existing, incoming){
+  const out = Object.assign({}, existing || {});
+  if (!incoming) return out;
+  const assignIf = (key, val)=>{
+    if (val === undefined || val === null) return;
+    if (typeof val === 'string'){
+      const v = val.trim();
+      if (!v) return;
+      out[key] = v;
+      return;
+    }
+    if (Array.isArray(val)){
+      if (!val.length) return;
+      out[key] = val;
+      return;
+    }
+    out[key] = val;
+  };
+  assignIf('name', incoming.name);
+  assignIf('category', incoming.category);
+  assignIf('area', incoming.area);
+  assignIf('price', incoming.price);
+  assignIf('address', incoming.address);
+  assignIf('hours', incoming.hours);
+  assignIf('maps', incoming.maps);
+  assignIf('ig', incoming.ig);
+  assignIf('youtube', incoming.youtube);
+  assignIf('igComment', incoming.igComment);
+  assignIf('cover', incoming.cover);
+  assignIf('coverPos', incoming.coverPos);
+  assignIf('intro', incoming.intro);
+  assignIf('highlights', incoming.highlights);
+  assignIf('dishes', incoming.dishes);
+  const latPair = parseLatLngPair(incoming.lat, incoming.lng);
+  if (latPair){
+    out.lat = latPair.lat;
+    out.lng = latPair.lng;
+  }
+  out.id = incoming.id || out.id;
+  out.deleted = false;
+  return out;
 }
 async function deleteFood(env, id){
   if (!env.FOODS || !id) return false;
@@ -3507,29 +3718,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       try{
         const body = await request.json().catch(()=>({}));
-        const id = String(body.id || `food-${Date.now()}`).trim();
-        if (!id) return json({ ok:false, error:'missing id' }, 400);
         const now = new Date().toISOString();
-        const obj = {
-          id,
-          name: String(body.name||'').trim(),
-          category: String(body.category||'').trim(),
-          area: String(body.area||'').trim(),
-          price: String(body.price||'').trim(),
-          address: String(body.address||'').trim(),
-          hours: String(body.hours||'').trim(),
-          maps: String(body.maps||'').trim(),
-          ig: String(body.ig||'').trim(),
-          youtube: String(body.youtube||'').trim(),
-          igComment: String(body.igComment||'').trim(),
-          cover: String(body.cover||'').trim(),
-          coverPos: String(body.coverPos || body.cover_pos || '').trim(),
-          intro: String(body.intro||'').trim(),
-          deleted: false,
-          highlights: Array.isArray(body.highlights) ? body.highlights : [],
-          dishes: Array.isArray(body.dishes) ? body.dishes : [],
-          updatedAt: now
-        };
+        const incoming = normalizeFoodPayload(body, `food-${Date.now()}`);
+        if (!incoming) return json({ ok:false, error:'missing id' }, 400);
+        const existing = await readFood(env, incoming.id);
+        const obj = mergeFoodRecord(existing, incoming);
+        obj.updatedAt = now;
+        if (!parseLatLngPair(obj.lat, obj.lng)){
+          const coords = await resolveFoodCoords(env, obj);
+          if (coords){
+            obj.lat = coords.lat;
+            obj.lng = coords.lng;
+          }
+        }
         await saveFood(env, obj);
         return json({ ok:true, item: obj });
       }catch(e){
@@ -3537,6 +3738,73 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }
     }
     return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/foods/geocode' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit') || 300) || 300));
+    const force = String(url.searchParams.get('force') || '').toLowerCase() === 'true';
+    const items = await listFoods(env, limit);
+    let updated = 0;
+    let checked = 0;
+    let failed = 0;
+    for (const item of items){
+      checked += 1;
+      if (!force && parseLatLngPair(item.lat, item.lng)) continue;
+      const coords = await resolveFoodCoords(env, item);
+      if (coords){
+        item.lat = coords.lat;
+        item.lng = coords.lng;
+        item.updatedAt = new Date().toISOString();
+        await saveFood(env, item);
+        updated += 1;
+      }else{
+        failed += 1;
+      }
+    }
+    return json({ ok:true, checked, updated, failed });
+  }
+
+  if (pathname === '/api/foods/sync' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (!items.length) return json({ ok:false, error:'missing items' }, 400);
+    const limit = Math.min(items.length, 1000);
+    let saved = 0;
+    let updated = 0;
+    let failed = 0;
+    for (const raw of items.slice(0, limit)){
+      try{
+        const incoming = normalizeFoodPayload(raw);
+        if (!incoming || !incoming.id){ failed += 1; continue; }
+        const existing = await readFood(env, incoming.id);
+        const obj = mergeFoodRecord(existing, incoming);
+        if (!parseLatLngPair(obj.lat, obj.lng)){
+          const coords = await resolveFoodCoords(env, obj);
+          if (coords){
+            obj.lat = coords.lat;
+            obj.lng = coords.lng;
+          }
+        }
+        obj.updatedAt = new Date().toISOString();
+        await saveFood(env, obj);
+        if (existing) updated += 1;
+        else saved += 1;
+      }catch(_){
+        failed += 1;
+      }
+    }
+    return json({ ok:true, saved, updated, failed, total: limit });
   }
 
   if (pathname === '/api/me/orders' && request.method === 'GET') {
