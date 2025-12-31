@@ -29,7 +29,7 @@
     }
     *{box-sizing:border-box;}
     body{margin:0;background:var(--bg);font-family:'Sora','Segoe UI',system-ui,-apple-system,sans-serif;color:var(--text);line-height:1.6;}
-    header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 10px 22px rgba(15,23,42,.08);}
+    header{position:static;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 10px 22px rgba(15,23,42,.08);}
     .wrap{max-width:1120px;margin:0 auto;padding:16px;}
     .topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .brand{display:flex;align-items:center;gap:12px;}
@@ -46,7 +46,7 @@
     .title-ig{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 8px 16px rgba(15,23,42,.08);text-decoration:none;}
     .title-ig img{width:16px;height:16px;display:block;}
     .hero-panel{background:linear-gradient(135deg, rgba(255,90,60,.12), rgba(255,138,0,.08));border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:8px;}
-    .hero-right{background:#fff;border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:10px;box-shadow:0 10px 22px rgba(15,23,42,.06);max-height:min(70vh,640px);overflow:hidden;}
+    .hero-right{background:#fff;border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:10px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
     .searchbox input{border:none;outline:none;font-size:13px;width:100%;font-family:inherit;background:transparent;}
     .search-icon{font-size:16px;color:var(--accent);}
@@ -55,14 +55,14 @@
     .cat-tabs{display:flex;gap:6px;flex-wrap:nowrap;margin:4px 0 2px;overflow-x:auto;padding-bottom:2px;}
     .cat-tab{border:1px solid #ffd7c7;background:#fff;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
     .cat-tab.active{background:#ffedd5;border-color:#fb923c;color:#ea580c;}
-    .nearby-panel{background:#fff;border:1px dashed rgba(255,90,60,.25);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 20px rgba(15,23,42,.05);height:100%;min-height:0;}
+    .nearby-panel{background:#fff;border:1px dashed rgba(255,90,60,.25);border-radius:14px;padding:10px;display:grid;gap:8px;box-shadow:0 10px 20px rgba(15,23,42,.05);}
     .nearby-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
     .nearby-title{font-size:12px;font-weight:800;color:#0f172a;}
     .nearby-input{display:grid;grid-template-columns:1fr auto;gap:8px;}
     .nearby-input input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;font-family:inherit;background:#fff;}
     .nearby-status{font-size:11px;color:var(--muted);}
-    .nearby-list{display:grid;gap:8px;overflow-y:auto;min-height:0;padding-right:4px;flex:1 1 auto;}
-    .nearby-map{height:180px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;text-align:center;padding:8px;flex:0 0 180px;}
+    .nearby-list{display:grid;gap:8px;}
+    .nearby-map{height:180px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;text-align:center;padding:8px;}
     .nearby-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;}
     .nearby-name{font-size:13px;font-weight:700;color:#0f172a;}
     .nearby-meta{font-size:11px;color:#64748b;}
@@ -138,8 +138,6 @@
     .count-pill{font-size:12px;color:#475569;border:1px solid #e2e8f0;border-radius:999px;padding:4px 10px;background:#fff;}
     @media(max-width:900px){
       .hero{grid-template-columns:1fr;}
-      .hero-right{max-height:none;overflow:visible;}
-      .nearby-list{overflow:visible;padding-right:0;}
       .filter-row{grid-template-columns:repeat(2,minmax(0,1fr));}
     }
     @media(max-width:720px){
@@ -2041,13 +2039,25 @@ async function getNearbyRestaurants(origin, limit=5){
   }
   return ranked.slice(0, limit);
 }
-function renderNearbyList(list, label){
-  if (!nearbyList) return;
-  if (!list.length){
+function renderNearbyList(list){
+  if (!nearbyList) return 0;
+  const source = Array.isArray(list) ? list.filter(entry=> entry && entry.item) : [];
+  const deduped = [];
+  const seen = new Set();
+  source.forEach((entry)=>{
+    const item = entry.item;
+    const key = item && (item.id || item.name);
+    if (key){
+      if (seen.has(key)) return;
+      seen.add(key);
+    }
+    deduped.push(entry);
+  });
+  if (!deduped.length){
     nearbyList.innerHTML = '<div class="nearby-empty">附近沒有可用的推薦店家</div>';
-    return;
+    return 0;
   }
-  nearbyList.innerHTML = list.map(entry=>{
+  nearbyList.innerHTML = deduped.map(entry=>{
     const item = entry.item;
     const mapsUrl = safeUrl(item.maps);
     const displayCat = mapCategory(item.category) || item.category || '';
@@ -2071,9 +2081,7 @@ function renderNearbyList(list, label){
       if (id) openModal(id);
     });
   });
-  if (nearbyStatus && label){
-    nearbyStatus.textContent = `已找到 ${NEARBY_MAX_KM}km 內靠近「${label}」的 ${list.length} 間店家`;
-  }
+  return deduped.length;
 }
 
 function render(){
@@ -2485,14 +2493,16 @@ async function runNearby(origin, label){
   if (nearbyList) nearbyList.innerHTML = '';
   const cachedList = getNearbyFromCached(origin, 5);
   if (cachedList.length){
-    renderNearbyList(cachedList, label || '目前位置');
-    if (nearbyStatus) nearbyStatus.textContent = `先顯示 ${cachedList.length} 間，正在補充附近餐廳…`;
+    const shown = renderNearbyList(cachedList);
+    if (nearbyStatus) nearbyStatus.textContent = `先顯示 ${shown} 間，正在補充附近餐廳…`;
   }
   try{
     const list = await getNearbyRestaurants(origin, 5);
-    renderNearbyList(list, label || '目前位置');
-    if (!list.length && nearbyStatus){
+    const shown = renderNearbyList(list);
+    if (!shown && nearbyStatus){
       nearbyStatus.textContent = `附近 ${NEARBY_MAX_KM}km 內沒有可用的店家資料`;
+    }else if (nearbyStatus && label){
+      nearbyStatus.textContent = `已找到 ${NEARBY_MAX_KM}km 內靠近「${label}」的 ${shown} 間店家`;
     }
   }catch(_){
     if (nearbyStatus) nearbyStatus.textContent = '附近搜尋失敗，請稍後再試';
