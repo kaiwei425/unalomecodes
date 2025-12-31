@@ -31,6 +31,8 @@ const jsonHeaders = {
 };
 
 const FOODS_LIST_TTL = 60 * 1000;
+const FOODS_LIST_KV_TTL = 60 * 10;
+const FOODS_LIST_KEY = 'FOODS:LIST';
 const FOODS_LIST_CACHE = { ts: 0, items: null };
 
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
@@ -1038,6 +1040,59 @@ async function deleteFood(env, id){
   if (!env.FOODS || !id) return false;
   await env.FOODS.delete(foodKey(id));
   return true;
+}
+function resetFoodsListMemoryCache(){
+  FOODS_LIST_CACHE.ts = 0;
+  FOODS_LIST_CACHE.items = null;
+}
+async function readFoodsListCacheRaw(env){
+  if (!env.FOODS || !env.FOODS.get) return null;
+  try{
+    const raw = await env.FOODS.get(FOODS_LIST_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.items)) return null;
+    return data.items;
+  }catch(_){
+    return null;
+  }
+}
+async function readFoodsListCache(env){
+  if (!env.FOODS || !env.FOODS.get) return null;
+  try{
+    const raw = await env.FOODS.get(FOODS_LIST_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.items)) return null;
+    const ts = Number(data.ts || 0);
+    if (!ts) return null;
+    if ((Date.now() - ts) > FOODS_LIST_KV_TTL * 1000) return null;
+    return data.items;
+  }catch(_){
+    return null;
+  }
+}
+async function writeFoodsListCache(env, items){
+  if (!env.FOODS || !env.FOODS.put) return;
+  if (!Array.isArray(items)) return;
+  try{
+    await env.FOODS.put(FOODS_LIST_KEY, JSON.stringify({
+      ts: Date.now(),
+      items
+    }));
+  }catch(_){}
+}
+async function deleteFoodsListCache(env){
+  if (!env.FOODS || !env.FOODS.delete) return;
+  try{ await env.FOODS.delete(FOODS_LIST_KEY); }catch(_){}
+}
+async function upsertFoodsListCache(env, item){
+  if (!item || !item.id) return;
+  const items = await readFoodsListCacheRaw(env);
+  if (!items) return;
+  const next = items.filter(it=> it && it.id && it.id !== item.id);
+  if (!item.deleted) next.push(item);
+  await writeFoodsListCache(env, next);
 }
 async function listFoods(env, limit, opts = {}){
   const out = [];
@@ -3862,7 +3917,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/foods') {
     if (request.method === 'GET'){
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+      const cached = await readFoodsListCache(env);
+      if (cached){
+        return jsonWithHeaders({ ok:true, items: cached }, 200, {
+          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
+        });
+      }
       const items = await listFoods(env, 300, { cache: true });
+      await writeFoodsListCache(env, items);
       return jsonWithHeaders({ ok:true, items }, 200, {
         'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
       });
@@ -3883,6 +3945,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (!id) return json({ ok:false, error:'missing id' }, 400);
       const now = new Date().toISOString();
       await saveFood(env, { id, deleted:true, updatedAt: now });
+      resetFoodsListMemoryCache();
+      await upsertFoodsListCache(env, { id, deleted:true });
       return json({ ok:true, id, deleted:true });
     }
     if (request.method === 'POST'){
@@ -3907,6 +3971,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           }
         }
         await saveFood(env, obj);
+        resetFoodsListMemoryCache();
+        await upsertFoodsListCache(env, obj);
         return json({ ok:true, item: obj });
       }catch(e){
         return json({ ok:false, error:String(e) }, 400);
@@ -3933,7 +3999,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (item) items.push(item);
       }
     }else{
-      items = await listFoods(env, limit);
+      items = await listFoods(env, limit, { cache: false });
     }
     let updated = 0;
     let checked = 0;
@@ -3955,6 +4021,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }else{
         failed += 1;
       }
+    }
+    if (updated){
+      resetFoodsListMemoryCache();
+      await deleteFoodsListCache(env);
     }
     return json({ ok:true, checked, updated, failed, skipped, total: items.length });
   }
@@ -3979,7 +4049,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (item) items.push(item);
       }
     }else{
-      items = await listFoods(env, limit);
+      items = await listFoods(env, limit, { cache: false });
     }
     let updated = 0;
     let checked = 0;
@@ -4003,6 +4073,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }else{
         failed += 1;
       }
+    }
+    if (updated){
+      resetFoodsListMemoryCache();
+      await deleteFoodsListCache(env);
     }
     return json({ ok:true, checked, updated, failed, skipped, total: items.length });
   }
@@ -4042,6 +4116,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }catch(_){
         failed += 1;
       }
+    }
+    if (saved || updated){
+      resetFoodsListMemoryCache();
+      await deleteFoodsListCache(env);
     }
     return json({ ok:true, saved, updated, failed, total: limit, geocode });
   }
