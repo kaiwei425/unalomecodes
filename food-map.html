@@ -171,6 +171,7 @@
           <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
           <button class="btn ghost pill" id="btnGeo" style="display:none;">補定位</button>
           <button class="btn ghost pill" id="btnSync" style="display:none;">同步資料庫</button>
+          <button class="btn ghost pill" id="btnGeoList" style="display:none;">缺定位清單</button>
         </div>
       </div>
       <div class="hero">
@@ -1609,6 +1610,7 @@ const btnFav = document.getElementById('btnFav');
 const btnAdd = document.getElementById('btnAdd');
 const btnGeo = document.getElementById('btnGeo');
 const btnSync = document.getElementById('btnSync');
+const btnGeoList = document.getElementById('btnGeoList');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
 const nearbyInput = document.getElementById('nearbyInput');
@@ -1769,6 +1771,7 @@ async function checkAdmin(){
   if (btnAdd) btnAdd.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnGeo) btnGeo.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnSync) btnSync.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (btnGeoList) btnGeoList.style.display = isAdmin ? 'inline-flex' : 'none';
 }
 
 function initFilters(){
@@ -2515,6 +2518,7 @@ if (btnSync) btnSync.onclick = async ()=>{
     btnSync.textContent = '同步資料庫';
   }
 };
+if (btnGeoList) btnGeoList.onclick = ()=> openMissingGeoList();
 
 function bootFoodMap(){
   if (foodBooted) return;
@@ -2784,6 +2788,42 @@ function openFavList(){
   body.querySelectorAll('button[data-remove]').forEach(btn=>{
     btn.onclick = ()=> removeFav(btn.getAttribute('data-remove'));
   });
+}
+function openMissingGeoList(){
+  const dlg = document.getElementById('foodModal');
+  const body = document.getElementById('foodModalBody');
+  const list = (Array.isArray(DATA) ? DATA : []).filter(it=>{
+    if (!it || it.deleted) return false;
+    return !parseLatLngPair(it.lat, it.lng);
+  });
+  body.innerHTML = `
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:18px;font-weight:800;">缺定位清單</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+      </div>
+      ${!list.length ? '<div style="color:#94a3b8;">目前所有餐廳都有定位。</div>' : `
+        <div style="display:grid;gap:8px;">
+          ${list.map(it=>{
+            const mapsUrl = safeUrl(it.maps);
+            const cat = mapCategory(it.category) || it.category || '';
+            const area = it.area || '';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
+              <div>
+                <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
+                <div style="color:#64748b;font-size:12px;">${escapeHtml(cat)}｜${escapeHtml(area)}</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                ${mapsUrl ? `<a class="btn ghost" style="padding:6px 10px;font-size:12px;" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">地圖</a>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      `}
+    </div>
+  `;
+  dlg.showModal();
+  document.getElementById('foodClose').onclick = ()=> dlg.close();
 }
 async function removeFav(id){
   try{
