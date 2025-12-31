@@ -60,6 +60,9 @@
     .btn.ghost{background:#fff3ee;border-color:#ffd4c4;color:#d9480f;}
     .btn.pill{border-radius:999px;padding:8px 14px;font-size:12px;flex:0 0 auto;}
     .fav-btn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 12px rgba(15,23,42,.12);}
+    .edit-btn{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:0 10px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;color:#0f172a;box-shadow:0 6px 12px rgba(15,23,42,.08);}
+    .edit-btn:hover{border-color:#94a3b8;}
+    .card-head-actions{display:flex;align-items:center;gap:8px;}
     .pill-inline{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:10px;background:#f8fafc;border:1px solid var(--line);font-size:12px;}
     .tag-row{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;}
     .admin-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:grid;gap:10px;min-width:0;}
@@ -68,8 +71,9 @@
     .admin-grid label{display:grid;gap:6px;font-size:12px;color:var(--muted);min-width:0;}
     .admin-input{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;}
     .admin-textarea{min-height:90px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12px;font-family:inherit;resize:vertical;width:100%;box-sizing:border-box;}
-    .admin-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .admin-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
     .admin-hint{font-size:11px;color:#64748b;}
+    .admin-msg{font-size:12px;color:#0f766e;font-weight:700;min-height:16px;}
     .admin-upload{display:grid;gap:8px;width:100%;justify-items:start;}
     .admin-file{width:100%;font-size:12px;}
     .admin-preview{width:100%;max-width:220px;aspect-ratio:4/5;border-radius:12px;border:1px dashed var(--line);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;touch-action:none;cursor:grab;pointer-events:auto;}
@@ -96,6 +100,7 @@
     .empty-state{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:24px;text-align:center;color:var(--muted);box-shadow:var(--shadow);}
     .empty-state h3{margin:0 0 6px;font-size:18px;color:var(--text);}
     .empty-state p{margin:0 0 14px;font-size:13px;}
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#0f172a;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;display:none;z-index:999;box-shadow:0 12px 24px rgba(15,23,42,.25);}
     @media(max-width:900px){
       .hero{grid-template-columns:1fr;}
     }
@@ -121,7 +126,7 @@
         <div class="top-actions">
           <button class="btn ghost pill" id="btnBack">← 返回上一頁</button>
           <button class="btn ghost pill" id="btnFav">收藏清單</button>
-          <button class="btn ghost pill" id="btnAdmin">管理編輯</button>
+          <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
         </div>
       </div>
       <div class="hero">
@@ -167,6 +172,7 @@
   <dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
     <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
   </dialog>
+  <div class="toast" id="saveToast">已儲存</div>
 
 <script>
 const BASE_DATA = [
@@ -742,6 +748,15 @@ function buildIntroText(item){
   }
   return parts.join('。');
 }
+let toastTimer = null;
+function showToast(text){
+  const el = document.getElementById('saveToast');
+  if (!el) return;
+  el.textContent = text || '完成';
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.style.display = 'none'; }, 1600);
+}
 
 const nameCollator = (typeof Intl !== 'undefined' && Intl.Collator)
   ? new Intl.Collator('zh-Hant', { numeric:true, sensitivity:'base' })
@@ -969,12 +984,13 @@ const kwInput = document.getElementById('kw');
 const catTabs = document.getElementById('catTabs');
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
-const btnAdmin = document.getElementById('btnAdmin');
+const btnAdd = document.getElementById('btnAdd');
 
 let DATA = BASE_DATA.slice();
 let favs = [];
-let adminMode = false;
-const ADMIN_KEY = 'foodMapAdminMode';
+let isAdmin = false;
+let editingId = '';
+let newItem = null;
 
 function resetFilters(){
   if (kwInput) kwInput.value = '';
@@ -984,20 +1000,15 @@ function resetFilters(){
   if (fSort) fSort.value = '';
 }
 
-function getAdminMode(){
+async function checkAdmin(){
   try{
-    const params = new URLSearchParams(location.search);
-    if (params.get('admin') === '1') return true;
-    return localStorage.getItem(ADMIN_KEY) === '1';
+    const res = await fetch('/api/admin/status', { credentials:'include', cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    isAdmin = !!(data && data.admin);
   }catch(_){
-    return false;
+    isAdmin = false;
   }
-}
-function setAdminMode(next){
-  adminMode = !!next;
-  try{ localStorage.setItem(ADMIN_KEY, adminMode ? '1' : '0'); }catch(_){}
-  document.body.classList.toggle('admin-editing', adminMode);
-  if (btnAdmin) btnAdmin.textContent = adminMode ? '完成編輯' : '管理編輯';
+  if (btnAdd) btnAdd.style.display = isAdmin ? 'inline-flex' : 'none';
 }
 
 function initFilters(){
@@ -1108,7 +1119,9 @@ function render(){
       btn.classList.toggle('active', val === (fCat.value || ''));
     });
   }
-  if (!list.length){
+  const canEdit = isAdmin;
+  const renderList = (canEdit && newItem) ? [newItem, ...list] : list;
+  if (!renderList.length){
     cardsEl.innerHTML = `
       <div class="empty-state">
         <h3>目前沒有符合的店家</h3>
@@ -1122,15 +1135,17 @@ function render(){
     }
     return;
   }
-  cardsEl.innerHTML = list.map(item=>{
+  cardsEl.innerHTML = renderList.map(item=>{
     const displayCat = mapCategory(item.category) || item.category;
     const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
       .join('');
-    const liked = favs.includes(item.id);
+    const liked = item.id ? favs.includes(item.id) : false;
     const safeId = escapeHtml(item.id || '');
-    const safeName = escapeHtml(item.name || '');
+    const isNew = !!item.__tempId;
+    const editKey = item.__tempId || item.id || '';
+    const safeName = escapeHtml(item.name || (isNew ? '（新餐廳）' : ''));
     const coverUrl = safeUrl(item.cover);
     const coverPos = safeObjectPosition(item.coverPos || item.cover_pos);
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
@@ -1138,10 +1153,11 @@ function render(){
     const coverPreview = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}"${coverStyle}>` : '<div class="admin-preview-empty">尚未上傳</div>';
     const mapsUrl = safeUrl(item.maps);
     const introText = buildIntroText(item);
-    const adminPanel = adminMode ? `
+    const isEditing = canEdit && editingId === editKey;
+    const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
         <div class="admin-grid">
-          <label>店名<input class="admin-input" data-admin-field="name" value="${safeName}"></label>
+          <label>店名<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
           <label>分類<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>地區<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
           <label>價位<input class="admin-input" data-admin-field="price" value="${escapeHtml(item.price || '')}"></label>
@@ -1168,11 +1184,13 @@ function render(){
         </label>
         <div class="admin-actions">
           <button class="btn ghost" data-admin-save="${safeId}">儲存</button>
+          <button class="btn ghost" data-admin-cancel>取消</button>
+          <span class="admin-msg" data-admin-msg></span>
         </div>
         <div class="admin-hint">管理模式：儲存後會直接寫入資料庫。</div>
       </div>
     ` : '';
-    return `<article class="card" data-card-id="${String(item.id || '').replace(/"/g,'&quot;')}">
+    return `<article class="card" data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
       <div class="cover">${coverImg}</div>
       <div class="card-body">
         <div class="card-head">
@@ -1180,13 +1198,16 @@ function render(){
             <div class="card-title">${safeName}</div>
             <div class="card-sub">${escapeHtml(displayCat || '')} · ${escapeHtml(item.area || '')}${item.price ? ` · 價位 ${escapeHtml(item.price)}` : ''}</div>
           </div>
-          <button class="fav-btn" data-fav="${safeId}" title="收藏">${liked?'★':'☆'}</button>
+          <div class="card-head-actions">
+            ${canEdit ? `<button class="edit-btn" data-edit="${escapeHtml(editKey)}">編輯</button>` : ''}
+            ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="收藏">${liked?'★':'☆'}</button>` : ''}
+          </div>
         </div>
         <div class="card-tags">${tags}<span class="badge-hot">推薦</span></div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         <div class="card-actions">
-          <button class="btn primary" data-open="${safeId}">查看店家資訊</button>
-          <a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">地圖導航</a>
+          ${item.id ? `<button class="btn primary" data-open="${safeId}">查看店家資訊</button>` : '<span class="mini">新增完成後會顯示操作按鈕</span>'}
+          ${item.id ? `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">地圖導航</a>` : ''}
         </div>
         ${adminPanel}
       </div>
@@ -1224,7 +1245,16 @@ function render(){
       }
     };
   });
-  if (adminMode){
+  if (isAdmin){
+    cardsEl.querySelectorAll('button[data-edit]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const id = btn.getAttribute('data-edit') || '';
+        editingId = (editingId === id) ? '' : id;
+        render();
+        const card = cardsEl.querySelector(`[data-card-id="${escapeSelectorValue(id)}"]`);
+        if (card) card.scrollIntoView({ behavior:'smooth', block:'start' });
+      };
+    });
     cardsEl.querySelectorAll('[data-admin-save]').forEach(btn=>{
       btn.onclick = async ()=>{
         const wrap = btn.closest('[data-admin-id]');
@@ -1252,6 +1282,12 @@ function render(){
           highlights: introLines,
           dishes: []
         };
+        const msgEl = wrap.querySelector('[data-admin-msg]');
+        const setMsg = (text)=>{
+          if (!msgEl) return;
+          msgEl.textContent = text || '';
+          if (text) setTimeout(()=>{ if (msgEl) msgEl.textContent = ''; }, 2000);
+        };
         try{
           btn.disabled = true;
           const res = await fetch('/api/foods', {
@@ -1266,12 +1302,23 @@ function render(){
             return;
           }
           if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+          setMsg('已儲存');
+          showToast('已儲存');
+          editingId = '';
+          newItem = null;
           await loadRemote();
         }catch(err){
           alert('儲存失敗：' + (err.message||err));
         }finally{
           btn.disabled = false;
         }
+      };
+    });
+    cardsEl.querySelectorAll('[data-admin-cancel]').forEach(btn=>{
+      btn.onclick = ()=>{
+        editingId = '';
+        if (newItem) newItem = null;
+        render();
       };
     });
     cardsEl.querySelectorAll('[data-admin-file="cover"]').forEach(input=>{
@@ -1322,15 +1369,36 @@ function render(){
 }
 
 // 按鈕事件
-[btnBack, btnFav, btnAdmin].forEach(btn=>{
+[btnBack, btnFav, btnAdd].forEach(btn=>{
   if (!btn) return;
   if (btn.id === 'btnBack') btn.onclick = ()=> history.back();
 });
 if (btnFav) btnFav.onclick = ()=> openFavList();
-if (btnAdmin) btnAdmin.onclick = ()=>{ setAdminMode(!adminMode); render(); };
+if (btnAdd) btnAdd.onclick = ()=>{
+  if (!isAdmin) return;
+  if (!newItem){
+    newItem = {
+      __tempId: `new-${Date.now()}`,
+      id: '',
+      name: '',
+      category: '',
+      area: '',
+      price: '',
+      address: '',
+      maps: '',
+      ig: '',
+      youtube: '',
+      cover: '',
+      coverPos: '50% 50%',
+      intro: ''
+    };
+  }
+  editingId = newItem.__tempId;
+  render();
+  if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
+};
 
-adminMode = getAdminMode();
-setAdminMode(adminMode);
+checkAdmin().then(()=>{ render(); });
 initFilters();
 resetFilters();
 render();

@@ -3429,6 +3429,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:false, error:'method not allowed' }, 405);
   }
 
+  if (pathname === '/api/admin/status' && request.method === 'GET') {
+    const admin = await isAdmin(request, env);
+    return json({ ok:true, admin: !!admin }, 200);
+  }
+
   if (pathname === '/api/ig/cover' && request.method === 'GET') {
     const headers = jsonHeadersFor(request, env);
     const targetRaw = url.searchParams.get('url') || url.searchParams.get('u') || '';
