@@ -53,11 +53,13 @@
     .search-icon{font-size:16px;color:var(--accent);}
     .filter-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
     .filter-select{appearance:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;font-family:inherit;color:var(--text);box-shadow:0 6px 12px rgba(15,23,42,.05);height:34px;width:100%;}
-    .cat-tabs{display:flex;gap:6px;flex-wrap:nowrap;margin:4px 0 2px;overflow-x:auto;padding-bottom:2px;}
+    .cat-tabs{display:flex;gap:6px;flex-wrap:nowrap;margin:6px 0 12px;overflow-x:auto;padding-bottom:2px;}
     .cat-tab{border:1px solid #ffd7c7;background:#fff;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
     .cat-tab.active{background:#ffedd5;border-color:#fb923c;color:#ea580c;}
     .nearby-panel{background:#fff;border:1px dashed rgba(255,90,60,.25);border-radius:14px;padding:10px;display:grid;gap:8px;box-shadow:0 10px 20px rgba(15,23,42,.05);}
     .nearby-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .nearby-head-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .nearby-panel.collapsed .nearby-body{display:none;}
     .nearby-title{font-size:12px;font-weight:800;color:#0f172a;}
     .nearby-input{display:grid;grid-template-columns:1fr auto;gap:8px;}
     .nearby-input input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;font-family:inherit;background:#fff;}
@@ -191,7 +193,6 @@
               <span class="search-icon">🔍</span>
               <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
             </div>
-            <div class="cat-tabs" id="catTabs"></div>
             <div class="filter-row">
               <select id="fCat" class="filter-select">
                 <option value="">全部分類</option>
@@ -215,18 +216,23 @@
           </div>
         </div>
         <div class="hero-right">
-          <div class="nearby-panel" style="border:none;padding:0;box-shadow:none;">
+          <div class="nearby-panel" id="nearbyPanel" style="border:none;padding:0;box-shadow:none;">
             <div class="nearby-head">
               <div class="nearby-title">📍 附近推薦</div>
-              <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
+              <div class="nearby-head-actions">
+                <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
+                <button class="btn ghost pill" type="button" id="nearbyToggle" style="display:none;" aria-expanded="true">收合</button>
+              </div>
             </div>
-          <div class="nearby-input">
-            <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
-            <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
-          </div>
-          <div class="nearby-map" id="nearbyMap">尚未設定 Google Maps API Key</div>
-          <div class="nearby-status" id="nearbyStatus">尚未搜尋附近餐廳</div>
-          <div class="nearby-list" id="nearbyList"></div>
+            <div class="nearby-body" id="nearbyBody">
+              <div class="nearby-input">
+                <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
+                <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
+              </div>
+              <div class="nearby-map" id="nearbyMap">尚未設定 Google Maps API Key</div>
+              <div class="nearby-status" id="nearbyStatus">尚未搜尋附近餐廳</div>
+              <div class="nearby-list" id="nearbyList"></div>
+            </div>
         </div>
       </div>
       </div>
@@ -238,6 +244,7 @@
       <div class="count-total" id="totalCount">共 0 間</div>
       <div class="count-tags" id="categoryCounts"></div>
     </div>
+    <div class="cat-tabs" id="catTabs"></div>
     <div class="cards" id="cards"></div>
   </main>
 
@@ -1612,9 +1619,12 @@ const btnAdd = document.getElementById('btnAdd');
 const btnGeo = document.getElementById('btnGeo');
 const btnGeoList = document.getElementById('btnGeoList');
 let btnHours = document.getElementById('btnHours');
+const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
 const nearbyInput = document.getElementById('nearbyInput');
+const nearbyToggle = document.getElementById('nearbyToggle');
+const nearbyBody = document.getElementById('nearbyBody');
 const nearbyStatus = document.getElementById('nearbyStatus');
 const nearbyList = document.getElementById('nearbyList');
 const nearbyMapEl = document.getElementById('nearbyMap');
@@ -1650,6 +1660,23 @@ function safeRender(){
 function showLoadingState(){
   if (!cardsEl) return;
   cardsEl.innerHTML = '<div class="empty-state"><h3>載入中...</h3><p>正在抓取最新資料。</p></div>';
+}
+
+function setNearbyCollapsed(collapsed){
+  if (!nearbyPanel) return;
+  nearbyPanel.classList.toggle('collapsed', collapsed);
+  if (nearbyBody) nearbyBody.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+  if (nearbyToggle){
+    nearbyToggle.textContent = collapsed ? '展開' : '收合';
+    nearbyToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+}
+function showNearbyToggle(show){
+  if (!nearbyToggle) return;
+  nearbyToggle.style.display = show ? 'inline-flex' : 'none';
+}
+function isNearbyCollapsed(){
+  return !!(nearbyPanel && nearbyPanel.classList.contains('collapsed'));
 }
 
 function updateMapPreview(coords, label){
@@ -2598,6 +2625,8 @@ function bootFoodMap(){
   dataLoading = true;
   dataReady = false;
   showLoadingState();
+  showNearbyToggle(false);
+  setNearbyCollapsed(false);
   checkAdmin().then(()=>{ safeRender(); });
   initFilters();
   resetFilters();
@@ -2611,6 +2640,8 @@ bootFoodMap();
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
+  showNearbyToggle(true);
+  setNearbyCollapsed(false);
   if (nearbyStatus) nearbyStatus.textContent = `正在整理 ${NEARBY_MAX_KM}km 內的附近餐廳…`;
   if (nearbyList) nearbyList.innerHTML = '';
   const cachedList = getNearbyFromCached(origin, 5);
@@ -2683,6 +2714,11 @@ if (nearbySearch){
       }
     });
   }
+}
+if (nearbyToggle){
+  nearbyToggle.addEventListener('click', ()=>{
+    setNearbyCollapsed(!isNearbyCollapsed());
+  });
 }
 
 // 讀取遠端資料與收藏
