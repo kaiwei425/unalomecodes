@@ -1678,7 +1678,7 @@ async function loadGoogleMaps(){
   if (nearbyMapEl) nearbyMapEl.textContent = '正在載入 Google Maps…';
   const key = await getGoogleMapsKey();
   if (!key){
-    if (nearbyMapEl) nearbyMapEl.textContent = '尚未設定 Google Maps API Key';
+    if (nearbyMapEl) nearbyMapEl.textContent = '尚未設定 Google Maps API Key（請確認已部署環境變數）';
     return;
   }
   if (window.google && window.google.maps){
@@ -2440,6 +2440,7 @@ function bootFoodMap(){
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
 window.addEventListener('load', bootFoodMap);
+bootFoodMap();
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
