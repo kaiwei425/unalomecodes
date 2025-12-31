@@ -150,8 +150,8 @@
             <select id="fPrice" class="filter-select">
               <option value="">全部價位</option>
               <option value="$">$（≤200）</option>
-              <option value="$$">$$（200–500）</option>
-              <option value="$$$">$$$（500+）</option>
+              <option value="$$">$$（200-1000）</option>
+              <option value="$$$">$$$（1000+）</option>
             </select>
             <select id="fSort" class="filter-select">
               <option value="">排序</option>
@@ -1088,7 +1088,8 @@ function render(){
       item.area,
       item.address,
       item.intro,
-      item.ig
+      item.ig,
+      item.igComment
     ].filter(Boolean).join(' ').toLowerCase();
     if (kw && !hay.includes(kw)) return false;
     if (cat && mapCategory(item.category) !== cat) return false;
@@ -1165,6 +1166,9 @@ function render(){
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>YouTube 影片<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
+          <label class="admin-field">IG 留言
+            <textarea class="admin-textarea" data-admin-field="igComment">${escapeHtml(item.igComment || '')}</textarea>
+          </label>
           <label class="admin-cover">封面圖
             <div class="admin-upload">
               <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
@@ -1276,6 +1280,7 @@ function render(){
           maps: read('maps'),
           ig: read('ig'),
           youtube: read('youtube'),
+          igComment: read('igComment'),
           cover: read('cover'),
           coverPos: read('coverPos'),
           intro: introRaw,
@@ -1376,23 +1381,24 @@ function render(){
 if (btnFav) btnFav.onclick = ()=> openFavList();
 if (btnAdd) btnAdd.onclick = ()=>{
   if (!isAdmin) return;
-  if (!newItem){
-    newItem = {
-      __tempId: `new-${Date.now()}`,
-      id: '',
-      name: '',
-      category: '',
-      area: '',
-      price: '',
-      address: '',
-      maps: '',
-      ig: '',
-      youtube: '',
-      cover: '',
-      coverPos: '50% 50%',
-      intro: ''
-    };
-  }
+      if (!newItem){
+        newItem = {
+          __tempId: `new-${Date.now()}`,
+          id: '',
+          name: '',
+          category: '',
+          area: '',
+          price: '',
+          address: '',
+          maps: '',
+          ig: '',
+          youtube: '',
+          igComment: '',
+          cover: '',
+          coverPos: '50% 50%',
+          intro: ''
+        };
+      }
   editingId = newItem.__tempId;
   render();
   if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -1450,6 +1456,7 @@ function openModal(id){
   const embedUrl = ytEmbed || igEmbed;
   const iframe = embedUrl ? `<iframe src="${escapeHtml(embedUrl)}" allowfullscreen></iframe>` : '';
   const embedClass = ytEmbed ? 'modal-embed yt' : 'modal-embed';
+  const igComment = String(item.igComment || '').trim();
   const mapsUrl = safeUrl(item.maps);
   const safeId = escapeHtml(item.id || '');
   const displayCat = mapCategory(item.category) || item.category;
@@ -1469,6 +1476,11 @@ function openModal(id){
           ${iframe || '<div style="padding:20px;color:#94a3b8;text-align:center;">無影片</div>'}
         </div>
       </div>
+      ${igComment ? `
+        <div class="modal-section">
+          <strong>IG 留言</strong>
+          <div style="white-space:pre-wrap;color:#475569;line-height:1.8;">${escapeHtml(igComment)}</div>
+        </div>` : ''}
       <div class="modal-section">
         <div><strong>地址：</strong>${escapeHtml(item.address || '') || '暫無地址'}</div>
       </div>
