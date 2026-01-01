@@ -2383,7 +2383,6 @@ function render(){
           <label>分類<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>地區<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
           <label>價位<input class="admin-input" data-admin-field="price" value="${escapeHtml(item.price || '')}"></label>
-          <label>評分<input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5"></label>
           <label>評分
             <div style="display:flex;gap:4px">
               <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5">
@@ -2890,6 +2889,7 @@ function bindRatingButton(){
     btnRating.disabled = false;
     btnRating.textContent = '補評分';
     showToast(`已更新 ${success} 間餐廳評分`);
+    saveCacheData(DATA);
     safeRender();
   };
 }
