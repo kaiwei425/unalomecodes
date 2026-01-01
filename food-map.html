@@ -1912,16 +1912,9 @@ async function checkAdmin(){
         btn.textContent = '修復中...';
         btn.disabled = true;
         try {
-          // 傳送第一筆資料進行同步，這會觸發後端的「清除列表快取」機制
-          // 下一次讀取時，後端就會被迫重新掃描整個 KV 資料庫，找回所有資料
-          const sample = DATA[0]; 
-          if (!sample) throw new Error('無法執行修復（本地無任何資料）');
-          
-          await fetch('/api/foods/sync', {
+          await fetch('/api/foods/rebuild-cache', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
-            body: JSON.stringify({ items: [sample] }) 
+            credentials: 'include'
           });
           
           await loadRemote(); // 重新讀取完整列表
@@ -3492,122 +3485,6 @@ async function removeFav(id){
     alert('移除失敗：' + (err.message||err));
   }
 }
-
-</script>
-</body>
-</html>
-  }
-}
-
-</script>
-</body>
-</html>
-    const res = await fetch('/api/me/food-favs',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      credentials:'include',
-      body: JSON.stringify({ id, action })
-    });
-    const data = await res.json().catch(()=>({}));
-    if (res.status === 401){ alert('請先登入後再收藏'); return; }
-    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-    favs = data.favorites || [];
-    safeRender();
-  }catch(err){
-    alert('收藏失敗：' + (err.message||err));
-  }
-}
-function openFavList(){
-  const dlg = document.getElementById('foodModal');
-  const body = document.getElementById('foodModalBody');
-  const list = DATA.filter(it=> favs.includes(it.id));
-  body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:18px;font-weight:800;">收藏清單</div>
-        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
-      </div>
-      ${!list.length ? '<div style="color:#94a3b8;">目前沒有收藏。</div>' : `
-        <div style="display:grid;gap:8px;">
-          ${list.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
-            <div>
-              <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
-              <div style="color:#64748b;font-size:12px;">${escapeHtml(mapCategory(it.category) || it.category || '')}｜${escapeHtml(it.area || '')}</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn ghost" style="padding:6px 10px;font-size:12px;" data-open="${escapeHtml(it.id || '')}">查看</button>
-              <button class="btn" style="padding:6px 10px;font-size:12px;" data-remove="${escapeHtml(it.id || '')}">移除</button>
-            </div>
-          </div>`).join('')}
-        </div>
-      `}
-    </div>
-  `;
-  dlg.showModal();
-  document.getElementById('foodClose').onclick = ()=> dlg.close();
-  body.querySelectorAll('button[data-open]').forEach(btn=>{
-    btn.onclick = ()=> openModal(btn.getAttribute('data-open'));
-  });
-  body.querySelectorAll('button[data-remove]').forEach(btn=>{
-    btn.onclick = ()=> removeFav(btn.getAttribute('data-remove'));
-  });
-}
-function openMissingGeoList(){
-  const dlg = document.getElementById('foodModal');
-  const body = document.getElementById('foodModalBody');
-  const list = (Array.isArray(DATA) ? DATA : []).filter(it=>{
-    if (!it || it.deleted) return false;
-    return !parseLatLngPair(it.lat, it.lng);
-  });
-  body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:18px;font-weight:800;">缺定位清單</div>
-        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
-      </div>
-      ${!list.length ? '<div style="color:#94a3b8;">目前所有餐廳都有定位。</div>' : `
-        <div style="display:grid;gap:8px;">
-          ${list.map(it=>{
-            const mapsUrl = safeUrl(it.maps);
-            const cat = mapCategory(it.category) || it.category || '';
-            const area = it.area || '';
-            return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
-              <div>
-                <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
-                <div style="color:#64748b;font-size:12px;">${escapeHtml(cat)}｜${escapeHtml(area)}</div>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-                ${mapsUrl ? `<a class="btn ghost" style="padding:6px 10px;font-size:12px;" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">地圖</a>` : ''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      `}
-    </div>
-  `;
-  dlg.showModal();
-  document.getElementById('foodClose').onclick = ()=> dlg.close();
-}
-async function removeFav(id){
-  try{
-    const res = await fetch('/api/me/food-favs',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      credentials:'include',
-      body: JSON.stringify({ id, action:'remove' })
-    });
-    const data = await res.json().catch(()=>({}));
-    if (res.status === 401){ alert('請先登入後再操作'); return; }
-    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-    favs = data.favorites || [];
-    safeRender();
-    const dlg = document.getElementById('foodModal');
-    if (dlg.open) openFavList();
-  }catch(err){
-    alert('移除失敗：' + (err.message||err));
-  }
-}
-
 </script>
 </body>
 </html>
