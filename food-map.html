@@ -3259,10 +3259,13 @@ async function loadRemote(){
   try{
     const res = await fetch('/api/foods', { cache: 'no-store' }); // 強制不快取，確保讀取 KV/R2 最新資料
     const data = await res.json().catch(()=>({}));
-    if (res.ok && Array.isArray(data.items)){
+    // Only overwrite BASE_DATA if the fetched data is a non-empty array
+    if (res.ok && Array.isArray(data.items) && data.items.length > 0){
       DATA = data.items.filter(it=>it && !it.deleted);
     }
-  }catch(_){}
+  }catch(err){
+    console.error("Failed to load remote food data, using fallback.", err);
+  }
   dataReady = true;
   dataLoading = false;
   setSyncIndicator(false);
