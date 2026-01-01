@@ -2329,6 +2329,7 @@ function render(){
   }
   cardsEl.innerHTML = renderList.map((item, idx)=>{
     const displayCat = mapCategory(item.category) || item.category;
+    const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
     const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
@@ -2360,7 +2361,12 @@ function render(){
           <label>分類<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>地區<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
           <label>價位<input class="admin-input" data-admin-field="price" value="${escapeHtml(item.price || '')}"></label>
-          <label>評分<input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5"></label>
+          <label>評分
+            <div style="display:flex;gap:4px">
+              <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5">
+              <button class="btn pill" type="button" data-fetch-rating="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">同步G</button>
+            </div>
+          </label>
           <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
           <label>緯度<input class="admin-input" data-admin-field="lat" value="${escapeHtml(item.lat ?? '')}"></label>
           <label>經度<input class="admin-input" data-admin-field="lng" value="${escapeHtml(item.lng ?? '')}"></label>
@@ -2411,7 +2417,7 @@ function render(){
             ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="收藏">${liked?'★':'☆'}</button>` : ''}
           </div>
         </div>
-        <div class="card-tags">${tags}<span class="badge-hot">推薦</span></div>
+        <div class="card-tags">${tags}${ratingTag}<span class="badge-hot">推薦</span></div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
@@ -2453,6 +2459,68 @@ function render(){
       }catch(err){
         alert('收藏失敗：'+ (err.message||err));
       }
+    };
+  });
+  cardsEl.querySelectorAll('[data-fetch-rating]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.preventDefault();
+      const id = btn.getAttribute('data-fetch-rating');
+      const item = DATA.find(x=>x.id===id);
+      if(!item) return;
+      const wrap = btn.closest('[data-admin-id]');
+      const input = wrap.querySelector('[data-admin-field="rating"]');
+      
+      if(!window.google || !window.google.maps || !window.google.maps.places){
+        alert('地圖服務尚未載入，請稍候');
+        ensureGoogleMaps();
+        return;
+      }
+      
+      btn.textContent = '...';
+      btn.disabled = true;
+      
+      const service = new google.maps.places.PlacesService(document.createElement('div'));
+      
+      const onResult = (place, status) => {
+        btn.textContent = '同步G';
+        btn.disabled = false;
+        if(status === google.maps.places.PlacesServiceStatus.OK && place && place.rating){
+          input.value = place.rating;
+        } else {
+          alert('無法取得 Google 評分');
+        }
+      };
+
+      const placeId = item.googlePlaceId || item.google_place_id;
+      if(placeId){
+        service.getDetails({ placeId, fields:['rating'] }, onResult);
+        return;
+      }
+      
+      let query = '';
+      if (item.maps) {
+        try {
+          const u = new URL(item.maps);
+          const qVal = u.searchParams.get('q') || u.searchParams.get('query');
+          if (qVal) query = qVal;
+          else if (u.pathname.includes('/place/')) {
+            const parts = u.pathname.split('/');
+            const idx = parts.indexOf('place');
+            if (idx >= 0 && parts[idx + 1]) query = decodeURIComponent(parts[idx + 1]).replace(/\+/g, ' ');
+          }
+        } catch (e) {}
+      }
+      if (!query) query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
+      
+      service.findPlaceFromQuery({ query, fields:['place_id'] }, (res, stat)=>{
+        if(stat === google.maps.places.PlacesServiceStatus.OK && res && res[0]){
+          service.getDetails({ placeId: res[0].place_id, fields:['rating'] }, onResult);
+        } else {
+          btn.textContent = '同步G';
+          btn.disabled = false;
+          alert('Google Maps 上找不到此地點');
+        }
+      });
     };
   });
   if (isAdmin){
