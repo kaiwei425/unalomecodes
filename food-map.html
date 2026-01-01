@@ -218,6 +218,13 @@
       font-family: inherit;
       font-weight: 400;
     }
+    #btnBackToTop {
+      position: fixed; bottom: 80px; right: 20px; width: 44px; height: 44px;
+      border-radius: 50%; background: #fff; color: #0f172a; border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 900; font-size: 18px; transition: transform 0.2s;
+    }
+    #btnBackToTop:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
   </style>
 </head>
 <body>
@@ -348,6 +355,7 @@
     <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
   </dialog>
   <div class="toast" id="saveToast">已儲存</div>
+  <button id="btnBackToTop" title="回到頂部">↑</button>
   <script src="/js/auth.js?v=20240930"></script>
 
 <script>
@@ -375,6 +383,14 @@ document.addEventListener('DOMContentLoaded', function() {
       memberMenu.classList.toggle('active');
     });
     document.addEventListener('click', ()=>{ memberMenu.classList.remove('active'); });
+  }
+
+  const btnBackToTop = document.getElementById('btnBackToTop');
+  if (btnBackToTop) {
+    window.addEventListener('scroll', () => {
+      btnBackToTop.style.display = window.scrollY > 300 ? 'flex' : 'none';
+    });
+    btnBackToTop.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 });
 
