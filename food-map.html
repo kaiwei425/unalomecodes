@@ -936,7 +936,7 @@ let favs = [];
 let isAdmin = false;
 let editingId = '';
 let newItem = null;
-const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','其他'];
+const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
 
 function resetFilters(){
   if (kwInput) kwInput.value = '';
@@ -1070,6 +1070,7 @@ function initFilters(){
 function mapCategory(value){
   const v = String(value || '');
   if (!v) return '';
+  if (v.toLowerCase().includes('buffet')) return 'buffet';
   if (v.includes('素食') || v.includes('蔬食')) return '素食';
   if (v.includes('日式')) return '日式料理';
   if (v.includes('泰式')) return '泰式料理';
