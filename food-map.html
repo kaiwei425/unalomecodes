@@ -181,6 +181,9 @@
           <button class="btn ghost pill" id="btnGeoList" style="display:none;">缺定位清單</button>
           <button class="btn ghost pill" id="btnHours" style="display:none;">補營業時間</button>
           <button class="btn ghost pill" id="btnRating" style="display:none;">補評分</button>
+          <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
+          <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
+          <button class="btn ghost pill" id="btnRecoverBase" style="display:none; color: #ef4444; border-color: #fca5a5;">重置為預設</button>
         </div>
       </div>
       <div class="hero">
@@ -1641,6 +1644,9 @@ const btnGeoList = document.getElementById('btnGeoList');
 let btnHours = document.getElementById('btnHours');
 let btnRating = document.getElementById('btnRating');
 let btnRepair = document.getElementById('btnRepair');
+let btnExport = document.getElementById('btnExport');
+let btnImport = document.getElementById('btnImport');
+let btnRecoverBase = document.getElementById('btnRecoverBase');
 let btnRecoverCache = document.getElementById('btnRecoverCache');
 let btnRecoverBase = document.getElementById('btnRecoverBase');
 let btnExport = document.getElementById('btnExport');
@@ -1675,6 +1681,31 @@ let foodBooted = false;
 let userLocation = null;
 let dataReady = false;
 let dataLoading = false;
+
+function loadCacheData(){
+  try{
+    const raw = localStorage.getItem(FOOD_CACHE_KEY);
+    if (!raw) return false;
+    const cached = JSON.parse(raw);
+    if (!cached || !Array.isArray(cached.items) || !cached.ts) return false;
+    if ((Date.now() - cached.ts) > FOOD_CACHE_TTL) return false;
+    DATA = cached.items.filter(it=>it && !it.deleted);
+    dataReady = true;
+    safeRender();
+    return true;
+  }catch(_){
+    return false;
+  }
+}
+
+function saveCacheData(items){
+  try{
+    localStorage.setItem(FOOD_CACHE_KEY, JSON.stringify({
+      ts: Date.now(),
+      items
+    }));
+  }catch(_){}
+}
 
 function safeRender(){
   if (dataLoading && !dataReady){
@@ -1902,6 +1933,10 @@ async function checkAdmin(){
   }
   if (btnRating) btnRating.style.display = isAdmin ? 'inline-flex' : 'none';
   
+  if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (btnImport) btnImport.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (btnRecoverBase) btnRecoverBase.style.display = isAdmin ? 'inline-flex' : 'none';
+
   if (!btnRepair && isAdmin){
     const actions = document.querySelector('.top-actions');
     if (actions){
@@ -3157,9 +3192,6 @@ function bootFoodMap(){
   setTimeout(() => ensureGoogleMaps(), 3500); // 延遲載入地圖，加快首頁顯示
   loadRemote();
 }
-document.addEventListener('DOMContentLoaded', bootFoodMap);
-window.addEventListener('load', bootFoodMap);
-bootFoodMap();
 
 async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
