@@ -189,7 +189,22 @@
       .nearby-actions{width:100%;}
       .nearby-actions .nearby-btn{flex:1;}
       .nearby-map{height:160px;}
+      .auth-widget .auth-status { display: none; }
     }
+    .member-menu { position: relative; display: none; }
+    .member-menu.active .dropdown-content { display: block; }
+    .member-menu .dropdown-content {
+      display: none; position: absolute; right: 0; top: 100%;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-width: 140px; z-index: 20;
+      padding: 6px; margin-top: 4px;
+    }
+    .member-menu .dropdown-content button {
+      display: block; width: 100%; text-align: left; padding: 8px 12px;
+      background: none; border: none; font-size: 13px; color: #334155;
+      cursor: pointer; border-radius: 8px;
+    }
+    .member-menu .dropdown-content button:hover { background: #f1f5f9; color: #0f172a; }
   </style>
 </head>
 <body>
@@ -206,6 +221,19 @@
         <div class="top-actions">
           <button class="btn ghost pill" id="btnBack">返回首頁</button>
           <button class="btn ghost pill" id="btnFav">收藏清單</button>
+          
+          <div class="member-menu" id="memberMenuContainer">
+            <button class="btn ghost pill" id="memberMenuBtn">會員中心</button>
+            <div class="dropdown-content" id="memberMenuPanel">
+              <button onclick="location.href='/account-orders.html'">我的訂單</button>
+              <button onclick="location.href='/account-coupons.html'">我的優惠券</button>
+              <button onclick="location.href='/account-store.html'">門市預設</button>
+            </div>
+          </div>
+          <div class="auth-widget" data-auth-widget style="display:inline-flex; align-items:center; gap:6px;">
+            <button class="btn ghost pill" data-auth-btn>登入會員</button>
+          </div>
+
           <div class="dropdown" id="adminDropdown" style="display: none;">
             <button class="btn ghost pill">更多</button>
             <div class="dropdown-content">
@@ -306,6 +334,7 @@
     <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
   </dialog>
   <div class="toast" id="saveToast">已儲存</div>
+  <script src="/js/auth.js?v=20240930"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -322,6 +351,16 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.classList.remove('active');
       }
     });
+  }
+  
+  const memberBtn = document.getElementById('memberMenuBtn');
+  const memberMenu = document.getElementById('memberMenuContainer');
+  if(memberBtn && memberMenu){
+    memberBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      memberMenu.classList.toggle('active');
+    });
+    document.addEventListener('click', ()=>{ memberMenu.classList.remove('active'); });
   }
 });
 
@@ -1623,10 +1662,6 @@ function render(){
           body: JSON.stringify({ id, action })
         });
         const data = await res.json().catch(()=>({}));
-        if (res.status === 401){
-          alert('請先登入後再收藏');
-          return;
-        }
         if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
         favs = data.favorites || [];
         safeRender();
@@ -1978,7 +2013,27 @@ function updateMapMarkers(list) {
   if (!btn) return;
   if (btn.id === 'btnBack') btn.onclick = ()=> { window.location.href = '/shop'; };
 });
-if (btnFav) btnFav.onclick = ()=> openFavList();
+
+function checkLoginOrRedirect(msg){
+  if (window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()) {
+    return true;
+  }
+  if (confirm((msg || '請先登入會員才能使用此功能。') + '\n\n是否現在登入？')) {
+    if (window.authState && typeof window.authState.login === 'function') {
+      window.authState.login();
+    } else {
+      window.location.href = '/shop'; 
+    }
+  }
+  return false;
+}
+
+if (btnFav) btnFav.onclick = ()=> {
+  if (checkLoginOrRedirect('請先登入會員才能查看收藏清單。')) {
+    openFavList();
+  }
+};
+
 if (btnAdd) btnAdd.onclick = ()=>{
   if (!isAdmin) return;
       if (!newItem){
@@ -2398,6 +2453,7 @@ async function refreshFavorites(){
   }catch(_){ return false; }
 }
 async function toggleFav(id){
+  if (!checkLoginOrRedirect('請先登入會員才能加入收藏。')) return;
   try{
     const action = favs.includes(id) ? 'remove' : 'add';
     const res = await fetch('/api/me/food-favs',{
@@ -2451,6 +2507,7 @@ function openFavList(){
   });
 }
 async function removeFav(id){
+  if (!checkLoginOrRedirect('請先登入會員才能移除收藏。')) return;
   try{
     const res = await fetch('/api/me/food-favs',{
       method:'POST',
@@ -2459,7 +2516,6 @@ async function removeFav(id){
       body: JSON.stringify({ id, action:'remove' })
     });
     const data = await res.json().catch(()=>({}));
-    if (res.status === 401){ alert('請先登入後再操作'); return; }
     if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
     favs = data.favorites || [];
     safeRender();
