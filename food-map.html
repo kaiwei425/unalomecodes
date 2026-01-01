@@ -208,13 +208,8 @@
             <button class="btn ghost pill">更多</button>
             <div class="dropdown-content">
               <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
-              <button class="btn ghost pill" id="btnGeo" style="display:none;">補定位</button>
-              <button class="btn ghost pill" id="btnGeoList" style="display:none;">缺定位清單</button>
-              <button class="btn ghost pill" id="btnHours" style="display:none;">補營業時間</button>
-              <button class="btn ghost pill" id="btnRating" style="display:none;">補評分</button>
               <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
               <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
-              <button class="btn ghost pill" id="btnRecoverBase" style="display:none; color: #ef4444; border-color: #fca5a5;">重置為預設</button>
             </div>
           </div>
         </div>
@@ -370,15 +365,8 @@ const nearbyStatus = document.getElementById('nearbyStatus');
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
 const btnAdd = document.getElementById('btnAdd');
-const btnGeo = document.getElementById('btnGeo');
-const btnGeoList = document.getElementById('btnGeoList');
-let btnHours = document.getElementById('btnHours');
-let btnRating = document.getElementById('btnRating');
 let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
-let btnRecoverBase = document.getElementById('btnRecoverBase');
-let btnRepair = null;
-let btnRecoverCache = null;
 // ---------------------------
 
 function escapeHtml(s){
@@ -967,108 +955,14 @@ async function checkAdmin(){
     isAdmin = false;
   }
   if (btnAdd) btnAdd.style.display = isAdmin ? 'inline-flex' : 'none';
-  if (btnGeo) btnGeo.style.display = isAdmin ? 'inline-flex' : 'none';
-  if (btnGeoList) btnGeoList.style.display = isAdmin ? 'inline-flex' : 'none';
-  if (!btnHours && isAdmin){
-    // 舊版相容：若 HTML 沒寫 btnHours，動態建立
-    const actions = document.querySelector('.top-actions');
-    if (actions){
-      const btn = document.createElement('button');
-      btn.className = 'btn ghost pill';
-      btn.id = 'btnHours';
-      btn.textContent = '補營業時間';
-      actions.appendChild(btn);
-      btnHours = btn;
-    }
-  }
-  if (btnHours) btnHours.style.display = isAdmin ? 'inline-flex' : 'none';
-  if (!btnRating && isAdmin){
-    const actions = document.querySelector('.top-actions');
-    if (actions){
-      const btn = document.createElement('button');
-      btn.className = 'btn ghost pill';
-      btn.id = 'btnRating';
-      btn.textContent = '補評分';
-      actions.appendChild(btn);
-      btnRating = btn;
-    }
-  }
-  if (btnRating) btnRating.style.display = isAdmin ? 'inline-flex' : 'none';
   
   if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnImport) btnImport.style.display = isAdmin ? 'inline-flex' : 'none';
 
-  if (!btnRepair && isAdmin){
-    const actions = document.querySelector('.top-actions');
-    if (actions){
-      const btn = document.createElement('button');
-      btn.className = 'btn ghost pill';
-      btn.id = 'btnRepair';
-      btn.textContent = '修復資料';
-      btn.style.color = '#ef4444';
-      btn.style.borderColor = '#fca5a5';
-      btn.onclick = async () => {
-        if(!confirm('這將會強制重新掃描資料庫，找回消失的餐廳資料。確定嗎？')) return;
-        btn.textContent = '修復中...';
-        btn.disabled = true;
-        try {
-          await fetch('/api/foods/rebuild-cache', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          await loadRemote(); // 重新讀取完整列表
-          alert('資料已修復！消失的餐廳應該都回來了。');
-        } catch(e) {
-          alert('修復失敗: ' + e.message);
-        } finally {
-          btn.textContent = '修復資料';
-          btn.disabled = false;
-        }
-      };
-      actions.appendChild(btn);
-      btnRepair = btn;
-    }
-  }
-  
-  if (!btnRecoverCache && isAdmin){
-    const actions = document.querySelector('.top-actions');
-    if (actions){
-      const btn = document.createElement('button');
-      btn.className = 'btn ghost pill';
-      btn.id = 'btnRecoverCache';
-      btn.textContent = '救回(從快取)';
-      btn.style.color = '#ef4444';
-      btn.style.borderColor = '#fca5a5';
-      btn.onclick = async () => {
-        try {
-          const raw = localStorage.getItem(FOOD_CACHE_KEY);
-          if (!raw) return alert('找不到本機快取備份，無法復原。');
-          const cached = JSON.parse(raw);
-          if (!cached || !Array.isArray(cached.items)) return alert('快取格式錯誤。');
-          const items = cached.items;
-          if (!confirm(`找到 ${items.length} 筆本機備份資料（時間：${new Date(cached.ts).toLocaleString()}）。\n是否嘗試推送到伺服器以覆蓋目前的損壞資料？`)) return;
-          
-          btn.textContent = '救援中...';
-          await fetch('/api/foods/sync', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
-            body: JSON.stringify({ items })
-          });
-          alert('復原請求已送出，頁面將重新整理。');
-          location.reload();
-        } catch(e) { alert('復原失敗：' + e.message); btn.textContent = '救回(從快取)'; }
-      };
-      actions.appendChild(btn);
-      btnRecoverCache = btn;
-
-      // 匯出按鈕 (備份用)
-      const btnExp = document.createElement('button');
-      btnExp.className = 'btn ghost pill';
-      btnExp.id = 'btnExport';
-      btnExp.textContent = '匯出';
-      btnExp.onclick = () => {
+  if (isAdmin) {
+    // 匯出按鈕 (備份用)
+    if (btnExport) {
+      btnExport.onclick = () => {
         const json = JSON.stringify({ items: DATA, ts: Date.now() }, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1079,17 +973,11 @@ async function checkAdmin(){
         a.click();
         document.body.removeChild(a);
       };
-      actions.appendChild(btnExp);
-      btnExport = btnExp;
+    }
 
-      // 匯入按鈕 (救援用)
-      const btnImp = document.createElement('button');
-      btnImp.className = 'btn ghost pill';
-      btnImp.id = 'btnImport';
-      btnImp.textContent = '匯入救援檔';
-      btnImp.style.color = '#16a34a';
-      btnImp.style.borderColor = '#86efac';
-      btnImp.onclick = () => {
+    // 匯入按鈕 (救援用)
+    if (btnImport) {
+      btnImport.onclick = () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
@@ -1108,8 +996,8 @@ async function checkAdmin(){
               if (!items.length) return alert('檔案內無資料');
               if (!confirm(`準備匯入 ${items.length} 筆資料，這將會覆蓋現有資料。確定嗎？`)) return;
               
-              btnImp.textContent = '匯入中...';
-              btnImp.disabled = true;
+              btnImport.textContent = '匯入中...';
+              btnImport.disabled = true;
               
               // 使用批次同步接口寫入資料庫
               await fetch('/api/foods/sync', {
@@ -1123,21 +1011,16 @@ async function checkAdmin(){
               location.reload();
             } catch (err) {
               alert('匯入失敗：' + err.message);
-              btnImp.textContent = '匯入救援檔';
-              btnImp.disabled = false;
+              btnImport.textContent = '匯入救援檔';
+              btnImport.disabled = false;
             }
           };
           reader.readAsText(file);
         };
         input.click();
       };
-      actions.appendChild(btnImp);
-      btnImport = btnImp;
     }
   }
-
-  bindHoursButton();
-  bindRatingButton();
 }
 
 function initFilters(){
@@ -2005,207 +1888,6 @@ if (btnAdd) btnAdd.onclick = ()=>{
         safeRender();
   if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
 };
-if (btnGeo) btnGeo.onclick = async ()=>{
-  if (!isAdmin) return;
-  if (!confirm('要自動補上缺少定位的餐廳座標嗎？')) return;
-  btnGeo.disabled = true;
-  btnGeo.textContent = '定位中...';
-  try{
-    const missing = (Array.isArray(DATA) ? DATA : [])
-      .filter(it=> it && !it.deleted && !parseLatLngPair(it.lat, it.lng))
-      .map(it=> String(it.id || '').trim())
-      .filter(Boolean);
-    if (!missing.length){
-      showToast('全部已定位');
-      return;
-    }
-    const total = missing.length;
-    const batchSize = 12;
-    let done = 0;
-    let updated = 0;
-    let failed = 0;
-    while (done < total){
-      const batch = missing.slice(done, done + batchSize);
-      btnGeo.textContent = `定位中... ${Math.min(done + batch.length, total)}/${total}`;
-      const res = await fetch('/api/foods/geocode', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body: JSON.stringify({ ids: batch })
-      });
-      const data = await res.json().catch(()=>({}));
-      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-      updated += Number(data.updated || 0);
-      failed += Number(data.failed || 0);
-      done += batch.length;
-    }
-    showToast(`已補定位 ${updated} 間${failed ? `，失敗 ${failed} 間` : ''}`);
-    await loadRemote();
-  }catch(err){
-    alert('補定位失敗：' + (err.message||err));
-  }finally{
-    btnGeo.disabled = false;
-    btnGeo.textContent = '補定位';
-  }
-};
-if (btnGeoList) btnGeoList.onclick = ()=> openMissingGeoList();
-
-function bindRatingButton(){
-  if (!btnRating || btnRating.dataset.bound === '1') return;
-  btnRating.dataset.bound = '1';
-  btnRating.onclick = async ()=>{
-    if (!isAdmin) return;
-    await ensureGoogleMaps();
-    if (!window.google || !window.google.maps || !window.google.maps.places){
-      alert('Google Maps 服務載入失敗');
-      return;
-    }
-
-    const allItems = (Array.isArray(DATA) ? DATA : []).filter(it=> it && !it.deleted);
-    // 預設只找沒有評分的
-    let targets = allItems.filter(it=> !it.rating);
-    
-    if (targets.length === 0){
-      if (confirm('目前所有餐廳都有評分了。要強制更新「所有」餐廳的評分嗎？')){
-        targets = allItems;
-      } else {
-        return;
-      }
-    } else {
-      if (!confirm(`即將為 ${targets.length} 間缺少評分的餐廳自動抓取 Google 評分，確定嗎？`)) return;
-    }
-
-    btnRating.disabled = true;
-    const total = targets.length;
-    let success = 0;
-    const service = new google.maps.places.PlacesService(document.createElement('div'));
-    const batchUpdates = [];
-
-    // 輔助函式：查詢單一餐廳評分
-    const fetchOne = (item) => new Promise((resolve) => {
-      const placeId = item.googlePlaceId || item.google_place_id;
-      if (placeId){
-        service.getDetails({ placeId, fields:['rating'] }, (pl, st)=>{
-          if (st === google.maps.places.PlacesServiceStatus.OK && pl && pl.rating) resolve(pl.rating);
-          else resolve(null);
-        });
-        return;
-      }
-      // 沒 ID 則搜尋
-      let query = '';
-      if (item.maps) {
-        try {
-          const u = new URL(item.maps);
-          const qVal = u.searchParams.get('q') || u.searchParams.get('query');
-          if (qVal) query = qVal;
-          else if (u.pathname.includes('/place/')) {
-            const parts = u.pathname.split('/');
-            const idx = parts.indexOf('place');
-            if (idx >= 0 && parts[idx + 1]) query = decodeURIComponent(parts[idx + 1]).replace(/\+/g, ' ');
-          }
-        } catch (e) {}
-      }
-      if (!query) query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
-      
-      service.findPlaceFromQuery({ query, fields:['place_id'] }, (res, stat)=>{
-        if (stat === google.maps.places.PlacesServiceStatus.OK && res && res[0]){
-          service.getDetails({ placeId: res[0].place_id, fields:['rating'] }, (pl, st)=>{
-            if (st === google.maps.places.PlacesServiceStatus.OK && pl && pl.rating) resolve(pl.rating);
-            else resolve(null);
-          });
-        } else {
-          resolve(null);
-        }
-      });
-    });
-
-    for (let i=0; i<total; i++){
-      const item = targets[i];
-      btnRating.textContent = `更新中... ${i+1}/${total}`;
-      const rating = await fetchOne(item);
-      if (rating){
-        item.rating = rating;
-        const payload = { ...item, rating: rating };
-        // 確保相容性欄位
-        if (payload.googlePlaceId) payload.google_place_id = payload.googlePlaceId;
-        if (payload.featured) payload.featured_ = payload.featured;
-        batchUpdates.push(payload);
-        success++;
-      }
-      // 避免觸發 Google API Rate Limit
-      await new Promise(r => setTimeout(r, 300));
-    }
-
-    if (batchUpdates.length > 0) {
-      btnRating.textContent = `正在儲存 ${batchUpdates.length} 筆資料...`;
-      try {
-        // 改用批次同步接口，一次性寫入，避免 Race Condition
-        await fetch('/api/foods/sync', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          credentials: 'include',
-          body: JSON.stringify({ items: batchUpdates })
-        });
-      } catch(e) {
-        console.error(e);
-        alert('儲存失敗，請重試');
-      }
-    }
-
-    btnRating.disabled = false;
-    btnRating.textContent = '補評分';
-    showToast(`已更新 ${success} 間餐廳評分`);
-    // 全部完成後，強制從伺服器重新讀取資料，確保顯示的是最終儲存結果
-    await loadRemote();
-    safeRender();
-  };
-}
-
-function bindHoursButton(){
-  if (!btnHours || btnHours.dataset.bound === '1') return;
-  btnHours.dataset.bound = '1';
-  btnHours.onclick = async ()=>{
-  if (!isAdmin) return;
-  if (!confirm('要更新所有餐廳的營業時間嗎？會以最新資料覆蓋。')) return;
-  btnHours.disabled = true;
-  btnHours.textContent = '更新中...';
-  try{
-    const allIds = (Array.isArray(DATA) ? DATA : [])
-      .filter(it=> it && it.id && !it.deleted)
-      .map(it=> String(it.id).trim())
-      .filter(Boolean);
-    if (!allIds.length){
-      showToast('沒有資料可更新');
-      return;
-    }
-    const batchSize = 10;
-    let updated = 0;
-    let failed = 0;
-    for (let i = 0; i < allIds.length; i += batchSize){
-      const batch = allIds.slice(i, i + batchSize);
-      btnHours.textContent = `更新中... ${Math.min(i + batch.length, allIds.length)}/${allIds.length}`;
-      const res = await fetch('/api/foods/hours', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body: JSON.stringify({ ids: batch, force: true })
-      });
-      const data = await res.json().catch(()=>({}));
-      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-      updated += Number(data.updated || 0);
-      failed += Number(data.failed || 0);
-    }
-    showToast(`已更新 ${updated} 間${failed ? `，失敗 ${failed} 間` : ''}`);
-    await loadRemote();
-  }catch(err){
-    alert('更新失敗：' + (err.message||err));
-  }finally{
-    btnHours.disabled = false;
-    btnHours.textContent = '補營業時間';
-  }
-  };
-}
-bindHoursButton();
 
 function bootFoodMap(){
   if (foodBooted) return;
@@ -2647,42 +2329,6 @@ function openFavList(){
   body.querySelectorAll('button[data-remove]').forEach(btn=>{
     btn.onclick = ()=> removeFav(btn.getAttribute('data-remove'));
   });
-}
-function openMissingGeoList(){
-  const dlg = document.getElementById('foodModal');
-  const body = document.getElementById('foodModalBody');
-  const list = (Array.isArray(DATA) ? DATA : []).filter(it=>{
-    if (!it || it.deleted) return false;
-    return !parseLatLngPair(it.lat, it.lng);
-  });
-  body.innerHTML = `
-    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:18px;font-weight:800;">缺定位清單</div>
-        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
-      </div>
-      ${!list.length ? '<div style="color:#94a3b8;">目前所有餐廳都有定位。</div>' : `
-        <div style="display:grid;gap:8px;">
-          ${list.map(it=>{
-            const mapsUrl = safeUrl(it.maps);
-            const cat = mapCategory(it.category) || it.category || '';
-            const area = it.area || '';
-            return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
-              <div>
-                <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
-                <div style="color:#64748b;font-size:12px;">${escapeHtml(cat)}｜${escapeHtml(area)}</div>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-                ${mapsUrl ? `<a class="btn ghost" style="padding:6px 10px;font-size:12px;" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">地圖</a>` : ''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      `}
-    </div>
-  `;
-  dlg.showModal();
-  document.getElementById('foodClose').onclick = ()=> dlg.close();
 }
 async function removeFav(id){
   try{
