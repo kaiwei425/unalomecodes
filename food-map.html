@@ -2291,6 +2291,7 @@ function render(){
           <label>經度<input class="admin-input" data-admin-field="lng" value="${escapeHtml(item.lng ?? '')}"></label>
           <label>營業時間<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
+          <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || '')}" placeholder="指定 Place ID 以修正評論"></label>
           <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>YouTube 影片<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
           <label class="admin-field">IG 留言
@@ -2410,6 +2411,7 @@ function render(){
           lat: read('lat'),
           lng: read('lng'),
           maps: read('maps'),
+          googlePlaceId: read('googlePlaceId'),
           hours: read('hours'),
           ig: read('ig'),
           youtube: read('youtube'),
@@ -2561,6 +2563,7 @@ if (btnAdd) btnAdd.onclick = ()=>{
           address: '',
           hours: '',
           maps: '',
+          googlePlaceId: '',
           ig: '',
           youtube: '',
           igComment: '',
@@ -2800,6 +2803,21 @@ function loadGooglePlaceDetails(item, container) {
     return;
   }
   const service = new google.maps.places.PlacesService(document.createElement('div'));
+  
+  if (item.googlePlaceId) {
+    service.getDetails({
+      placeId: item.googlePlaceId,
+      fields: ['rating', 'user_ratings_total', 'reviews', 'url']
+    }, (place, statusDet) => {
+      if (statusDet === google.maps.places.PlacesServiceStatus.OK && place) {
+        renderGoogleReviews(place, container);
+      } else {
+        container.innerHTML = '<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">無法取得詳細評價 (ID 無效)</div>';
+      }
+    });
+    return;
+  }
+
   const query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
   
   service.findPlaceFromQuery({
