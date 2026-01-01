@@ -2153,9 +2153,22 @@ function buildMultiStopUrl(origin, sortedItems) {
   const base = 'https://www.google.com/maps/dir/?api=1';
   const params = new URLSearchParams();
   params.set('origin', `${origin.lat},${origin.lng}`);
-  params.set('destination', `${sortedItems[sortedItems.length - 1].coords.lat},${sortedItems[sortedItems.length - 1].coords.lng}`);
+  
+  const getLoc = (entry) => {
+    const it = entry.item;
+    const pid = it.googlePlaceId || it.google_place_id;
+    if (pid) return `place_id:${pid}`;
+    if (it.name) {
+      let q = it.name.replace(/[|]/g, ' ');
+      if (it.area) q += ` ${it.area}`;
+      return q;
+    }
+    return `${entry.coords.lat},${entry.coords.lng}`;
+  };
+
+  params.set('destination', getLoc(sortedItems[sortedItems.length - 1]));
   if (sortedItems.length > 1) {
-    const waypoints = sortedItems.slice(0, -1).map(it => `${it.coords.lat},${it.coords.lng}`).join('|');
+    const waypoints = sortedItems.slice(0, -1).map(it => getLoc(it)).join('|');
     params.set('waypoints', waypoints);
   }
   params.set('travelmode', 'driving');
