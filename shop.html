@@ -3906,33 +3906,6 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   });
 })();
 </script>
-<script id="bankBackBtn-handler">
-(function(){
-  if (window.__bankBackBtnHandler__) return; window.__bankBackBtnHandler__ = true;
-
-  document.addEventListener('click', function(e){
-    var t = e.target;
-    if (!t || t.id !== 'bankBackBtn') return;
-    e.preventDefault();
-
-    try{
-      var bankDlg = document.getElementById('dlgBank');
-      if (bankDlg && bankDlg.open){ bankDlg.close(); }
-    }catch(_){ }
-
-    try{
-      if (typeof window.__openOrderConfirmDialogUnified === 'function'){
-        window.__openOrderConfirmDialogUnified();
-      }else{
-        var orderDlg = document.getElementById('dlgOrderConfirm');
-        if (orderDlg && typeof orderDlg.showModal === 'function'){
-          orderDlg.showModal();
-        }
-      }
-    }catch(_){ }
-  });
-})();
-</script>
 <script id="coupon-legacy-disable">
 (function(){
   // 將舊版單一優惠券邏輯全面降級為 no-op，避免與「cart-coupon-normalize-and-apply」的新多券邏輯產生衝突
@@ -5505,7 +5478,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }
   });
 })();
-</style>
+</script>
 
 <script id="product-image-fallback-fix">
 (function(){
