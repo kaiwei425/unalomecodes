@@ -153,7 +153,7 @@
     .modal-title{font-size:18px;font-weight:800;color:#0f172a;}
     .modal-close{border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;color:#0f172a;font-weight:700;font-size:12px;}
     .modal-tags{display:flex;gap:6px;flex-wrap:wrap;}
-    .modal-chip{background:#f8fafc;border:1px solid #e2e8f0;color:#334155;border-radius:999px;padding:4px 10px;font-size:12px;}
+    .modal-chip{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;box-shadow:0 2px 4px rgba(251,146,60,0.05);}
     .modal-embed{border-radius:14px;overflow:hidden;background:#f8fafc;border:1px solid #e2e8f0;}
     .modal-embed-inner{max-width:420px;margin:0 auto;}
     .modal-embed iframe{width:100%;aspect-ratio:9/16;border:0;display:block;background:#fff;}
@@ -936,7 +936,7 @@ let favs = [];
 let isAdmin = false;
 let editingId = '';
 let newItem = null;
-const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
+ㄉconst CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
 
 function resetFilters(){
   if (kwInput) kwInput.value = '';
@@ -2243,12 +2243,12 @@ function openModal(id){
           <div style="white-space:pre-wrap;color:#475569;line-height:1.8;">${escapeHtml(igComment)}</div>
         </div>` : ''}
       <div class="modal-section">
-        <div><strong>地址：</strong>${escapeHtml(item.address || '') || '暫無地址'}</div>
-        ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
-      </div>
-      <div class="modal-section">
         <strong>店家介紹</strong>
         <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || '暫無介紹')}</div>
+      </div>
+      <div class="modal-section">
+        <div><strong>地址：</strong>${escapeHtml(item.address || '') || '暫無地址'}</div>
+        ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
       </div>
       <div class="modal-section">
         <strong>Google 評分 & 評論</strong>
