@@ -3915,15 +3915,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       const cached = await readFoodsListCache(env);
       if (cached){
-        return jsonWithHeaders({ ok:true, items: cached }, 200, {
-          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
-        });
+        return jsonWithHeaders({ ok:true, items: cached }, 200, { 'Cache-Control': 'public, max-age=300, s-maxage=300' });
       }
       const items = await listFoods(env, 2000, { cache: true }); // 提高讀取上限
       await writeFoodsListCache(env, items);
-      return jsonWithHeaders({ ok:true, items }, 200, {
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
-      });
+      return jsonWithHeaders({ ok:true, items }, 200, { 'Cache-Control': 'public, max-age=300, s-maxage=300' });
     }
     if (request.method === 'DELETE'){
       {
