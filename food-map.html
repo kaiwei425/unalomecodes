@@ -2033,6 +2033,11 @@ function checkLoginOrRedirect(msg){
     return true;
   }
   if (confirm((msg || '請先登入會員才能使用此功能。') + '\n\n是否現在登入？')) {
+    // 修正：若店家資訊彈窗開啟中，需先關閉，否則登入畫面會被蓋住 (因為 dialog 在 top-layer)
+    const dlg = document.getElementById('foodModal');
+    if (dlg && dlg.open) {
+      dlg.close();
+    }
     if (window.authState && typeof window.authState.login === 'function') {
       window.authState.login();
     } else {
