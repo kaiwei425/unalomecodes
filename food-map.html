@@ -229,26 +229,12 @@
       cursor: pointer; z-index: 900; font-size: 18px; transition: transform 0.2s;
     }
     #btnBackToTop:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
-    #tripBasket {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: linear-gradient(180deg, #ffffff, #f8fafc);
-      border-top: 1px solid var(--line);
-      padding: 12px 16px;
-      box-shadow: 0 -10px 30px rgba(15,23,42,0.1);
-      z-index: 950;
-      transform: translateY(100%);
-      transition: transform 0.3s ease-in-out;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    }
-    #tripBasket.active { transform: translateY(0); }
-    .trip-info { font-size: 13px; color: var(--muted); }
-    .trip-info strong { font-size: 15px; color: var(--text); }
     .trip-result-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid var(--line); }
     .trip-result-item:last-child { border-bottom: none; }
     .trip-result-order { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; flex-shrink: 0; }
     .trip-result-name { font-weight: 700; }
     .trip-result-meta { font-size: 12px; color: var(--muted); }
-    .trip-result-dist { font-size: 12px; color: var(--brand); font-weight: 700; margin-top: 4px; }
+    .trip-result-dist { font-size: 12px; color: var(--accent-2); font-weight: 700; margin-top: 4px; }
     .trip-result-actions { margin-left: auto; flex-shrink: 0; }
   </style>
 </head>
@@ -359,8 +345,7 @@
       <div class="count-total" id="totalCount">共 0 間</div>
       <div class="count-sync" id="countSync">更新中...</div>
       <div class="count-tags" id="categoryCounts"></div>
-      <button class="btn pill" id="tripModeToggle" style="margin-left:auto;">🚀 行程模式</button>
-      <button class="btn pill primary" id="modeToggle">地圖模式</button>
+      <button class="btn pill primary" id="modeToggle" style="margin-left:auto;">地圖模式</button>
     </div>
     <div class="cat-tabs" id="catTabs"></div>
     <div id="mainMap" class="main-map"></div>
@@ -377,10 +362,6 @@
     <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
   </dialog>
   <div class="toast" id="saveToast">已儲存</div>
-  <div id="tripBasket">
-    <div class="trip-info">已選 <strong id="tripCount">0</strong> / ${MAX_TRIP_ITEMS} 家</div>
-    <button class="btn primary" id="generateTripBtn" disabled>一鍵產生路線</button>
-  </div>
   <dialog id="tripResultModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
     <div id="tripResultBody"></div>
   </dialog>
@@ -458,10 +439,7 @@ let isMapMode = false;
 let mainMap = null;
 let mainMarkers = [];
 let mainInfoWindow = null;
-let isTripMode = false;
-let tripItems = [];
-const MAX_TRIP_ITEMS = 5;
-
+const tripResultModal = document.getElementById('tripResultModal');
 
 let userLocation = null;
 let dataLoading = false;
@@ -482,11 +460,6 @@ const categoryCountsEl = document.getElementById('categoryCounts');
 const countSyncEl = document.getElementById('countSync');
 const modeToggle = document.getElementById('modeToggle');
 const mainMapEl = document.getElementById('mainMap');
-const tripModeToggle = document.getElementById('tripModeToggle');
-const tripBasket = document.getElementById('tripBasket');
-const tripCount = document.getElementById('tripCount');
-const generateTripBtn = document.getElementById('generateTripBtn');
-const tripResultModal = document.getElementById('tripResultModal');
 
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyBody = document.getElementById('nearbyBody');
@@ -1727,9 +1700,7 @@ function render(){
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
-          ${item.id ? (isTripMode
-            ? `<button class="btn primary" data-add-trip="${safeId}">${tripItems.includes(item.id) ? '✓ 已加入' : '加入行程'}</button>`
-            : `<button class="btn primary" data-open="${safeId}">查看店家資訊</button>`) : '<span class="mini">新增完成後會顯示操作按鈕</span>'}
+          ${item.id ? `<button class="btn primary" data-open="${safeId}">查看店家資訊</button>` : '<span class="mini">新增完成後會顯示操作按鈕</span>'}
           ${item.id ? `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">地圖導航</a>` : ''}
         </div>
         ${adminPanel}
@@ -1756,13 +1727,6 @@ function render(){
     btn.onclick = (ev)=>{
       const id = btn.getAttribute('data-open');
       openModal(id);
-    };
-  });
-  cardsEl.querySelectorAll('button[data-add-trip]').forEach(btn=>{
-    btn.onclick = (ev)=>{
-      const id = btn.getAttribute('data-add-trip');
-      handleAddToTrip(id);
-      btn.textContent = tripItems.includes(id) ? '✓ 已加入' : '加入行程';
     };
   });
   cardsEl.querySelectorAll('button[data-fav]').forEach(btn=>{
@@ -2168,80 +2132,6 @@ function updateMapMarkers(list) {
       google.maps.event.removeListener(listener); 
     });
   }
-}
-
-// --- 行程模式相關邏輯 ---
-if (tripModeToggle) {
-  tripModeToggle.onclick = () => {
-    isTripMode = !isTripMode;
-    tripModeToggle.textContent = isTripMode ? '結束行程模式' : '🚀 行程模式';
-    tripModeToggle.classList.toggle('primary', isTripMode);
-    tripBasket.classList.toggle('active', isTripMode);
-    if (!isTripMode) {
-      tripItems = [];
-    }
-    updateTripBasketUI();
-    safeRender();
-  };
-}
-
-function handleAddToTrip(id) {
-  const index = tripItems.indexOf(id);
-  if (index > -1) {
-    tripItems.splice(index, 1);
-  } else {
-    if (tripItems.length >= MAX_TRIP_ITEMS) {
-      alert(`行程最多只能加入 ${MAX_TRIP_ITEMS} 家店。`);
-      return;
-    }
-    tripItems.push(id);
-  }
-  updateTripBasketUI();
-}
-
-function updateTripBasketUI() {
-  if (!tripCount || !generateTripBtn) return;
-  tripCount.textContent = tripItems.length;
-  generateTripBtn.disabled = tripItems.length < 2;
-}
-
-if (generateTripBtn) {
-  generateTripBtn.onclick = async () => {
-    if (tripItems.length < 2) {
-      alert('請至少選擇 2 家店才能規劃路線。');
-      return;
-    }
-    generateTripBtn.textContent = '規劃中...';
-    generateTripBtn.disabled = true;
-    try {
-      const startCoords = await new Promise((resolve, reject) => {
-        if (userLocation) return resolve(userLocation);
-        navigator.geolocation.getCurrentPosition(
-          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => {
-            alert('無法取得您的位置，將以第一家店為起點。');
-            const firstItem = DATA.find(it => it.id === tripItems[0]);
-            const coords = getCachedCoords(firstItem);
-            if (coords) resolve(coords);
-            else reject(new Error('無法取得起點位置'));
-          }
-        );
-      });
-
-      const selected = tripItems.map(id => DATA.find(it => it.id === id)).filter(Boolean);
-      const sorted = sortTripItems(startCoords, selected);
-      const gmapsUrl = buildMultiStopUrl(startCoords, sorted);
-
-      renderTripResult(sorted, gmapsUrl, startCoords);
-      tripResultModal.showModal();
-
-    } catch (err) {
-      alert('路線規劃失敗：' + err.message);
-    } finally {
-      generateTripBtn.textContent = '一鍵產生路線';
-      generateTripBtn.disabled = tripItems.length < 2;
-    }
-  };
 }
 
 function sortTripItems(origin, items) {
@@ -2782,13 +2672,20 @@ function openFavList(){
   const dlg = document.getElementById('foodModal');
   const body = document.getElementById('foodModalBody');
   const list = DATA.filter(it=> favs.includes(it.id));
+  
+  const planButtonHtml = list.length >= 3 ? `
+    <div style="margin-top:16px; padding-top:16px; border-top:1px solid #e2e8f0;">
+      <button class="btn primary" id="planTripFromFavs" style="width:100%;">規劃收藏路線</button>
+    </div>
+  ` : '';
+
   body.innerHTML = `
     <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:18px;font-weight:800;">收藏清單</div>
         <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
       </div>
-      ${!list.length ? '<div style="color:#94a3b8;">目前沒有收藏。</div>' : `
+      ${!list.length ? '<div style="color:#94a3b8; text-align:center; padding:20px 0;">目前沒有收藏。</div>' : `
         <div style="display:grid;gap:8px;">
           ${list.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
             <div>
@@ -2802,6 +2699,7 @@ function openFavList(){
           </div>`).join('')}
         </div>
       `}
+      ${planButtonHtml}
     </div>
   `;
   dlg.showModal();
@@ -2812,6 +2710,41 @@ function openFavList(){
   body.querySelectorAll('button[data-remove]').forEach(btn=>{
     btn.onclick = ()=> removeFav(btn.getAttribute('data-remove'));
   });
+
+  const planBtn = document.getElementById('planTripFromFavs');
+  if (planBtn) {
+    planBtn.onclick = async () => {
+      planBtn.textContent = '規劃中...';
+      planBtn.disabled = true;
+      try {
+        const startCoords = await new Promise((resolve, reject) => {
+          if (userLocation) return resolve(userLocation);
+          navigator.geolocation.getCurrentPosition(
+            pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => {
+              alert('無法取得您的位置，將以第一家店為起點。');
+              const firstItem = DATA.find(it => it.id === favs[0]);
+              const coords = getCachedCoords(firstItem);
+              if (coords) resolve(coords);
+              else reject(new Error('無法取得起點位置'));
+            }
+          );
+        });
+
+        const selected = favs.map(id => DATA.find(it => it.id === id)).filter(Boolean);
+        const sorted = sortTripItems(startCoords, selected);
+        const gmapsUrl = buildMultiStopUrl(startCoords, sorted);
+
+        renderTripResult(sorted, gmapsUrl, startCoords);
+        tripResultModal.showModal();
+      } catch (err) {
+        alert('路線規劃失敗：' + err.message);
+      } finally {
+        planBtn.textContent = '規劃收藏路線';
+        planBtn.disabled = false;
+      }
+    };
+  }
 }
 async function removeFav(id){
   if (!checkLoginOrRedirect('請先登入會員才能移除收藏。')) return;
