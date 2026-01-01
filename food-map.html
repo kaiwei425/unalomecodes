@@ -336,7 +336,7 @@
       <div class="count-total" id="totalCount">共 0 間</div>
       <div class="count-sync" id="countSync">更新中...</div>
       <div class="count-tags" id="categoryCounts"></div>
-      <button class="btn pill primary" id="modeToggle" style="margin-left:auto;">🗺️ 地圖模式</button>
+      <button class="btn pill primary" id="modeToggle" style="margin-left:auto;">地圖模式</button>
     </div>
     <div class="cat-tabs" id="catTabs"></div>
     <div id="mainMap" class="main-map"></div>
@@ -1980,7 +1980,7 @@ if (modeToggle) {
   modeToggle.onclick = () => {
     isMapMode = !isMapMode;
     if (isMapMode) {
-      modeToggle.textContent = '📄 列表模式';
+      modeToggle.textContent = '列表模式';
       cardsEl.style.display = 'none';
       mainMapEl.style.display = 'block';
       // 切換到地圖模式時，若地圖尚未初始化則初始化，否則觸發 resize 並更新標記
@@ -1992,7 +1992,7 @@ if (modeToggle) {
         safeRender();
       }
     } else {
-      modeToggle.textContent = '🗺️ 地圖模式';
+      modeToggle.textContent = '地圖模式';
       cardsEl.style.display = 'grid';
       mainMapEl.style.display = 'none';
     }
