@@ -2429,6 +2429,7 @@ function render(){
           lng: read('lng'),
           maps: read('maps'),
           googlePlaceId: read('googlePlaceId'),
+          google_place_id: read('googlePlaceId'),
           hours: read('hours'),
           ig: read('ig'),
           youtube: read('youtube'),
@@ -2453,12 +2454,16 @@ function render(){
             credentials:'include',
             body: JSON.stringify(payload)
           });
-          const data = await res.json().catch(()=>({}));
+          const text = await res.text();
+          let data = {};
+          try { data = JSON.parse(text); } catch(e) { data = { error: text }; }
+
           if (res.status === 401){
             alert('需要管理員權限才能編輯。');
             return;
           }
-          if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+          const isSuccess = res.ok && (data.ok || data.success || data.id);
+          if (!isSuccess) throw new Error(data.error || ('HTTP ' + res.status + (text ? ': ' + text.slice(0, 100) : '')));
           setMsg('已儲存');
           showToast('已儲存');
           editingId = '';
