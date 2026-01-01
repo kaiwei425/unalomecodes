@@ -2434,7 +2434,6 @@ function render(){
             ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="收藏">${liked?'★':'☆'}</button>` : ''}
           </div>
         </div>
-        <div class="card-tags">${tags}<span class="badge-hot">推薦</span></div>
         <div class="card-tags">${tags}${ratingTag}<span class="badge-hot">推薦</span></div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
