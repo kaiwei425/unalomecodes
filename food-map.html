@@ -2788,6 +2788,57 @@ async function loadRemote(){
   safeRender();
 }
 
+function loadGooglePlaceDetails(item, container) {
+  if (!window.google || !window.google.maps || !window.google.maps.places) {
+    container.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:13px;text-align:center;">地圖服務載入中...</div>';
+    return;
+  }
+  const service = new google.maps.places.PlacesService(document.createElement('div'));
+  const query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
+  
+  service.findPlaceFromQuery({
+    query: query,
+    fields: ['place_id']
+  }, (results, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+      service.getDetails({
+        placeId: results[0].place_id,
+        fields: ['rating', 'user_ratings_total', 'reviews', 'url']
+      }, (place, statusDet) => {
+        if (statusDet === google.maps.places.PlacesServiceStatus.OK && place) {
+          renderGoogleReviews(place, container);
+        } else {
+          container.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:13px;text-align:center;">無法取得詳細評價</div>';
+        }
+      });
+    } else {
+      container.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:13px;text-align:center;">Google Maps 上找不到此地點</div>';
+    }
+  });
+}
+
+function renderGoogleReviews(place, container) {
+  const rating = place.rating || 0;
+  const total = place.user_ratings_total || 0;
+  const reviews = place.reviews || [];
+  const fullStars = Math.floor(rating);
+  const hasHalf = (rating % 1) >= 0.5;
+  const stars = '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(5 - fullStars - (hasHalf?1:0));
+  
+  let html = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;"><div style="display:flex;align-items:center;gap:12px;"><div style="text-align:center;"><div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1;">${rating}</div><div style="font-size:11px;color:#64748b;margin-top:2px;">${total} 則評論</div></div><div style="flex:1;"><div style="color:#f59e0b;font-size:16px;letter-spacing:1px;">${stars}</div><a href="${place.url}" target="_blank" rel="noopener" style="font-size:12px;color:#2563eb;text-decoration:underline;">查看 Google Maps 評論</a></div></div></div>`;
+  
+  if (reviews.length) {
+    html += `<div style="display:grid;gap:10px;">`;
+    reviews.slice(0, 3).forEach(r => {
+      const txt = r.text ? (r.text.length > 65 ? r.text.slice(0, 65) + '...' : r.text) : '';
+      if (!txt) return;
+      html += `<div style="border-bottom:1px solid #f1f5f9;padding-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><img src="${r.profile_photo_url}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;"><div style="font-size:12px;font-weight:700;color:#334155;">${escapeHtml(r.author_name)}</div><div style="font-size:11px;color:#f59e0b;">${r.rating}★</div><div style="font-size:11px;color:#94a3b8;margin-left:auto;">${r.relative_time_description}</div></div><div style="font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(txt)}</div></div>`;
+    });
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
 // Modal：店家資訊
 function openModal(id){
   const item = DATA.find(x=>x.id===id);
@@ -2842,6 +2893,10 @@ function openModal(id){
         <strong>店家介紹</strong>
         <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || '暫無介紹')}</div>
       </div>
+      <div class="modal-section">
+        <strong>Google 評分 & 評論</strong>
+        <div id="googleReviewsBox"><div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">載入中...</div></div>
+      </div>
       <div class="modal-actions">
         <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
         <button class="btn ghost" data-fav="${safeId}">加入收藏</button>
@@ -2850,6 +2905,7 @@ function openModal(id){
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
+  loadGooglePlaceDetails(item, document.getElementById('googleReviewsBox'));
   const favBtn = body.querySelector('button[data-fav]');
   if (favBtn){ favBtn.onclick = ()=> toggleFav(item.id); }
 }
