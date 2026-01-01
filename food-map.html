@@ -452,7 +452,7 @@ function buildThumbUrl(input, width=520){
   const raw = safeUrl(input);
   if (!raw) return '';
   const w = Math.max(120, Math.min(1200, Number(width)||520));
-  return `/api/img?u=${encodeURIComponent(raw)}&w=${w}&q=72&fmt=webp`;
+  return `/api/img?u=${encodeURIComponent(raw)}&w=${w}&q=65&fmt=webp`;
 }
 function isIgCoverUrl(input){
   const raw = safeUrl(input);
@@ -1000,9 +1000,12 @@ let favs = [];
 let isAdmin = false;
 let editingId = '';
 let newItem = null;
+let currentLimit = 20;
+const PAGE_SIZE = 20;
 const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
 
 function resetFilters(){
+  currentLimit = PAGE_SIZE;
   if (kwInput) kwInput.value = '';
   if (fCat) fCat.value = '';
   if (fArea) fArea.value = '';
@@ -1122,6 +1125,7 @@ function initFilters(){
     catTabs.querySelectorAll('.cat-tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         fCat.value = btn.dataset.value || '';
+        currentLimit = PAGE_SIZE;
         safeRender();
       });
     });
@@ -1531,7 +1535,9 @@ function render(){
   }
   const canEdit = isAdmin;
   const renderList = (canEdit && newItem) ? [newItem, ...list] : list;
-  if (!renderList.length){
+  const totalLen = renderList.length;
+  const displayList = renderList.slice(0, currentLimit);
+  if (!displayList.length){
     cardsEl.innerHTML = `
       <div class="empty-state">
         <h3>目前沒有符合的店家</h3>
@@ -1545,7 +1551,7 @@ function render(){
     }
     return;
   }
-  cardsEl.innerHTML = renderList.map((item, idx)=>{
+  cardsEl.innerHTML = displayList.map((item, idx)=>{
     const displayCat = mapCategory(item.category) || item.category;
     const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
     const isFeatured = !!(item.featured || item.featured_);
@@ -1654,9 +1660,22 @@ function render(){
         ${adminPanel}
       </div>
     </article>`;
-  }).join('');
-  list.forEach(item=> ensureCover(item));
-  renderSummary(list);
+  }).join('') + (totalLen > currentLimit ? `
+    <div style="grid-column:1/-1;text-align:center;padding:20px 0;">
+      <button id="btnLoadMore" class="btn pill" style="background:#fff;border:1px solid #cbd5e1;padding:10px 24px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.05);margin:0 auto;">
+        載入更多 (${totalLen - currentLimit})
+      </button>
+    </div>` : '');
+
+  if (totalLen > currentLimit) {
+    document.getElementById('btnLoadMore').onclick = () => {
+      currentLimit += PAGE_SIZE;
+      safeRender();
+    };
+  }
+
+  displayList.forEach(item=> ensureCover(item));
+  renderSummary(displayList);
   // 綁定卡片按鈕
   cardsEl.querySelectorAll('button[data-open]').forEach(btn=>{
     btn.onclick = (ev)=>{
@@ -2105,9 +2124,13 @@ function bootFoodMap(){
   checkAdmin().then(()=>{ safeRender(); });
   initFilters();
   resetFilters();
-  [kwInput, fCat, fArea, fPrice, fStatus].filter(Boolean).forEach(el=> el.addEventListener('input', safeRender));
+  [kwInput, fCat, fArea, fPrice, fStatus].filter(Boolean).forEach(el=> el.addEventListener('input', () => {
+    currentLimit = PAGE_SIZE;
+    safeRender();
+  }));
   if (fSort) {
     fSort.addEventListener('change', ()=>{
+      currentLimit = PAGE_SIZE;
       if (fSort.value === 'dist_asc' && !userLocation) {
         if (nearbyStatus) nearbyStatus.textContent = '定位中...';
         navigator.geolocation.getCurrentPosition(
@@ -2221,7 +2244,7 @@ async function loadRemote(){
   setSyncIndicator(true);
   if (!dataReady) showLoadingState();
   try{
-    const res = await fetch('/api/foods', { cache: 'no-store' }); // 強制不快取，確保讀取 KV/R2 最新資料
+    const res = await fetch('/api/foods'); // 移除 no-store，允許瀏覽器快取 (需配合後端 Cache-Control)
     const data = await res.json().catch(()=>({}));
     if (res.ok && Array.isArray(data.items)){
       DATA = data.items.filter(it=>it && !it.deleted);
