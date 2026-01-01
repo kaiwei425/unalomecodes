@@ -40,7 +40,7 @@
     .brand-sub{font-size:11px;color:var(--muted);}
     h1{margin:0;font-size:24px;font-weight:800;}
     .sub{margin:4px 0 0;font-size:13px;color:var(--muted);}
-    .top-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap; position: relative;}
+    .top-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap; position: relative;}
     .top-actions .btn{padding:6px 12px;font-size:12px;}
     .dropdown {
       position: relative;
@@ -269,48 +269,41 @@
           </div>
         </div>
       </div>
+      <div style="text-align: center; margin: 24px 0px;">
+        <h1 style="font-size: 28px; font-weight: 800; margin: 0px 0px 4px;">精選ＩＧ美食REELS</h1>
+        <div class="sub" style="font-size: 14px;">一鍵找出離你最近的餐廳</div>
+      </div>
       <div class="hero">
-        <div class="hero-left">
-          <div>
-            <div class="title-row">
-              <h1>泰國美食地圖</h1>
-              <a class="title-ig" href="https://www.instagram.com/bkkaiwei/" target="_blank" rel="noopener" aria-label="Instagram bkkaiwei">
-                <img src="/img/brand/logo-instagram.png" alt="Instagram">
-              </a>
-            </div>
-            <div class="sub">精選 IG 影音＋地圖導航，快速找到你要的餐廳</div>
+        <div class="hero-panel">
+          <div class="searchbox">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
           </div>
-          <div class="hero-panel">
-            <div class="searchbox">
-              <span class="search-icon">🔍</span>
-              <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
-            </div>
-            <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
-              <select id="fCat" class="filter-select">
-                <option value="">全部分類</option>
-              </select>
-              <select id="fArea" class="filter-select">
-                <option value="">全部地區</option>
-              </select>
-              <select id="fPrice" class="filter-select">
-                <option value="">全部價位</option>
-                <option value="$">$（≤200）</option>
-                <option value="$$">$$（200-1000）</option>
-                <option value="$$$">$$$（1000+）</option>
-              </select>
-              <select id="fStatus" class="filter-select">
-                <option value="">營業狀態</option>
-                <option value="open">現在營業中</option>
-              </select>
-              <select id="fSort" class="filter-select">
-                <option value="">排序</option>
-                <option value="dist_asc">距離 近→遠</option>
-                <option value="rating_desc">評分 高→低</option>
-                <option value="name_asc">店名 A→Z</option>
-                <option value="price_asc">價位 低→高</option>
-                <option value="price_desc">價位 高→低</option>
-              </select>
-            </div>
+          <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
+            <select id="fCat" class="filter-select">
+              <option value="">全部分類</option>
+            </select>
+            <select id="fArea" class="filter-select">
+              <option value="">全部地區</option>
+            </select>
+            <select id="fPrice" class="filter-select">
+              <option value="">全部價位</option>
+              <option value="$">$（≤200）</option>
+              <option value="$$">$$（200-1000）</option>
+              <option value="$$$">$$$（1000+）</option>
+            </select>
+            <select id="fStatus" class="filter-select">
+              <option value="">營業狀態</option>
+              <option value="open">現在營業中</option>
+            </select>
+            <select id="fSort" class="filter-select">
+              <option value="">排序</option>
+              <option value="dist_asc">距離 近→遠</option>
+              <option value="rating_desc">評分 高→低</option>
+              <option value="name_asc">店名 A→Z</option>
+              <option value="price_asc">價位 低→高</option>
+              <option value="price_desc">價位 高→低</option>
+            </select>
           </div>
         </div>
         <div class="hero-right">
