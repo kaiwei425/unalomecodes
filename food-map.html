@@ -204,7 +204,7 @@
         <div class="top-actions">
           <button class="btn ghost pill" id="btnBack">返回首頁</button>
           <button class="btn ghost pill" id="btnFav">收藏清單</button>
-          <div class="dropdown">
+          <div class="dropdown" id="adminDropdown" style="display: none;">
             <button class="btn ghost pill">更多</button>
             <div class="dropdown-content">
               <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
@@ -365,6 +365,7 @@ const nearbyStatus = document.getElementById('nearbyStatus');
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
 const btnAdd = document.getElementById('btnAdd');
+const adminDropdown = document.getElementById('adminDropdown');
 let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
 // ---------------------------
@@ -954,6 +955,8 @@ async function checkAdmin(){
   }catch(_){
     isAdmin = false;
   }
+  if (adminDropdown) adminDropdown.style.display = isAdmin ? 'inline-block' : 'none';
+
   if (btnAdd) btnAdd.style.display = isAdmin ? 'inline-flex' : 'none';
   
   if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
