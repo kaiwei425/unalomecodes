@@ -1290,6 +1290,60 @@ const BASE_DATA = [
   }
 ];
 
+// --- 補上缺少的變數宣告，避免 ReferenceError ---
+const FOOD_CACHE_KEY = 'food_map_data_v1';
+const FOOD_CACHE_TTL = 24 * 60 * 60 * 1000;
+const GOOGLE_MAPS_LANG = 'zh-TW';
+
+let googleMapsKey = '';
+let googleReady = false;
+let googleMap = null;
+let googleMarker = null;
+let googleGeocoder = null;
+let googleAutocomplete = null;
+let googleLoadingPromise = null;
+let userLocation = null;
+let dataLoading = false;
+let dataReady = false;
+
+// DOM Elements
+const cardsEl = document.getElementById('cards');
+const kwInput = document.getElementById('kw');
+const fCat = document.getElementById('fCat');
+const fArea = document.getElementById('fArea');
+const fPrice = document.getElementById('fPrice');
+const fStatus = document.getElementById('fStatus');
+const fSort = document.getElementById('fSort');
+const catTabs = document.getElementById('catTabs');
+const totalCountEl = document.getElementById('totalCount');
+const categoryCountsEl = document.getElementById('categoryCounts');
+const countSyncEl = document.getElementById('countSync');
+
+const nearbyPanel = document.getElementById('nearbyPanel');
+const nearbyBody = document.getElementById('nearbyBody');
+const nearbyToggle = document.getElementById('nearbyToggle');
+const nearbyList = document.getElementById('nearbyList');
+const nearbyMapEl = document.getElementById('nearbyMap');
+const nearbyInput = document.getElementById('nearbyInput');
+const nearbySearch = document.getElementById('nearbySearch');
+const nearbyUse = document.getElementById('nearbyUse');
+const nearbyStatus = document.getElementById('nearbyStatus');
+
+// Buttons
+const btnBack = document.getElementById('btnBack');
+const btnFav = document.getElementById('btnFav');
+const btnAdd = document.getElementById('btnAdd');
+const btnGeo = document.getElementById('btnGeo');
+const btnGeoList = document.getElementById('btnGeoList');
+let btnHours = document.getElementById('btnHours');
+let btnRating = document.getElementById('btnRating');
+let btnExport = document.getElementById('btnExport');
+let btnImport = document.getElementById('btnImport');
+let btnRecoverBase = document.getElementById('btnRecoverBase');
+let btnRepair = null;
+let btnRecoverCache = null;
+// ---------------------------
+
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c=>({
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
