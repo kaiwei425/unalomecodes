@@ -2183,13 +2183,18 @@ function renderTripResult(sortedItems, gmapsUrl, startCoords) {
     const dist = haversineKm(lastCoords, entry.coords);
     lastCoords = entry.coords;
     const distLabel = index === 0 ? '距離目前位置' : '距離上一站';
+    // 簡單估算：市區平均時速 30km/h
+    const minutes = Math.ceil((dist / 30) * 60);
+    const timeLabel = minutes >= 60 
+      ? `${Math.floor(minutes/60)} 小時 ${minutes%60} 分` 
+      : `${minutes} 分鐘`;
     return `
       <div class="trip-result-item">
         <div class="trip-result-order">${index + 1}</div>
         <div>
           <div class="trip-result-name">${escapeHtml(entry.item.name)}</div>
           <div class="trip-result-meta">${escapeHtml(entry.item.area)} · ${escapeHtml(mapCategory(entry.item.category))}</div>
-          <div class="trip-result-dist">${distLabel}：${formatDistance(dist)}</div>
+          <div class="trip-result-dist">${distLabel}：${formatDistance(dist)} <span style="color:#64748b;font-weight:400;font-size:11px;">(開車約 ${timeLabel})</span></div>
         </div>
         <div class="trip-result-actions">
           <button class="btn pill ghost" onclick="openModal('${escapeHtml(entry.item.id)}')">詳情</button>
