@@ -2568,38 +2568,45 @@ function render(){
         const wrap = btn.closest('[data-admin-id]');
         if (!wrap) return;
         const id = wrap.getAttribute('data-admin-id');
+        const original = DATA.find(x => x.id === id) || {};
+
         const read = (field)=>{
           const el = wrap.querySelector(`[data-admin-field="${field}"]`);
-          if (!el) return '';
+          if (!el) return undefined;
           if (el.type === 'checkbox') return el.checked;
           return el.value.trim();
         };
-        const introRaw = read('intro');
-        const introLines = introRaw.split(/\n+/).filter(Boolean);
+        
+        const getVal = (f) => { const v = read(f); return v !== undefined ? v : original[f]; };
+        
+        const introRaw = getVal('intro') || '';
+        const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : (original.highlights || []);
+
         const payload = {
-          id: id || undefined,
-          name: read('name'),
-          category: read('category'),
-          area: read('area'),
-          price: read('price'),
-          featured_: read('featured'),
-          featured: read('featured'),
-          rating: read('rating'),
-          address: read('address'),
-          lat: read('lat'),
-          lng: read('lng'),
-          maps: read('maps'),
-          googlePlaceId: read('googlePlaceId'),
-          google_place_id: read('googlePlaceId'),
-          hours: read('hours'),
-          ig: read('ig'),
-          youtube: read('youtube'),
-          igComment: read('igComment'),
-          cover: read('cover'),
-          coverPos: read('coverPos'),
+          ...original,
+          id: id || original.id,
+          name: getVal('name'),
+          category: getVal('category'),
+          area: getVal('area'),
+          price: getVal('price'),
+          featured: read('featured') ?? original.featured,
+          featured_: read('featured') ?? original.featured_,
+          rating: getVal('rating'),
+          address: getVal('address'),
+          lat: getVal('lat'),
+          lng: getVal('lng'),
+          maps: getVal('maps'),
+          googlePlaceId: getVal('googlePlaceId'),
+          google_place_id: getVal('googlePlaceId'),
+          hours: getVal('hours'),
+          ig: getVal('ig'),
+          youtube: getVal('youtube'),
+          igComment: getVal('igComment'),
+          cover: getVal('cover'),
+          coverPos: getVal('coverPos'),
           intro: introRaw,
           highlights: introLines,
-          dishes: []
+          dishes: original.dishes || []
         };
         const msgEl = wrap.querySelector('[data-admin-msg]');
         const setMsg = (text)=>{
