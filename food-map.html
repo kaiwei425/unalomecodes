@@ -2169,13 +2169,14 @@ function renderTripResult(sortedItems, gmapsUrl, startCoords) {
   const itemsHtml = sortedItems.map((entry, index) => {
     const dist = haversineKm(lastCoords, entry.coords);
     lastCoords = entry.coords;
+    const distLabel = index === 0 ? '距離目前位置' : '距離上一站';
     return `
       <div class="trip-result-item">
         <div class="trip-result-order">${index + 1}</div>
         <div>
           <div class="trip-result-name">${escapeHtml(entry.item.name)}</div>
           <div class="trip-result-meta">${escapeHtml(entry.item.area)} · ${escapeHtml(mapCategory(entry.item.category))}</div>
-          <div class="trip-result-dist">距離上一站：${formatDistance(dist)}</div>
+          <div class="trip-result-dist">${distLabel}：${formatDistance(dist)}</div>
         </div>
         <div class="trip-result-actions">
           <button class="btn pill ghost" onclick="openModal('${escapeHtml(entry.item.id)}')">詳情</button>
