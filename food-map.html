@@ -206,7 +206,12 @@
     }
     .member-menu .dropdown-content button:hover { background: #f1f5f9; color: #0f172a; }
     .auth-widget { display: inline-flex; align-items: center; gap: 6px; }
-    .auth-status { display: none; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #0f172a; }
+    .auth-status {
+      display: none; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #0f172a;
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 999px; padding: 6px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;
+    }
+    .auth-status:hover { border-color: #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
     
     /* 當 auth-widget 擁有 logged-in 類別時的顯示切換 */
     .auth-widget.logged-in .auth-status { display: flex !important; }
@@ -214,8 +219,9 @@
 
     /* 登出按鈕樣式 (仿照 shop) */
     .auth-status .logout-btn {
-      background:none; border:none; color:#64748b; text-decoration:underline; cursor:pointer; font-size:12px; padding:0; margin-left:4px;
+      background:none; border:none; color:#64748b; text-decoration:none; cursor:pointer; font-size:12px; padding:0; margin-left:0; font-weight:400;
     }
+    .auth-status .logout-btn:hover { text-decoration: underline; color: #ef4444; }
     #btnBackToTop {
       position: fixed; bottom: 80px; right: 20px; width: 44px; height: 44px;
       border-radius: 50%; background: #fff; color: #0f172a; border: 1px solid #e2e8f0;
@@ -401,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const statusEl = widget.querySelector('[data-auth-status]');
           if (statusEl) {
             // 強制設定內容為：會員名稱 + 登出按鈕
-            statusEl.innerHTML = `${escapeHtml(user.name)} <button class="logout-btn" onclick="window.authState.logout()">登出</button>`;
+            statusEl.innerHTML = `${escapeHtml(user.name)} <span style="color:#e2e8f0;margin:0 2px">|</span> <button class="logout-btn" onclick="window.authState.logout()">登出</button>`;
           }
         } else {
           widget.classList.remove('logged-in');
