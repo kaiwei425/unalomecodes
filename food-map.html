@@ -1648,9 +1648,6 @@ let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
 let btnRecoverBase = document.getElementById('btnRecoverBase');
 let btnRecoverCache = document.getElementById('btnRecoverCache');
-let btnRecoverBase = document.getElementById('btnRecoverBase');
-let btnExport = document.getElementById('btnExport');
-let btnImport = document.getElementById('btnImport');
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
@@ -1728,31 +1725,6 @@ function showLoadingState(){
 function setSyncIndicator(loading){
   if (!countSyncEl) return;
   countSyncEl.style.display = loading ? 'inline-flex' : 'none';
-}
-
-function loadCacheData(){
-  try{
-    const raw = localStorage.getItem(FOOD_CACHE_KEY);
-    if (!raw) return false;
-    const cached = JSON.parse(raw);
-    if (!cached || !Array.isArray(cached.items) || !cached.ts) return false;
-    if ((Date.now() - cached.ts) > FOOD_CACHE_TTL) return false;
-    DATA = cached.items.filter(it=>it && !it.deleted);
-    dataReady = true;
-    safeRender();
-    return true;
-  }catch(_){
-    return false;
-  }
-}
-
-function saveCacheData(items){
-  try{
-    localStorage.setItem(FOOD_CACHE_KEY, JSON.stringify({
-      ts: Date.now(),
-      items
-    }));
-  }catch(_){}
 }
 
 function setNearbyCollapsed(collapsed){
@@ -3292,9 +3264,13 @@ async function loadRemote(){
     // Only overwrite BASE_DATA if the fetched data is a non-empty array
     if (res.ok && Array.isArray(data.items) && data.items.length > 0){
       DATA = data.items.filter(it=>it && !it.deleted);
+      saveCacheData(DATA);
     }
   }catch(err){
     console.error("Failed to load remote food data, using fallback.", err);
+    if (loadCacheData()) {
+      console.log("Loaded from local cache");
+    }
   }
   dataReady = true;
   dataLoading = false;
