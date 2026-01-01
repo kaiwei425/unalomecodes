@@ -996,21 +996,9 @@ function mergeFoodRecord(existing, incoming, options){
   const preserveExisting = !!(options && options.preserveExisting);
   if (!incoming) return out;
   const assignIf = (key, val)=>{
-    if (val === undefined || val === null) return;
-    if (typeof val === 'string'){
-      const v = val.trim();
-      if (!v) return;
-      if (preserveExisting && String(out[key] || '').trim()) return;
-      out[key] = v;
-      return;
-    }
-    if (Array.isArray(val)){
-      if (!val.length) return;
-      if (preserveExisting && Array.isArray(out[key]) && out[key].length) return;
-      out[key] = val;
-      return;
-    }
-    if (preserveExisting && out[key] !== undefined && out[key] !== null && out[key] !== '') return;
+    // 只有在傳入的值是 undefined 時才跳過，允許傳入 null 或空字串來清空欄位
+    if (val === undefined) return;
+    if (preserveExisting && out[key] != null && out[key] !== '' && (!Array.isArray(out[key]) || out[key].length > 0)) return;
     out[key] = val;
   };
   assignIf('name', incoming.name);

@@ -2351,7 +2351,8 @@ function render(){
   cardsEl.innerHTML = renderList.map((item, idx)=>{
     const displayCat = mapCategory(item.category) || item.category;
     const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
-    const featuredTag = (item.featured || item.featured_) ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
+    const isFeatured = !!(item.featured || item.featured_);
+    const featuredTag = isFeatured ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
     const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
@@ -2376,6 +2377,9 @@ function render(){
     const introText = buildIntroText(item);
     const snippet = buildCardSnippet(item);
     const isEditing = canEdit && editingId === editKey;
+    
+    const cardStyle = isFeatured ? 'style="border:2px solid #fda4af;background:#fff1f2;box-shadow:0 12px 32px rgba(251,113,133,0.12);position:relative;z-index:1;"' : '';
+
     const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
         <div class="admin-grid">
@@ -2430,7 +2434,7 @@ function render(){
         <div class="admin-hint">管理模式：儲存後會直接寫入資料庫。</div>
       </div>
     ` : '';
-    return `<article class="card" data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
+    return `<article class="card" ${cardStyle} data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
       <div class="cover">${coverImg}</div>
       <div class="card-body">
         <div class="card-head">
