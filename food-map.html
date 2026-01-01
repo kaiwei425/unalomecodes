@@ -1640,7 +1640,6 @@ const btnGeo = document.getElementById('btnGeo');
 const btnGeoList = document.getElementById('btnGeoList');
 let btnHours = document.getElementById('btnHours');
 let btnRating = document.getElementById('btnRating');
-let btnRepair = document.getElementById('btnRepair');
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
@@ -1897,40 +1896,6 @@ async function checkAdmin(){
     }
   }
   if (btnRating) btnRating.style.display = isAdmin ? 'inline-flex' : 'none';
-  
-  if (!btnRepair && isAdmin){
-    const actions = document.querySelector('.top-actions');
-    if (actions){
-      const btn = document.createElement('button');
-      btn.className = 'btn ghost pill';
-      btn.id = 'btnRepair';
-      btn.textContent = '修復資料';
-      btn.style.color = '#ef4444';
-      btn.style.borderColor = '#fca5a5';
-      btn.onclick = async () => {
-        if(!confirm('這將會強制重新掃描資料庫，找回消失的餐廳資料。確定嗎？')) return;
-        btn.textContent = '修復中...';
-        btn.disabled = true;
-        try {
-          await fetch('/api/foods/rebuild-cache', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          await loadRemote(); // 重新讀取完整列表
-          alert('資料已修復！消失的餐廳應該都回來了。');
-        } catch(e) {
-          alert('修復失敗: ' + e.message);
-        } finally {
-          btn.textContent = '修復資料';
-          btn.disabled = false;
-        }
-      };
-      actions.appendChild(btn);
-      btnRepair = btn;
-    }
-  }
-
   bindHoursButton();
   bindRatingButton();
 }
@@ -3485,6 +3450,7 @@ async function removeFav(id){
     alert('移除失敗：' + (err.message||err));
   }
 }
+
 </script>
 </body>
 </html>

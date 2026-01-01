@@ -3917,7 +3917,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
         });
       }
-      const items = await listFoods(env, 1000, { cache: true });
+      const items = await listFoods(env, 2000, { cache: true }); // 提高讀取上限
       await writeFoodsListCache(env, items);
       return jsonWithHeaders({ ok:true, items }, 200, {
         'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
@@ -4021,6 +4021,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       await deleteFoodsListCache(env);
     }
     return json({ ok:true, checked, updated, failed, skipped, total: items.length });
+  }
+
+  if (pathname === '/api/foods/rebuild-cache' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    resetFoodsListMemoryCache();
+    await deleteFoodsListCache(env);
+    return json({ ok:true });
   }
 
   if (pathname === '/api/foods/hours' && request.method === 'POST'){
