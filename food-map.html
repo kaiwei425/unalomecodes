@@ -2301,8 +2301,8 @@ function render(){
   
   list = list.slice().sort((a,b)=>{
     // 優先置頂
-    const af = !!a.featured;
-    const bf = !!b.featured;
+    const af = !!(a.featured || a.featured_);
+    const bf = !!(b.featured || b.featured_);
     if (af !== bf) return af ? -1 : 1;
 
     if (sort === 'name_asc'){
@@ -2351,7 +2351,7 @@ function render(){
   cardsEl.innerHTML = renderList.map((item, idx)=>{
     const displayCat = mapCategory(item.category) || item.category;
     const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
-    const featuredTag = item.featured ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
+    const featuredTag = (item.featured || item.featured_) ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
     const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
@@ -2390,7 +2390,7 @@ function render(){
             </div>
           </label>
           <label style="display:flex;align-items:center;gap:6px;grid-column:1/-1;background:#fff7ed;padding:8px;border-radius:8px;border:1px dashed #fdba74;">
-            <input type="checkbox" data-admin-field="featured" ${item.featured ? 'checked' : ''}>
+            <input type="checkbox" data-admin-field="featured" ${(item.featured || item.featured_) ? 'checked' : ''}>
             <span style="font-weight:700;color:#c2410c;font-size:12px;">置頂推薦 (Featured)</span>
           </label>
           <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
@@ -2578,6 +2578,7 @@ function render(){
           category: read('category'),
           area: read('area'),
           price: read('price'),
+          featured_: read('featured'),
           featured: read('featured'),
           rating: read('rating'),
           address: read('address'),
@@ -2734,6 +2735,7 @@ if (btnAdd) btnAdd.onclick = ()=>{
           category: '',
           area: '',
           price: '',
+          featured_: false,
           featured: false,
           rating: '',
           address: '',
