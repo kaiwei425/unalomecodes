@@ -2841,7 +2841,27 @@ function loadGooglePlaceDetails(item, container) {
     return;
   }
 
-  const query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
+  // 優先嘗試從 Google Maps 連結中提取搜尋關鍵字，比單純用店名更準確
+  let query = '';
+  if (item.maps) {
+    try {
+      const u = new URL(item.maps);
+      const qVal = u.searchParams.get('q') || u.searchParams.get('query');
+      if (qVal) {
+        query = qVal;
+      } else if (u.pathname.includes('/place/')) {
+        const parts = u.pathname.split('/');
+        const idx = parts.indexOf('place');
+        if (idx >= 0 && parts[idx + 1]) {
+          query = decodeURIComponent(parts[idx + 1]).replace(/\+/g, ' ');
+        }
+      }
+    } catch (e) {}
+  }
+  
+  if (!query) {
+    query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
+  }
   
   service.findPlaceFromQuery({
     query: query,
