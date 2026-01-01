@@ -984,6 +984,9 @@ function normalizeFoodPayload(payload, fallbackId){
     intro: String(body.intro||'').trim(),
     highlights: Array.isArray(body.highlights) ? body.highlights : [],
     dishes: Array.isArray(body.dishes) ? body.dishes : [],
+    featured: !!(body.featured || body.featured_),
+    rating: body.rating,
+    googlePlaceId: String(body.googlePlaceId || body.google_place_id || '').trim(),
     lat: body.lat,
     lng: body.lng
   };
@@ -1025,6 +1028,9 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('intro', incoming.intro);
   assignIf('highlights', incoming.highlights);
   assignIf('dishes', incoming.dishes);
+  assignIf('featured', incoming.featured);
+  assignIf('rating', incoming.rating);
+  assignIf('googlePlaceId', incoming.googlePlaceId);
   const latPair = parseLatLngPair(incoming.lat, incoming.lng);
   if (latPair){
     if (!preserveExisting || !parseLatLngPair(out.lat, out.lng)){
