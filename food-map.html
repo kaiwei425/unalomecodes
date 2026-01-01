@@ -1643,6 +1643,8 @@ let btnRating = document.getElementById('btnRating');
 let btnRepair = document.getElementById('btnRepair');
 let btnRecoverCache = document.getElementById('btnRecoverCache');
 let btnRecoverBase = document.getElementById('btnRecoverBase');
+let btnExport = document.getElementById('btnExport');
+let btnImport = document.getElementById('btnImport');
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
@@ -1977,6 +1979,73 @@ async function checkAdmin(){
       };
       actions.appendChild(btn2);
       btnRecoverBase = btn2;
+
+      // 匯出按鈕 (備份用)
+      const btnExp = document.createElement('button');
+      btnExp.className = 'btn ghost pill';
+      btnExp.id = 'btnExport';
+      btnExp.textContent = '匯出';
+      btnExp.onclick = () => {
+        const json = JSON.stringify({ items: DATA, ts: Date.now() }, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `food-map-backup-${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+      actions.appendChild(btnExp);
+      btnExport = btnExp;
+
+      // 匯入按鈕 (救援用)
+      const btnImp = document.createElement('button');
+      btnImp.className = 'btn ghost pill';
+      btnImp.id = 'btnImport';
+      btnImp.textContent = '匯入救援檔';
+      btnImp.style.color = '#16a34a';
+      btnImp.style.borderColor = '#86efac';
+      btnImp.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async e => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async ev => {
+            try {
+              const obj = JSON.parse(ev.target.result);
+              const items = Array.isArray(obj) ? obj : (obj.items || []);
+              if (!items.length) return alert('檔案內無資料');
+              if (!confirm(`準備匯入 ${items.length} 筆資料，這將會覆蓋現有資料。確定嗎？`)) return;
+              
+              btnImp.textContent = '匯入中...';
+              btnImp.disabled = true;
+              
+              // 使用批次同步接口寫入資料庫
+              await fetch('/api/foods/sync', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({ items })
+              });
+              
+              alert('救援成功！資料已寫回資料庫。頁面將重新整理。');
+              location.reload();
+            } catch (err) {
+              alert('匯入失敗：' + err.message);
+              btnImp.textContent = '匯入救援檔';
+              btnImp.disabled = false;
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      };
+      actions.appendChild(btnImp);
+      btnImport = btnImp;
     }
   }
 
