@@ -2790,7 +2790,13 @@ async function loadRemote(){
 
 function loadGooglePlaceDetails(item, container) {
   if (!window.google || !window.google.maps || !window.google.maps.places) {
-    container.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:13px;text-align:center;">地圖服務載入中...</div>';
+    container.innerHTML = `
+      <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; text-align:center;">
+        <div style="color:#94a3b8; font-size:13px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span style="display:inline-block; width:14px; height:14px; border:2px solid #cbd5e1; border-top-color:#64748b; border-radius:50%; animation:spin 1s linear infinite;"></span>
+          正在載入 Google 評價...
+        </div>
+      </div>`;
     return;
   }
   const service = new google.maps.places.PlacesService(document.createElement('div'));
@@ -2808,11 +2814,11 @@ function loadGooglePlaceDetails(item, container) {
         if (statusDet === google.maps.places.PlacesServiceStatus.OK && place) {
           renderGoogleReviews(place, container);
         } else {
-          container.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:13px;text-align:center;">無法取得詳細評價</div>';
+          container.innerHTML = '<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">無法取得詳細評價</div>';
         }
       });
     } else {
-      container.innerHTML = '<div style="padding:10px;color:#94a3b8;font-size:13px;text-align:center;">Google Maps 上找不到此地點</div>';
+      container.innerHTML = '<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">Google Maps 上找不到此地點</div>';
     }
   });
 }
@@ -2821,21 +2827,73 @@ function renderGoogleReviews(place, container) {
   const rating = place.rating || 0;
   const total = place.user_ratings_total || 0;
   const reviews = place.reviews || [];
-  const fullStars = Math.floor(rating);
-  const hasHalf = (rating % 1) >= 0.5;
-  const stars = '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(5 - fullStars - (hasHalf?1:0));
   
-  let html = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;"><div style="display:flex;align-items:center;gap:12px;"><div style="text-align:center;"><div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1;">${rating}</div><div style="font-size:11px;color:#64748b;margin-top:2px;">${total} 則評論</div></div><div style="flex:1;"><div style="color:#f59e0b;font-size:16px;letter-spacing:1px;">${stars}</div><a href="${place.url}" target="_blank" rel="noopener" style="font-size:12px;color:#2563eb;text-decoration:underline;">查看 Google Maps 評論</a></div></div></div>`;
+  // 產生星星 HTML
+  const starHtml = (r) => {
+    const full = Math.floor(r);
+    const hasHalf = (r % 1) >= 0.5;
+    let html = '';
+    for (let i = 0; i < 5; i++) {
+      if (i < full) html += '<span style="color:#fbbc04;">★</span>';
+      else if (i === full && hasHalf) html += '<span style="background:linear-gradient(90deg, #fbbc04 50%, #e2e8f0 50%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">★</span>';
+      else html += '<span style="color:#e2e8f0;">★</span>';
+    }
+    return html;
+  };
+
+  let html = `
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+      <div style="padding:14px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style="width:20px; height:20px;">
+          <div>
+            <div style="font-weight:700; font-size:13px; color:#0f172a; line-height:1.2;">Google 評價</div>
+            <div style="font-size:11px; color:#64748b;">${total.toLocaleString()} 則評論</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:22px; font-weight:800; color:#0f172a; line-height:1;">${rating}</div>
+          <div style="font-size:12px; letter-spacing:1px; margin-top:2px;">${starHtml(rating)}</div>
+        </div>
+      </div>
+  `;
   
   if (reviews.length) {
-    html += `<div style="display:grid;gap:10px;">`;
-    reviews.slice(0, 3).forEach(r => {
-      const txt = r.text ? (r.text.length > 65 ? r.text.slice(0, 65) + '...' : r.text) : '';
-      if (!txt) return;
-      html += `<div style="border-bottom:1px solid #f1f5f9;padding-bottom:8px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><img src="${r.profile_photo_url}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;"><div style="font-size:12px;font-weight:700;color:#334155;">${escapeHtml(r.author_name)}</div><div style="font-size:11px;color:#f59e0b;">${r.rating}★</div><div style="font-size:11px;color:#94a3b8;margin-left:auto;">${r.relative_time_description}</div></div><div style="font-size:13px;color:#475569;line-height:1.5;">${escapeHtml(txt)}</div></div>`;
+    html += `<div style="display:flex; flex-direction:column;">`;
+    reviews.slice(0, 3).forEach((r, idx) => {
+      const txt = r.text || '';
+      const isLong = txt.length > 85;
+      const displayTxt = isLong ? txt.slice(0, 85) + '...' : txt;
+      const border = idx === reviews.slice(0,3).length - 1 ? '' : 'border-bottom:1px solid #f1f5f9;';
+      
+      html += `
+        <div style="padding:14px 16px; ${border}">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <img src="${r.profile_photo_url}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:13px; font-weight:700; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(r.author_name)}</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#94a3b8;">
+                <span style="display:flex; color:#fbbc04; font-size:10px;">${'★'.repeat(Math.floor(r.rating))}</span>
+                <span>${r.relative_time_description}</span>
+              </div>
+            </div>
+          </div>
+          ${txt ? `<div style="font-size:13px; color:#475569; line-height:1.6;">${escapeHtml(displayTxt)}</div>` : ''}
+        </div>
+      `;
     });
     html += `</div>`;
+  } else {
+    html += `<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">暫無評論內容</div>`;
   }
+
+  html += `
+      <a href="${place.url}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:13px; font-weight:600; color:#2563eb; text-decoration:none; transition:background 0.2s;">
+        查看更多 Google Maps 評論 →
+      </a>
+    </div>
+  `;
+  
   container.innerHTML = html;
 }
 
@@ -2895,7 +2953,7 @@ function openModal(id){
       </div>
       <div class="modal-section">
         <strong>Google 評分 & 評論</strong>
-        <div id="googleReviewsBox"><div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">載入中...</div></div>
+        <div id="googleReviewsBox" style="margin-top:4px;"></div>
       </div>
       <div class="modal-actions">
         <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
