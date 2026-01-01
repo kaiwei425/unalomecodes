@@ -1856,6 +1856,9 @@ let favs = [];
 let isAdmin = false;
 let editingId = '';
 let newItem = null;
+let foodBooted = false;
+let btnRepair = null;
+let btnRecoverCache = null;
 const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','其他'];
 
 function resetFilters(){
@@ -3617,6 +3620,7 @@ async function removeFav(id){
     alert('移除失敗：' + (err.message||err));
   }
 }
+document.addEventListener('DOMContentLoaded', bootFoodMap);
 </script>
 </body>
 </html>
