@@ -757,46 +757,8 @@
 })();
 </script>
 
-  <!-- 門市選擇 Dialog（新） -->
-  <dialog id="dlgStore" style="border:none;border-radius:16px;padding:0;max-width:520px;width:92%;">
-    <div style="padding:16px 18px 0;display:flex;gap:8px;font-size:12px;font-weight:600;">
-      <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">1 確認訂單</div>
-      <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #16a34a;color:#16a34a;">2 選擇門市</div>
-      <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">3 匯款資料</div>
-    </div>
-  <div style="padding:18px 18px 10px;">
-    <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
-    <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;">
-      請先選擇 7-11 取貨門市，再進入匯款或信用卡資料頁面。
-    </div>
-  </div>
-    <div style="padding:0 18px 16px;display:grid;gap:10px">
-      <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">取貨門市</label>
-        <input id="dlgStoreInput" type="text"
-               placeholder="尚未選擇門市"
-               style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;background-color:#f9fafb;">
-        <div style="font-size:12px;color:#6b7280;line-height:1.6">
-          請點選下方「查詢 7-11 門市」按鈕，於地圖中選擇門市後，這裡與匯款資料頁面會自動帶入相同門市
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
-        <button type="button" id="storeOpenCvsBtn" class="btn link" style="flex:1 1 auto">查詢 7-11 門市</button>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-        <button type="button" id="storeBackBtn" class="btn">返回上一頁</button>
-        <button type="button" id="storeNextBtn" class="btn primary">下一步：填寫付款資料</button>
-      </div>
-    </div>
-  </dialog>
-
   <!-- 轉帳匯款 Dialog -->
   <dialog id="dlgBank" style="border:none;border-radius:16px;padding:0;max-width:680px;width:96%;">
-  <div style="padding:16px 18px 0;display:flex;gap:8px;font-size:12px;font-weight:600;">
-    <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">1 確認訂單</div>
-    <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #e5e7eb;color:#6b7280;">2 選擇門市</div>
-    <div style="flex:1;text-align:center;padding:6px 0;border-bottom:2px solid #16a34a;color:#16a34a;">3 匯款資料</div>
-  </div>
   <div style="padding:18px 18px 10px;">
     <div style="font-weight:800;font-size:18px;">收件人資料</div>
     <div style="color:#6b7280;font-size:14px;margin-top:4px">請先完成匯款，再上傳匯款憑證並填寫資料。</div>
@@ -905,7 +867,7 @@ function fillStoreIntoForm(p){
   if (!text) return false;
 
   // 3) Step 2 預覽欄位（選擇門市對話框）
-  var preview = document.getElementById('dlgStoreInput');
+  var preview = document.getElementById('dlgStoreInput') || document.getElementById('bfStorePreview');
   if (preview){
     preview.value = text;
   }
