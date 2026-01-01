@@ -2351,8 +2351,7 @@ function render(){
   cardsEl.innerHTML = renderList.map((item, idx)=>{
     const displayCat = mapCategory(item.category) || item.category;
     const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
-    const isFeatured = !!(item.featured || item.featured_);
-    const featuredTag = isFeatured ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
+    const featuredTag = (item.featured || item.featured_) ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
     const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
@@ -2377,9 +2376,6 @@ function render(){
     const introText = buildIntroText(item);
     const snippet = buildCardSnippet(item);
     const isEditing = canEdit && editingId === editKey;
-    
-    const cardStyle = isFeatured ? 'style="border:2px solid #fda4af;background:#fff1f2;box-shadow:0 12px 32px rgba(251,113,133,0.12);"' : '';
-
     const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
         <div class="admin-grid">
@@ -2434,7 +2430,7 @@ function render(){
         <div class="admin-hint">管理模式：儲存後會直接寫入資料庫。</div>
       </div>
     ` : '';
-    return `<article class="card" ${cardStyle} data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
+    return `<article class="card" data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
       <div class="cover">${coverImg}</div>
       <div class="card-body">
         <div class="card-head">
@@ -2568,45 +2564,37 @@ function render(){
         const wrap = btn.closest('[data-admin-id]');
         if (!wrap) return;
         const id = wrap.getAttribute('data-admin-id');
-        const original = DATA.find(x => x.id === id) || {};
-
         const read = (field)=>{
           const el = wrap.querySelector(`[data-admin-field="${field}"]`);
-          if (!el) return undefined;
+          if (!el) return '';
           if (el.type === 'checkbox') return el.checked;
           return el.value.trim();
         };
-        
-        const getVal = (f) => { const v = read(f); return v !== undefined ? v : original[f]; };
-        
-        const introRaw = getVal('intro') || '';
-        const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : (original.highlights || []);
-
+        const introRaw = read('intro');
+        const introLines = introRaw.split(/\n+/).filter(Boolean);
         const payload = {
-          ...original,
-          id: id || original.id,
-          name: getVal('name'),
-          category: getVal('category'),
-          area: getVal('area'),
-          price: getVal('price'),
-          featured: read('featured') ?? original.featured,
-          featured_: read('featured') ?? original.featured_,
-          rating: getVal('rating'),
-          address: getVal('address'),
-          lat: getVal('lat'),
-          lng: getVal('lng'),
-          maps: getVal('maps'),
-          googlePlaceId: getVal('googlePlaceId'),
-          google_place_id: getVal('googlePlaceId'),
-          hours: getVal('hours'),
-          ig: getVal('ig'),
-          youtube: getVal('youtube'),
-          igComment: getVal('igComment'),
-          cover: getVal('cover'),
-          coverPos: getVal('coverPos'),
+          id: id || undefined,
+          name: read('name'),
+          category: read('category'),
+          area: read('area'),
+          price: read('price'),
+          featured: read('featured'),
+          rating: read('rating'),
+          address: read('address'),
+          lat: read('lat'),
+          lng: read('lng'),
+          maps: read('maps'),
+          googlePlaceId: read('googlePlaceId'),
+          google_place_id: read('googlePlaceId'),
+          hours: read('hours'),
+          ig: read('ig'),
+          youtube: read('youtube'),
+          igComment: read('igComment'),
+          cover: read('cover'),
+          coverPos: read('coverPos'),
           intro: introRaw,
           highlights: introLines,
-          dishes: original.dishes || []
+          dishes: []
         };
         const msgEl = wrap.querySelector('[data-admin-msg]');
         const setMsg = (text)=>{
@@ -2885,36 +2873,24 @@ function bindRatingButton(){
       if (rating){
         // 呼叫後端更新
         try{
-          const payload = { ...item, rating: rating };
-          // 確保 highlights 與 intro 同步（模擬後台儲存邏輯，避免資料遺失）
-          if (typeof payload.intro === 'string') {
-            payload.highlights = payload.intro.split(/\n+/).filter(Boolean);
-          }
-          // 確保相容性欄位（避免後端因欄位名稱不同而漏存）
-          if (payload.googlePlaceId) payload.google_place_id = payload.googlePlaceId;
-          if (payload.google_place_id) payload.googlePlaceId = payload.google_place_id;
-          if (payload.featured) payload.featured_ = payload.featured;
-          if (payload.featured_) payload.featured = payload.featured_;
-
           await fetch('/api/foods', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             credentials:'include',
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ id: item.id, rating: rating })
           });
           item.rating = rating; // 更新本地資料
           success++;
         }catch(e){ console.error(e); }
       }
-      // 增加延遲至 1.5 秒，避免後端 KV 寫入發生 Race Condition (競態條件) 導致資料被覆蓋
-      await new Promise(r => setTimeout(r, 1500));
+      // 避免觸發 API Rate Limit，稍微延遲
+      await new Promise(r => setTimeout(r, 350));
     }
 
     btnRating.disabled = false;
     btnRating.textContent = '補評分';
     showToast(`已更新 ${success} 間餐廳評分`);
-    // 全部完成後，強制從伺服器重新讀取資料，確保顯示的是最終儲存結果
-    await loadRemote();
+    saveCacheData(DATA);
     safeRender();
   };
 }
@@ -2970,7 +2946,8 @@ function bootFoodMap(){
   foodBooted = true;
   dataLoading = true;
   dataReady = false;
-  showLoadingState(); // 不讀取本地快取，直接顯示載入中
+  const usedCache = loadCacheData();
+  if (!usedCache) showLoadingState();
   setSyncIndicator(true);
   showNearbyToggle(false);
   setNearbyCollapsed(false);
@@ -3096,10 +3073,11 @@ async function loadRemote(){
   setSyncIndicator(true);
   if (!dataReady) showLoadingState();
   try{
-    const res = await fetch('/api/foods', { cache: 'no-store' }); // 強制不快取，確保讀取 KV/R2 最新資料
+    const res = await fetch('/api/foods');
     const data = await res.json().catch(()=>({}));
     if (res.ok && Array.isArray(data.items)){
       DATA = data.items.filter(it=>it && !it.deleted);
+      saveCacheData(DATA);
     }
   }catch(_){}
   dataReady = true;
@@ -3446,12 +3424,6 @@ async function removeFav(id){
     if (dlg.open) openFavList();
   }catch(err){
     alert('移除失敗：' + (err.message||err));
-  }
-}
-
-</script>
-</body>
-</html>
   }
 }
 
