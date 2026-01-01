@@ -2308,7 +2308,7 @@ function render(){
           <label>經度<input class="admin-input" data-admin-field="lng" value="${escapeHtml(item.lng ?? '')}"></label>
           <label>營業時間<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
-          <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || '')}" placeholder="指定 Place ID 以修正評論"></label>
+          <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="指定 Place ID 以修正評論"></label>
           <label>IG 影片<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>YouTube 影片<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
           <label class="admin-field">IG 留言
@@ -2454,16 +2454,12 @@ function render(){
             credentials:'include',
             body: JSON.stringify(payload)
           });
-          const text = await res.text();
-          let data = {};
-          try { data = JSON.parse(text); } catch(e) { data = { error: text }; }
-
+          const data = await res.json().catch(()=>({}));
           if (res.status === 401){
             alert('需要管理員權限才能編輯。');
             return;
           }
-          const isSuccess = res.ok && (data.ok || data.success || data.id);
-          if (!isSuccess) throw new Error(data.error || ('HTTP ' + res.status + (text ? ': ' + text.slice(0, 100) : '')));
+          if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
           setMsg('已儲存');
           showToast('已儲存');
           editingId = '';
@@ -2830,9 +2826,10 @@ function loadGooglePlaceDetails(item, container) {
   }
   const service = new google.maps.places.PlacesService(document.createElement('div'));
   
-  if (item.googlePlaceId) {
+  const placeId = item.googlePlaceId || item.google_place_id;
+  if (placeId) {
     service.getDetails({
-      placeId: item.googlePlaceId,
+      placeId: placeId,
       fields: ['rating', 'user_ratings_total', 'reviews', 'url']
     }, (place, statusDet) => {
       if (statusDet === google.maps.places.PlacesServiceStatus.OK && place) {
