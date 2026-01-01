@@ -198,7 +198,7 @@
               <span class="search-icon">🔍</span>
               <input type="text" id="kw" placeholder="搜尋店名 / 關鍵字">
             </div>
-            <div class="filter-row">
+            <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
               <select id="fCat" class="filter-select">
                 <option value="">全部分類</option>
               </select>
@@ -211,8 +211,14 @@
                 <option value="$$">$$（200-1000）</option>
                 <option value="$$$">$$$（1000+）</option>
               </select>
+              <select id="fStatus" class="filter-select">
+                <option value="">營業狀態</option>
+                <option value="open">現在營業中</option>
+              </select>
               <select id="fSort" class="filter-select">
                 <option value="">排序</option>
+                <option value="dist_asc">距離 近→遠</option>
+                <option value="rating_desc">評分 高→低</option>
                 <option value="name_asc">店名 A→Z</option>
                 <option value="price_asc">價位 低→高</option>
                 <option value="price_desc">價位 高→低</option>
@@ -1623,6 +1629,7 @@ const fCat = document.getElementById('fCat');
 const fArea = document.getElementById('fArea');
 const fPrice = document.getElementById('fPrice');
 const fSort = document.getElementById('fSort');
+const fStatus = document.getElementById('fStatus');
 const kwInput = document.getElementById('kw');
 const catTabs = document.getElementById('catTabs');
 const btnBack = document.getElementById('btnBack');
@@ -1658,6 +1665,7 @@ let googleReady = false;
 let googleLoadingPromise = null;
 let googleMapsKey = GOOGLE_MAPS_KEY;
 let foodBooted = false;
+let userLocation = null;
 let dataReady = false;
 let dataLoading = false;
 
@@ -1839,7 +1847,7 @@ let favs = [];
 let isAdmin = false;
 let editingId = '';
 let newItem = null;
-const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','其他'];
+const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','其他'];
 
 function resetFilters(){
   if (kwInput) kwInput.value = '';
@@ -1847,6 +1855,7 @@ function resetFilters(){
   if (fArea) fArea.value = '';
   if (fPrice) fPrice.value = '';
   if (fSort) fSort.value = '';
+  if (fStatus) fStatus.value = '';
 }
 
 async function checkAdmin(){
@@ -1919,6 +1928,7 @@ function initFilters(){
 function mapCategory(value){
   const v = String(value || '');
   if (!v) return '';
+  if (v.includes('素食') || v.includes('蔬食')) return '素食';
   if (v.includes('日式')) return '日式料理';
   if (v.includes('泰式')) return '泰式料理';
   if (v.includes('義式')) return '義式料理';
@@ -2211,11 +2221,46 @@ function renderNearbyList(list){
   return deduped.length;
 }
 
+function isOpenNow(hoursStr) {
+  if (!hoursStr) return false;
+  const s = String(hoursStr).trim();
+  if (s.includes('24 小時') || s.includes('24 hours')) return true;
+  if (s.includes('休息') || s.includes('Closed')) return false;
+  
+  const now = new Date();
+  const current = now.getHours() * 60 + now.getMinutes();
+
+  if (s.includes('開始') || s.includes('Starts')) {
+    const m = s.match(/(\d{1,2}):(\d{2})/);
+    if (m) {
+      const start = parseInt(m[1])*60 + parseInt(m[2]);
+      return current >= start;
+    }
+  }
+  const ranges = s.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/g);
+  if (ranges) {
+    for (const range of ranges) {
+      const m = range.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+      if (m) {
+        const start = parseInt(m[1])*60 + parseInt(m[2]);
+        let end = parseInt(m[3])*60 + parseInt(m[4]);
+        if (end < start) end += 24 * 60;
+        let c = current;
+        if (c < start && (end > 24*60)) c += 24*60;
+        if (c >= start && c <= end) return true;
+      }
+    }
+    return false;
+  }
+  return true; 
+}
+
 function render(){
   const kw = (kwInput.value||'').trim().toLowerCase();
   const cat = fCat.value;
   const area= fArea.value;
   const price= fPrice.value;
+  const status = fStatus ? fStatus.value : '';
   const sort = fSort ? fSort.value : '';
   const hasFilters = !!(kw || cat || area || price);
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
@@ -2234,6 +2279,7 @@ function render(){
     if (cat && mapCategory(item.category) !== cat) return false;
     if (area && item.area !== area) return false;
     if (price && item.price !== price) return false;
+    if (status === 'open' && !isOpenNow(item.hours)) return false;
     return true;
   });
   if (sort){
@@ -2246,6 +2292,15 @@ function render(){
       if (sort === 'price_asc' || sort === 'price_desc'){
         const diff = priceRank(a.price) - priceRank(b.price);
         return sort === 'price_desc' ? -diff : diff;
+      }
+      if (sort === 'rating_desc'){
+        return (Number(b.rating)||0) - (Number(a.rating)||0);
+      }
+      if (sort === 'dist_asc'){
+        if (!userLocation) return 0;
+        const da = haversineKm(userLocation, {lat:a.lat||0, lng:a.lng||0});
+        const db = haversineKm(userLocation, {lat:b.lat||0, lng:b.lng||0});
+        return da - db;
       }
       return 0;
     });
@@ -2305,6 +2360,7 @@ function render(){
           <label>分類<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>地區<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
           <label>價位<input class="admin-input" data-admin-field="price" value="${escapeHtml(item.price || '')}"></label>
+          <label>評分<input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5"></label>
           <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
           <label>緯度<input class="admin-input" data-admin-field="lat" value="${escapeHtml(item.lat ?? '')}"></label>
           <label>經度<input class="admin-input" data-admin-field="lng" value="${escapeHtml(item.lng ?? '')}"></label>
@@ -2426,6 +2482,7 @@ function render(){
           category: read('category'),
           area: read('area'),
           price: read('price'),
+          rating: read('rating'),
           address: read('address'),
           lat: read('lat'),
           lng: read('lng'),
@@ -2580,6 +2637,7 @@ if (btnAdd) btnAdd.onclick = ()=>{
           category: '',
           area: '',
           price: '',
+          rating: '',
           address: '',
           hours: '',
           maps: '',
@@ -2699,7 +2757,24 @@ function bootFoodMap(){
   checkAdmin().then(()=>{ safeRender(); });
   initFilters();
   resetFilters();
-  [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', safeRender));
+  [kwInput, fCat, fArea, fPrice, fStatus].filter(Boolean).forEach(el=> el.addEventListener('input', safeRender));
+  if (fSort) {
+    fSort.addEventListener('change', ()=>{
+      if (fSort.value === 'dist_asc' && !userLocation) {
+        if (nearbyStatus) nearbyStatus.textContent = '定位中...';
+        navigator.geolocation.getCurrentPosition(
+          (pos)=>{
+            userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            updateMapPreview(userLocation, '我的位置');
+            safeRender();
+          },
+          ()=>{ alert('無法取得位置，無法依距離排序'); fSort.value = ''; safeRender(); }
+        );
+      } else {
+        safeRender();
+      }
+    });
+  }
   setTimeout(() => ensureGoogleMaps(), 3500); // 延遲載入地圖，加快首頁顯示
   loadRemote();
 }
@@ -2741,6 +2816,7 @@ if (nearbyUse){
     navigator.geolocation.getCurrentPosition(
       (pos)=>{
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        userLocation = coords;
         updateMapPreview(coords, '我的位置');
         runNearby(coords, '我的位置');
       },
