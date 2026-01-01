@@ -1640,6 +1640,7 @@ const btnGeo = document.getElementById('btnGeo');
 const btnGeoList = document.getElementById('btnGeoList');
 let btnHours = document.getElementById('btnHours');
 let btnRating = document.getElementById('btnRating');
+let btnRepair = document.getElementById('btnRepair');
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
@@ -1896,6 +1897,47 @@ async function checkAdmin(){
     }
   }
   if (btnRating) btnRating.style.display = isAdmin ? 'inline-flex' : 'none';
+  
+  if (!btnRepair && isAdmin){
+    const actions = document.querySelector('.top-actions');
+    if (actions){
+      const btn = document.createElement('button');
+      btn.className = 'btn ghost pill';
+      btn.id = 'btnRepair';
+      btn.textContent = '修復資料';
+      btn.style.color = '#ef4444';
+      btn.style.borderColor = '#fca5a5';
+      btn.onclick = async () => {
+        if(!confirm('這將會強制重新掃描資料庫，找回消失的餐廳資料。確定嗎？')) return;
+        btn.textContent = '修復中...';
+        btn.disabled = true;
+        try {
+          // 傳送第一筆資料進行同步，這會觸發後端的「清除列表快取」機制
+          // 下一次讀取時，後端就會被迫重新掃描整個 KV 資料庫，找回所有資料
+          const sample = DATA[0]; 
+          if (!sample) throw new Error('無法執行修復（本地無任何資料）');
+          
+          await fetch('/api/foods/sync', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ items: [sample] }) 
+          });
+          
+          await loadRemote(); // 重新讀取完整列表
+          alert('資料已修復！消失的餐廳應該都回來了。');
+        } catch(e) {
+          alert('修復失敗: ' + e.message);
+        } finally {
+          btn.textContent = '修復資料';
+          btn.disabled = false;
+        }
+      };
+      actions.appendChild(btn);
+      btnRepair = btn;
+    }
+  }
+
   bindHoursButton();
   bindRatingButton();
 }
@@ -2378,7 +2420,7 @@ function render(){
     const snippet = buildCardSnippet(item);
     const isEditing = canEdit && editingId === editKey;
     
-    const cardStyle = isFeatured ? 'style="border:2px solid #fda4af;background:#fff1f2;box-shadow:0 12px 32px rgba(251,113,133,0.12);position:relative;z-index:1;"' : '';
+    const cardStyle = isFeatured ? 'style="border:2px solid #fda4af;background:#fff1f2;box-shadow:0 12px 32px rgba(251,113,133,0.12);"' : '';
 
     const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
@@ -2568,37 +2610,45 @@ function render(){
         const wrap = btn.closest('[data-admin-id]');
         if (!wrap) return;
         const id = wrap.getAttribute('data-admin-id');
+        const original = DATA.find(x => x.id === id) || {};
+
         const read = (field)=>{
           const el = wrap.querySelector(`[data-admin-field="${field}"]`);
-          if (!el) return '';
+          if (!el) return undefined;
           if (el.type === 'checkbox') return el.checked;
           return el.value.trim();
         };
-        const introRaw = read('intro');
-        const introLines = introRaw.split(/\n+/).filter(Boolean);
+        
+        const getVal = (f) => { const v = read(f); return v !== undefined ? v : original[f]; };
+        
+        const introRaw = getVal('intro') || '';
+        const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : (original.highlights || []);
+
         const payload = {
-          id: id || undefined,
-          name: read('name'),
-          category: read('category'),
-          area: read('area'),
-          price: read('price'),
-          featured: read('featured'),
-          rating: read('rating'),
-          address: read('address'),
-          lat: read('lat'),
-          lng: read('lng'),
-          maps: read('maps'),
-          googlePlaceId: read('googlePlaceId'),
-          google_place_id: read('googlePlaceId'),
-          hours: read('hours'),
-          ig: read('ig'),
-          youtube: read('youtube'),
-          igComment: read('igComment'),
-          cover: read('cover'),
-          coverPos: read('coverPos'),
+          ...original,
+          id: id || original.id,
+          name: getVal('name'),
+          category: getVal('category'),
+          area: getVal('area'),
+          price: getVal('price'),
+          featured: read('featured') ?? original.featured,
+          featured_: read('featured') ?? original.featured_,
+          rating: getVal('rating'),
+          address: getVal('address'),
+          lat: getVal('lat'),
+          lng: getVal('lng'),
+          maps: getVal('maps'),
+          googlePlaceId: getVal('googlePlaceId'),
+          google_place_id: getVal('googlePlaceId'),
+          hours: getVal('hours'),
+          ig: getVal('ig'),
+          youtube: getVal('youtube'),
+          igComment: getVal('igComment'),
+          cover: getVal('cover'),
+          coverPos: getVal('coverPos'),
           intro: introRaw,
           highlights: introLines,
-          dishes: []
+          dishes: original.dishes || []
         };
         const msgEl = wrap.querySelector('[data-admin-msg]');
         const setMsg = (text)=>{
@@ -2831,6 +2881,7 @@ function bindRatingButton(){
     const total = targets.length;
     let success = 0;
     const service = new google.maps.places.PlacesService(document.createElement('div'));
+    const batchUpdates = [];
 
     // 輔助函式：查詢單一餐廳評分
     const fetchOne = (item) => new Promise((resolve) => {
@@ -2875,26 +2926,39 @@ function bindRatingButton(){
       btnRating.textContent = `更新中... ${i+1}/${total}`;
       const rating = await fetchOne(item);
       if (rating){
-        // 呼叫後端更新
-        try{
-          await fetch('/api/foods', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            credentials:'include',
-            body: JSON.stringify({ id: item.id, rating: rating })
-          });
-          item.rating = rating; // 更新本地資料
-          success++;
-        }catch(e){ console.error(e); }
+        item.rating = rating;
+        const payload = { ...item, rating: rating };
+        // 確保相容性欄位
+        if (payload.googlePlaceId) payload.google_place_id = payload.googlePlaceId;
+        if (payload.featured) payload.featured_ = payload.featured;
+        batchUpdates.push(payload);
+        success++;
       }
-      // 避免觸發 API Rate Limit，稍微延遲
-      await new Promise(r => setTimeout(r, 350));
+      // 避免觸發 Google API Rate Limit
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    if (batchUpdates.length > 0) {
+      btnRating.textContent = `正在儲存 ${batchUpdates.length} 筆資料...`;
+      try {
+        // 改用批次同步接口，一次性寫入，避免 Race Condition
+        await fetch('/api/foods/sync', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({ items: batchUpdates })
+        });
+      } catch(e) {
+        console.error(e);
+        alert('儲存失敗，請重試');
+      }
     }
 
     btnRating.disabled = false;
     btnRating.textContent = '補評分';
     showToast(`已更新 ${success} 間餐廳評分`);
-    saveCacheData(DATA);
+    // 全部完成後，強制從伺服器重新讀取資料，確保顯示的是最終儲存結果
+    await loadRemote();
     safeRender();
   };
 }
@@ -2950,8 +3014,7 @@ function bootFoodMap(){
   foodBooted = true;
   dataLoading = true;
   dataReady = false;
-  const usedCache = loadCacheData();
-  if (!usedCache) showLoadingState();
+  showLoadingState(); // 不讀取本地快取，直接顯示載入中
   setSyncIndicator(true);
   showNearbyToggle(false);
   setNearbyCollapsed(false);
@@ -3077,11 +3140,10 @@ async function loadRemote(){
   setSyncIndicator(true);
   if (!dataReady) showLoadingState();
   try{
-    const res = await fetch('/api/foods');
+    const res = await fetch('/api/foods', { cache: 'no-store' }); // 強制不快取，確保讀取 KV/R2 最新資料
     const data = await res.json().catch(()=>({}));
     if (res.ok && Array.isArray(data.items)){
       DATA = data.items.filter(it=>it && !it.deleted);
-      saveCacheData(DATA);
     }
   }catch(_){}
   dataReady = true;
@@ -3428,6 +3490,127 @@ async function removeFav(id){
     if (dlg.open) openFavList();
   }catch(err){
     alert('移除失敗：' + (err.message||err));
+  }
+}
+
+</script>
+</body>
+</html>
+  }
+}
+
+</script>
+</body>
+</html>
+    const res = await fetch('/api/me/food-favs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ id, action })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (res.status === 401){ alert('請先登入後再收藏'); return; }
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+    favs = data.favorites || [];
+    safeRender();
+  }catch(err){
+    alert('收藏失敗：' + (err.message||err));
+  }
+}
+function openFavList(){
+  const dlg = document.getElementById('foodModal');
+  const body = document.getElementById('foodModalBody');
+  const list = DATA.filter(it=> favs.includes(it.id));
+  body.innerHTML = `
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:18px;font-weight:800;">收藏清單</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+      </div>
+      ${!list.length ? '<div style="color:#94a3b8;">目前沒有收藏。</div>' : `
+        <div style="display:grid;gap:8px;">
+          ${list.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
+            <div>
+              <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
+              <div style="color:#64748b;font-size:12px;">${escapeHtml(mapCategory(it.category) || it.category || '')}｜${escapeHtml(it.area || '')}</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn ghost" style="padding:6px 10px;font-size:12px;" data-open="${escapeHtml(it.id || '')}">查看</button>
+              <button class="btn" style="padding:6px 10px;font-size:12px;" data-remove="${escapeHtml(it.id || '')}">移除</button>
+            </div>
+          </div>`).join('')}
+        </div>
+      `}
+    </div>
+  `;
+  dlg.showModal();
+  document.getElementById('foodClose').onclick = ()=> dlg.close();
+  body.querySelectorAll('button[data-open]').forEach(btn=>{
+    btn.onclick = ()=> openModal(btn.getAttribute('data-open'));
+  });
+  body.querySelectorAll('button[data-remove]').forEach(btn=>{
+    btn.onclick = ()=> removeFav(btn.getAttribute('data-remove'));
+  });
+}
+function openMissingGeoList(){
+  const dlg = document.getElementById('foodModal');
+  const body = document.getElementById('foodModalBody');
+  const list = (Array.isArray(DATA) ? DATA : []).filter(it=>{
+    if (!it || it.deleted) return false;
+    return !parseLatLngPair(it.lat, it.lng);
+  });
+  body.innerHTML = `
+    <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:18px;font-weight:800;">缺定位清單</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+      </div>
+      ${!list.length ? '<div style="color:#94a3b8;">目前所有餐廳都有定位。</div>' : `
+        <div style="display:grid;gap:8px;">
+          ${list.map(it=>{
+            const mapsUrl = safeUrl(it.maps);
+            const cat = mapCategory(it.category) || it.category || '';
+            const area = it.area || '';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
+              <div>
+                <div style="font-weight:700;">${escapeHtml(it.name || '')}</div>
+                <div style="color:#64748b;font-size:12px;">${escapeHtml(cat)}｜${escapeHtml(area)}</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                ${mapsUrl ? `<a class="btn ghost" style="padding:6px 10px;font-size:12px;" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">地圖</a>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      `}
+    </div>
+  `;
+  dlg.showModal();
+  document.getElementById('foodClose').onclick = ()=> dlg.close();
+}
+async function removeFav(id){
+  try{
+    const res = await fetch('/api/me/food-favs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ id, action:'remove' })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (res.status === 401){ alert('請先登入後再操作'); return; }
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+    favs = data.favorites || [];
+    safeRender();
+    const dlg = document.getElementById('foodModal');
+    if (dlg.open) openFavList();
+  }catch(err){
+    alert('移除失敗：' + (err.message||err));
+  }
+}
+
+</script>
+</body>
+</html>
   }
 }
 
