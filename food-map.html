@@ -1653,6 +1653,7 @@ let googleMarker = null;
 let googleGeocoder = null;
 let googleAutocomplete = null;
 let googleReady = false;
+let googleLoadingPromise = null;
 let googleMapsKey = GOOGLE_MAPS_KEY;
 let foodBooted = false;
 let dataReady = false;
@@ -1779,27 +1780,43 @@ async function getGoogleMapsKey(){
   }catch(_){}
   return '';
 }
-async function loadGoogleMaps(){
-  if (nearbyMapEl) nearbyMapEl.textContent = '正在載入 Google Maps…';
-  const key = await getGoogleMapsKey();
-  if (!key){
-    if (nearbyMapEl) nearbyMapEl.textContent = '尚未設定 Google Maps API Key（請確認已部署環境變數）';
-    return;
-  }
-  if (window.google && window.google.maps){
-    initGoogleMaps();
-    return;
-  }
-  if (document.getElementById('googleMapsScript')) return;
-  const script = document.createElement('script');
-  script.id = 'googleMapsScript';
-  script.async = true;
-  script.defer = true;
-  script.onerror = () => {
-    if (nearbyMapEl) nearbyMapEl.textContent = 'Google Maps 載入失敗';
-  };
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initGoogleMaps&language=${encodeURIComponent(GOOGLE_MAPS_LANG)}`;
-  document.head.appendChild(script);
+async function ensureGoogleMaps(){
+  if (googleReady && window.google && window.google.maps) return true;
+  if (googleLoadingPromise) return googleLoadingPromise;
+  
+  googleLoadingPromise = new Promise(async (resolve) => {
+    if (nearbyMapEl) nearbyMapEl.textContent = '正在載入地圖元件...';
+    const key = await getGoogleMapsKey();
+    if (!key){
+      if (nearbyMapEl) nearbyMapEl.textContent = '未設定 Google Maps Key';
+      resolve(false);
+      return;
+    }
+    if (window.google && window.google.maps) {
+      initGoogleMaps();
+      resolve(true);
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.id = 'googleMapsScript';
+    script.async = true;
+    script.defer = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initGoogleMaps&language=${encodeURIComponent(GOOGLE_MAPS_LANG)}`;
+    
+    // Hook callback
+    const originalInit = window.initGoogleMaps;
+    window.initGoogleMaps = () => {
+      if (typeof originalInit === 'function') originalInit();
+      resolve(true);
+    };
+    script.onerror = () => {
+      if (nearbyMapEl) nearbyMapEl.textContent = '地圖載入失敗';
+      resolve(false);
+    };
+    document.head.appendChild(script);
+  });
+  return googleLoadingPromise;
 }
 window.initGoogleMaps = initGoogleMaps;
 
@@ -2680,7 +2697,7 @@ function bootFoodMap(){
   initFilters();
   resetFilters();
   [kwInput, fCat, fArea, fPrice, fSort].filter(Boolean).forEach(el=> el.addEventListener('input', safeRender));
-  void loadGoogleMaps();
+  setTimeout(() => ensureGoogleMaps(), 3500); // 延遲載入地圖，加快首頁顯示
   loadRemote();
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
@@ -2712,6 +2729,7 @@ async function runNearby(origin, label){
 }
 if (nearbyUse){
   nearbyUse.addEventListener('click', ()=>{
+    ensureGoogleMaps();
     if (!navigator.geolocation){
       if (nearbyStatus) nearbyStatus.textContent = '此瀏覽器不支援定位';
       return;
@@ -2732,6 +2750,7 @@ if (nearbyUse){
 }
 if (nearbySearch){
   const runSearch = async ()=>{
+    await ensureGoogleMaps();
     const query = nearbyInput ? nearbyInput.value.trim() : '';
     if (!query){
       if (nearbyStatus) nearbyStatus.textContent = '請先輸入飯店名稱或地址';
@@ -2757,6 +2776,7 @@ if (nearbySearch){
   nearbySearch.addEventListener('click', runSearch);
   if (nearbyInput){
     nearbyInput.addEventListener('keydown', (ev)=>{
+      ensureGoogleMaps();
       if (ev.key === 'Enter'){
         ev.preventDefault();
         runSearch();
@@ -2766,6 +2786,7 @@ if (nearbySearch){
 }
 if (nearbyToggle){
   nearbyToggle.addEventListener('click', ()=>{
+    ensureGoogleMaps();
     setNearbyCollapsed(!isNearbyCollapsed());
   });
 }
@@ -2981,7 +3002,9 @@ function openModal(id){
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
-  loadGooglePlaceDetails(item, document.getElementById('googleReviewsBox'));
+  ensureGoogleMaps().then(() => {
+    loadGooglePlaceDetails(item, document.getElementById('googleReviewsBox'));
+  });
   const favBtn = body.querySelector('button[data-fav]');
   if (favBtn){ favBtn.onclick = ()=> toggleFav(item.id); }
 }
