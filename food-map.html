@@ -2018,6 +2018,12 @@ async function checkAdmin(){
             try {
               const obj = JSON.parse(ev.target.result);
               const items = Array.isArray(obj) ? obj : (obj.items || []);
+              let obj = JSON.parse(ev.target.result);
+              // 處理從 console 複製時可能產生的雙重編碼字串 (例如 "{\"items\":...}")
+              if (typeof obj === 'string') {
+                try { obj = JSON.parse(obj); } catch(_) {}
+              }
+              const items = Array.isArray(obj) ? obj : (obj && obj.items || []);
               if (!items.length) return alert('檔案內無資料');
               if (!confirm(`準備匯入 ${items.length} 筆資料，這將會覆蓋現有資料。確定嗎？`)) return;
               
