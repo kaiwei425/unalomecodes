@@ -967,29 +967,31 @@ function normalizeFoodPayload(payload, fallbackId){
   const body = payload || {};
   const id = String(body.id || fallbackId || '').trim();
   if (!id) return null;
-  return {
-    id,
-    name: String(body.name||'').trim(),
-    category: String(body.category||'').trim(),
-    area: String(body.area||'').trim(),
-    price: String(body.price||'').trim(),
-    address: String(body.address||'').trim(),
-    hours: String(body.hours||'').trim(),
-    maps: String(body.maps||'').trim(),
-    ig: String(body.ig||'').trim(),
-    youtube: String(body.youtube||'').trim(),
-    igComment: String(body.igComment||'').trim(),
-    cover: String(body.cover||'').trim(),
-    coverPos: String(body.coverPos || body.cover_pos || '').trim(),
-    intro: String(body.intro||'').trim(),
-    highlights: Array.isArray(body.highlights) ? body.highlights : [],
-    dishes: Array.isArray(body.dishes) ? body.dishes : [],
-    featured: !!(body.featured || body.featured_),
-    rating: body.rating,
-    googlePlaceId: String(body.googlePlaceId || body.google_place_id || '').trim(),
-    lat: body.lat,
-    lng: body.lng
-  };
+  
+  const out = { id };
+  // 只有當欄位存在於 payload 時才更新，避免 undefined 覆蓋掉舊資料
+  const str = (k) => { if (body[k] !== undefined) out[k] = String(body[k]||'').trim(); };
+  
+  str('name'); str('category'); str('area'); str('price');
+  str('address'); str('hours'); str('maps'); str('ig');
+  str('youtube'); str('igComment'); str('cover');
+  
+  if (body.coverPos !== undefined || body.cover_pos !== undefined) {
+    out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
+  }
+  str('intro'); str('googlePlaceId');
+  
+  if (body.highlights !== undefined) out.highlights = Array.isArray(body.highlights) ? body.highlights : [];
+  if (body.dishes !== undefined) out.dishes = Array.isArray(body.dishes) ? body.dishes : [];
+  
+  if (body.featured !== undefined || body.featured_ !== undefined) {
+    out.featured = !!(body.featured || body.featured_);
+  }
+  if (body.rating !== undefined) out.rating = body.rating;
+  if (body.lat !== undefined) out.lat = body.lat;
+  if (body.lng !== undefined) out.lng = body.lng;
+  
+  return out;
 }
 function mergeFoodRecord(existing, incoming, options){
   const out = Object.assign({}, existing || {});

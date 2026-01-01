@@ -1640,6 +1640,9 @@ const btnGeo = document.getElementById('btnGeo');
 const btnGeoList = document.getElementById('btnGeoList');
 let btnHours = document.getElementById('btnHours');
 let btnRating = document.getElementById('btnRating');
+let btnRepair = document.getElementById('btnRepair');
+let btnRecoverCache = document.getElementById('btnRecoverCache');
+let btnRecoverBase = document.getElementById('btnRecoverBase');
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbySearch = document.getElementById('nearbySearch');
@@ -1896,6 +1899,87 @@ async function checkAdmin(){
     }
   }
   if (btnRating) btnRating.style.display = isAdmin ? 'inline-flex' : 'none';
+  
+  if (!btnRepair && isAdmin){
+    const actions = document.querySelector('.top-actions');
+    if (actions){
+      const btn = document.createElement('button');
+      btn.className = 'btn ghost pill';
+      btn.id = 'btnRepair';
+      btn.textContent = '修復資料';
+      btn.style.color = '#ef4444';
+      btn.style.borderColor = '#fca5a5';
+      btn.onclick = async () => {
+        if(!confirm('這將會強制重新掃描資料庫，找回消失的餐廳資料。確定嗎？')) return;
+        btn.textContent = '修復中...';
+        btn.disabled = true;
+        try {
+          await fetch('/api/foods/rebuild-cache', {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          await loadRemote(); // 重新讀取完整列表
+          alert('資料已修復！消失的餐廳應該都回來了。');
+        } catch(e) {
+          alert('修復失敗: ' + e.message);
+        } finally {
+          btn.textContent = '修復資料';
+          btn.disabled = false;
+        }
+      };
+      actions.appendChild(btn);
+      btnRepair = btn;
+    }
+  }
+  
+  if (!btnRecoverCache && isAdmin){
+    const actions = document.querySelector('.top-actions');
+    if (actions){
+      const btn = document.createElement('button');
+      btn.className = 'btn ghost pill';
+      btn.id = 'btnRecoverCache';
+      btn.textContent = '救回(從快取)';
+      btn.style.color = '#ef4444';
+      btn.style.borderColor = '#fca5a5';
+      btn.onclick = async () => {
+        try {
+          const raw = localStorage.getItem(FOOD_CACHE_KEY);
+          if (!raw) return alert('找不到本機快取備份，無法復原。');
+          const cached = JSON.parse(raw);
+          if (!cached || !Array.isArray(cached.items)) return alert('快取格式錯誤。');
+          const items = cached.items;
+          if (!confirm(`找到 ${items.length} 筆本機備份資料（時間：${new Date(cached.ts).toLocaleString()}）。\n是否嘗試推送到伺服器以覆蓋目前的損壞資料？`)) return;
+          
+          btn.textContent = '救援中...';
+          await fetch('/api/foods/sync', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ items })
+          });
+          alert('復原請求已送出，頁面將重新整理。');
+          location.reload();
+        } catch(e) { alert('復原失敗：' + e.message); btn.textContent = '救回(從快取)'; }
+      };
+      actions.appendChild(btn);
+      btnRecoverCache = btn;
+
+      const btn2 = document.createElement('button');
+      btn2.className = 'btn ghost pill';
+      btn2.id = 'btnRecoverBase';
+      btn2.textContent = '重置預設';
+      btn2.onclick = async () => {
+        if(!confirm('確定要將程式碼中的預設餐廳資料（BASE_DATA）重新寫入資料庫嗎？')) return;
+        await fetch('/api/foods/sync', { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'include', body: JSON.stringify({ items: BASE_DATA }) });
+        alert('已重置預設資料，頁面將重新整理。');
+        location.reload();
+      };
+      actions.appendChild(btn2);
+      btnRecoverBase = btn2;
+    }
+  }
+
   bindHoursButton();
   bindRatingButton();
 }
@@ -3450,7 +3534,6 @@ async function removeFav(id){
     alert('移除失敗：' + (err.message||err));
   }
 }
-
 </script>
 </body>
 </html>
