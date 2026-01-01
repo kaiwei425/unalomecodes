@@ -205,6 +205,19 @@
       cursor: pointer; border-radius: 8px;
     }
     .member-menu .dropdown-content button:hover { background: #f1f5f9; color: #0f172a; }
+    .auth-widget { display: inline-flex; align-items: center; gap: 6px; }
+    .auth-status { display: none; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .auth-status button { /* logout button */
+      background: none;
+      border: none;
+      color: var(--muted);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 0;
+      font-family: inherit;
+      font-weight: 400;
+    }
   </style>
 </head>
 <body>
@@ -223,14 +236,15 @@
           <button class="btn ghost pill" id="btnFav">收藏清單</button>
           
           <div class="member-menu" id="memberMenuContainer">
-            <button class="btn ghost pill" id="memberMenuBtn">會員中心</button>
+            <button class="btn ghost pill" id="memberMenuBtn">會員中心 ▾</button>
             <div class="dropdown-content" id="memberMenuPanel">
               <button onclick="location.href='/account-orders.html'">我的訂單</button>
               <button onclick="location.href='/account-coupons.html'">我的優惠券</button>
               <button onclick="location.href='/account-store.html'">門市預設</button>
             </div>
           </div>
-          <div class="auth-widget" data-auth-widget style="display:inline-flex; align-items:center; gap:6px;">
+          <div class="auth-widget" data-auth-widget>
+            <span class="auth-status" data-auth-status>登入狀態載入中…</span>
             <button class="btn ghost pill" data-auth-btn>登入會員</button>
           </div>
 
