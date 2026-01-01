@@ -2893,20 +2893,21 @@ function bindRatingButton(){
             method:'POST',
             headers:{'Content-Type':'application/json'},
             credentials:'include',
-            body: JSON.stringify({ id: item.id, rating: rating })
             body: JSON.stringify(payload)
           });
           item.rating = rating; // 更新本地資料
           success++;
         }catch(e){ console.error(e); }
       }
-      // 避免觸發 API Rate Limit，稍微延遲
-      await new Promise(r => setTimeout(r, 350));
+      // 增加延遲至 1.5 秒，避免後端 KV 寫入發生 Race Condition (競態條件) 導致資料被覆蓋
+      await new Promise(r => setTimeout(r, 1500));
     }
 
     btnRating.disabled = false;
     btnRating.textContent = '補評分';
     showToast(`已更新 ${success} 間餐廳評分`);
+    // 全部完成後，強制從伺服器重新讀取資料，確保顯示的是最終儲存結果
+    await loadRemote();
     safeRender();
   };
 }
