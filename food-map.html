@@ -206,17 +206,15 @@
     }
     .member-menu .dropdown-content button:hover { background: #f1f5f9; color: #0f172a; }
     .auth-widget { display: inline-flex; align-items: center; gap: 6px; }
-    .auth-status { display: none; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text); }
-    .auth-status button { /* logout button */
-      background: none;
-      border: none;
-      color: var(--muted);
-      text-decoration: underline;
-      cursor: pointer;
-      font-size: 12px;
-      padding: 0;
-      font-family: inherit;
-      font-weight: 400;
+    .auth-status { display: none; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #0f172a; }
+    
+    /* 當 auth-widget 擁有 logged-in 類別時的顯示切換 */
+    .auth-widget.logged-in .auth-status { display: flex !important; }
+    .auth-widget.logged-in [data-auth-btn] { display: none !important; }
+
+    /* 登出按鈕樣式 (仿照 shop) */
+    .auth-status .logout-btn {
+      background:none; border:none; color:#64748b; text-decoration:underline; cursor:pointer; font-size:12px; padding:0; margin-left:4px;
     }
     #btnBackToTop {
       position: fixed; bottom: 80px; right: 20px; width: 44px; height: 44px;
@@ -391,6 +389,25 @@ document.addEventListener('DOMContentLoaded', function() {
       btnBackToTop.style.display = window.scrollY > 300 ? 'flex' : 'none';
     });
     btnBackToTop.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 手動補強：確保登入後樣式正確切換，並顯示會員名稱
+  if (window.authState && typeof window.authState.onProfile === 'function') {
+    window.authState.onProfile((user) => {
+      const widget = document.querySelector('[data-auth-widget]');
+      if (widget) {
+        if (user) {
+          widget.classList.add('logged-in');
+          const statusEl = widget.querySelector('[data-auth-status]');
+          if (statusEl) {
+            // 強制設定內容為：會員名稱 + 登出按鈕
+            statusEl.innerHTML = `${escapeHtml(user.name)} <button class="logout-btn" onclick="window.authState.logout()">登出</button>`;
+          }
+        } else {
+          widget.classList.remove('logged-in');
+        }
+      }
+    });
   }
 });
 
