@@ -2016,6 +2016,53 @@ function initMainMap() {
   });
   mainInfoWindow = new google.maps.InfoWindow({ maxWidth: 280 });
   
+  // 新增定位按鈕
+  const locBtn = document.createElement("button");
+  locBtn.className = "btn pill";
+  locBtn.style.cssText = "background:#fff; color:#0f172a; border:1px solid #cbd5e1; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:10px; font-weight:700; cursor:pointer; z-index: 5;";
+  locBtn.innerHTML = "📍 定位我的位置";
+  
+  locBtn.addEventListener("click", () => {
+    if (navigator.geolocation) {
+      locBtn.textContent = "定位中...";
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          userLocation = pos; // 更新全域位置變數
+          mainMap.setCenter(pos);
+          mainMap.setZoom(15);
+          
+          // 標示使用者位置
+          new google.maps.Marker({
+            position: pos,
+            map: mainMap,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: "#2563eb",
+              fillOpacity: 1,
+              strokeColor: "white",
+              strokeWeight: 2,
+            },
+            title: "您的位置"
+          });
+          locBtn.innerHTML = "📍 定位我的位置";
+        },
+        () => {
+          alert("無法取得位置權限。");
+          locBtn.innerHTML = "📍 定位我的位置";
+        }
+      );
+    } else {
+      alert("瀏覽器不支援定位。");
+    }
+  });
+  
+  mainMap.controls[google.maps.ControlPosition.TOP_CENTER].push(locBtn);
+  
   // 初始化後立即更新標記
   safeRender();
 }
