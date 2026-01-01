@@ -2210,9 +2210,19 @@ bindHoursButton();
 function bootFoodMap(){
   if (foodBooted) return;
   foodBooted = true;
-  dataLoading = true;
-  dataReady = false;
-  showLoadingState(); // 不讀取本地快取，直接顯示載入中
+
+  // 優化：優先讀取快取或預設資料，實現秒開
+  if (loadCacheData()) {
+    // loadCacheData 內部會設定 dataReady = true 並渲染
+  } else if (DATA && DATA.length > 0) {
+    dataReady = true;
+    safeRender();
+  } else {
+    dataLoading = true;
+    dataReady = false;
+    showLoadingState();
+  }
+
   setSyncIndicator(true);
   showNearbyToggle(false);
   setNearbyCollapsed(false);
@@ -2237,7 +2247,7 @@ function bootFoodMap(){
       }
     });
   }
-  setTimeout(() => ensureGoogleMaps(), 3500); // 延遲載入地圖，加快首頁顯示
+  ensureGoogleMaps(); // 移除延遲，直接載入地圖
   loadRemote();
 }
 
