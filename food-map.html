@@ -2016,8 +2016,6 @@ async function checkAdmin(){
           const reader = new FileReader();
           reader.onload = async ev => {
             try {
-              const obj = JSON.parse(ev.target.result);
-              const items = Array.isArray(obj) ? obj : (obj.items || []);
               let obj = JSON.parse(ev.target.result);
               // 處理從 console 複製時可能產生的雙重編碼字串 (例如 "{\"items\":...}")
               if (typeof obj === 'string') {
