@@ -2213,13 +2213,13 @@ function openModal(id){
   const displayCat = mapCategory(item.category) || item.category;
   const tags = [
     displayCat,
-    item.area
+    item.area,
+    item.price ? `價位 ${item.price}` : ''
   ]
     .filter(Boolean)
     .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
     .join('');
   const metaTags = [
-    item.price ? `價位 ${item.price}` : '',
     hoursText ? `營業 ${hoursText}` : ''
   ]
     .filter(Boolean)
