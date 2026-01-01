@@ -2878,11 +2878,23 @@ function bindRatingButton(){
       if (rating){
         // 呼叫後端更新
         try{
+          const payload = { ...item, rating: rating };
+          // 確保 highlights 與 intro 同步（模擬後台儲存邏輯，避免資料遺失）
+          if (typeof payload.intro === 'string') {
+            payload.highlights = payload.intro.split(/\n+/).filter(Boolean);
+          }
+          // 確保相容性欄位（避免後端因欄位名稱不同而漏存）
+          if (payload.googlePlaceId) payload.google_place_id = payload.googlePlaceId;
+          if (payload.google_place_id) payload.googlePlaceId = payload.google_place_id;
+          if (payload.featured) payload.featured_ = payload.featured;
+          if (payload.featured_) payload.featured = payload.featured_;
+
           await fetch('/api/foods', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             credentials:'include',
             body: JSON.stringify({ id: item.id, rating: rating })
+            body: JSON.stringify(payload)
           });
           item.rating = rating; // 更新本地資料
           success++;
@@ -2895,7 +2907,6 @@ function bindRatingButton(){
     btnRating.disabled = false;
     btnRating.textContent = '補評分';
     showToast(`已更新 ${success} 間餐廳評分`);
-    saveCacheData(DATA);
     safeRender();
   };
 }
@@ -2951,8 +2962,7 @@ function bootFoodMap(){
   foodBooted = true;
   dataLoading = true;
   dataReady = false;
-  const usedCache = loadCacheData();
-  if (!usedCache) showLoadingState();
+  showLoadingState(); // 不讀取本地快取，直接顯示載入中
   setSyncIndicator(true);
   showNearbyToggle(false);
   setNearbyCollapsed(false);
@@ -3078,11 +3088,10 @@ async function loadRemote(){
   setSyncIndicator(true);
   if (!dataReady) showLoadingState();
   try{
-    const res = await fetch('/api/foods');
+    const res = await fetch('/api/foods', { cache: 'no-store' }); // 強制不快取，確保讀取 KV/R2 最新資料
     const data = await res.json().catch(()=>({}));
     if (res.ok && Array.isArray(data.items)){
       DATA = data.items.filter(it=>it && !it.deleted);
-      saveCacheData(DATA);
     }
   }catch(_){}
   dataReady = true;
