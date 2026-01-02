@@ -1596,15 +1596,29 @@ async function recordFortuneStat(env, dateKey, userId){
 }
 async function recordFoodMapStat(env, dateKey, clientId){
   if (!env || !env.FOODS || !dateKey || !clientId) return;
-  const seenKey = `FOOD_STATS:SEEN:${dateKey}:${clientId}`;
-  const countKey = `FOOD_STATS:${dateKey}`;
+  const dailySeenKey = `FOOD_STATS:SEEN:${dateKey}:${clientId}`;
+  const dailyCountKey = `FOOD_STATS:${dateKey}`;
+  const totalSeenKey = `FOOD_STATS:USER_SEEN:${clientId}`;
+  const totalCountKey = `FOOD_STATS:TOTAL_UNIQUE`;
+
   try{
-    const seen = await env.FOODS.get(seenKey);
-    if (seen) return;
-    await env.FOODS.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 * 2 });
-    const raw = await env.FOODS.get(countKey);
-    const count = (parseInt(raw || '0', 10) || 0) + 1;
-    await env.FOODS.put(countKey, String(count));
+    // Daily unique visitor
+    const seenToday = await env.FOODS.get(dailySeenKey);
+    if (!seenToday) {
+      await env.FOODS.put(dailySeenKey, '1', { expirationTtl: 60 * 60 * 24 * 2 });
+      const rawDaily = await env.FOODS.get(dailyCountKey);
+      const dailyCount = (parseInt(rawDaily || '0', 10) || 0) + 1;
+      await env.FOODS.put(dailyCountKey, String(dailyCount));
+    }
+
+    // Total unique visitor
+    const seenEver = await env.FOODS.get(totalSeenKey);
+    if (!seenEver) {
+      await env.FOODS.put(totalSeenKey, '1'); // No TTL, mark as seen forever
+      const rawTotal = await env.FOODS.get(totalCountKey);
+      const totalCount = (parseInt(rawTotal || '0', 10) || 0) + 1;
+      await env.FOODS.put(totalCountKey, String(totalCount));
+    }
   }catch(_){}
 }
 function taipeiDateParts(ts=Date.now()){
@@ -4180,7 +4194,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }catch(_){}
       out.push({ date: dateKey, count });
     }
-    return json({ ok:true, stats: out });
+    // Get total unique count
+    let totalUnique = 0;
+    try {
+      const rawTotal = await env.FOODS.get('FOOD_STATS:TOTAL_UNIQUE');
+      totalUnique = parseInt(rawTotal || '0', 10) || 0;
+    } catch(_) {}
+
+    return json({ ok:true, stats: out, total: totalUnique });
   }
 
   if (pathname === '/api/me/orders' && request.method === 'GET') {
