@@ -361,18 +361,26 @@
         width:100%;
       }
       .top-actions-row{
-        grid-template-columns:repeat(3, minmax(0,1fr));
-        gap:6px;
+        display:flex !important;
+        flex-wrap:nowrap;
+        justify-content:flex-start;
+        gap:8px;
+        width:100%;
       }
       .top-actions-row .btn{
         height:36px;
-        padding:6px 8px;
+        padding:6px 10px;
         font-size:12px;
         white-space:nowrap;
         min-width:0;
+        flex:1 1 0;
       }
       .top-actions-row .dropdown{
         min-width:0;
+        flex:1 1 0;
+      }
+      .top-actions-row .dropdown .btn{
+        width:100%;
       }
       .action-group:first-child{
         grid-template-columns:repeat(2, minmax(0,1fr));
