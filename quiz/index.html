@@ -285,9 +285,10 @@ const ADVICE_BASE = 'https://proud-boat-794c.kaiwei425.workers.dev';
 const API_BASE = ADVICE_BASE; // 供舊有分享/守護神資料 API 使用
 // 本站 API（新優惠券系統、商品結帳）
 const SITE_BASE   = (function(){ try{ return location.origin; }catch(e){ return 'https://shop.unalomecodes.com'; }})();
-// 使用既有可用的外部網域，以確保「查看完整介紹／分享結果／瀏覽其他守護者」可正常開啟
+// 分享結果仍使用既有外部網域
 const SHARE_PAGE = 'https://unalomecodes.pages.dev/share';
-const DEITY_PAGE = 'https://unalomecodes.pages.dev/deity';
+// 內部神祇頁面改為新網址
+const DEITY_PAGE = SITE_BASE + '/deity';
 const DEITY_IMG_OVERRIDES = { CD:'https://i.ibb.co/rGpp2w1s/image.jpg', RH:'https://i.ibb.co/qMy9RxVx/image.jpg', HM:'https://i.ibb.co/kV0pz49B/image.jpg', WE:'https://i.ibb.co/pv4Jc4sc/image.jpg', XZ:'https://i.ibb.co/V0hNnFHT/image.jpg', JL:'https://i.ibb.co/wrWW3ddN/image.jpg', ZD:'https://i.ibb.co/xtJtDTVy/image.jpg', KP:'https://i.ibb.co/k29dc4Qn/image.jpg', FM:'https://i.ibb.co/SXGB6vKj/image.jpg', GA:'https://i.ibb.co/2RhD1k9/image.jpg', HP:'https://i.ibb.co/ymcrPm1C/image.jpg', ZF:'https://i.ibb.co/CRctyB3/image.jpg' };
 const BRAND_NAME = '守護指引';
 const BRAND_LOGO = 'https://i.ibb.co/7mtppQQ/logo.jpg';
@@ -783,7 +784,7 @@ async function showResult(){
   // links
   document.getElementById('deityLink').href = `${DEITY_PAGE}?code=${encodeURIComponent(code)}&api=${encodeURIComponent(API_BASE)}`;
   document.getElementById('shareLink').href = buildShareUrl({ code, job:state.job, dow:state.dow, zod:state.zod, aff:aff, img: finalImg });
-  document.getElementById('menuLink').href = `${SHARE_PAGE}?view=deity-menu&api=${encodeURIComponent(API_BASE)}`;
+  document.getElementById('menuLink').href = `${DEITY_PAGE}`;
 
   // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
   try {
