@@ -740,6 +740,7 @@ const TRANSLATIONS = {
     reviews: 'Google 評分 & 評論',
     tripTitle: '半日吃喝路線',
     planTrip: '規劃收藏路線',
+    addFav: '加入收藏',
     distFromHere: '距離目前位置',
     distFromPrev: '距離上一站',
     openNav: '在 Google Maps 開啟導航',
@@ -765,6 +766,7 @@ const TRANSLATIONS = {
     featured: '精選',
     recommend: '推薦',
     newPlace: '（新餐廳）',
+    actionsHint: '新增完成後會顯示操作按鈕',
     unknownAddr: '暫無地址',
     noIntro: '暫無介紹',
     noYt: '尚未提供 YouTube 影片',
@@ -903,6 +905,7 @@ const TRANSLATIONS = {
     reviews: 'Google Ratings & Reviews',
     tripTitle: 'Half-day Trip',
     planTrip: 'Plan Trip',
+    addFav: 'Add to Favorites',
     distFromHere: 'Dist from here',
     distFromPrev: 'Dist from prev',
     openNav: 'Open Navigation',
@@ -928,6 +931,7 @@ const TRANSLATIONS = {
     featured: 'Featured',
     recommend: 'Recommended',
     newPlace: '(New)',
+    actionsHint: 'Actions are available after saving.',
     unknownAddr: 'No Address',
     noIntro: 'No Description',
     noYt: 'No YouTube Video',
@@ -2450,19 +2454,19 @@ function render(){
         <div class="card-head">
           <div>
             <div class="card-title">${safeName}</div>
-            <div class="card-sub">${escapeHtml(displayCat || '')} · ${escapeHtml(item.area || '')}${item.price ? ` · 價位 ${escapeHtml(item.price)}` : ''}</div>
+            <div class="card-sub">${escapeHtml(displayCat || '')} · ${escapeHtml(item.area || '')}${item.price ? ` · ${escapeHtml(t('priceLabel'))} ${escapeHtml(item.price)}` : ''}</div>
           </div>
           <div class="card-head-actions">
-            ${canEdit ? `<button class="edit-btn" data-edit="${escapeHtml(editKey)}">編輯</button>` : ''}
-            ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="收藏">${liked?'★':'☆'}</button>` : ''}
+            ${canEdit ? `<button class="edit-btn" data-edit="${escapeHtml(editKey)}">${escapeHtml(t('edit'))}</button>` : ''}
+            ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="${escapeHtml(t('favBtn'))}">${liked?'★':'☆'}</button>` : ''}
           </div>
         </div>
-        <div class="card-tags">${featuredTag}${tags}${ratingTag}<span class="badge-hot">推薦</span></div>
+        <div class="card-tags">${featuredTag}${tags}${ratingTag}<span class="badge-hot">${escapeHtml(t('recommend'))}</span></div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
-          ${item.id ? `<button class="btn primary" data-open="${safeId}">查看店家資訊</button>` : '<span class="mini">新增完成後會顯示操作按鈕</span>'}
-          ${item.id ? `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">地圖導航</a>` : ''}
+          ${item.id ? `<button class="btn primary" data-open="${safeId}">${escapeHtml(t('details'))}</button>` : `<span class="mini">${escapeHtml(t('actionsHint'))}</span>`}
+          ${item.id ? `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('nav'))}</a>` : ''}
         </div>
         ${adminPanel}
       </div>
@@ -2470,7 +2474,7 @@ function render(){
   }).join('') + (totalLen > currentLimit ? `
     <div style="grid-column:1/-1;text-align:center;padding:20px 0;">
       <button id="btnLoadMore" class="btn pill" style="background:#fff;border:1px solid #cbd5e1;padding:10px 24px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.05);margin:0 auto;">
-        載入更多 (${totalLen - currentLimit})
+        ${escapeHtml(t('loadMore'))} (${totalLen - currentLimit})
       </button>
     </div>` : '');
 
@@ -3371,13 +3375,13 @@ function openModal(id){
   const tags = [
     displayCat,
     item.area,
-    item.price ? `價位 ${item.price}` : ''
+    item.price ? `${t('priceLabel')} ${item.price}` : ''
   ]
     .filter(Boolean)
     .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
     .join('');
   const metaTags = [
-    hoursText ? `營業 ${hoursText}` : ''
+    hoursText ? `${t('hours')} ${hoursText}` : ''
   ]
     .filter(Boolean)
     .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
@@ -3386,35 +3390,35 @@ function openModal(id){
     <div class="modal-body">
       <div class="modal-head">
         <div class="modal-title">${escapeHtml(item.name || '')}</div>
-        <button id="foodClose" class="modal-close">關閉</button>
+        <button id="foodClose" class="modal-close">${escapeHtml(t('close'))}</button>
       </div>
       <div class="modal-tags">${tags}</div>
       <div class="${embedClass}">
         <div class="modal-embed-inner">
-          ${iframe || '<div style="padding:20px;color:#94a3b8;text-align:center;">尚未提供 YouTube 影片</div>'}
+          ${iframe || `<div style="padding:20px;color:#94a3b8;text-align:center;">${escapeHtml(t('noYt'))}</div>`}
         </div>
       </div>
       ${igComment ? `
         <div class="modal-section">
-          <strong>IG 留言</strong>
+          <strong>${escapeHtml(t('igComment'))}</strong>
           <div style="white-space:pre-wrap;color:#475569;line-height:1.8;">${escapeHtml(igComment)}</div>
         </div>` : ''}
       <div class="modal-section">
-        <strong>店家介紹</strong>
-        <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || '暫無介紹')}</div>
+        <strong>${escapeHtml(t('desc'))}</strong>
+        <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || t('noIntro'))}</div>
       </div>
       <div class="modal-section">
-        <div><strong>地址：</strong>${escapeHtml(item.address || '') || '暫無地址'}</div>
+        <div><strong>${escapeHtml(t('addr'))}：</strong>${escapeHtml(item.address || '') || escapeHtml(t('unknownAddr'))}</div>
         ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
       </div>
       <div class="modal-section">
-        <strong>Google 評分 & 評論</strong>
+        <strong>${escapeHtml(t('reviews'))}</strong>
         <div id="googleReviewsBox" style="margin-top:4px;"></div>
       </div>
       <div class="modal-actions">
-        <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
-        ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">在 IG 上查看</a>` : ''}
-        <button class="btn ghost" data-fav="${safeId}">加入收藏</button>
+        <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
+        ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">${escapeHtml(t('viewIg'))}</a>` : ''}
+        <button class="btn ghost" data-fav="${safeId}">${escapeHtml(t('addFav'))}</button>
       </div>
     </div>
   `;
@@ -3465,17 +3469,17 @@ function openFavList(){
   
   const planButtonHtml = list.length >= 3 ? `
     <div style="margin-top:16px; padding-top:16px; border-top:1px solid #e2e8f0;">
-      <button class="btn primary" id="planTripFromFavs" style="width:100%;">規劃收藏路線</button>
+      <button class="btn primary" id="planTripFromFavs" style="width:100%;">${escapeHtml(t('planTrip'))}</button>
     </div>
   ` : '';
 
   body.innerHTML = `
     <div style="padding:16px;display:grid;gap:12px;background:#fff;max-height:80vh;overflow:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:18px;font-weight:800;">收藏清單</div>
-        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">關閉</button>
+        <div style="font-size:18px;font-weight:800;">${escapeHtml(t('fav'))}</div>
+        <button id="foodClose" style="border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;">${escapeHtml(t('close'))}</button>
       </div>
-      ${!list.length ? '<div style="color:#94a3b8; text-align:center; padding:20px 0;">目前沒有收藏。</div>' : `
+      ${!list.length ? `<div style="color:#94a3b8; text-align:center; padding:20px 0;">${escapeHtml(t('emptyFav'))}</div>` : `
         <div style="display:grid;gap:8px;">
           ${list.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;">
             <div>
@@ -3483,8 +3487,8 @@ function openFavList(){
               <div style="color:#64748b;font-size:12px;">${escapeHtml(mapCategory(it.category) || it.category || '')}｜${escapeHtml(it.area || '')}</div>
             </div>
             <div style="display:flex;gap:6px;">
-              <button class="btn ghost" style="padding:6px 10px;font-size:12px;" data-open="${escapeHtml(it.id || '')}">查看</button>
-              <button class="btn" style="padding:6px 10px;font-size:12px;" data-remove="${escapeHtml(it.id || '')}">移除</button>
+              <button class="btn ghost" style="padding:6px 10px;font-size:12px;" data-open="${escapeHtml(it.id || '')}">${escapeHtml(t('viewBtn'))}</button>
+              <button class="btn" style="padding:6px 10px;font-size:12px;" data-remove="${escapeHtml(it.id || '')}">${escapeHtml(t('removeBtn'))}</button>
             </div>
           </div>`).join('')}
         </div>
@@ -3504,7 +3508,7 @@ function openFavList(){
   const planBtn = document.getElementById('planTripFromFavs');
   if (planBtn) {
     planBtn.onclick = async () => {
-      planBtn.textContent = '規劃中...';
+      planBtn.textContent = t('planning');
       planBtn.disabled = true;
       try {
         const startCoords = await new Promise((resolve, reject) => {
@@ -3530,7 +3534,7 @@ function openFavList(){
       } catch (err) {
         alert('路線規劃失敗：' + err.message);
       } finally {
-        planBtn.textContent = '規劃收藏路線';
+        planBtn.textContent = t('planTrip');
         planBtn.disabled = false;
       }
     };
