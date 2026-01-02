@@ -362,8 +362,8 @@
         width:100%;
       }
       .top-actions .top-actions-row{
-        display:grid !important;
-        grid-template-columns:repeat(3, minmax(0,1fr));
+        display:flex !important;
+        flex-wrap:nowrap;
         gap:6px;
         width:100%;
         justify-content:flex-start;
@@ -374,13 +374,13 @@
         font-size:11px;
         white-space:nowrap;
         min-width:0;
-        width:100%;
+        flex:1 1 0;
         justify-content:center;
         text-align:center;
       }
       .top-actions .top-actions-row .dropdown{
         min-width:0;
-        width:100%;
+        flex:1 1 0;
       }
       .top-actions .top-actions-row .dropdown .btn{
         width:100%;
@@ -419,7 +419,7 @@
       .mobile-auth-slot .member-menu,
       .mobile-auth-slot .auth-widget{
         flex:0 0 auto;
-        width:140px;
+        width:160px;
       }
       .mobile-auth-slot .member-menu button,
       .mobile-auth-slot .auth-widget{
@@ -431,7 +431,8 @@
       }
       .mobile-auth-slot .auth-widget{
         gap:6px;
-        padding:4px 10px;
+        padding:4px 8px;
+        justify-content:space-between;
       }
       .mobile-auth-slot .auth-status{
         font-size:12px;
