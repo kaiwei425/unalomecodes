@@ -1784,6 +1784,8 @@
     checkoutForm.addEventListener('submit', async ev=>{
       ev.preventDefault();
       if (checkoutStep !== 2 || !checkoutSubmitBtn) return;
+      const submitTip = document.getElementById('svcSubmitTip');
+      if (submitTip) submitTip.classList.add('show');
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
         if (window.authState && typeof window.authState.promptLogin === 'function'){
           window.authState.promptLogin('請先登入後再送出匯款資料。');
@@ -1791,32 +1793,38 @@
           alert('請先登入後再送出匯款資料。');
           window.location.href = '/api/auth/google/login';
         }
+        if (submitTip) submitTip.classList.remove('show');
         return;
       }
       const serviceIdFromInput = checkoutServiceIdInput ? checkoutServiceIdInput.value : '';
       const serviceId = serviceIdFromInput || (checkoutForm && checkoutForm.dataset ? checkoutForm.dataset.serviceId : '') || '';
       if (!serviceId){
         alert('缺少服務資訊，請重新選擇。');
+        if (submitTip) submitTip.classList.remove('show');
         return;
       }
       if (!checkoutContact){
         alert('請先填寫基本資料');
         setCheckoutStep(1);
+        if (submitTip) submitTip.classList.remove('show');
         return;
       }
       const last5 = bankLast5Input ? bankLast5Input.value.trim() : '';
       if (!/^\d{5}$/.test(last5)){
         alert('請輸入 5 位數的匯款末五碼');
         if (bankLast5Input) bankLast5Input.focus();
+        if (submitTip) submitTip.classList.remove('show');
         return;
       }
       const cart = loadCart();
       if (!cart.length){
         alert('購物車為空，請重新選擇服務。');
+        if (submitTip) submitTip.classList.remove('show');
         return;
       }
       checkoutSubmitBtn.disabled = true;
       checkoutSubmitBtn.textContent = '送出中…';
+      checkoutSubmitBtn.classList.add('loading');
       try{
         const receiptUrl = await ensureReceiptUploaded();
         const totalAmount = Number(bankAmountInput && bankAmountInput.dataset ? bankAmountInput.dataset.amount : cartTotal(cart));
@@ -1860,6 +1868,8 @@
       }finally{
         checkoutSubmitBtn.disabled = false;
         checkoutSubmitBtn.textContent = '送出匯款資料';
+        checkoutSubmitBtn.classList.remove('loading');
+        if (submitTip) submitTip.classList.remove('show');
       }
     });
   }

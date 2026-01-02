@@ -106,6 +106,18 @@ dialog[data-fallback-open]{display:block;}
   border-top-color:transparent;
   animation:spin .8s linear infinite;
 }
+.btn.loading::before{
+  content:"";
+  position:absolute;
+  left:10px;
+  width:14px;height:14px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.6);
+  border-top-color:transparent;
+  animation:spin .8s linear infinite;
+}
+.submit-tip{font-size:12px;color:#64748b;margin-top:8px;display:none;}
+.submit-tip.show{display:block;}
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @media(max-width:560px){
   .svc-cart-item{flex-direction:column;align-items:flex-start;}
@@ -594,6 +606,7 @@ dialog[data-fallback-open]{display:block;}
           <button type="button" class="btn" id="svcBankBack">上一步</button>
           <button type="submit" id="svcBankSubmit" class="btn primary">送出匯款資料</button>
         </div>
+        <div class="submit-tip" id="svcSubmitTip">若上傳圖片檔案較大，送出訂單時間會較久，請耐心等待。</div>
       </div>
 
       <div class="svc-step-content" id="svcCartStep3" data-step="3">
