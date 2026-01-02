@@ -121,9 +121,16 @@ dialog[data-fallback-open]{display:block;}
 #svcCartForm{flex:1;max-height:calc(85vh - 64px);overflow:hidden;display:flex;flex-direction:column;}
 #svcCart .svc-step-content{max-height:calc(85vh - 160px);overflow:auto;}
 @media (max-width: 640px){
-  #svcCart{max-height:82vh;}
-  #svcCartForm{max-height:calc(82vh - 64px);}
-  #svcCart .svc-step-content{max-height:calc(82vh - 160px);}
+  #svcCart{
+    max-height:88vh;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    margin:0;
+  }
+  #svcCartForm{max-height:calc(88vh - 64px);}
+  #svcCart .svc-step-content{max-height:calc(88vh - 160px);}
   #svcLookup input,
   #svcLookup textarea,
   #svcLookup select,
