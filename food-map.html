@@ -293,6 +293,21 @@
     .member-menu-panel .qna-badge.show{display:inline-flex;}
     .member-menu-panel a:hover,
     .member-menu-panel button:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
+    .member-menu-subpanel{
+      margin-top:6px;
+      padding:6px;
+      border-radius:12px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      display:none;
+      gap:6px;
+    }
+    .member-menu-subpanel button{
+      padding:10px 12px;
+      font-size:13px;
+      border-radius:10px;
+      font-weight:700;
+    }
     .top-actions .member-menu button,
     .top-actions .auth-widget{
       min-height:52px;
@@ -426,9 +441,12 @@
                 <a href="/account-store">門市預設</a>
                 <a href="/admin/orders" id="adminQnaLink" class="qna-link" data-admin-only data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadge">0</span></a>
                 <a href="/admin" data-admin-only data-admin-href="/admin" style="display:none;">後台管理</a>
-                <button type="button" id="btnAdd" style="display:none;">新增餐廳</button>
-                <button type="button" id="btnExport" style="display:none;">匯出備份</button>
-                <button type="button" id="btnImport" style="display:none; color:#16a34a;">匯入救援檔</button>
+                <button type="button" id="adminToolsToggle" data-admin-only style="display:none;">美食地圖 ▾</button>
+                <div class="member-menu-subpanel" id="adminToolsPanel" data-admin-only style="display:none;">
+                  <button type="button" id="btnAdd" style="display:none;">新增餐廳</button>
+                  <button type="button" id="btnExport" style="display:none;">匯出備份</button>
+                  <button type="button" id="btnImport" style="display:none;">匯入救援檔</button>
+                </div>
               </div>
             </div>
             <div class="auth-widget" data-auth-widget>
@@ -694,6 +712,28 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
+    const adminToolsToggle = document.getElementById('adminToolsToggle');
+    const adminToolsPanel = document.getElementById('adminToolsPanel');
+    if (adminToolsToggle && adminToolsPanel){
+      const setAdminArrow = (isOpen)=>{
+        adminToolsToggle.textContent = `${t('adminTools')} ${isOpen ? '▴' : '▾'}`;
+      };
+      const closeAdmin = ()=>{
+        adminToolsPanel.style.display = 'none';
+        setAdminArrow(false);
+      };
+      const openAdmin = ()=>{
+        adminToolsPanel.style.display = 'grid';
+        setAdminArrow(true);
+      };
+      setAdminArrow(false);
+      adminToolsToggle.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const isOpen = adminToolsPanel.style.display === 'grid';
+        if (isOpen) closeAdmin(); else openAdmin();
+      });
+    }
+
     if (closeBtn){
       closeBtn.addEventListener('click', ()=>{
         if (dlg && typeof dlg.close === 'function') dlg.close();
@@ -716,6 +756,8 @@ document.addEventListener('DOMContentLoaded', function() {
           memberMenu.classList.remove('is-visible');
           if (panel) panel.style.display = 'none';
           if (arrow) arrow.textContent = '▾';
+          if (adminToolsPanel) adminToolsPanel.style.display = 'none';
+          if (adminToolsToggle) adminToolsToggle.textContent = `${t('adminTools')} ▾`;
         }
       });
     }
@@ -750,6 +792,7 @@ const TRANSLATIONS = {
     langSwitch: '切換語言',
     langZh: '中文',
     langEn: '英文',
+    adminTools: '美食地圖',
     member: '會員中心 ▾',
     login: '登入會員',
     logout: '登出',
@@ -915,6 +958,7 @@ const TRANSLATIONS = {
     langSwitch: 'Language',
     langZh: 'Chinese',
     langEn: 'English',
+    adminTools: 'Food Map',
     member: 'Member ▾',
     login: 'Login',
     logout: 'Logout',
@@ -1897,6 +1941,12 @@ function setLanguage(lang) {
   if (authBtn) {
     const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn();
     authBtn.textContent = loggedIn ? t('logout') : t('login');
+  }
+  const adminToolsToggle = document.getElementById('adminToolsToggle');
+  if (adminToolsToggle) {
+    const adminPanel = document.getElementById('adminToolsPanel');
+    const isOpen = adminPanel && adminPanel.style.display === 'block';
+    adminToolsToggle.textContent = `${t('adminTools')} ${isOpen ? '▴' : '▾'}`;
   }
   
   // Dropdown
