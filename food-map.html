@@ -40,8 +40,9 @@
     .brand-sub{font-size:11px;color:var(--muted);}
     h1{margin:0;font-size:24px;font-weight:800;}
     .sub{margin:4px 0 0;font-size:13px;color:var(--muted);}
-    .top-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap; position: relative;}
+    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;position:relative;}
     .top-actions .btn{padding:6px 12px;font-size:12px;}
+    .top-actions .action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
     .dropdown {
       position: relative;
       display: inline-block;
@@ -262,28 +263,38 @@
           </div>
         </div>
         <div class="top-actions">
-          <button class="btn ghost pill" id="btnBack">返回首頁</button>
-          <button class="btn ghost pill" id="btnLang">EN</button>
-          <button class="btn ghost pill" id="btnFav">收藏清單</button>
-          <div class="member-menu" id="memberMenuContainer">
-            <button class="btn ghost pill" id="memberMenuBtn">會員中心 ▾</button>
-            <div class="dropdown-content" id="memberMenuPanel">
-              <button onclick="location.href='/account-orders.html'">我的訂單</button>
-              <button onclick="location.href='/account-coupons.html'">我的優惠券</button>
-              <button onclick="location.href='/account-store.html'">門市預設</button>
+          <div class="action-group">
+            <button class="btn ghost pill" id="btnBack">返回首頁</button>
+            <div class="dropdown" id="langDropdown">
+              <button class="btn ghost pill" id="btnLang">切換語言 ▾</button>
+              <div class="dropdown-content">
+                <button type="button" data-lang="zh">中文</button>
+                <button type="button" data-lang="en">英文</button>
+              </div>
+            </div>
+            <button class="btn ghost pill" id="btnFav">收藏清單</button>
+            <div class="member-menu" id="memberMenuContainer">
+              <button class="btn ghost pill" id="memberMenuBtn">會員中心 ▾</button>
+              <div class="dropdown-content" id="memberMenuPanel">
+                <button onclick="location.href='/account-orders.html'">我的訂單</button>
+                <button onclick="location.href='/account-coupons.html'">我的優惠券</button>
+                <button onclick="location.href='/account-store.html'">門市預設</button>
+              </div>
             </div>
           </div>
-          <div class="auth-widget" data-auth-widget>
-            <span class="auth-status" data-auth-status>登入狀態載入中…</span>
-            <button type="button" class="btn ghost pill auth-btn" data-auth-btn>登入會員</button>
-          </div>
-          <div class="dropdown" id="adminDropdown" style="display: none;">
-            <button class="btn ghost pill">更多</button>
-            <div class="dropdown-content">
-              <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
-              <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
-              <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
-              <button class="btn ghost pill" id="btnStats" style="display:none; color: #2563eb; border-color: #93c5fd;">流量統計</button>
+          <div class="action-group">
+            <div class="auth-widget" data-auth-widget>
+              <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+              <button type="button" class="btn ghost pill auth-btn" data-auth-btn>登入會員</button>
+            </div>
+            <div class="dropdown" id="adminDropdown" style="display: none;">
+              <button class="btn ghost pill">更多</button>
+              <div class="dropdown-content">
+                <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
+                <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
+                <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
+                <button class="btn ghost pill" id="btnStats" style="display:none; color: #2563eb; border-color: #93c5fd;">流量統計</button>
+              </div>
             </div>
           </div>
         </div>
@@ -378,18 +389,20 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const dropdown = document.querySelector('.dropdown');
-  if(dropdown) {
-    const dropdownButton = dropdown.querySelector('button');
-    dropdownButton.addEventListener('click', function(event) {
-      dropdown.classList.toggle('active');
-      event.stopPropagation();
+  const dropdowns = Array.from(document.querySelectorAll('.dropdown'));
+  if (dropdowns.length) {
+    dropdowns.forEach((dropdown) => {
+      const dropdownButton = dropdown.querySelector('button');
+      if (!dropdownButton) return;
+      dropdownButton.addEventListener('click', function(event) {
+        dropdowns.forEach(other => { if (other !== dropdown) other.classList.remove('active'); });
+        dropdown.classList.toggle('active');
+        event.stopPropagation();
+      });
     });
 
-    document.addEventListener('click', function(event) {
-      if (!dropdown.contains(event.target)) {
-        dropdown.classList.remove('active');
-      }
+    document.addEventListener('click', function() {
+      dropdowns.forEach(d => d.classList.remove('active'));
     });
   }
   
@@ -411,19 +424,26 @@ document.addEventListener('DOMContentLoaded', function() {
     btnBackToTop.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   
-  if (btnLang) {
-    btnLang.onclick = () => {
-      setLanguage(currentLang === 'zh' ? 'en' : 'zh');
-    };
+  const langDropdown = document.getElementById('langDropdown');
+  if (langDropdown) {
+    langDropdown.querySelectorAll('[data-lang]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextLang = btn.getAttribute('data-lang') || 'zh';
+        setLanguage(nextLang);
+        langDropdown.classList.remove('active');
+      });
+    });
   }
 
   // 手動補強：確保登入後樣式正確切換，並顯示會員名稱
   if (window.authState && typeof window.authState.onProfile === 'function') {
     window.authState.onProfile((user) => {
       const widget = document.querySelector('[data-auth-widget]');
+      const memberMenuEl = document.getElementById('memberMenuContainer');
       if (widget) {
         if (user) {
           widget.classList.add('logged-in');
+          if (memberMenuEl) memberMenuEl.style.display = 'inline-block';
           const statusEl = widget.querySelector('[data-auth-status]');
           if (statusEl) {
             // 強制設定內容為：會員名稱 + 登出按鈕
@@ -431,6 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         } else {
           widget.classList.remove('logged-in');
+          if (memberMenuEl) memberMenuEl.style.display = 'none';
         }
       }
     });
@@ -461,6 +482,9 @@ const TRANSLATIONS = {
     subtitle: '精選ＩＧ美食REELS 一鍵找出來離你最近的餐廳',
     home: '返回首頁',
     fav: '收藏清單',
+    langSwitch: '切換語言',
+    langZh: '中文',
+    langEn: '英文',
     member: '會員中心 ▾',
     login: '登入會員',
     more: '更多',
@@ -619,6 +643,9 @@ const TRANSLATIONS = {
     subtitle: 'Curated IG Reels & One-click to find nearest restaurants',
     home: 'Home',
     fav: 'Favorites',
+    langSwitch: 'Language',
+    langZh: 'Chinese',
+    langEn: 'English',
     member: 'Member ▾',
     login: 'Login',
     more: 'More',
@@ -1578,12 +1605,19 @@ async function checkAdmin(){
 
 function setLanguage(lang) {
   currentLang = lang;
-  btnLang.textContent = lang === 'zh' ? 'EN' : '中文';
+  if (btnLang) btnLang.textContent = `${t('langSwitch')} ▾`;
+  const langDropdown = document.getElementById('langDropdown');
+  if (langDropdown) {
+    const zhBtn = langDropdown.querySelector('[data-lang="zh"]');
+    const enBtn = langDropdown.querySelector('[data-lang="en"]');
+    if (zhBtn) zhBtn.textContent = t('langZh');
+    if (enBtn) enBtn.textContent = t('langEn');
+  }
   
   // Update static text
   document.querySelector('h1').textContent = t('title');
   const sub = document.getElementById('pageSubtitle');
-  if (sub && sub.textContent === TRANSLATIONS['zh']['subtitle'] || sub.textContent === TRANSLATIONS['en']['subtitle']) {
+  if (sub && (sub.textContent === TRANSLATIONS['zh']['subtitle'] || sub.textContent === TRANSLATIONS['en']['subtitle'])) {
     sub.textContent = t('subtitle');
   }
   if (btnBack) btnBack.textContent = t('home');
@@ -1623,7 +1657,8 @@ function setLanguage(lang) {
   }
 
   // Nearby
-  document.querySelector('.nearby-title').textContent = t('nearbyTitle');
+  const nearbyTitleEl = document.querySelector('.nearby-title');
+  if (nearbyTitleEl) nearbyTitleEl.textContent = t('nearbyTitle');
   if (nearbyUse) nearbyUse.textContent = t('useLoc');
   if (nearbyToggle) nearbyToggle.textContent = isNearbyCollapsed() ? t('expand') : t('collapse');
   if (nearbyInput) nearbyInput.placeholder = t('nearbyPlaceholder');
