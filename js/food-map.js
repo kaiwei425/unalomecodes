@@ -1915,7 +1915,7 @@ function render(){
   cardsEl.innerHTML = displayList.map((item, idx)=>{
     let displayCat = mapCategory(item.category) || item.category;
     if (currentLang === 'en') displayCat = CATEGORY_MAP_EN[displayCat] || displayCat;
-    const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
+    const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${escapeHtml(item.rating)}</span>` : '';
     const isFeatured = !!(item.featured || item.featured_);
     const featuredTag = isFeatured ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 ${t('featured')}</span>` : '';
     const tags = [displayCat, item.area, item.price ? `${t('priceLabel')} ${item.price}` : '']
@@ -2879,12 +2879,12 @@ function renderGoogleReviews(place, container) {
       html += `
         <div style="padding:14px 16px; ${border}">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-            <img src="${r.profile_photo_url}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0;">
+            <img src="${escapeHtml(safeUrl(r.profile_photo_url) || '')}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0;">
             <div style="flex:1; min-width:0;">
               <div style="font-size:13px; font-weight:700; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(r.author_name)}</div>
               <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#94a3b8;">
                 <span style="display:flex; color:#fbbc04; font-size:10px;">${'★'.repeat(Math.floor(r.rating))}</span>
-                <span>${r.relative_time_description}</span>
+                <span>${escapeHtml(r.relative_time_description || '')}</span>
               </div>
             </div>
           </div>
@@ -2898,7 +2898,7 @@ function renderGoogleReviews(place, container) {
   }
 
   html += `
-      <a href="${place.url}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:13px; font-weight:600; color:#2563eb; text-decoration:none; transition:background 0.2s;">
+      <a href="${escapeHtml(safeUrl(place.url) || '#')}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:13px; font-weight:600; color:#2563eb; text-decoration:none; transition:background 0.2s;">
         查看更多 Google Maps 評論 →
       </a>
     </div>
