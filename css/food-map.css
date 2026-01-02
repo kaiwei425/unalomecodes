@@ -30,6 +30,7 @@
     }
     .topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
     .topbar-actions .btn{height:34px;border-radius:12px;font-size:12px;padding:6px 10px;}
+    .mobile-auth-slot{display:none;align-items:center;gap:8px;}
     .top-actions .action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;overflow:visible;}
     .dropdown {
       position: relative;
@@ -45,10 +46,11 @@
       border-radius: 10px;
       padding: 5px;
       right: 0;
+      color: #0f172a;
     }
     .dropdown-content button {
-      color: #0f172a;
-      -webkit-text-fill-color: #0f172a;
+      color: inherit !important;
+      -webkit-text-fill-color: #0f172a !important;
       padding: 10px 14px;
       text-decoration: none;
       display: block;
@@ -59,6 +61,12 @@
       cursor: pointer;
       font-size: 13px;
       line-height: 1.2;
+      font-weight: 600;
+      text-shadow: none;
+    }
+    .dropdown-content *{
+      color: #0f172a !important;
+      -webkit-text-fill-color: #0f172a !important;
     }
     .dropdown-content button:hover {background-color: #f1f1f1;}
     .dropdown.active .dropdown-content {display: block;}
@@ -344,10 +352,38 @@
       }
       .topbar-actions{
         width:100%;
-        justify-content:flex-start;
+        justify-content:space-between;
       }
       .topbar-actions .btn{
         height:32px;
+      }
+      .mobile-auth-slot{
+        display:flex;
+        flex:1;
+        justify-content:flex-end;
+      }
+      .mobile-auth-slot .member-menu,
+      .mobile-auth-slot .auth-widget{
+        flex:0 0 auto;
+      }
+      .mobile-auth-slot .member-menu button,
+      .mobile-auth-slot .auth-widget{
+        height:32px;
+        min-height:32px;
+        padding:4px 8px;
+        border-radius:12px;
+      }
+      .mobile-auth-slot .auth-widget{
+        gap:6px;
+        padding:4px 8px;
+      }
+      .mobile-auth-slot .auth-status{
+        font-size:12px;
+      }
+      .mobile-auth-slot .auth-btn{
+        height:24px;
+        padding:3px 8px;
+        font-size:11px;
       }
       .top-actions{
         z-index:30;

@@ -35,6 +35,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  const authGroup = document.getElementById('authGroup');
+  const mobileAuthSlot = document.getElementById('mobileAuthSlot');
+  const authGroupSlot = document.getElementById('authGroupSlot');
+  if (authGroup && mobileAuthSlot && authGroupSlot) {
+    const mq = window.matchMedia('(max-width:720px)');
+    const placeAuthGroup = () => {
+      if (mq.matches) {
+        if (authGroup.parentElement !== mobileAuthSlot) {
+          mobileAuthSlot.appendChild(authGroup);
+        }
+      } else if (authGroup.parentElement !== authGroupSlot) {
+        authGroupSlot.appendChild(authGroup);
+      }
+    };
+    placeAuthGroup();
+    if (mq.addEventListener) mq.addEventListener('change', placeAuthGroup);
+    else mq.addListener(placeAuthGroup);
+  }
+
   // 會員中心下拉 (同步 shop)
   (function(){
     const toggle = document.getElementById('memberMenuBtn');
