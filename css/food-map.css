@@ -363,11 +363,15 @@
       .mobile-auth-slot{
         display:flex;
         flex:1;
-        justify-content:flex-end;
+        flex-direction:column;
+        align-items:flex-end;
+        justify-content:flex-start;
+        gap:6px;
       }
       .mobile-auth-slot .member-menu,
       .mobile-auth-slot .auth-widget{
         flex:0 0 auto;
+        width:100%;
       }
       .mobile-auth-slot .member-menu button,
       .mobile-auth-slot .auth-widget{
@@ -375,6 +379,7 @@
         min-height:32px;
         padding:4px 8px;
         border-radius:12px;
+        width:100%;
       }
       .mobile-auth-slot .auth-widget{
         gap:6px;
