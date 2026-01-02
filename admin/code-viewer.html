@@ -9,25 +9,24 @@
 <title>後台｜商品留言管理</title>
 <style>
 :root {
-  --bg: #0d1117;
-  --panel: #0b1224;
-  --card: #111a2f;
-  --line: #1f2a44;
-  --muted: #9fb2d3;
-  --fg: #e8f1ff;
-  --primary: #7c7cff;
-  --primary-strong: #5d5de6;
-  --danger: #f1607d;
-  --danger-strong: #d94b64;
-  --accent: #58e1c1;
-  --gradient: radial-gradient(circle at 20% 20%, rgba(124,124,255,0.15), transparent 35%), radial-gradient(circle at 80% 0%, rgba(88,225,193,0.16), transparent 30%), linear-gradient(145deg, #0b1020 0%, #0f162b 60%, #0c1626 100%);
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --line: #e5e7eb;
+  --muted: #64748b;
+  --fg: #0f172a;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --danger: #ef4444;
+  --danger-strong: #dc2626;
+  --accent: #0ea5e9;
 }
 *{box-sizing:border-box;}
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 html,body{
   margin:0;padding:0;
   min-height:100%;
-  background:var(--gradient);
+  background:var(--bg);
   color:var(--fg);
   font-family:"Space Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;
   -webkit-font-smoothing:antialiased;
@@ -38,33 +37,30 @@ html,body{
 .backBtn{
   display:inline-flex;align-items:center;gap:6px;
   padding:8px 14px;border-radius:999px;
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.2);
+  background:#fff;
+  border:1px solid var(--line);
   color:var(--fg);text-decoration:none;font-weight:700;font-size:13px;
   transition:all .18s ease;
 }
-.backBtn:hover{border-color:var(--primary);background:rgba(124,124,255,0.18);}
-.hero{
-  display:flex;gap:18px;align-items:flex-start;justify-content:space-between;
-  background:linear-gradient(135deg, rgba(124,124,255,0.16), rgba(88,225,193,0.12));
-  border:1px solid rgba(124,124,255,0.35);
-  box-shadow:0 18px 35px rgba(0,0,0,0.35);
-  border-radius:18px;
-  padding:22px 24px;
+.backBtn:hover{border-color:var(--primary);color:var(--primary);}
+.page-head{
+  display:flex;gap:16px;align-items:center;justify-content:space-between;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:18px 20px;
+  box-shadow:0 10px 24px rgba(15,23,42,0.08);
 }
-.eyebrow{letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--accent);margin:0 0 4px 0;font-weight:700;}
-h1{margin:0;font-size:30px;font-weight:800;letter-spacing:.4px;}
+.page-title{margin:0;font-size:24px;font-weight:800;}
+.page-subtitle{color:var(--muted);font-size:14px;margin:6px 0 0;}
 .muted{color:var(--muted);font-size:14px;line-height:1.6;}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
-.chip{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.08);color:var(--fg);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:600;}
-.hero-actions{display:flex;gap:10px;align-items:flex-start;}
 
 .card{
   background:var(--card);
   border:1px solid var(--line);
-  border-radius:18px;
-  padding:20px 22px;
-  box-shadow:0 12px 26px rgba(0,0,0,0.25);
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 12px 24px rgba(15,23,42,0.06);
   margin-top:16px;
 }
 .card-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;}
@@ -77,27 +73,35 @@ h1{margin:0;font-size:30px;font-weight:800;letter-spacing:.4px;}
   gap:14px;
 }
 .item{
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+  background:#fff;
   border:1px solid var(--line);
-  border-radius:14px;
-  padding:16px;
+  border-radius:12px;
+  padding:14px;
   display:flex;
   flex-direction:column;
   gap:10px;
   transition:all .2s ease;
 }
-.item:hover{transform:translateY(-3px);border-color:rgba(124,124,255,0.4);box-shadow:0 12px 24px rgba(0,0,0,0.18);}
-.item .title{font-weight:700;font-size:18px;color:var(--fg);}
-.item .id{font-size:13px;color:var(--muted);font-weight:500;}
-.item .deity-info{font-size:14px;color:var(--muted);margin-top:2px;}
-.item .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+.item:hover{border-color:#cbd5f5;box-shadow:0 10px 22px rgba(15,23,42,0.08);}
+.item .title{font-weight:700;font-size:16px;color:var(--fg);}
+.item .id{font-size:12px;color:var(--muted);font-weight:500;}
+.item .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;}
+.badge{
+  background:#f1f5f9;
+  border:1px solid var(--line);
+  color:#0f172a;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
 
 .btn{
-  appearance:none;border:1px solid var(--line);background:rgba(255,255,255,0.05);color:var(--fg);
-  border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700;font-size:14px;
+  appearance:none;border:1px solid var(--line);background:#fff;color:var(--fg);
+  border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700;font-size:13px;
   transition:all 0.18s ease;letter-spacing:0.01em;
 }
-.btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,0.25);box-shadow:0 8px 16px rgba(0,0,0,0.2);}
+.btn:hover{transform:translateY(-1px);border-color:#cbd5f5;box-shadow:0 8px 16px rgba(15,23,42,0.08);}
 .btn.primary{background:var(--primary);border-color:var(--primary-strong);color:#fff;}
 .btn.primary:hover{background:var(--primary-strong);}
 .btn.warn, .btn.danger{background:var(--danger);border-color:var(--danger-strong);color:#fff;}
@@ -106,26 +110,23 @@ h1{margin:0;font-size:30px;font-weight:800;letter-spacing:.4px;}
 
 #log{
   margin-top:10px;font-size:13px;color:var(--muted);white-space:pre-wrap;
-  background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;border:1px dashed var(--line);
+  background:#f8fafc;padding:12px;border-radius:10px;border:1px dashed var(--line);
 }
-
-.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px;}
-.legend span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--line);}
+#log:empty{display:none;}
 
 /* Overlay */
-.overlay{position:fixed;inset:0;background:rgba(5,8,15,.82);backdrop-filter:blur(6px);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;}
-.panel{position:relative;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:16px;box-shadow:0 28px 70px rgba(0,0,0,.55);display:flex;flex-direction:column;max-width:900px;width:100%;max-height:92vh;}
-.panel header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:10;}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,0.45);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;}
+.panel{position:relative;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:16px;box-shadow:0 28px 70px rgba(15,23,42,.25);display:flex;flex-direction:column;max-width:860px;width:100%;max-height:92vh;}
+.panel header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:10;}
 .panel header strong{font-size:18px;font-weight:700;}
-.panel header .ov-code{font-size:14px;color:var(--muted);margin-left:10px;}
+.panel header .ov-code{font-size:13px;color:var(--muted);margin-left:8px;}
 .panel header .row{margin:0;}
-.panel main{padding:14px 20px;overflow-y:auto;flex-grow:1;display:flex;flex-direction:column;gap:14px;}
-.panel footer{padding:14px 20px;border-top:1px solid var(--line);background:var(--panel);position:sticky;bottom:0;z-index:10;}
+.panel main{padding:16px 18px;overflow-y:auto;flex-grow:1;display:flex;flex-direction:column;gap:12px;}
 
 /* Message List */
-#ovList{display:flex;flex-direction:column;gap:14px;}
+#ovList{display:flex;flex-direction:column;gap:12px;}
 #ovList:empty::before{content:"目前沒有留言。";display:block;text-align:center;color:var(--muted);padding:18px;border:1px dashed var(--line);border-radius:10px;}
-.msg{background:rgba(255,255,255,0.02);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:flex-start;}
+.msg{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:flex-start;}
 .msg .msg-left{flex-shrink:0;}
 .msg .msg-img{width:72px;height:72px;object-fit:cover;border-radius:10px;background:var(--bg);cursor:pointer;transition:opacity 0.2s ease;}
 .msg .msg-img:hover{opacity:0.82;}
@@ -136,9 +137,6 @@ h1{margin:0;font-size:30px;font-weight:800;letter-spacing:.4px;}
 .msg .msg-text{font-size:14px;color:var(--fg);line-height:1.6;white-space:pre-wrap;word-break:break-word;}
 .msg .msg-actions{margin-top:8px;text-align:right;}
 .msg .btn.del-one{padding:6px 10px;font-size:12px;font-weight:600;}
-
-/* Raw JSON Textarea */
-textarea.raw{width:100%;min-height:140px;background:#0a1020;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;resize:vertical;}
 
 /* Image Lightbox for Overlay */
 #imageLightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;align-items:center;justify-content:center;padding:20px;}
@@ -154,34 +152,20 @@ html.admin-guard-hide{visibility:hidden;}
 <body>
 <div class="wrap">
   <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
-  <div class="hero">
+  <div class="page-head">
     <div>
-      <p class="eyebrow">留言管理</p>
-      <h1>商品留言控制台</h1>
-      <p class="muted">快速查看、管理、刪除所有商品的顧客留言。任何人登入都能直覺操作。</p>
-      <div class="chips">
-        <span class="chip">即時讀取 /api/products</span>
-        <span class="chip">留言清單 /api/stories</span>
-        <span class="chip">支援逐筆刪除與全刪</span>
-      </div>
+      <h1 class="page-title">商品留言管理</h1>
+      <p class="page-subtitle">選擇商品即可查看留言，點留言右側刪除。</p>
     </div>
-    <div class="hero-actions">
-      <button class="btn ghost" onclick="loadProducts()">重新載入</button>
-      <button class="btn primary" onclick="document.getElementById('overlay').style.display='block'; setTimeout(()=>document.getElementById('ovList').innerHTML='<div class=&quot;msg&quot;><div class=&quot;msg-body&quot;><div class=&quot;msg-text&quot;>選擇商品後才能載入留言</div></div></div>',0);">開啟留言面板</button>
-    </div>
+    <button class="btn primary" onclick="loadProducts()">重新載入</button>
   </div>
 
   <div class="card">
     <div class="card-head">
       <div class="card-title">商品清單</div>
-      <div class="hint">點「查看」開啟 JSON；「管理留言」進入留言面板；「整品項全刪」快速清空。</div>
+      <div class="hint">點商品的「查看留言」即可進入留言列表。</div>
     </div>
     <div id="productList" class="grid">讀取中...</div>
-    <div class="legend">
-      <span>🗂️ 神祇代碼自動帶入</span>
-      <span>👀 管理留言支援圖片預覽</span>
-      <span>⚠️ 全刪會一次清除該品項全部留言</span>
-    </div>
     <div id="log" class="muted"></div>
   </div>
 </div>
@@ -190,19 +174,14 @@ html.admin-guard-hide{visibility:hidden;}
   <div class="panel">
     <header>
       <div style="display:flex;align-items:baseline;">
-        <strong>留言管理：</strong>
+        <strong id="ovTitle">留言管理</strong>
         <span class="ov-code" id="ovCode"></span>
       </div>
       <div class="row">
-        <button class="btn danger" id="ovDelAll">刪除全部</button>
         <button class="btn primary" id="ovClose">關閉</button>
       </div>
     </header>
     <main id="ovList">載入中…</main>
-    <footer>
-      <div class="muted" style="margin-bottom:6px">原始回應（除錯用）：</div>
-      <textarea class="raw" id="ovRaw" readonly>（等待載入）</textarea>
-    </footer>
   </div>
 </div>
 
@@ -213,7 +192,6 @@ html.admin-guard-hide{visibility:hidden;}
 
 <script>
 const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
-const svcListBtn = document.getElementById('btnLoadServices');
 function authHeaders(extra){
   const base = {};
   if (extra) return Object.assign(base, extra);
@@ -295,20 +273,18 @@ async function loadProducts(){
     list.innerHTML = combined.map(item => {
       const p = item.raw || {};
       const typeLabel = item.type === 'service'
-        ? '<span class="chip alt">服務商品</span>'
-        : '<span class="chip">實體商品</span>';
+        ? '<span class="badge">服務商品</span>'
+        : '<span class="badge">實體商品</span>';
       return `
-        <div class="item" data-type="${esc(item.type)}" data-id="${esc(p.id||'')}" data-deity-code="${esc(item.code)}">
+        <div class="item" data-type="${esc(item.type)}" data-id="${esc(p.id||'')}" data-name="${esc(p.name||'')}" data-deity-code="${esc(item.code)}">
           <div class="title">${p.name ? esc(p.name) : '（未命名）'}</div>
           <div class="id">ID：${esc(p.id||'(無 ID)')}</div>
-          <div class="row" style="margin:4px 0 8px;gap:6px;flex-wrap:wrap;">
+          <div class="row" style="margin:4px 0 6px;gap:6px;flex-wrap:wrap;">
             ${typeLabel}
-            ${p.deity ? `<span class="chip">神祇：${esc(p.deity)}</span>` : ''}
+            ${p.deity ? `<span class="badge">神祇：${esc(p.deity)}</span>` : ''}
           </div>
           <div class="row">
-            <button class="btn" data-act="view">查看留言(JSON)</button>
-            <button class="btn primary" data-act="manage">管理留言</button>
-            <button class="btn warn" data-act="del">整品項全刪</button>
+            <button class="btn primary" data-act="open">查看留言</button>
           </div>
         </div>
       `;
@@ -327,34 +303,11 @@ function handleListAction(e){
   const wrap = t.closest('.item');
   if (!wrap) return;
   const deityCode = (wrap.getAttribute('data-deity-code')||'').trim().toUpperCase();
-  console.log('Action:', act, 'Deity Code:', deityCode);
+  const name = wrap.getAttribute('data-name') || '';
   if (!deityCode) return toast('找不到此商品的神祇代碼 (deityCode)');
 
-  if (act === 'view'){
-    window.open(API_BASE + '/api/stories?code=' + encodeURIComponent(deityCode), '_blank');
-  }
-  if (act === 'del'){
-    delAllViaPost(deityCode);
-  }
-  if (act === 'manage'){
-    openOverlay(deityCode);
-  }
-}
-
-async function delAllViaPost(id){
-  const code = (id || '').toString().trim().toUpperCase();
-  if (!confirm('刪除 '+code+' 的所有留言？')) return;
-  try{
-    const r = await fetch(API_BASE + '/api/stories?code=' + encodeURIComponent(code) + '&_method=DELETE', {
-      method: 'POST',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ _method: 'DELETE' }),
-      credentials:'include'
-    });
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    toast('已刪除 '+code+' 的所有留言');
-  }catch(e){
-    toast('刪除失敗：' + e.message);
+  if (act === 'open'){
+    openOverlay(deityCode, name);
   }
 }
 
@@ -369,32 +322,27 @@ async function fetchStories(code){
 /* overlay logic */
 const overlay = $('#overlay');
 const ovCode = $('#ovCode');
+const ovTitle = $('#ovTitle');
 const ovList = $('#ovList');
-const ovRaw  = $('#ovRaw');
 
 $('#ovClose').onclick = ()=> overlay.style.display = 'none';
-$('#ovDelAll').onclick = ()=>{
-  const code = ovCode.textContent.trim();
-  if (!code) return;
-  delAllViaPost(code);
-};
 
-async function openOverlay(code){
+async function openOverlay(code, name){
   ovCode.textContent = code;
+  if (ovTitle){
+    ovTitle.textContent = name ? `留言管理｜${name}` : '留言管理';
+  }
   ovList.textContent = '載入中…';
-  ovRaw.value = '（等待載入）';
   overlay.style.display = 'block';
   try{
     const data = await fetchStories(code);
     renderMessages(code, data);
   }catch(e){
     ovList.textContent = '讀取留言失敗：' + e.message;
-    ovRaw.value = '讀取失敗：' + e.message;
   }
 }
 
 function renderMessages(code, data){
-    ovRaw.value = JSON.stringify(data, null, 2);
     const arr = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
     if (!arr.length){
       ovList.innerHTML = ''; // Let CSS handle the empty state message
