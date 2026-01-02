@@ -279,7 +279,6 @@
               <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
               <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
               <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
-              <button class="btn ghost pill" id="btnStats" style="display:none; color: #2563eb; border-color: #93c5fd;">流量統計</button>
             </div>
           </div>
         </div>
@@ -365,9 +364,6 @@
   <div class="toast" id="saveToast">已儲存</div>
   <dialog id="tripResultModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
     <div id="tripResultBody"></div>
-  </dialog>
-  <dialog id="statsModal" style="border:none;border-radius:16px;padding:0;max-width:640px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
-    <div id="statsModalBody"></div>
   </dialog>
   <button id="btnBackToTop" title="回到頂部">↑</button>
   <script src="/js/auth.js?v=20240930"></script>
@@ -482,7 +478,6 @@ const btnAdd = document.getElementById('btnAdd');
 const adminDropdown = document.getElementById('adminDropdown');
 let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
-let btnStats = document.getElementById('btnStats');
 // ---------------------------
 
 function escapeHtml(s){
@@ -1079,7 +1074,6 @@ async function checkAdmin(){
   
   if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnImport) btnImport.style.display = isAdmin ? 'inline-flex' : 'none';
-  if (btnStats) btnStats.style.display = isAdmin ? 'inline-flex' : 'none';
 
   if (isAdmin) {
     // 匯出按鈕 (備份用)
@@ -1140,68 +1134,6 @@ async function checkAdmin(){
           reader.readAsText(file);
         };
         input.click();
-      };
-    }
-
-    // 流量統計按鈕
-    if (btnStats) {
-      btnStats.onclick = async () => {
-        const statsModal = document.getElementById('statsModal');
-        if (!statsModal) return;
-
-        btnStats.disabled = true;
-        btnStats.textContent = '讀取中...';
-        try {
-          // Ensure Chart.js is loaded
-          if (typeof Chart === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-            await new Promise((resolve, reject) => {
-              script.onload = resolve;
-              script.onerror = reject;
-              document.head.appendChild(script);
-            });
-          }
-
-          const res = await fetch('/api/admin/food-stats?days=14', { credentials: 'include' });
-          const data = await res.json();
-          if (!data.ok) throw new Error(data.error || '讀取失敗');
-          
-          const statsModalBody = document.getElementById('statsModalBody');
-          if (!statsModalBody) return;
-
-          const labels = data.stats.map(s => s.date.slice(5));
-          const counts = data.stats.map(s => s.count);
-          const totalUsers = data.total || 0;
-
-          statsModalBody.innerHTML = `
-            <div style="padding:16px; display:grid; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size:18px; font-weight:800;">流量統計</div>
-                <button class="modal-close" onclick="document.getElementById('statsModal').close()">關閉</button>
-              </div>
-              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px;">
-                <div style="font-size:12px; color:#64748b;">總累積不重複訪客</div>
-                <div style="font-size:24px; font-weight:800; color:#0f172a;">${totalUsers.toLocaleString()} 人</div>
-              </div>
-              <div><canvas id="statsChartCanvas"></canvas></div>
-            </div>
-          `;
-          
-          statsModal.showModal();
-
-          const ctx = document.getElementById('statsChartCanvas').getContext('2d');
-          new Chart(ctx, {
-            type: 'bar',
-            data: { labels, datasets: [{ label: '每日不重複訪客', data: counts, backgroundColor: 'rgba(255, 90, 60, 0.6)', borderColor: 'rgba(255, 90, 60, 1)', borderWidth: 1 }] },
-            options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false }, title: { display: true, text: '過去 14 天每日流量' } } }
-          });
-        } catch (e) {
-          alert('讀取失敗: ' + e.message);
-        } finally {
-          btnStats.disabled = false;
-          btnStats.textContent = '流量統計';
-        }
       };
     }
   }
