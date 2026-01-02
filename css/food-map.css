@@ -362,25 +362,25 @@
         width:100%;
       }
       .top-actions .top-actions-row{
-        display:flex !important;
-        flex-wrap:nowrap;
-        justify-content:flex-start;
-        gap:8px;
+        display:grid !important;
+        grid-template-columns:repeat(3, minmax(0,1fr));
+        gap:6px;
         width:100%;
+        justify-content:flex-start;
       }
       .top-actions .top-actions-row .btn{
         height:32px;
-        padding:6px 8px;
-        font-size:12px;
+        padding:6px 6px;
+        font-size:11px;
         white-space:nowrap;
         min-width:0;
-        flex:0 0 auto;
+        width:100%;
         justify-content:center;
         text-align:center;
       }
       .top-actions .top-actions-row .dropdown{
         min-width:0;
-        flex:0 0 auto;
+        width:100%;
       }
       .top-actions .top-actions-row .dropdown .btn{
         width:100%;
