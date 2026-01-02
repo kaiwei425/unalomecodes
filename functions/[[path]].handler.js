@@ -537,13 +537,22 @@ function parseAdminEmails(env){
     return raw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
   }catch(_){ return []; }
 }
+function getAdminSecret(env){
+  try{
+    return env.ADMIN_JWT_SECRET || env.SESSION_SECRET || '';
+  }catch(_){
+    return '';
+  }
+}
 async function getAdminSession(request, env){
-  if (!env || !env.ADMIN_JWT_SECRET) return null;
+  if (!env) return null;
+  const secret = getAdminSecret(env);
+  if (!secret) return null;
   const cookies = parseCookies(request);
   const token = cookies.admin_session || '';
   if (!token) return null;
   try{
-    const payload = await verifySessionToken(token, env.ADMIN_JWT_SECRET);
+    const payload = await verifySessionToken(token, secret);
     if (!payload) return null;
     const email = (payload.email || '').toLowerCase();
     if (!email) return null;
@@ -3514,7 +3523,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       try{
         const allowed = parseAdminEmails(env);
         const mail = (user.email || '').toLowerCase();
-        if (allowed.length && allowed.includes(mail) && env.ADMIN_JWT_SECRET){
+        const adminSecret = getAdminSecret(env);
+        if (allowed.length && allowed.includes(mail) && adminSecret){
           const adminPayload = {
             sub: user.id || mail,
             email: mail,
@@ -3522,7 +3532,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             role: 'admin',
             exp: Date.now() + 60 * 60 * 1000 // 1 小時
           };
-          const adminToken = await signSession(adminPayload, env.ADMIN_JWT_SECRET);
+          const adminToken = await signSession(adminPayload, adminSecret);
           headers.append('Set-Cookie', `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`);
         }
       }catch(_){}
@@ -3656,6 +3666,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         h.append('Set-Cookie', clearRedirectCookie);
         return new Response('非授權的管理員帳號', { status:403, headers: h });
       }
+      const adminSecret = getAdminSecret(env);
+      if (!adminSecret){
+        const h = new Headers();
+        h.append('Set-Cookie', clearStateCookie);
+        h.append('Set-Cookie', clearRedirectCookie);
+        return new Response('Admin session secret missing', { status:500, headers: h });
+      }
       const adminPayload = {
         sub: profile.sub || email,
         email,
@@ -3663,7 +3680,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         role: 'admin',
         exp: Date.now() + 60 * 60 * 1000
       };
-      const adminToken = await signSession(adminPayload, env.ADMIN_JWT_SECRET || '');
+      const adminToken = await signSession(adminPayload, adminSecret);
       const headers = new Headers({
         'Set-Cookie': `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`,
       });
@@ -3770,11 +3787,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const data = JSON.parse(raw);
       return json({ ok: true, ...data, fromCache: true });
     }
-    // Fallback: if cache is empty, compute it once and serve, but don't block
-    context.waitUntil(updateDashboardStats(env).then(result => {
-      return store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: 60 * 15 }); // Cache for 15 mins
-    }));
-    return json({ ok: true, stats: {}, reports: {}, fromCache: false, message: 'Cache is being built. Please refresh in a moment.' });
+    // Cache empty: compute once, return immediately, and cache the result.
+    const result = await updateDashboardStats(env);
+    await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: 60 * 60 }); // Cache for 1 hour
+    return json({ ok: true, ...result, fromCache: false });
   }
 
   if (pathname === '/api/admin/cron/update-dashboard' && (request.method === 'POST' || request.method === 'GET')) {
