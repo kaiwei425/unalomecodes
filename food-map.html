@@ -263,6 +263,7 @@
         </div>
         <div class="top-actions">
           <button class="btn ghost pill" id="btnBack">返回首頁</button>
+          <button class="btn ghost pill" id="btnLang">EN</button>
           <button class="btn ghost pill" id="btnFav">收藏清單</button>
           <div class="member-menu" id="memberMenuContainer">
             <button class="btn ghost pill" id="memberMenuBtn">會員中心 ▾</button>
@@ -409,6 +410,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     btnBackToTop.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  
+  if (btnLang) {
+    btnLang.onclick = () => {
+      setLanguage(currentLang === 'zh' ? 'en' : 'zh');
+    };
+  }
 
   // 手動補強：確保登入後樣式正確切換，並顯示會員名稱
   if (window.authState && typeof window.authState.onProfile === 'function') {
@@ -447,6 +454,334 @@ let mainMap = null;
 let mainMarkers = [];
 let mainInfoWindow = null;
 const tripResultModal = document.getElementById('tripResultModal');
+let currentLang = 'zh';
+const TRANSLATIONS = {
+  zh: {
+    title: '泰國美食地圖',
+    subtitle: '精選ＩＧ美食REELS 一鍵找出來離你最近的餐廳',
+    home: '返回首頁',
+    fav: '收藏清單',
+    member: '會員中心 ▾',
+    login: '登入會員',
+    more: '更多',
+    add: '新增餐廳',
+    export: '匯出備份',
+    import: '匯入救援檔',
+    stats: '流量統計',
+    searchPlaceholder: '搜尋店名 / 關鍵字',
+    allCats: '全部分類',
+    allAreas: '全部地區',
+    allPrices: '全部價位',
+    status: '營業狀態',
+    openNow: '現在營業中',
+    sort: '排序',
+    distAsc: '距離 近→遠',
+    ratingDesc: '評分 高→低',
+    nameAsc: '店名 A→Z',
+    priceAsc: '價位 低→高',
+    priceDesc: '價位 高→低',
+    nearbyTitle: '📍 附近推薦',
+    useLoc: '使用我的位置',
+    collapse: '收合',
+    expand: '展開',
+    nearbyPlaceholder: '輸入飯店 / 地址',
+    searchNearby: '搜尋附近',
+    mapMode: '地圖模式',
+    listMode: '列表模式',
+    totalCount: '共 {n} 間',
+    loadMore: '載入更多',
+    details: '查看店家資訊',
+    nav: '地圖導航',
+    openGmaps: '開啟 Google Maps',
+    viewIg: '在 IG 上查看',
+    desc: '店家介紹',
+    addr: '地址',
+    reviews: 'Google 評分 & 評論',
+    tripTitle: '半日吃喝路線',
+    planTrip: '規劃收藏路線',
+    distFromHere: '距離目前位置',
+    distFromPrev: '距離上一站',
+    openNav: '在 Google Maps 開啟導航',
+    detailShort: '詳情',
+    locating: '定位中...',
+    locFailed: '定位失敗',
+    searching: '搜尋中...',
+    noResult: '找不到結果',
+    emptyFav: '目前沒有收藏。',
+    emptyList: '目前沒有符合的店家',
+    clearFilter: '清除篩選',
+    priceLabel: '價位',
+    openLabel: '營業',
+    igComment: 'IG 留言',
+    close: '關閉',
+    copy: '複製',
+    copied: '已複製',
+    save: '儲存',
+    cancel: '取消',
+    delete: '刪除',
+    edit: '編輯',
+    syncG: '同步G',
+    featured: '精選',
+    recommend: '推薦',
+    newPlace: '（新餐廳）',
+    unknownAddr: '暫無地址',
+    noIntro: '暫無介紹',
+    noYt: '尚未提供 YouTube 影片',
+    tripLimit: '行程最多只能加入 {n} 家店。',
+    tripMin: '請至少選擇 2 家店才能規劃路線。',
+    planning: '規劃中...',
+    cantLocate: '無法取得您的位置，將以第一家店為起點。',
+    tripFail: '路線規劃失敗：',
+    loginReq: '請先登入會員才能使用此功能。',
+    loginConfirm: '是否現在登入？',
+    loginFav: '請先登入會員才能查看收藏清單。',
+    loginAddFav: '請先登入會員才能加入收藏。',
+    loginRemoveFav: '請先登入會員才能移除收藏。',
+    importing: '匯入中...',
+    importSuccess: '救援成功！資料已寫回資料庫。頁面將重新整理。',
+    importFail: '匯入失敗：',
+    saveFail: '儲存失敗：',
+    delConfirm: '確定要刪除這筆餐廳嗎？刪除後無法復原。',
+    delSuccess: '已刪除',
+    delFail: '刪除失敗：',
+    uploading: '上傳中…',
+    uploaded: '已上傳',
+    uploadFail: '上傳失敗',
+    coverFail: '封面圖上傳失敗：',
+    needAdmin: '需要管理員權限。',
+    syncing: '更新中...',
+    synced: '已更新',
+    syncFail: '更新失敗：',
+    geoFail: '補定位失敗：',
+    ratingFail: '無法取得 Google 評分',
+    gmapFail: 'Google Maps 上找不到此地點',
+    mapLoad: '正在載入地圖元件...',
+    mapFail: '地圖載入失敗',
+    noKey: '未設定 Google Maps Key',
+    browserNoLoc: '此瀏覽器不支援定位',
+    locPerm: '定位失敗，請允許位置權限',
+    inputHotel: '請先輸入飯店名稱或地址',
+    searchLoc: '搜尋位置中…',
+    locNotFound: '找不到此位置，請換個關鍵字',
+    nearbyEmpty: '附近沒有可用的推薦店家',
+    nearbyFound: '已找到 {dist}km 內靠近「{label}」的 {n} 間店家',
+    nearbyNone: '附近 {dist}km 內沒有可用的店家資料',
+    nearbyFail: '附近搜尋失敗，請稍後再試',
+    preparing: '正在整理 {dist}km 內的附近餐廳…',
+    showing: '先顯示 {n} 間，正在補充附近餐廳…',
+    locMy: '我的位置',
+    locBtn: '📍 定位我的位置',
+    adminMode: '管理模式：儲存後會直接寫入資料庫。',
+    dragHint: '拖曳圖片可調整顯示位置',
+    autoUpload: '選擇圖片後會自動上傳',
+    placeIdHint: '指定 Place ID 以修正評論',
+    featuredLabel: '置頂推薦 (Featured)',
+    igVideo: 'IG 影片',
+    ytVideo: 'YouTube 影片',
+    gMap: 'Google Maps',
+    hours: '營業時間',
+    lat: '緯度',
+    lng: '經度',
+    rating: '評分',
+    priceInput: '價位',
+    areaInput: '地區',
+    catInput: '分類',
+    nameInput: '店名',
+    coverImg: '封面圖',
+    saveBtn: '儲存',
+    cancelBtn: '取消',
+    delBtn: '刪除',
+    editBtn: '編輯',
+    favBtn: '收藏',
+    viewBtn: '查看',
+    removeBtn: '移除',
+    navBtn: '導航',
+    seeMore: '查看更多 Google Maps 評論 →',
+    noReviews: '暫無評論內容',
+    loadingReviews: '正在載入 Google 評價...',
+    failReviews: '無法取得詳細評價',
+    failReviewsId: '無法取得詳細評價 (ID 無效)',
+    gReviews: 'Google 評價',
+    reviewsCount: '{n} 則評論',
+    trafficStats: '流量統計',
+    totalVisitors: '總累積不重複訪客',
+    dailyVisitors: '每日不重複訪客',
+    past14Days: '過去 14 天每日流量',
+    reading: '讀取中...',
+    readFail: '讀取失敗: ',
+    editSub: '編輯副標題',
+    editSubPrompt: '編輯副標題',
+    unknownError: 'unknown',
+    ok: '完成'
+  },
+  en: {
+    title: 'Thailand Food Map',
+    subtitle: 'Curated IG Reels & One-click to find nearest restaurants',
+    home: 'Home',
+    fav: 'Favorites',
+    member: 'Member ▾',
+    login: 'Login',
+    more: 'More',
+    add: 'Add Place',
+    export: 'Export',
+    import: 'Import',
+    stats: 'Stats',
+    searchPlaceholder: 'Search name / keyword',
+    allCats: 'All Categories',
+    allAreas: 'All Areas',
+    allPrices: 'All Prices',
+    status: 'Status',
+    openNow: 'Open Now',
+    sort: 'Sort',
+    distAsc: 'Distance (Near->Far)',
+    ratingDesc: 'Rating (High->Low)',
+    nameAsc: 'Name (A->Z)',
+    priceAsc: 'Price (Low->High)',
+    priceDesc: 'Price (High->Low)',
+    nearbyTitle: '📍 Nearby',
+    useLoc: 'Use My Location',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    nearbyPlaceholder: 'Enter hotel / address',
+    searchNearby: 'Search Nearby',
+    mapMode: 'Map Mode',
+    listMode: 'List Mode',
+    totalCount: '{n} places',
+    loadMore: 'Load More',
+    details: 'Details',
+    nav: 'Navigate',
+    openGmaps: 'Open Google Maps',
+    viewIg: 'View on IG',
+    desc: 'Description',
+    addr: 'Address',
+    reviews: 'Google Ratings & Reviews',
+    tripTitle: 'Half-day Trip',
+    planTrip: 'Plan Trip',
+    distFromHere: 'Dist from here',
+    distFromPrev: 'Dist from prev',
+    openNav: 'Open Navigation',
+    detailShort: 'Details',
+    locating: 'Locating...',
+    locFailed: 'Locating Failed',
+    searching: 'Searching...',
+    noResult: 'No results',
+    emptyFav: 'No favorites yet.',
+    emptyList: 'No matching places found.',
+    clearFilter: 'Clear Filters',
+    priceLabel: 'Price',
+    openLabel: 'Open',
+    igComment: 'IG Comment',
+    close: 'Close',
+    copy: 'Copy',
+    copied: 'Copied',
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+    syncG: 'Sync G',
+    featured: 'Featured',
+    recommend: 'Recommended',
+    newPlace: '(New)',
+    unknownAddr: 'No Address',
+    noIntro: 'No Description',
+    noYt: 'No YouTube Video',
+    tripLimit: 'Max {n} places allowed.',
+    tripMin: 'Select at least 2 places.',
+    planning: 'Planning...',
+    cantLocate: 'Cannot locate you, using first place as start.',
+    tripFail: 'Planning failed: ',
+    loginReq: 'Please login to use this feature.',
+    loginConfirm: 'Login now?',
+    loginFav: 'Please login to view favorites.',
+    loginAddFav: 'Please login to add favorites.',
+    loginRemoveFav: 'Please login to remove favorites.',
+    importing: 'Importing...',
+    importSuccess: 'Import success! Reloading...',
+    importFail: 'Import failed: ',
+    saveFail: 'Save failed: ',
+    delConfirm: 'Delete this place? Cannot be undone.',
+    delSuccess: 'Deleted',
+    delFail: 'Delete failed: ',
+    uploading: 'Uploading...',
+    uploaded: 'Uploaded',
+    uploadFail: 'Upload failed',
+    coverFail: 'Cover upload failed: ',
+    needAdmin: 'Admin permission required.',
+    syncing: 'Updating...',
+    synced: 'Updated',
+    syncFail: 'Update failed: ',
+    geoFail: 'Geocode failed: ',
+    ratingFail: 'Cannot get Google rating',
+    gmapFail: 'Place not found on Google Maps',
+    mapLoad: 'Loading map...',
+    mapFail: 'Map load failed',
+    noKey: 'Google Maps Key missing',
+    browserNoLoc: 'Browser does not support geolocation',
+    locPerm: 'Geolocation failed, please allow permission',
+    inputHotel: 'Please enter hotel or address',
+    searchLoc: 'Searching location...',
+    locNotFound: 'Location not found',
+    nearbyEmpty: 'No nearby recommendations',
+    nearbyFound: 'Found {n} places near "{label}" within {dist}km',
+    nearbyNone: 'No data within {dist}km',
+    nearbyFail: 'Nearby search failed',
+    preparing: 'Preparing nearby places within {dist}km...',
+    showing: 'Showing {n} places, loading more...',
+    locMy: 'My Location',
+    locBtn: '📍 Locate Me',
+    adminMode: 'Admin Mode: Saves directly to DB.',
+    dragHint: 'Drag image to adjust position',
+    autoUpload: 'Auto upload on select',
+    placeIdHint: 'Place ID for reviews',
+    featuredLabel: 'Featured',
+    igVideo: 'IG Video',
+    ytVideo: 'YouTube Video',
+    gMap: 'Google Maps',
+    hours: 'Hours',
+    lat: 'Lat',
+    lng: 'Lng',
+    rating: 'Rating',
+    priceInput: 'Price',
+    areaInput: 'Area',
+    catInput: 'Category',
+    nameInput: 'Name',
+    coverImg: 'Cover',
+    saveBtn: 'Save',
+    cancelBtn: 'Cancel',
+    delBtn: 'Delete',
+    editBtn: 'Edit',
+    favBtn: 'Fav',
+    viewBtn: 'View',
+    removeBtn: 'Remove',
+    navBtn: 'Nav',
+    seeMore: 'See more Google Maps reviews →',
+    noReviews: 'No reviews',
+    loadingReviews: 'Loading Google reviews...',
+    failReviews: 'Failed to load reviews',
+    failReviewsId: 'Failed to load reviews (Invalid ID)',
+    gReviews: 'Google Reviews',
+    reviewsCount: '{n} reviews',
+    trafficStats: 'Traffic Stats',
+    totalVisitors: 'Total Unique Visitors',
+    dailyVisitors: 'Daily Unique Visitors',
+    past14Days: 'Past 14 Days Traffic',
+    reading: 'Reading...',
+    readFail: 'Read failed: ',
+    editSub: 'Edit Subtitle',
+    editSubPrompt: 'Edit Subtitle',
+    unknownError: 'unknown',
+    ok: 'Done'
+  }
+};
+function t(key, params){
+  let str = (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) || TRANSLATIONS['zh'][key] || key;
+  if (params) {
+    Object.keys(params).forEach(k => {
+      str = str.replace(`{${k}}`, params[k]);
+    });
+  }
+  return str;
+}
 
 let userLocation = null;
 let dataLoading = false;
@@ -481,6 +816,7 @@ const nearbyStatus = document.getElementById('nearbyStatus');
 // Buttons
 const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
+const btnLang = document.getElementById('btnLang');
 const btnAdd = document.getElementById('btnAdd');
 const adminDropdown = document.getElementById('adminDropdown');
 let btnExport = document.getElementById('btnExport');
@@ -948,7 +1284,7 @@ function updateMapPreview(coords, label){
     googleMap.setZoom(14);
     googleMarker.setPosition(coords);
   }else if (nearbyMapEl){
-    nearbyMapEl.textContent = label ? `已定位：${label}` : '已取得位置';
+    nearbyMapEl.textContent = label ? `${t('locating')} ${label}` : t('locating');
   }
 }
 function initGoogleMaps(){
@@ -1005,7 +1341,7 @@ async function ensureGoogleMaps(){
     if (nearbyMapEl) nearbyMapEl.textContent = '正在載入地圖元件...';
     const key = await getGoogleMapsKey();
     if (!key){
-      if (nearbyMapEl) nearbyMapEl.textContent = '未設定 Google Maps Key';
+      if (nearbyMapEl) nearbyMapEl.textContent = t('noKey');
       resolve(false);
       return;
     }
@@ -1028,7 +1364,7 @@ async function ensureGoogleMaps(){
       resolve(true);
     };
     script.onerror = () => {
-      if (nearbyMapEl) nearbyMapEl.textContent = '地圖載入失敗';
+      if (nearbyMapEl) nearbyMapEl.textContent = t('mapFail');
       resolve(false);
     };
     document.head.appendChild(script);
@@ -1057,6 +1393,7 @@ let newItem = null;
 let currentLimit = 20;
 const PAGE_SIZE = 20;
 const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
+const CATEGORY_MAP_EN = {'日式料理':'Japanese','泰式料理':'Thai','義式料理':'Italian','中式料理':'Chinese','港點':'Dim Sum','餐酒館':'Bistro','酒吧':'Bar','咖啡廳':'Cafe','早午餐':'Brunch','甜點':'Dessert','小吃':'Street Food','素食':'Vegetarian','buffet':'Buffet','其他':'Other'};
 
 function resetFilters(){
   currentLimit = PAGE_SIZE;
@@ -1239,6 +1576,63 @@ async function checkAdmin(){
   }
 }
 
+function setLanguage(lang) {
+  currentLang = lang;
+  btnLang.textContent = lang === 'zh' ? 'EN' : '中文';
+  
+  // Update static text
+  document.querySelector('h1').textContent = t('title');
+  const sub = document.getElementById('pageSubtitle');
+  if (sub && sub.textContent === TRANSLATIONS['zh']['subtitle'] || sub.textContent === TRANSLATIONS['en']['subtitle']) {
+    sub.textContent = t('subtitle');
+  }
+  if (btnBack) btnBack.textContent = t('home');
+  if (btnFav) btnFav.textContent = t('fav');
+  const memBtn = document.getElementById('memberMenuBtn');
+  if (memBtn) memBtn.textContent = t('member');
+  const authBtn = document.querySelector('[data-auth-btn]');
+  if (authBtn) authBtn.textContent = t('login');
+  
+  // Dropdown
+  const dropBtn = document.querySelector('.dropdown > button');
+  if (dropBtn) dropBtn.textContent = t('more');
+  if (btnAdd) btnAdd.textContent = t('add');
+  if (btnExport) btnExport.textContent = t('export');
+  if (btnImport) btnImport.textContent = t('import');
+  if (btnStats) btnStats.textContent = t('stats');
+
+  // Filters
+  if (kwInput) kwInput.placeholder = t('searchPlaceholder');
+  
+  // Re-init filters to update options text
+  initFilters();
+  
+  // Update select options text (hardcoded ones)
+  if (fPrice && fPrice.options[0]) fPrice.options[0].textContent = t('allPrices');
+  if (fStatus) {
+    if (fStatus.options[0]) fStatus.options[0].textContent = t('status');
+    if (fStatus.options[1]) fStatus.options[1].textContent = t('openNow');
+  }
+  if (fSort) {
+    if (fSort.options[0]) fSort.options[0].textContent = t('sort');
+    if (fSort.options[1]) fSort.options[1].textContent = t('distAsc');
+    if (fSort.options[2]) fSort.options[2].textContent = t('ratingDesc');
+    if (fSort.options[3]) fSort.options[3].textContent = t('nameAsc');
+    if (fSort.options[4]) fSort.options[4].textContent = t('priceAsc');
+    if (fSort.options[5]) fSort.options[5].textContent = t('priceDesc');
+  }
+
+  // Nearby
+  document.querySelector('.nearby-title').textContent = t('nearbyTitle');
+  if (nearbyUse) nearbyUse.textContent = t('useLoc');
+  if (nearbyToggle) nearbyToggle.textContent = isNearbyCollapsed() ? t('expand') : t('collapse');
+  if (nearbyInput) nearbyInput.placeholder = t('nearbyPlaceholder');
+  if (nearbySearch) nearbySearch.textContent = t('searchNearby');
+  if (modeToggle) modeToggle.textContent = isMapMode ? t('listMode') : t('mapMode');
+
+  safeRender();
+}
+
 function initFilters(){
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object' && !item.deleted) : [];
   fCat.innerHTML = '<option value=\"\">全部分類</option>';
@@ -1257,14 +1651,16 @@ function initFilters(){
     const tabAll = document.createElement('button');
     tabAll.type = 'button';
     tabAll.className = 'cat-tab';
-    tabAll.textContent = '全部分類';
+    tabAll.textContent = t('allCats');
     tabAll.dataset.value = '';
     catTabs.appendChild(tabAll);
     cats.forEach(c=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'cat-tab';
-      btn.textContent = c;
+      // Translate category if possible
+      const displayC = currentLang === 'en' ? (CATEGORY_MAP_EN[c] || c) : c;
+      btn.textContent = displayC;
       btn.dataset.value = c;
       catTabs.appendChild(btn);
     });
@@ -1276,7 +1672,13 @@ function initFilters(){
       });
     });
   }
-  cats.forEach(c=>{ const opt=document.createElement('option');opt.value=c;opt.textContent=c;fCat.appendChild(opt); });
+  fCat.options[0].textContent = t('allCats');
+  cats.forEach(c=>{ 
+    const opt=document.createElement('option');opt.value=c;
+    opt.textContent= currentLang === 'en' ? (CATEGORY_MAP_EN[c] || c) : c;
+    fCat.appendChild(opt); 
+  });
+  fArea.options[0].textContent = t('allAreas');
   const areas = Array.from(new Set(source.map(d=>d.area).filter(Boolean))).sort();
   areas.forEach(a=>{ const opt=document.createElement('option');opt.value=a;opt.textContent=a;fArea.appendChild(opt); });
 }
@@ -1309,8 +1711,8 @@ function renderSummary(currentList){
   const totalAll = allItems.length;
   const shown = Array.isArray(currentList) ? currentList.length : totalAll;
   totalCountEl.textContent = (shown !== totalAll && totalAll)
-    ? `目前顯示 ${shown} 間 / 共 ${totalAll} 間`
-    : `共 ${totalAll} 間`;
+    ? `${t('totalCount', {n: shown})} / ${totalAll}`
+    : t('totalCount', {n: totalAll});
 
   const counts = new Map();
   allItems.forEach(item=>{
@@ -1327,7 +1729,8 @@ function renderSummary(currentList){
   });
   categoryCountsEl.innerHTML = cats.map(cat=>{
     const count = counts.get(cat) || 0;
-    return `<span class="count-pill">${escapeHtml(cat)} ${count}/${totalAll}</span>`;
+    const displayCat = currentLang === 'en' ? (CATEGORY_MAP_EN[cat] || cat) : cat;
+    return `<span class="count-pill">${escapeHtml(displayCat)} ${count}/${totalAll}</span>`;
   }).join('');
 }
 
@@ -1548,13 +1951,14 @@ function renderNearbyList(list){
     deduped.push(entry);
   });
   if (!deduped.length){
-    nearbyList.innerHTML = '<div class="nearby-empty">附近沒有可用的推薦店家</div>';
+    nearbyList.innerHTML = `<div class="nearby-empty">${t('nearbyEmpty')}</div>`;
     return 0;
   }
   nearbyList.innerHTML = deduped.map(entry=>{
     const item = entry.item;
     const mapsUrl = safeUrl(item.maps);
-    const displayCat = mapCategory(item.category) || item.category || '';
+    let displayCat = mapCategory(item.category) || item.category || '';
+    if (currentLang === 'en') displayCat = CATEGORY_MAP_EN[displayCat] || displayCat;
     const distance = formatDistance(entry.distance);
     return `
       <div class="nearby-item">
@@ -1563,8 +1967,8 @@ function renderNearbyList(list){
           <div class="nearby-meta">${escapeHtml(distance)} · ${escapeHtml(displayCat)} · ${escapeHtml(item.area || '')}</div>
         </div>
         <div class="nearby-actions">
-          <button class="nearby-btn primary" type="button" data-nearby-open="${escapeHtml(item.id || '')}">查看</button>
-          ${mapsUrl ? `<a class="nearby-btn" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">導航</a>` : ''}
+          <button class="nearby-btn primary" type="button" data-nearby-open="${escapeHtml(item.id || '')}">${t('viewBtn')}</button>
+          ${mapsUrl ? `<a class="nearby-btn" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">${t('navBtn')}</a>` : ''}
         </div>
       </div>
     `;
@@ -1686,9 +2090,8 @@ function render(){
   if (!displayList.length){
     cardsEl.innerHTML = `
       <div class="empty-state">
-        <h3>目前沒有符合的店家</h3>
-        <p>可以清除篩選或稍後再試。</p>
-        <button class="btn ghost pill" type="button" id="clearFiltersBtn">清除篩選</button>
+        <h3>${t('emptyList')}</h3>
+        <button class="btn ghost pill" type="button" id="clearFiltersBtn">${t('clearFilter')}</button>
       </div>
     `;
     const clearBtn = document.getElementById('clearFiltersBtn');
@@ -1698,11 +2101,12 @@ function render(){
     return;
   }
   cardsEl.innerHTML = displayList.map((item, idx)=>{
-    const displayCat = mapCategory(item.category) || item.category;
+    let displayCat = mapCategory(item.category) || item.category;
+    if (currentLang === 'en') displayCat = CATEGORY_MAP_EN[displayCat] || displayCat;
     const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${item.rating}</span>` : '';
     const isFeatured = !!(item.featured || item.featured_);
-    const featuredTag = isFeatured ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 精選</span>` : '';
-    const tags = [displayCat, item.area, item.price ? `價位：${item.price}` : '']
+    const featuredTag = isFeatured ? `<span class="tag" style="background:#fff1f2;color:#be123c;border-color:#fda4af">🔥 ${t('featured')}</span>` : '';
+    const tags = [displayCat, item.area, item.price ? `${t('priceLabel')} ${item.price}` : '']
       .filter(Boolean)
       .map(t=>`<span class="tag">${escapeHtml(t)}</span>`)
       .join('');
@@ -1710,7 +2114,7 @@ function render(){
     const safeId = escapeHtml(item.id || '');
     const isNew = !!item.__tempId;
     const editKey = item.__tempId || item.id || '';
-    const safeName = escapeHtml(item.name || (isNew ? '（新餐廳）' : ''));
+    const safeName = escapeHtml(item.name || (isNew ? t('newPlace') : ''));
     let coverUrl = safeUrl(item.cover);
     const isIgCover = isIgCoverUrl(coverUrl);
     if (isIgCover && !ALLOW_IG_COVER) coverUrl = '';
@@ -2105,7 +2509,7 @@ if (modeToggle) {
         safeRender();
       }
     } else {
-      modeToggle.textContent = '地圖模式';
+    modeToggle.textContent = t('mapMode');
       cardsEl.style.display = 'grid';
       mainMapEl.style.display = 'none';
     }
@@ -2133,11 +2537,11 @@ function initMainMap() {
   const locBtn = document.createElement("button");
   locBtn.className = "btn pill";
   locBtn.style.cssText = "background:#fff; color:#0f172a; border:1px solid #cbd5e1; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-top:10px; font-weight:700; cursor:pointer; z-index: 5;";
-  locBtn.innerHTML = "📍 定位我的位置";
+  locBtn.innerHTML = t('locBtn');
   
   locBtn.addEventListener("click", () => {
     if (navigator.geolocation) {
-      locBtn.textContent = "定位中...";
+      locBtn.textContent = t('locating');
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const pos = {
@@ -2162,15 +2566,15 @@ function initMainMap() {
             },
             title: "您的位置"
           });
-          locBtn.innerHTML = "📍 定位我的位置";
+          locBtn.innerHTML = t('locBtn');
         },
         () => {
-          alert("無法取得位置權限。");
-          locBtn.innerHTML = "📍 定位我的位置";
+          alert(t('locPerm'));
+          locBtn.innerHTML = t('locBtn');
         }
       );
     } else {
-      alert("瀏覽器不支援定位。");
+      alert(t('browserNoLoc'));
     }
   });
   
@@ -2209,9 +2613,9 @@ function updateMapMarkers(list) {
               <div style="font-weight:700; font-size:14px; margin-bottom:4px; line-height:1.3;">${escapeHtml(item.name)}</div>
               <div style="font-size:12px; color:#64748b; margin-bottom:8px;">
                 ${item.rating ? `<span style="color:#b45309;">★ ${item.rating}</span>` : ''} 
-                ${item.price ? `· ${escapeHtml(item.price)}` : ''}
+                ${item.price ? `· ${t('priceLabel')} ${escapeHtml(item.price)}` : ''}
               </div>
-              <button onclick="openModal('${escapeHtml(item.id)}')" style="background:#0f172a; color:#fff; border:none; padding:5px 12px; border-radius:999px; font-size:12px; cursor:pointer; font-weight:600;">查看詳情</button>
+              <button onclick="openModal('${escapeHtml(item.id)}')" style="background:#0f172a; color:#fff; border:none; padding:5px 12px; border-radius:999px; font-size:12px; cursor:pointer; font-weight:600;">${t('detailShort')}</button>
             </div>
           </div>
         `;
@@ -2282,17 +2686,17 @@ function renderTripResult(sortedItems, gmapsUrl, startCoords) {
   const itemsHtml = sortedItems.map((entry, index) => {
     const dist = haversineKm(lastCoords, entry.coords);
     lastCoords = entry.coords;
-    const distLabel = index === 0 ? '距離目前位置' : '距離上一站';
+    const distLabel = index === 0 ? t('distFromHere') : t('distFromPrev');
     return `
       <div class="trip-result-item">
         <div class="trip-result-order">${index + 1}</div>
         <div>
           <div class="trip-result-name">${escapeHtml(entry.item.name)}</div>
-          <div class="trip-result-meta">${escapeHtml(entry.item.area)} · ${escapeHtml(mapCategory(entry.item.category))}</div>
+          <div class="trip-result-meta">${escapeHtml(entry.item.area)} · ${escapeHtml(currentLang==='en'?(CATEGORY_MAP_EN[mapCategory(entry.item.category)]||mapCategory(entry.item.category)):mapCategory(entry.item.category))}</div>
           <div class="trip-result-dist">${distLabel}：${formatDistance(dist)}</div>
         </div>
         <div class="trip-result-actions">
-          <button class="btn pill ghost" onclick="openModal('${escapeHtml(entry.item.id)}')">詳情</button>
+          <button class="btn pill ghost" onclick="openModal('${escapeHtml(entry.item.id)}')">${t('detailShort')}</button>
         </div>
       </div>
     `;
@@ -2301,11 +2705,11 @@ function renderTripResult(sortedItems, gmapsUrl, startCoords) {
   body.innerHTML = `
     <div style="padding:16px; display:grid; gap:12px;">
       <div class="modal-head">
-        <div class="modal-title">半日吃喝路線</div>
-        <button class="modal-close" onclick="tripResultModal.close()">關閉</button>
+        <div class="modal-title">${t('tripTitle')}</div>
+        <button class="modal-close" onclick="tripResultModal.close()">${t('close')}</button>
       </div>
       <div>${itemsHtml}</div>
-      <a href="${escapeHtml(gmapsUrl)}" target="_blank" rel="noopener" class="btn primary">在 Google Maps 開啟導航</a>
+      <a href="${escapeHtml(gmapsUrl)}" target="_blank" rel="noopener" class="btn primary">${t('openNav')}</a>
     </div>
   `;
 }
@@ -2320,7 +2724,7 @@ function checkLoginOrRedirect(msg){
   if (window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()) {
     return true;
   }
-  if (confirm((msg || '請先登入會員才能使用此功能。') + '\n\n是否現在登入？')) {
+  if (confirm((msg || t('loginReq')) + '\n\n' + t('loginConfirm'))) {
     // 修正：若店家資訊彈窗開啟中，需先關閉，否則登入畫面會被蓋住 (因為 dialog 在 top-layer)
     const dlg = document.getElementById('foodModal');
     if (dlg && dlg.open) {
@@ -2336,7 +2740,7 @@ function checkLoginOrRedirect(msg){
 }
 
 if (btnFav) btnFav.onclick = ()=> {
-  if (checkLoginOrRedirect('請先登入會員才能查看收藏清單。')) {
+  if (checkLoginOrRedirect(t('loginFav'))) {
     openFavList();
   }
 };
@@ -2401,14 +2805,14 @@ function bootFoodMap(){
     fSort.addEventListener('change', ()=>{
       currentLimit = PAGE_SIZE;
       if (fSort.value === 'dist_asc' && !userLocation) {
-        if (nearbyStatus) nearbyStatus.textContent = '定位中...';
+        if (nearbyStatus) nearbyStatus.textContent = t('locating');
         navigator.geolocation.getCurrentPosition(
           (pos)=>{
             userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            updateMapPreview(userLocation, '我的位置');
+            updateMapPreview(userLocation, t('locMy'));
             safeRender();
           },
-          ()=>{ alert('無法取得位置，無法依距離排序'); fSort.value = ''; safeRender(); }
+          ()=>{ alert(t('locPerm')); fSort.value = ''; safeRender(); }
         );
       } else {
         safeRender();
@@ -2425,42 +2829,42 @@ async function runNearby(origin, label){
   if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return;
   showNearbyToggle(true);
   setNearbyCollapsed(false);
-  if (nearbyStatus) nearbyStatus.textContent = `正在整理 ${NEARBY_MAX_KM}km 內的附近餐廳…`;
+  if (nearbyStatus) nearbyStatus.textContent = t('preparing', {dist: NEARBY_MAX_KM});
   if (nearbyList) nearbyList.innerHTML = '';
   const cachedList = getNearbyFromCached(origin, 5);
   if (cachedList.length){
     const shown = renderNearbyList(cachedList);
-    if (nearbyStatus) nearbyStatus.textContent = `先顯示 ${shown} 間，正在補充附近餐廳…`;
+    if (nearbyStatus) nearbyStatus.textContent = t('showing', {n: shown});
   }
   try{
     const list = await getNearbyRestaurants(origin, 5);
     const shown = renderNearbyList(list);
     if (!shown && nearbyStatus){
-      nearbyStatus.textContent = `附近 ${NEARBY_MAX_KM}km 內沒有可用的店家資料`;
+      nearbyStatus.textContent = t('nearbyNone', {dist: NEARBY_MAX_KM});
     }else if (nearbyStatus && label){
-      nearbyStatus.textContent = `已找到 ${NEARBY_MAX_KM}km 內靠近「${label}」的 ${shown} 間店家`;
+      nearbyStatus.textContent = t('nearbyFound', {dist: NEARBY_MAX_KM, label, n: shown});
     }
   }catch(_){
-    if (nearbyStatus) nearbyStatus.textContent = '附近搜尋失敗，請稍後再試';
+    if (nearbyStatus) nearbyStatus.textContent = t('nearbyFail');
   }
 }
 if (nearbyUse){
   nearbyUse.addEventListener('click', ()=>{
     ensureGoogleMaps();
     if (!navigator.geolocation){
-      if (nearbyStatus) nearbyStatus.textContent = '此瀏覽器不支援定位';
+      if (nearbyStatus) nearbyStatus.textContent = t('browserNoLoc');
       return;
     }
-    if (nearbyStatus) nearbyStatus.textContent = '定位中…';
+    if (nearbyStatus) nearbyStatus.textContent = t('locating');
     navigator.geolocation.getCurrentPosition(
       (pos)=>{
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         userLocation = coords;
-        updateMapPreview(coords, '我的位置');
-        runNearby(coords, '我的位置');
+        updateMapPreview(coords, t('locMy'));
+        runNearby(coords, t('locMy'));
       },
       ()=>{
-        if (nearbyStatus) nearbyStatus.textContent = '定位失敗，請允許位置權限';
+        if (nearbyStatus) nearbyStatus.textContent = t('locPerm');
       },
       { enableHighAccuracy:true, timeout: 8000, maximumAge: 60000 }
     );
@@ -2471,10 +2875,10 @@ if (nearbySearch){
     await ensureGoogleMaps();
     const query = nearbyInput ? nearbyInput.value.trim() : '';
     if (!query){
-      if (nearbyStatus) nearbyStatus.textContent = '請先輸入飯店名稱或地址';
+      if (nearbyStatus) nearbyStatus.textContent = t('inputHotel');
       return;
     }
-    if (nearbyStatus) nearbyStatus.textContent = '搜尋位置中…';
+    if (nearbyStatus) nearbyStatus.textContent = t('searchLoc');
     let coords = null;
     let label = query;
     if (googleReady){
@@ -2485,7 +2889,7 @@ if (nearbySearch){
       coords = await geocodeQuery(query);
     }
     if (!coords){
-      if (nearbyStatus) nearbyStatus.textContent = '找不到此位置，請換個關鍵字';
+      if (nearbyStatus) nearbyStatus.textContent = t('locNotFound');
       return;
     }
     updateMapPreview(coords, label);
