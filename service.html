@@ -117,7 +117,7 @@ dialog[data-fallback-open]{display:block;}
 #svcCartForm label{display:grid;gap:4px;font-size:13px;color:#374151;font-weight:700;}
 #svcCartForm input,#svcCartForm textarea,#svcCartForm select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
 #svcCartForm textarea{min-height:110px;resize:vertical;}
-#svcCart{width:min(720px,92vw);max-height:78vh;overflow:hidden;box-sizing:border-box;}
+#svcCart{width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:78vh;overflow:hidden;box-sizing:border-box;}
 #svcCartForm{flex:1;max-height:calc(78vh - 64px);overflow:hidden;display:flex;flex-direction:column;}
 #svcCart .svc-step-content{max-height:calc(78vh - 160px);overflow:auto;}
 @media (max-width: 640px){
@@ -130,7 +130,7 @@ dialog[data-fallback-open]{display:block;}
 .qty-stepper input{width:72px;text-align:center;}
 .svc-summary{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:18px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .svc-summary strong{font-size:18px;}
-#svcLookup{border:none;border-radius:16px;padding:0;background:var(--card);border:1px solid var(--line);box-shadow:0 20px 50px rgba(15,23,42,.35);max-width:560px;width:92%;max-height:85vh;}
+#svcLookup{border:none;border-radius:16px;padding:0;background:var(--card);border:1px solid var(--line);box-shadow:0 20px 50px rgba(15,23,42,.35);width:min(560px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:85vh;box-sizing:border-box;}
 #svcLookup::backdrop{background:rgba(2,6,23,.45);}
 #svcLookup header{padding:18px;border-bottom:1px solid var(--line);}
 #svcLookup form{padding:18px;display:grid;gap:12px;max-height:calc(85vh - 210px);overflow:auto;}
