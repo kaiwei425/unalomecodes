@@ -264,7 +264,7 @@
       padding:8px;
       display:none;
       min-width:180px;
-      z-index:20;
+      z-index:2000;
     }
     .member-menu-panel a,
     .member-menu-panel button{
@@ -419,7 +419,7 @@
       .mobile-auth-slot .member-menu,
       .mobile-auth-slot .auth-widget{
         flex:0 0 auto;
-        width:160px;
+        width:140px;
       }
       .mobile-auth-slot .member-menu button,
       .mobile-auth-slot .auth-widget{
