@@ -193,8 +193,11 @@
     .policy-dialog{border:none;border-radius:18px;padding:0;width:92%;max-width:560px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;box-shadow:0 20px 60px rgba(15,23,42,.35);}
     .policy-dialog header{padding:18px 20px;border-bottom:1px solid #e5e7eb;font-weight:800;font-size:18px;}
     .policy-dialog .body{padding:20px;font-size:14px;line-height:1.7;color:#1e293b;max-height:60vh;overflow:auto;}
+    .policy-dialog .body label{display:block;margin-top:8px;font-size:12px;color:#64748b;font-weight:600;}
+    .policy-dialog .body input{width:100%;margin-top:6px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;}
     .policy-dialog footer{padding:18px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
-    .policy-dialog .btn{border:none;border-radius:999px;padding:8px 18px;background:#111827;color:#fff;font-weight:600;cursor:pointer;}
+    .policy-dialog .btn,
+    .policy-dialog .btn.primary{border:none;border-radius:999px;padding:8px 18px;background:#111827;color:#fff;font-weight:600;cursor:pointer;}
     .auth-widget{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.08);min-height:48px;}
     .auth-widget .auth-status{font-size:13px;font-weight:700;color:#475569;}
     .auth-widget.is-authed .auth-status{color:#15803d;}
