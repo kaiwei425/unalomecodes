@@ -368,19 +368,22 @@
         width:100%;
       }
       .top-actions-row .btn{
-        height:36px;
-        padding:6px 10px;
+        height:34px;
+        padding:6px 8px;
         font-size:12px;
         white-space:nowrap;
         min-width:0;
-        flex:1 1 0;
+        flex:0 1 auto;
+        justify-content:flex-start;
+        text-align:left;
       }
       .top-actions-row .dropdown{
         min-width:0;
-        flex:1 1 0;
+        flex:0 1 auto;
       }
       .top-actions-row .dropdown .btn{
         width:100%;
+        justify-content:flex-start;
       }
       .action-group:first-child{
         grid-template-columns:repeat(2, minmax(0,1fr));
