@@ -2704,6 +2704,7 @@ function openModal(id){
   const igComment = String(item.igComment || '').trim();
   const hoursText = String(item.hours || '').trim();
   const mapsUrl = safeUrl(item.maps);
+  const igUrl = safeUrl(item.ig);
   const safeId = escapeHtml(item.id || '');
   const displayCat = mapCategory(item.category) || item.category;
   const tags = [
@@ -2751,6 +2752,7 @@ function openModal(id){
       </div>
       <div class="modal-actions">
         <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">開啟 Google Maps</a>
+        ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">在 IG 上查看</a>` : ''}
         <button class="btn ghost" data-fav="${safeId}">加入收藏</button>
       </div>
     </div>
