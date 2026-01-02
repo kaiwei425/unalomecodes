@@ -47,15 +47,18 @@
       right: 0;
     }
     .dropdown-content button {
-      color: black;
-      padding: 12px 16px;
+      color: #0f172a;
+      -webkit-text-fill-color: #0f172a;
+      padding: 10px 14px;
       text-decoration: none;
       display: block;
       width: 100%;
       text-align: left;
-      background: none;
+      background: #fff;
       border: none;
       cursor: pointer;
+      font-size: 13px;
+      line-height: 1.2;
     }
     .dropdown-content button:hover {background-color: #f1f1f1;}
     .dropdown.active .dropdown-content {display: block;}
