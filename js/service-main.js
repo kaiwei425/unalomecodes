@@ -1225,6 +1225,21 @@
       lookupCards.innerHTML = '<div style="color:#94a3b8;">查無資料，請確認輸入是否正確。</div>';
     }else{
       list.forEach(order=>{
+        const transfer = order && order.transfer ? order.transfer : {};
+        const directTotal = Number(transfer.amount || order.amount || order.totalAmount || order.total || 0);
+        let totalAmount = Number.isFinite(directTotal) && directTotal > 0 ? directTotal : 0;
+        if (!totalAmount && Array.isArray(order.items)){
+          totalAmount = order.items.reduce((sum, it)=>{
+            const line = Number(it && (it.total ?? it.amount));
+            if (Number.isFinite(line) && line > 0) return sum + line;
+            const price = Number(it && (it.price ?? it.basePrice ?? 0));
+            const qty = Number(it && (it.qty ?? it.quantity ?? 1));
+            if (Number.isFinite(price) && price > 0){
+              return sum + price * (Number.isFinite(qty) && qty > 0 ? qty : 1);
+            }
+            return sum;
+          }, 0);
+        }
         const selectionNames = Array.isArray(order.selectedOptions) && order.selectedOptions.length
           ? order.selectedOptions.map(opt => opt && opt.name ? opt.name : '').filter(Boolean)
           : (order.selectedOption && order.selectedOption.name ? [order.selectedOption.name] : []);
@@ -1245,6 +1260,7 @@
           <div style="font-size:13px;color:#475569;margin-top:6px;">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
           <div style="font-size:13px;color:#475569;">Email：${escapeHtml(buyer.email || '—')}</div>
           <div style="font-size:13px;color:#475569;">生日：${escapeHtml(buyer.birth || '—')}｜指定日期：${escapeHtml(order.requestDate || '—')}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">總金額：${formatTWD(totalAmount)}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">備註：${escapeHtml(order.note || '—')}</div>
           ${resultUrl ? `<div style="margin-top:12px;"><button type="button" class="btn primary" data-result-url="${escapeHtml(resultUrl)}">查看祈福成果照片</button></div>` : ''}
           <div style="margin-top:14px;border:1px dashed #cbd5f5;border-radius:12px;padding:12px;background:#f8fbff;">

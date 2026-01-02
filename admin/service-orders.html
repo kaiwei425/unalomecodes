@@ -168,6 +168,27 @@
   function getTransferLast5(order){
     return (order && (order.transfer && order.transfer.last5 || order.transferLast5 || '')) || '';
   }
+  function getOrderTotal(order){
+    if (!order) return 0;
+    const transfer = order.transfer || {};
+    const direct = Number(transfer.amount || order.amount || order.totalAmount || order.total || 0);
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    const list = Array.isArray(order.items) ? order.items : [];
+    let sum = 0;
+    list.forEach(it=>{
+      const line = Number(it && (it.total ?? it.amount));
+      if (Number.isFinite(line) && line > 0){
+        sum += line;
+        return;
+      }
+      const price = Number(it && (it.price ?? it.basePrice ?? 0));
+      const qty = Number(it && (it.qty ?? it.quantity ?? 1));
+      if (Number.isFinite(price) && price > 0){
+        sum += price * (Number.isFinite(qty) && qty > 0 ? qty : 1);
+      }
+    });
+    return sum;
+  }
   function fmt(ts){
     if (!ts) return '';
     try{
@@ -261,6 +282,7 @@
     bodyEl.innerHTML = view.map(o=>{
       const transferLast5 = getTransferLast5(o);
       const transferDisplay = transferLast5 ? `<strong style="letter-spacing:1px;">${transferLast5}</strong>` : '—';
+      const totalAmount = getOrderTotal(o);
       return `
         <div class="order-card" data-id="${o.id}">
           <div class="order-header">
@@ -278,6 +300,7 @@
               <div class="muted">內容：${formatItems(o)}</div>
               <div class="muted">備註：${escapeHtml(o.note||'—')}</div>
               <div class="muted">匯款末五碼：${transferDisplay}</div>
+              <div class="muted">總金額：${fmtCurrency(totalAmount)}</div>
             </div>
             <div class="section">
               <strong>聯絡人</strong>
