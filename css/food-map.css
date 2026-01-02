@@ -437,7 +437,9 @@
         font-size:12px;
         white-space:nowrap;
         line-height:1;
-        max-width:90px;
+        flex:1 1 auto;
+        text-align:center;
+        max-width:none;
         overflow:hidden;
         text-overflow:ellipsis;
       }
