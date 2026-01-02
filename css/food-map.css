@@ -362,6 +362,17 @@
       }
       .top-actions-row{
         grid-template-columns:repeat(3, minmax(0,1fr));
+        gap:6px;
+      }
+      .top-actions-row .btn{
+        height:36px;
+        padding:6px 8px;
+        font-size:12px;
+        white-space:nowrap;
+        min-width:0;
+      }
+      .top-actions-row .dropdown{
+        min-width:0;
       }
       .action-group:first-child{
         grid-template-columns:repeat(2, minmax(0,1fr));
