@@ -1594,6 +1594,19 @@ async function recordFortuneStat(env, dateKey, userId){
     await env.FORTUNES.put(countKey, String(count), { expirationTtl: 60 * 60 * 24 * 365 });
   }catch(_){}
 }
+async function recordFoodMapStat(env, dateKey, clientId){
+  if (!env || !env.FOODS || !dateKey || !clientId) return;
+  const seenKey = `FOOD_STATS:SEEN:${dateKey}:${clientId}`;
+  const countKey = `FOOD_STATS:${dateKey}`;
+  try{
+    const seen = await env.FOODS.get(seenKey);
+    if (seen) return;
+    await env.FOODS.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 * 2 });
+    const raw = await env.FOODS.get(countKey);
+    const count = (parseInt(raw || '0', 10) || 0) + 1;
+    await env.FOODS.put(countKey, String(count));
+  }catch(_){}
+}
 function taipeiDateParts(ts=Date.now()){
   const d = new Date(ts + 8 * 3600 * 1000);
   return {
@@ -4136,6 +4149,38 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       await deleteFoodsListCache(env);
     }
     return json({ ok:true, saved, updated, failed, total: limit, geocode });
+  }
+
+  if (pathname === '/api/foods/track' && request.method === 'POST'){
+    const ip = getClientIp(request) || 'unknown';
+    let clientId = ip;
+    try{
+      const user = await getSessionUser(request, env);
+      if (user && user.id) clientId = user.id;
+    }catch(_){}
+    const todayKey = taipeiDateKey();
+    await recordFoodMapStat(env, todayKey, clientId);
+    return json({ ok:true });
+  }
+
+  if (pathname === '/api/admin/food-stats' && request.method === 'GET'){
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
+    const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
+    const out = [];
+    for (let i = days - 1; i >= 0; i--){
+      const dateKey = taipeiDateKey(Date.now() - i * 86400000);
+      let count = 0;
+      try{
+        const raw = await env.FOODS.get(`FOOD_STATS:${dateKey}`);
+        count = parseInt(raw || '0', 10) || 0;
+      }catch(_){}
+      out.push({ date: dateKey, count });
+    }
+    return json({ ok:true, stats: out });
   }
 
   if (pathname === '/api/me/orders' && request.method === 'GET') {

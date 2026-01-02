@@ -279,6 +279,7 @@
               <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
               <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
               <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
+              <button class="btn ghost pill" id="btnStats" style="display:none; color: #2563eb; border-color: #93c5fd;">流量統計</button>
             </div>
           </div>
         </div>
@@ -478,6 +479,7 @@ const btnAdd = document.getElementById('btnAdd');
 const adminDropdown = document.getElementById('adminDropdown');
 let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
+let btnStats = document.getElementById('btnStats');
 // ---------------------------
 
 function escapeHtml(s){
@@ -1074,6 +1076,7 @@ async function checkAdmin(){
   
   if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnImport) btnImport.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (btnStats) btnStats.style.display = isAdmin ? 'inline-flex' : 'none';
 
   if (isAdmin) {
     // 匯出按鈕 (備份用)
@@ -1134,6 +1137,29 @@ async function checkAdmin(){
           reader.readAsText(file);
         };
         input.click();
+      };
+    }
+
+    // 流量統計按鈕
+    if (btnStats) {
+      btnStats.onclick = async () => {
+        btnStats.disabled = true;
+        btnStats.textContent = '讀取中...';
+        try {
+          const res = await fetch('/api/admin/food-stats?days=14', { credentials: 'include' });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || '讀取失敗');
+          let msg = '【美食地圖每日流量 (不重複訪客)】\n\n';
+          data.stats.forEach(row => {
+            msg += `${row.date}: ${row.count} 人\n`;
+          });
+          alert(msg);
+        } catch (e) {
+          alert('讀取失敗: ' + e.message);
+        } finally {
+          btnStats.disabled = false;
+          btnStats.textContent = '流量統計';
+        }
       };
     }
   }
@@ -2317,6 +2343,7 @@ function bootFoodMap(){
   }
   ensureGoogleMaps(); // 移除延遲，直接載入地圖
   loadRemote();
+  fetch('/api/foods/track', { method:'POST' }).catch(()=>{});
 }
 
 async function runNearby(origin, label){
