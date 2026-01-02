@@ -364,16 +364,15 @@
       }
       .mobile-auth-slot{
         display:flex;
-        flex:1;
-        flex-direction:column;
-        align-items:flex-end;
-        justify-content:flex-start;
+        flex:0 0 auto;
+        align-items:center;
+        justify-content:flex-end;
         gap:6px;
       }
       .mobile-auth-slot .member-menu,
       .mobile-auth-slot .auth-widget{
         flex:0 0 auto;
-        width:100%;
+        width:auto;
       }
       .mobile-auth-slot .member-menu button,
       .mobile-auth-slot .auth-widget{
@@ -381,7 +380,7 @@
         min-height:32px;
         padding:4px 8px;
         border-radius:12px;
-        width:100%;
+        width:auto;
       }
       .mobile-auth-slot .auth-widget{
         gap:6px;
@@ -389,11 +388,14 @@
       }
       .mobile-auth-slot .auth-status{
         font-size:12px;
+        white-space:nowrap;
+        line-height:1;
       }
       .mobile-auth-slot .auth-btn{
         height:24px;
         padding:3px 8px;
         font-size:11px;
+        white-space:nowrap;
       }
       .top-actions{
         z-index:30;
