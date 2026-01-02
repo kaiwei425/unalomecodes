@@ -256,7 +256,8 @@
       min-width:180px;
       z-index:20;
     }
-    .member-menu-panel a{
+    .member-menu-panel a,
+    .member-menu-panel button{
       display:block;
       padding:12px 14px;
       border-radius:12px;
@@ -264,6 +265,11 @@
       text-decoration:none;
       font-weight:800;
       font-size:14px;
+      width:100%;
+      text-align:left;
+      background:none;
+      border:none;
+      cursor:pointer;
     }
     .member-menu-panel a.qna-link{
       display:flex;
@@ -285,7 +291,8 @@
       justify-content:center;
     }
     .member-menu-panel .qna-badge.show{display:inline-flex;}
-    .member-menu-panel a:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
+    .member-menu-panel a:hover,
+    .member-menu-panel button:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
     .top-actions .member-menu button,
     .top-actions .auth-widget{
       min-height:52px;
@@ -299,8 +306,8 @@
         align-items:stretch;
         gap:8px;
       }
-      .top-actions .member-menu{flex:1 1 100%;}
-      .top-actions .auth-widget{flex:1 1 100%;}
+      .top-actions .member-menu{flex:1 1 48%;}
+      .top-actions .auth-widget{flex:1 1 48%;}
       .top-actions .member-menu button,
       .top-actions .auth-widget{
         width:100%;
@@ -333,7 +340,7 @@
         grid-template-columns:repeat(2, minmax(0,1fr));
       }
       .action-group:last-child{
-        grid-template-columns:1fr;
+        grid-template-columns:repeat(2, minmax(0,1fr));
       }
       .topbar{
         align-items:flex-start;
@@ -398,6 +405,8 @@
               </div>
             </div>
             <button class="btn ghost pill" id="btnFav">收藏清單</button>
+          </div>
+          <div class="action-group">
             <div class="member-menu" id="memberMenuContainer">
               <button type="button" id="memberMenuBtn">
                 <span class="member-menu-label">會員中心</span>
@@ -411,21 +420,14 @@
                 <a href="/account-store">門市預設</a>
                 <a href="/admin/orders" id="adminQnaLink" class="qna-link" data-admin-only data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadge">0</span></a>
                 <a href="/admin" data-admin-only data-admin-href="/admin" style="display:none;">後台管理</a>
+                <button type="button" id="btnAdd" style="display:none;">新增餐廳</button>
+                <button type="button" id="btnExport" style="display:none;">匯出備份</button>
+                <button type="button" id="btnImport" style="display:none; color:#16a34a;">匯入救援檔</button>
               </div>
             </div>
-          </div>
-          <div class="action-group">
             <div class="auth-widget" data-auth-widget>
               <span class="auth-status" data-auth-status>登入狀態載入中…</span>
               <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
-            </div>
-            <div class="dropdown" id="adminDropdown" style="display: none;">
-              <button class="btn ghost pill">更多</button>
-              <div class="dropdown-content">
-                <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
-                <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
-                <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
-              </div>
             </div>
           </div>
         </div>
@@ -1109,7 +1111,6 @@ const btnBack = document.getElementById('btnBack');
 const btnFav = document.getElementById('btnFav');
 const btnLang = document.getElementById('btnLang');
 const btnAdd = document.getElementById('btnAdd');
-const adminDropdown = document.getElementById('adminDropdown');
 let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
 let btnStats = document.getElementById('btnStats');
@@ -1704,8 +1705,6 @@ async function checkAdmin(){
   }catch(_){
     isAdmin = false;
   }
-  if (adminDropdown) adminDropdown.style.display = isAdmin ? 'inline-block' : 'none';
-
   if (btnAdd) btnAdd.style.display = isAdmin ? 'inline-flex' : 'none';
   
   if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
