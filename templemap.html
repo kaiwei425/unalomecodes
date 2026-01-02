@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="泰國寺廟地圖：曼谷/清邁/泰國各地寺廟整理、地圖導航、附近搜尋與收藏清單，一頁規劃參拜路線。">
+  <link rel="canonical" href="https://shop.unalomecodes.com/temple-map">
+  <title>unalomecodes 泰國寺廟地圖｜參拜路線整理</title>
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/img/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/img/favicon.png">
+  <meta property="og:title" content="unalomecodes 泰國寺廟地圖｜參拜路線整理">
+  <meta property="og:description" content="泰國寺廟地圖：曼谷/清邁/泰國各地寺廟整理、地圖導航、附近搜尋與收藏清單，一頁規劃參拜路線。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shop.unalomecodes.com/temple-map">
+  <meta property="og:image" content="https://shop.unalomecodes.com/img/logo.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/temple-map.css">
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">
+          <img src="https://i.ibb.co/7mtppQQ/logo.jpg" alt="">
+          <div>
+            <div class="brand-title">unalomecodes</div>
+            <div class="brand-sub">Thailand Temple Map</div>
+          </div>
+        </div>
+        <div class="mobile-auth-slot" id="mobileAuthSlot"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin: 10px 0px 24px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <h1 style="font-size: 28px; font-weight: 800; margin: 0;">泰國寺廟地圖</h1>
+            <a class="title-ig" href="https://www.instagram.com/bkkaiwei/" target="_blank" rel="noopener" aria-label="Instagram bkkaiwei"><img src="/img/brand/logo-instagram.png" alt="Instagram"></a>
+          </div>
+          <div class="sub" style="font-size: 14px; margin-top: 4px;">
+            <span id="pageSubtitle">精選泰國寺廟 一鍵找出來離你最近的寺廟</span>
+            <button id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;margin-left:4px;" title="編輯副標題">✏️</button>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="action-group top-actions-row">
+            <button class="btn ghost pill" id="btnBack">返回首頁</button>
+            <button class="btn ghost pill" id="btnFav">收藏清單</button>
+            <div class="dropdown" id="langDropdown">
+              <button class="btn ghost pill" id="btnLang">切換語言 ▾</button>
+              <div class="dropdown-content">
+                <button type="button" data-lang="zh">中文</button>
+                <button type="button" data-lang="en">英文</button>
+              </div>
+            </div>
+          </div>
+          <div id="authGroupSlot">
+            <div class="action-group" id="authGroup">
+              <div class="member-menu" id="memberMenuContainer">
+                <button type="button" id="memberMenuBtn">
+                  <span class="member-menu-label">會員中心</span>
+                  <span class="member-menu-arrow" id="memberMenuArrow">▾</span>
+                  <span class="member-menu-badge" id="memberMenuBadge" style="display:none;">0</span>
+                </button>
+                <div class="member-menu-panel" id="memberMenuPanel">
+                  <a href="#" data-profile>基本資料</a>
+                  <a href="/account-coupons" id="userCouponsLink" class="qna-link">我的優惠券 <span class="qna-badge" id="userCouponBadge">0</span></a>
+                  <a href="/account-orders" id="userOrdersLink" class="qna-link">我的訂單 <span class="qna-badge" id="userQnaBadge">0</span></a>
+                  <a href="/account-store">門市預設</a>
+                  <a href="/admin/orders" id="adminQnaLink" class="qna-link" data-admin-only data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadge">0</span></a>
+                  <a href="/admin" data-admin-only data-admin-href="/admin" style="display:none;">後台管理</a>
+                  <button type="button" id="adminToolsToggle" data-admin-only style="display:none;">寺廟地圖 ▾</button>
+                  <div class="member-menu-subpanel" id="adminToolsPanel" data-admin-only style="display:none;">
+                    <button type="button" id="btnAdd" style="display:none;">新增寺廟</button>
+                    <button type="button" id="btnExport" style="display:none;">匯出備份</button>
+                    <button type="button" id="btnImport" style="display:none;">匯入救援檔</button>
+                  </div>
+                </div>
+              </div>
+              <div class="auth-widget" data-auth-widget>
+                <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+                <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero">
+        <div class="hero-panel">
+          <div class="searchbox">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="kw" placeholder="搜尋寺廟名稱 / 關鍵字">
+          </div>
+          <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
+            <select id="fCat" class="filter-select">
+              <option value="">全部分類</option>
+            </select>
+            <select id="fArea" class="filter-select">
+              <option value="">全部地區</option>
+            </select>
+            <select id="fStatus" class="filter-select">
+              <option value="">營業狀態</option>
+              <option value="open">現在營業中</option>
+            </select>
+            <select id="fSort" class="filter-select">
+              <option value="">排序</option>
+              <option value="dist_asc">距離 近→遠</option>
+              <option value="rating_desc">評分 高→低</option>
+              <option value="name_asc">寺廟名稱 A→Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="nearby-panel" id="nearbyPanel" style="border:none;padding:0;box-shadow:none;">
+            <div class="nearby-head">
+              <div class="nearby-title">📍 附近推薦</div>
+              <div class="nearby-head-actions">
+                <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
+                <button class="btn ghost pill" type="button" id="nearbyToggle" style="display:none;" aria-expanded="true">收合</button>
+              </div>
+            </div>
+            <div class="nearby-body" id="nearbyBody">
+              <div class="nearby-input">
+                <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
+                <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
+              </div>
+              <div class="nearby-map" id="nearbyMap">地圖載入中...</div>
+              <div class="nearby-status" id="nearbyStatus">尚未搜尋附近寺廟</div>
+              <div class="nearby-list" id="nearbyList"></div>
+            </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="count-bar">
+      <div class="count-total" id="totalCount">共 0 間</div>
+      <div class="count-sync" id="countSync">更新中...</div>
+      <div class="count-tags" id="categoryCounts"></div>
+      <button class="btn pill primary" id="modeToggle" style="margin-left:auto;">地圖模式</button>
+    </div>
+    <div class="cat-tabs" id="catTabs"></div>
+    <div id="mainMap" class="main-map"></div>
+    <div class="cards" id="cards"></div>
+  </main>
+  <footer class="page-footer">
+      <div class="wrap footer-inner">
+        <div>© 2025-2026 unalomecodes. All rights reserved.</div>
+        <div>營業時間與資訊可能變動，請以寺廟公告為準。</div>
+      </div>
+    </footer>
+
+  <dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
+    <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
+  </dialog>
+  <div class="toast" id="saveToast">已儲存</div>
+  <dialog id="tripResultModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
+    <div id="tripResultBody"></div>
+  </dialog>
+  <dialog id="statsModal" style="border:none;border-radius:16px;padding:0;max-width:640px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
+    <div id="statsModalBody"></div>
+  </dialog>
+  <dialog id="profileDialog" class="policy-dialog">
+    <header>基本資料</header>
+    <div class="body">
+      <label>姓名</label>
+      <input id="profileName" type="text">
+      <label>Email</label>
+      <input id="profileEmail" type="email">
+      <label>手機號碼</label>
+      <input id="profilePhone" type="tel" placeholder="請輸入手機號碼">
+      <p class="muted" style="font-size:12px;margin-top:8px;">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
+      <div id="profileStatus" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="profileClose">取消</button>
+      <button type="button" class="btn primary" id="profileSave">儲存</button>
+    </footer>
+  </dialog>
+  <button id="btnBackToTop" title="回到頂部">↑</button>
+  <script>
+    window.LIFF_ID = "2008307812-jqNZZAhs";
+  </script>
+  <script src="/js/auth.js?v=20240930"></script>
+
+<script src="/js/temple-map.js"></script>
+</body>
+</html>

@@ -34,6 +34,10 @@ const FOODS_LIST_TTL = 60 * 1000;
 const FOODS_LIST_KV_TTL = 60 * 10;
 const FOODS_LIST_KEY = 'FOODS:LIST';
 const FOODS_LIST_CACHE = { ts: 0, items: null };
+const TEMPLES_LIST_TTL = 60 * 1000;
+const TEMPLES_LIST_KV_TTL = 60 * 10;
+const TEMPLES_LIST_KEY = 'TEMPLES:LIST';
+const TEMPLES_LIST_CACHE = { ts: 0, items: null };
 
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
 const ORDER_ID_PREFIX = 'OD';
@@ -1119,6 +1123,215 @@ async function listFoods(env, limit, opts = {}){
   }
   return out;
 }
+
+// Temples helpers (for temple map)
+function templeKey(id){ return `TEMPLE:${id}`; }
+async function geocodeQueryForTemple(env, query){
+  return await geocodeQueryForFood(env, query);
+}
+function buildTempleGeocodeQuery(temple, mapsUrl){
+  const fromMaps = extractMapsQuery(mapsUrl);
+  if (fromMaps) return fromMaps;
+  const place = extractPlaceNameFromMapsUrl(mapsUrl);
+  if (place) return place;
+  const address = String(temple.address || '').trim();
+  if (address) return address;
+  const name = String(temple.name || '').trim();
+  if (!name) return '';
+  const area = String(temple.area || '').trim();
+  const suffix = area ? ` ${area} Thailand` : ' Thailand';
+  return name + suffix;
+}
+async function resolveTempleCoords(env, temple){
+  if (!temple) return null;
+  const own = parseLatLngPair(temple.lat, temple.lng);
+  if (own) return own;
+  let mapsUrl = String(temple.maps || '').trim();
+  let coords = extractLatLngFromMapsUrl(mapsUrl);
+  if (coords) return coords;
+  if (mapsUrl){
+    const expanded = await expandMapsShortUrl(mapsUrl);
+    if (expanded){
+      coords = extractLatLngFromMapsUrl(expanded);
+      if (coords) return coords;
+      mapsUrl = expanded;
+    }
+  }
+  const query = buildTempleGeocodeQuery(temple, mapsUrl);
+  if (!query) return null;
+  return await geocodeQueryForTemple(env, query);
+}
+async function resolveTempleHours(env, temple){
+  const query = buildTempleGeocodeQuery(temple, temple.maps) || '';
+  if (!query) return '';
+  const placeId = await fetchPlaceId(env, query);
+  if (!placeId) return '';
+  const opening = await fetchPlaceDetails(env, placeId);
+  if (!opening) return '';
+  const fromPeriods = deriveHoursFromPeriods(opening.periods);
+  if (fromPeriods) return fromPeriods;
+  const fromText = deriveHoursFromWeekdayText(opening.weekday_text);
+  if (fromText) return fromText;
+  return '';
+}
+async function readTemple(env, id){
+  if (!env.TEMPLES) return null;
+  try{
+    const raw = await env.TEMPLES.get(templeKey(id));
+    return raw ? JSON.parse(raw) : null;
+  }catch(_){ return null; }
+}
+async function saveTemple(env, obj){
+  if (!env.TEMPLES || !obj || !obj.id) return null;
+  await env.TEMPLES.put(templeKey(obj.id), JSON.stringify(obj));
+  return obj;
+}
+function normalizeTemplePayload(payload, fallbackId){
+  const body = payload || {};
+  const id = String(body.id || fallbackId || '').trim();
+  if (!id) return null;
+
+  const out = { id };
+  const str = (k) => { if (body[k] !== undefined) out[k] = String(body[k] || '').trim(); };
+
+  str('name'); str('category'); str('area');
+  str('address'); str('hours'); str('maps');
+  str('cover'); str('intro'); str('googlePlaceId');
+  str('ig');
+
+  if (body.coverPos !== undefined || body.cover_pos !== undefined) {
+    out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
+  }
+
+  if (body.featured !== undefined || body.featured_ !== undefined) {
+    out.featured = !!(body.featured || body.featured_);
+  }
+  if (body.rating !== undefined) out.rating = body.rating;
+  if (body.lat !== undefined) out.lat = body.lat;
+  if (body.lng !== undefined) out.lng = body.lng;
+
+  return out;
+}
+function mergeTempleRecord(existing, incoming, options){
+  const out = Object.assign({}, existing || {});
+  const preserveExisting = !!(options && options.preserveExisting);
+  if (!incoming) return out;
+  const assignIf = (key, val)=>{
+    if (val === undefined) return;
+    if (preserveExisting && out[key] != null && out[key] !== '' && (!Array.isArray(out[key]) || out[key].length > 0)) return;
+    out[key] = val;
+  };
+  assignIf('name', incoming.name);
+  assignIf('category', incoming.category);
+  assignIf('area', incoming.area);
+  assignIf('address', incoming.address);
+  assignIf('hours', incoming.hours);
+  assignIf('maps', incoming.maps);
+  assignIf('ig', incoming.ig);
+  assignIf('cover', incoming.cover);
+  assignIf('coverPos', incoming.coverPos);
+  assignIf('intro', incoming.intro);
+  assignIf('featured', incoming.featured);
+  assignIf('rating', incoming.rating);
+  assignIf('googlePlaceId', incoming.googlePlaceId);
+  const latPair = parseLatLngPair(incoming.lat, incoming.lng);
+  if (latPair){
+    if (!preserveExisting || !parseLatLngPair(out.lat, out.lng)){
+      out.lat = latPair.lat;
+      out.lng = latPair.lng;
+    }
+  }
+  out.id = incoming.id || out.id;
+  out.deleted = false;
+  return out;
+}
+async function deleteTemple(env, id){
+  if (!env.TEMPLES || !id) return false;
+  await env.TEMPLES.delete(templeKey(id));
+  return true;
+}
+function resetTemplesListMemoryCache(){
+  TEMPLES_LIST_CACHE.ts = 0;
+  TEMPLES_LIST_CACHE.items = null;
+}
+async function readTemplesListCacheRaw(env){
+  if (!env.TEMPLES || !env.TEMPLES.get) return null;
+  try{
+    const raw = await env.TEMPLES.get(TEMPLES_LIST_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.items)) return null;
+    return data.items;
+  }catch(_){
+    return null;
+  }
+}
+async function readTemplesListCache(env){
+  if (!env.TEMPLES || !env.TEMPLES.get) return null;
+  try{
+    const raw = await env.TEMPLES.get(TEMPLES_LIST_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.items)) return null;
+    const ts = Number(data.ts || 0);
+    if (!ts) return null;
+    if ((Date.now() - ts) > TEMPLES_LIST_KV_TTL * 1000) return null;
+    return data.items;
+  }catch(_){
+    return null;
+  }
+}
+async function writeTemplesListCache(env, items){
+  if (!env.TEMPLES || !env.TEMPLES.put) return;
+  if (!Array.isArray(items)) return;
+  try{
+    await env.TEMPLES.put(TEMPLES_LIST_KEY, JSON.stringify({
+      ts: Date.now(),
+      items
+    }));
+  }catch(_){}
+}
+async function deleteTemplesListCache(env){
+  if (!env.TEMPLES || !env.TEMPLES.delete) return;
+  try{ await env.TEMPLES.delete(TEMPLES_LIST_KEY); }catch(_){}
+}
+async function upsertTemplesListCache(env, item){
+  if (!item || !item.id) return;
+  const items = await readTemplesListCacheRaw(env);
+  if (!items) return;
+  const next = items.filter(it=> it && it.id && it.id !== item.id);
+  if (!item.deleted) next.push(item);
+  await writeTemplesListCache(env, next);
+}
+async function listTemples(env, limit, opts = {}){
+  const out = [];
+  if (!env.TEMPLES || !env.TEMPLES.list) return out;
+  const useCache = opts.cache !== false;
+  const now = Date.now();
+  if (useCache && TEMPLES_LIST_CACHE.items && (now - TEMPLES_LIST_CACHE.ts) < TEMPLES_LIST_TTL){
+    const cached = TEMPLES_LIST_CACHE.items;
+    return cached.slice(0, limit || cached.length);
+  }
+  const iter = await env.TEMPLES.list({ prefix:'TEMPLE:' });
+  const keys = Array.isArray(iter.keys) ? iter.keys.slice(0, limit||200) : [];
+  const chunkSize = 30;
+  for (let i = 0; i < keys.length; i += chunkSize){
+    const chunk = keys.slice(i, i + chunkSize);
+    const raws = await Promise.all(chunk.map(k=> env.TEMPLES.get(k.name)));
+    raws.forEach((raw)=>{
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        if (obj && obj.id) out.push(obj);
+      }catch(_){}
+    });
+  }
+  if (useCache){
+    TEMPLES_LIST_CACHE.items = out;
+    TEMPLES_LIST_CACHE.ts = now;
+  }
+  return out;
+}
 async function readCoupon(env, code){
   if (!env.COUPONS) return null;
   if (!code) return null;
@@ -1618,6 +1831,31 @@ async function recordFoodMapStat(env, dateKey, clientId){
       const rawTotal = await env.FOODS.get(totalCountKey);
       const totalCount = (parseInt(rawTotal || '0', 10) || 0) + 1;
       await env.FOODS.put(totalCountKey, String(totalCount));
+    }
+  }catch(_){}
+}
+async function recordTempleMapStat(env, dateKey, clientId){
+  if (!env || !env.TEMPLES || !dateKey || !clientId) return;
+  const dailySeenKey = `TEMPLE_STATS:SEEN:${dateKey}:${clientId}`;
+  const dailyCountKey = `TEMPLE_STATS:${dateKey}`;
+  const totalSeenKey = `TEMPLE_STATS:USER_SEEN:${clientId}`;
+  const totalCountKey = `TEMPLE_STATS:TOTAL_UNIQUE`;
+
+  try{
+    const seenToday = await env.TEMPLES.get(dailySeenKey);
+    if (!seenToday) {
+      await env.TEMPLES.put(dailySeenKey, '1', { expirationTtl: 60 * 60 * 24 * 2 });
+      const rawDaily = await env.TEMPLES.get(dailyCountKey);
+      const dailyCount = (parseInt(rawDaily || '0', 10) || 0) + 1;
+      await env.TEMPLES.put(dailyCountKey, String(dailyCount));
+    }
+
+    const seenEver = await env.TEMPLES.get(totalSeenKey);
+    if (!seenEver) {
+      await env.TEMPLES.put(totalSeenKey, '1');
+      const rawTotal = await env.TEMPLES.get(totalCountKey);
+      const totalCount = (parseInt(rawTotal || '0', 10) || 0) + 1;
+      await env.TEMPLES.put(totalCountKey, String(totalCount));
     }
   }catch(_){}
 }
@@ -4252,7 +4490,364 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, stats: out, total: totalUnique });
   }
 
-  if (pathname === '/api/me/orders' && request.method === 'GET') {
+  
+if (pathname === '/api/me/temple-favs') {
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (request.method === 'GET'){
+      return json({ ok:true, favorites: Array.isArray(record.favoritesTemples) ? record.favoritesTemples : [] });
+    }
+    if (request.method === 'POST'){
+      try{
+        const body = await request.json().catch(()=>({}));
+        const id = String(body.id||'').trim();
+        if (!id) return json({ ok:false, error:'missing id' }, 400);
+        const action = (body.action || 'toggle').toLowerCase();
+        const list = Array.isArray(record.favoritesTemples) ? record.favoritesTemples.slice() : [];
+        const idx = list.indexOf(id);
+        if (action === 'remove'){ if (idx!==-1) list.splice(idx,1); }
+        else if (action === 'add'){ if (idx===-1) list.unshift(id); }
+        else { if (idx===-1) list.unshift(id); else list.splice(idx,1); }
+        record.favoritesTemples = list.slice(0, 500);
+        await saveUserRecord(env, record);
+        return json({ ok:true, favorites: record.favoritesTemples });
+      }catch(_){
+        return json({ ok:false, error:'invalid payload' }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/admin/status' && request.method === 'GET') {
+    const admin = await isAdmin(request, env);
+    return json({ ok:true, admin: !!admin }, 200);
+  }
+
+  if (pathname === '/api/ig/cover' && request.method === 'GET') {
+    const headers = jsonHeadersFor(request, env);
+    const targetRaw = url.searchParams.get('url') || url.searchParams.get('u') || '';
+    const target = normalizeInstagramPostUrl(targetRaw);
+    if (!target) {
+      return new Response(JSON.stringify({ ok:false, error:'invalid_url' }), { status:400, headers });
+    }
+    const ip = getClientIp(request) || '0.0.0.0';
+    const allowed = await checkRateLimit(env, `rl:igcover:${ip}`, 40, 60);
+    if (!allowed) {
+      return new Response(JSON.stringify({ ok:false, error:'rate_limited' }), { status:429, headers });
+    }
+    try{
+      const resp = await fetch(target, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      });
+      if (!resp.ok) {
+        return new Response(JSON.stringify({ ok:false, error:'fetch_failed' }), { status:502, headers });
+      }
+      const html = await resp.text();
+      const cover = extractMetaImage(html);
+      if (!cover) {
+        return new Response(JSON.stringify({ ok:false, error:'not_found' }), { status:404, headers });
+      }
+      headers['Cache-Control'] = 'public, max-age=3600';
+      return new Response(JSON.stringify({ ok:true, cover }), { status:200, headers });
+    }catch(err){
+      return new Response(JSON.stringify({ ok:false, error:'fetch_error' }), { status:502, headers });
+    }
+  }
+
+  if (pathname === '/api/temples/meta') {
+    if (request.method === 'GET'){
+      if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+      const raw = await env.TEMPLES.get('TEMPLE_MAP_META');
+      const meta = raw ? JSON.parse(raw) : {};
+      return json({ ok:true, meta });
+    }
+    if (request.method === 'POST'){
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+      if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+      const body = await request.json().catch(()=>({}));
+      const prev = await env.TEMPLES.get('TEMPLE_MAP_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
+      const next = Object.assign({}, prev, body);
+      await env.TEMPLES.put('TEMPLE_MAP_META', JSON.stringify(next));
+      return json({ ok:true, meta: next });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  // Temple map data (list / admin upsert)
+  if (pathname === '/api/temples') {
+    if (request.method === 'GET'){
+      if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+      const cached = await readTemplesListCache(env);
+      if (cached){
+        return jsonWithHeaders({ ok:true, items: cached }, 200, { 'Cache-Control': 'public, max-age=300, s-maxage=300' });
+      }
+      const items = await listTemples(env, 2000, { cache: true }); // 提高讀取上限
+      await writeTemplesListCache(env, items);
+      return jsonWithHeaders({ ok:true, items }, 200, { 'Cache-Control': 'public, max-age=300, s-maxage=300' });
+    }
+    if (request.method === 'DELETE'){
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+      }
+      if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+      let id = url.searchParams.get('id') || '';
+      if (!id){
+        try{
+          const body = await request.json().catch(()=>({}));
+          id = String(body.id || '').trim();
+        }catch(_){}
+      }
+      if (!id) return json({ ok:false, error:'missing id' }, 400);
+      const now = new Date().toISOString();
+      await saveTemple(env, { id, deleted:true, updatedAt: now });
+      resetTemplesListMemoryCache();
+      await upsertTemplesListCache(env, { id, deleted:true });
+      return json({ ok:true, id, deleted:true });
+    }
+    if (request.method === 'POST'){
+      {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+      }
+      if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+      try{
+        const body = await request.json().catch(()=>({}));
+        const now = new Date().toISOString();
+        const incoming = normalizeTemplePayload(body, `temple-${Date.now()}`);
+        if (!incoming) return json({ ok:false, error:'missing id' }, 400);
+        const existing = await readTemple(env, incoming.id);
+        const obj = mergeTempleRecord(existing, incoming);
+        obj.updatedAt = now;
+        if (!parseLatLngPair(obj.lat, obj.lng)){
+          const coords = await resolveTempleCoords(env, obj);
+          if (coords){
+            obj.lat = coords.lat;
+            obj.lng = coords.lng;
+          }
+        }
+        await saveTemple(env, obj);
+        resetTemplesListMemoryCache();
+        await upsertTemplesListCache(env, obj);
+        return json({ ok:true, item: obj });
+      }catch(e){
+        return json({ ok:false, error:String(e) }, 400);
+      }
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/temples/geocode' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const ids = Array.isArray(body.ids) ? body.ids.map(v=>String(v||'').trim()).filter(Boolean) : [];
+    const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit') || 300) || 300));
+    const force = String(url.searchParams.get('force') || '').toLowerCase() === 'true';
+    let items = [];
+    if (ids.length){
+      for (const id of ids){
+        const item = await readTemple(env, id);
+        if (item) items.push(item);
+      }
+    }else{
+      items = await listTemples(env, limit, { cache: false });
+    }
+    let updated = 0;
+    let checked = 0;
+    let failed = 0;
+    let skipped = 0;
+    for (const item of items){
+      checked += 1;
+      if (!force && parseLatLngPair(item.lat, item.lng)){
+        skipped += 1;
+        continue;
+      }
+      const coords = await resolveTempleCoords(env, item);
+      if (coords){
+        item.lat = coords.lat;
+        item.lng = coords.lng;
+        item.updatedAt = new Date().toISOString();
+        await saveTemple(env, item);
+        updated += 1;
+      }else{
+        failed += 1;
+      }
+    }
+    if (updated){
+      resetTemplesListMemoryCache();
+      await deleteTemplesListCache(env);
+    }
+    return json({ ok:true, checked, updated, failed, skipped, total: items.length });
+  }
+
+  if (pathname === '/api/temples/rebuild-cache' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    resetTemplesListMemoryCache();
+    await deleteTemplesListCache(env);
+    return json({ ok:true });
+  }
+
+  if (pathname === '/api/temples/hours' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
+    if (!key) return json({ ok:false, error:'missing google maps key' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const ids = Array.isArray(body.ids) ? body.ids.map(v=>String(v||'').trim()).filter(Boolean) : [];
+    const limit = Math.max(1, Math.min(300, Number(body.limit || url.searchParams.get('limit') || 100) || 100));
+    const force = String(body.force || url.searchParams.get('force') || '').toLowerCase() === 'true';
+    let items = [];
+    if (ids.length){
+      for (const id of ids){
+        const item = await readTemple(env, id);
+        if (item) items.push(item);
+      }
+    }else{
+      items = await listTemples(env, limit, { cache: false });
+    }
+    let updated = 0;
+    let checked = 0;
+    let failed = 0;
+    let skipped = 0;
+    for (const item of items){
+      checked += 1;
+      if (!force && hasNormalizedHours(item.hours)){
+        skipped += 1;
+        continue;
+      }
+      let hours = await resolveTempleHours(env, item);
+      if (!hours){
+        hours = normalizeHoursFallback(item.hours);
+      }
+      if (hours && String(hours || '').trim()){
+        item.hours = hours;
+        item.updatedAt = new Date().toISOString();
+        await saveTemple(env, item);
+        updated += 1;
+      }else{
+        failed += 1;
+      }
+    }
+    if (updated){
+      resetTemplesListMemoryCache();
+      await deleteTemplesListCache(env);
+    }
+    return json({ ok:true, checked, updated, failed, skipped, total: items.length });
+  }
+
+  if (pathname === '/api/temples/rebuild-cache' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    resetTemplesListMemoryCache();
+    await deleteTemplesListCache(env);
+    return json({ ok:true });
+  }
+
+  if (pathname === '/api/temples/sync' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (!items.length) return json({ ok:false, error:'missing items' }, 400);
+    const geocode = String(body.geocode || url.searchParams.get('geocode') || '').toLowerCase() === 'true';
+    const limit = Math.min(items.length, 1000);
+    let saved = 0;
+    let updated = 0;
+    let failed = 0;
+    for (const raw of items.slice(0, limit)){
+      try{
+        const incoming = normalizeTemplePayload(raw);
+        if (!incoming || !incoming.id){ failed += 1; continue; }
+        const existing = await readTemple(env, incoming.id);
+        const obj = mergeTempleRecord(existing, incoming, { preserveExisting: true });
+        if (geocode && !parseLatLngPair(obj.lat, obj.lng)){
+          const coords = await resolveTempleCoords(env, obj);
+          if (coords){
+            obj.lat = coords.lat;
+            obj.lng = coords.lng;
+          }
+        }
+        obj.updatedAt = new Date().toISOString();
+        await saveTemple(env, obj);
+        if (existing) updated += 1;
+        else saved += 1;
+      }catch(_){
+        failed += 1;
+      }
+    }
+    if (saved || updated){
+      resetTemplesListMemoryCache();
+      await deleteTemplesListCache(env);
+    }
+    return json({ ok:true, saved, updated, failed, total: limit, geocode });
+  }
+
+  if (pathname === '/api/temples/track' && request.method === 'POST'){
+    const ip = getClientIp(request) || 'unknown';
+    let clientId = ip;
+    try{
+      const user = await getSessionUser(request, env);
+      if (user && user.id) clientId = user.id;
+    }catch(_){}
+    const todayKey = taipeiDateKey();
+    await recordTempleMapStat(env, todayKey, clientId);
+    return json({ ok:true });
+  }
+
+  if (pathname === '/api/admin/temple-stats' && request.method === 'GET'){
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
+    const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
+    const out = [];
+    for (let i = days - 1; i >= 0; i--){
+      const dateKey = taipeiDateKey(Date.now() - i * 86400000);
+      let count = 0;
+      try{
+        const raw = await env.TEMPLES.get(`TEMPLE_STATS:${dateKey}`);
+        count = parseInt(raw || '0', 10) || 0;
+      }catch(_){}
+      out.push({ date: dateKey, count });
+    }
+    // Get total unique count
+    let totalUnique = 0;
+    try {
+      const rawTotal = await env.TEMPLES.get('TEMPLE_STATS:TOTAL_UNIQUE');
+      totalUnique = parseInt(rawTotal || '0', 10) || 0;
+    } catch(_) {}
+
+    return json({ ok:true, stats: out, total: totalUnique });
+  }
+
+  
+if (pathname === '/api/me/orders' && request.method === 'GET') {
     const record = await getSessionUserRecord(request, env);
     if (!record) return json({ ok:false, error:'unauthorized' }, 401);
     const ordersStore = env.ORDERS;
