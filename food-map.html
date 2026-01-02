@@ -40,7 +40,7 @@
     .brand-sub{font-size:11px;color:var(--muted);}
     h1{margin:0;font-size:24px;font-weight:800;}
     .sub{margin:4px 0 0;font-size:13px;color:var(--muted);}
-    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;position:relative;}
+    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;position:relative;overflow:visible;}
     .top-actions .btn{padding:6px 12px;font-size:12px;}
     .top-actions .btn,
     .top-actions .auth-btn,
@@ -51,7 +51,7 @@
     }
     .topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
     .topbar-actions .btn{height:34px;border-radius:12px;font-size:12px;padding:6px 10px;}
-    .top-actions .action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .top-actions .action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;overflow:visible;}
     .dropdown {
       position: relative;
       display: inline-block;
@@ -62,7 +62,7 @@
       background-color: #f9f9f9;
       min-width: 160px;
       box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-      z-index: 1;
+      z-index: 1200;
       border-radius: 10px;
       padding: 5px;
       right: 0;
@@ -351,6 +351,12 @@
       }
       .topbar-actions .btn{
         height:32px;
+      }
+      .top-actions{
+        z-index:30;
+      }
+      .dropdown-content{
+        z-index:1500;
       }
     }
     #btnBackToTop {
