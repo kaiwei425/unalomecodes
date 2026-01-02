@@ -215,6 +215,7 @@
     .policy-dialog .btn,
     .policy-dialog .btn.primary{border:none;border-radius:999px;padding:8px 18px;background:#111827;color:#fff;font-weight:600;cursor:pointer;}
     .auth-widget{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.08);min-height:48px;}
+    .auth-widget .auth-status{flex:1 1 auto;min-width:0;}
     .auth-widget .auth-status{font-size:13px;font-weight:700;color:#475569;}
     .auth-widget.is-authed .auth-status{color:#15803d;}
     .auth-btn{border:none;border-radius:999px;padding:4px 10px;height:28px;line-height:1;font-weight:700;font-size:12px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 8px 16px rgba(16,149,214,.2);transition:transform .2s ease,filter .2s ease;}
@@ -430,21 +431,22 @@
       }
       .mobile-auth-slot .auth-widget{
         gap:6px;
-        padding:4px 8px;
+        padding:4px 10px;
       }
       .mobile-auth-slot .auth-status{
         font-size:12px;
         white-space:nowrap;
         line-height:1;
-        max-width:70px;
+        max-width:90px;
         overflow:hidden;
         text-overflow:ellipsis;
       }
       .mobile-auth-slot .auth-btn{
-        height:24px;
-        padding:3px 8px;
+        height:22px;
+        padding:2px 8px;
         font-size:11px;
         white-space:nowrap;
+        min-width:60px;
       }
       .top-actions{
         z-index:30;
