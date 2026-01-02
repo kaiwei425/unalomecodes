@@ -352,91 +352,116 @@ html,body{
 (function(){
   const box = document.getElementById('adminStats');
   if (!box) return;
-  fetch('/api/admin/dashboard', { credentials:'include', cache:'no-store' })
-    .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
-    .then(({ ok, data })=>{
-      if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');
-      const s = data.stats || {};
-      const set = (key, value) => {
-        const el = box.querySelector(`[data-stat="${key}"]`);
-        if (el) el.textContent = value;
-      };
-      const setSub = (key, value) => {
-        const el = box.querySelector(`[data-stat-sub="${key}"]`);
-        if (el) el.textContent = value;
-      };
-      set('products-total', s.products ? s.products.total : '—');
-      setSub('products-sub', s.products ? `上架 ${s.products.active || 0}｜低庫存 ${s.products.lowStock || 0}` : '—');
-      set('orders-total', s.orders ? s.orders.total : '—');
-      setSub('orders-sub', s.orders ? `待處理 ${s.orders.pending || 0}｜已付款 ${s.orders.paid || 0}` : '—');
-      set('members-total', s.members ? s.members.total : '—');
-      setSub('members-sub', s.members && s.members.approx ? '資料量較大，顯示估算' : '同步完成');
-      if (s.coupons){
-        set('coupons-used', `${s.coupons.used || 0}/${s.coupons.total || 0}`);
-        setSub('coupons-sub', s.coupons.approx ? '資料量較大，顯示估算' : '使用率統計');
-      }
+  const maxDashboardAttempts = 3;
+  const retryDelay = (attempt) => 1400 * (attempt + 1);
+  const set = (key, value) => {
+    const el = box.querySelector(`[data-stat="${key}"]`);
+    if (el) el.textContent = value;
+  };
+  const setSub = (key, value) => {
+    const el = box.querySelector(`[data-stat-sub="${key}"]`);
+    if (el) el.textContent = value;
+  };
+  const fmtNum = (n)=> Number(n || 0).toLocaleString('zh-TW');
+  const fmtMoney = (n)=> `NT$ ${fmtNum(Math.round(Number(n || 0) || 0))}`;
+  const esc = (val)=>{
+    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+    return String(val || '').replace(/[&<>"']/g, m => map[m] || m);
+  };
+  const setReport = (key, value)=>{
+    const el = document.querySelector(`[data-report="${key}"]`);
+    if (el) el.textContent = value;
+  };
+  const renderList = (key, items, formatter)=>{
+    const el = document.querySelector(`[data-report-list="${key}"]`);
+    if (!el) return;
+    if (!items || !items.length){
+      el.innerHTML = '<li class="empty">尚無資料</li>';
+      return;
+    }
+    el.innerHTML = items.map(formatter).join('');
+  };
+  const markReportLoading = ()=>{
+    setSub('products-sub', '統計更新中…');
+    setSub('orders-sub', '統計更新中…');
+    setSub('members-sub', '統計更新中…');
+    setSub('coupons-sub', '統計更新中…');
+    setReport('physical-status', '統計更新中…');
+    setReport('service-status', '統計更新中…');
+    setReport('physical-scan', '統計更新中…');
+    setReport('service-scan', '統計更新中…');
+  };
+  const applyDashboard = (data)=>{
+    const s = data.stats || {};
+    set('products-total', s.products ? s.products.total : '—');
+    setSub('products-sub', s.products ? `上架 ${s.products.active || 0}｜低庫存 ${s.products.lowStock || 0}` : '—');
+    set('orders-total', s.orders ? s.orders.total : '—');
+    setSub('orders-sub', s.orders ? `新訂單 ${s.orders.pending || 0}｜已確認付款 ${s.orders.paid || 0}｜已完成訂單 ${s.orders.done || 0}` : '—');
+    set('members-total', s.members ? s.members.total : '—');
+    setSub('members-sub', s.members && s.members.approx ? '資料量較大，顯示估算' : '同步完成');
+    if (s.coupons){
+      set('coupons-used', `${s.coupons.used || 0}/${s.coupons.total || 0}`);
+      setSub('coupons-sub', s.coupons.approx ? '資料量較大，顯示估算' : '使用率統計');
+    }
 
-      const r = data.reports || {};
-      const limits = data.limits || {};
-      const fmtNum = (n)=> Number(n || 0).toLocaleString('zh-TW');
-      const fmtMoney = (n)=> `NT$ ${fmtNum(Math.round(Number(n || 0) || 0))}`;
-      const esc = (val)=>{
-        const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
-        return String(val || '').replace(/[&<>"']/g, m => map[m] || m);
-      };
-      const setReport = (key, value)=>{
-        const el = document.querySelector(`[data-report="${key}"]`);
-        if (el) el.textContent = value;
-      };
-      const renderList = (key, items, formatter)=>{
-        const el = document.querySelector(`[data-report-list="${key}"]`);
-        if (!el) return;
-        if (!items || !items.length){
-          el.innerHTML = '<li class="empty">尚無資料</li>';
+    const r = data.reports || {};
+    const limits = data.limits || {};
+    const physical = r.physical || {};
+    const service = r.service || {};
+    setReport('physical-rev-today', fmtMoney(physical.revenue?.today));
+    setReport('physical-rev-7', fmtMoney(physical.revenue?.last7));
+    setReport('physical-rev-30', fmtMoney(physical.revenue?.last30));
+    setReport('physical-ord-today', fmtNum(physical.orders?.today));
+    setReport('physical-ord-7', fmtNum(physical.orders?.last7));
+    setReport('physical-ord-30', fmtNum(physical.orders?.last30));
+    setReport('physical-status', `新訂單 ${fmtNum(physical.status?.pending)}｜已確認付款 ${fmtNum(physical.status?.paid)}｜已完成訂單 ${fmtNum(physical.status?.done)}`);
+    setReport('physical-scan', physical.approx ? `資料量較大，統計前 ${fmtNum(limits.scanLimit || 0)} 筆` : '完整統計');
+
+    setReport('service-rev-today', fmtMoney(service.revenue?.today));
+    setReport('service-rev-7', fmtMoney(service.revenue?.last7));
+    setReport('service-rev-30', fmtMoney(service.revenue?.last30));
+    setReport('service-ord-today', fmtNum(service.orders?.today));
+    setReport('service-ord-7', fmtNum(service.orders?.last7));
+    setReport('service-ord-30', fmtNum(service.orders?.last30));
+    setReport('service-status', `新訂單 ${fmtNum(service.status?.pending)}｜已確認付款 ${fmtNum(service.status?.paid)}｜已完成訂單 ${fmtNum(service.status?.done)}`);
+    setReport('service-scan', service.approx ? `資料量較大，統計前 ${fmtNum(limits.scanLimit || 0)} 筆` : '完整統計');
+
+    renderList('physical-top', physical.topItems, (item)=>{
+      const name = esc(item.name || '商品');
+      const qty = fmtNum(item.qty || 0);
+      return `<li><span class="name">${name}</span><span>× ${qty}</span></li>`;
+    });
+    renderList('physical-low', physical.lowStock, (item)=>{
+      const name = esc(item.name || '商品');
+      const stock = fmtNum(item.stock || 0);
+      return `<li><span class="name">${name}</span><span>庫存 ${stock}</span></li>`;
+    });
+    renderList('service-top', service.topItems, (item)=>{
+      const name = esc(item.name || '服務商品');
+      const qty = fmtNum(item.qty || 0);
+      return `<li><span class="name">${name}</span><span>× ${qty}</span></li>`;
+    });
+  };
+  const loadDashboard = (attempt = 0)=>{
+    fetch('/api/admin/dashboard', { credentials:'include', cache:'no-store' })
+      .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data })=>{
+        if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');
+        if (data && data.fromCache === false){
+          markReportLoading();
+          if (attempt < maxDashboardAttempts){
+            setTimeout(()=> loadDashboard(attempt + 1), retryDelay(attempt));
+          }
           return;
         }
-        el.innerHTML = items.map(formatter).join('');
-      };
-      const physical = r.physical || {};
-      const service = r.service || {};
-      setReport('physical-rev-today', fmtMoney(physical.revenue?.today));
-      setReport('physical-rev-7', fmtMoney(physical.revenue?.last7));
-      setReport('physical-rev-30', fmtMoney(physical.revenue?.last30));
-      setReport('physical-ord-today', fmtNum(physical.orders?.today));
-      setReport('physical-ord-7', fmtNum(physical.orders?.last7));
-      setReport('physical-ord-30', fmtNum(physical.orders?.last30));
-      setReport('physical-status', `已付款 ${fmtNum(physical.status?.paid)}｜待處理 ${fmtNum(physical.status?.pending)}｜取消 ${fmtNum(physical.status?.canceled)}`);
-      setReport('physical-scan', physical.approx ? `資料量較大，統計前 ${fmtNum(limits.scanLimit || 0)} 筆` : '完整統計');
-
-      setReport('service-rev-today', fmtMoney(service.revenue?.today));
-      setReport('service-rev-7', fmtMoney(service.revenue?.last7));
-      setReport('service-rev-30', fmtMoney(service.revenue?.last30));
-      setReport('service-ord-today', fmtNum(service.orders?.today));
-      setReport('service-ord-7', fmtNum(service.orders?.last7));
-      setReport('service-ord-30', fmtNum(service.orders?.last30));
-      setReport('service-status', `已付款 ${fmtNum(service.status?.paid)}｜待處理 ${fmtNum(service.status?.pending)}｜取消 ${fmtNum(service.status?.canceled)}`);
-      setReport('service-scan', service.approx ? `資料量較大，統計前 ${fmtNum(limits.scanLimit || 0)} 筆` : '完整統計');
-
-      renderList('physical-top', physical.topItems, (item)=>{
-        const name = esc(item.name || '商品');
-        const qty = fmtNum(item.qty || 0);
-        return `<li><span class="name">${name}</span><span>× ${qty}</span></li>`;
+        applyDashboard(data);
+      })
+      .catch(()=>{
+        const subs = box.querySelectorAll('[data-stat-sub]');
+        subs.forEach(el => { el.textContent = '暫時無法載入'; });
       });
-      renderList('physical-low', physical.lowStock, (item)=>{
-        const name = esc(item.name || '商品');
-        const stock = fmtNum(item.stock || 0);
-        return `<li><span class="name">${name}</span><span>庫存 ${stock}</span></li>`;
-      });
-      renderList('service-top', service.topItems, (item)=>{
-        const name = esc(item.name || '服務商品');
-        const qty = fmtNum(item.qty || 0);
-        return `<li><span class="name">${name}</span><span>× ${qty}</span></li>`;
-      });
-    })
-    .catch(()=>{
-      const subs = box.querySelectorAll('[data-stat-sub]');
-      subs.forEach(el => { el.textContent = '暫時無法載入'; });
-    });
+  };
+  loadDashboard();
 
   // Load Food Map Stats
   const ctx = document.getElementById('foodMapChart');

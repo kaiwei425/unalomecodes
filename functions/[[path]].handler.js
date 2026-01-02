@@ -2668,6 +2668,13 @@ function statusIsPaid(s){
   if (paidHints.some(k => v.includes(k))) return true;
   return /\bpaid\b/i.test(v);
 }
+function statusIsCompleted(s){
+  const v = normalizeStatus(s);
+  if (!v) return false;
+  if (/祈福完成/.test(v) || /成果已通知/.test(v)) return true;
+  if (/已完成訂單/.test(v) || /完成訂單/.test(v) || /訂單完成/.test(v)) return true;
+  return /\bcompleted\b/i.test(v);
+}
 function statusIsCanceled(s){
   const v = normalizeStatus(s);
   if (!v) return false;
@@ -2869,7 +2876,7 @@ async function updateDashboardStats(env) {
   const lowStockThreshold = Math.max(0, Number(env.LOW_STOCK_THRESHOLD || 3) || 3);
   const stats = {
     products: { total: 0, active: 0, lowStock: 0, approx: false },
-    orders: { total: 0, paid: 0, pending: 0, canceled: 0, approx: false },
+    orders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
     members: { total: 0, approx: false },
     coupons: { total: 0, used: 0, approx: false }
   };
@@ -2891,7 +2898,7 @@ async function updateDashboardStats(env) {
     physical: {
       revenue: makePeriods(),
       orders: makePeriods(),
-      status: { paid: 0, pending: 0, canceled: 0 },
+      status: { paid: 0, pending: 0, done: 0, canceled: 0 },
       topItems: [],
       lowStock: [],
       approx: false
@@ -2899,7 +2906,7 @@ async function updateDashboardStats(env) {
     service: {
       revenue: makePeriods(),
       orders: makePeriods(),
-      status: { paid: 0, pending: 0, canceled: 0 },
+      status: { paid: 0, pending: 0, done: 0, canceled: 0 },
       topItems: [],
       approx: false
     }
@@ -2960,13 +2967,16 @@ async function updateDashboardStats(env) {
       if (!raw) continue;
       try{
         const o = JSON.parse(raw);
+        const isDone = statusIsCompleted(o.status);
         const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
         const isCanceled = statusIsCanceled(o.status);
-        if (isPaid) stats.orders.paid++;
+        if (isDone) stats.orders.done++;
+        else if (isPaid) stats.orders.paid++;
         else if (isCanceled) stats.orders.canceled++;
         else stats.orders.pending++;
 
-        if (isPaid) reports.physical.status.paid++;
+        if (isDone) reports.physical.status.done++;
+        else if (isPaid) reports.physical.status.paid++;
         else if (isCanceled) reports.physical.status.canceled++;
         else reports.physical.status.pending++;
 
@@ -3014,13 +3024,15 @@ async function updateDashboardStats(env) {
       for (const oid of slice){
         const raw = await svcStore.get(oid);
         if (!raw) continue;
-        try{
-          const o = JSON.parse(raw);
-          const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
-          const isCanceled = statusIsCanceled(o.status);
-          if (isPaid) reports.service.status.paid++;
-          else if (isCanceled) reports.service.status.canceled++;
-          else reports.service.status.pending++;
+      try{
+        const o = JSON.parse(raw);
+        const isDone = statusIsCompleted(o.status);
+        const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
+        const isCanceled = statusIsCanceled(o.status);
+        if (isDone) reports.service.status.done++;
+        else if (isPaid) reports.service.status.paid++;
+        else if (isCanceled) reports.service.status.canceled++;
+        else reports.service.status.pending++;
 
           const createdTs = getOrderCreatedTs(o);
           addPeriods(reports.service.orders, createdTs, 1);
