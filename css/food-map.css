@@ -441,11 +441,13 @@
         white-space:nowrap;
         line-height:1;
         width:100%;
+        min-width:0;
         text-align:center;
         max-width:none;
         overflow:hidden;
         text-overflow:ellipsis;
         justify-self:center;
+        padding:0 6px;
       }
       .mobile-auth-slot .auth-btn{
         height:22px;
