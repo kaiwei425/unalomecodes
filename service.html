@@ -117,9 +117,14 @@ dialog[data-fallback-open]{display:block;}
 #svcCartForm label{display:grid;gap:4px;font-size:13px;color:#374151;font-weight:700;}
 #svcCartForm input,#svcCartForm textarea,#svcCartForm select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
 #svcCartForm textarea{min-height:110px;resize:vertical;}
-#svcCart{width:min(900px,94vw);max-height:90vh;height:90vh;overflow:hidden;box-sizing:border-box;}
+#svcCart{width:min(900px,94vw);max-height:90vh;overflow:hidden;box-sizing:border-box;}
 #svcCartForm{flex:1;max-height:calc(90vh - 64px);overflow:hidden;display:flex;flex-direction:column;}
 #svcCart .svc-step-content{max-height:calc(90vh - 160px);overflow:auto;}
+@media (max-width: 640px){
+  #svcCart{max-height:85vh;}
+  #svcCartForm{max-height:calc(85vh - 64px);}
+  #svcCart .svc-step-content{max-height:calc(85vh - 160px);}
+}
 .qty-stepper{display:flex;align-items:center;gap:8px;}
 .qty-stepper button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:18px;line-height:1;cursor:pointer;}
 .qty-stepper input{width:72px;text-align:center;}
