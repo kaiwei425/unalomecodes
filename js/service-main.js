@@ -25,6 +25,8 @@
   const detailQtyWrap = document.getElementById('svcDetailQtyWrap');
   const detailQtyInput = document.getElementById('svcDetailQty');
   const detailQtyLabel = document.getElementById('svcDetailQtyLabel');
+  const detailQtyMinus = document.getElementById('svcDetailQtyMinus');
+  const detailQtyPlus = document.getElementById('svcDetailQtyPlus');
   const detailFeeHint = document.getElementById('svcDetailFeeHint');
   const detailPriceHint = document.getElementById('svcDetailPriceHint');
   const detailLimited = document.getElementById('svcDetailLimited');
@@ -323,10 +325,11 @@
     const need = !!required;
     const name = String(serviceName || '').trim();
     let skipText = '此服務不需上傳個人照片。';
+    const isCoffinDonation = /代捐棺/.test(name);
     if (name){
       if (/義德善堂/.test(name) && /捐/.test(name)){
         skipText = `${name}不用上傳照片。`;
-      }else if (/代捐棺/.test(name)){
+      }else if (isCoffinDonation){
         skipText = '代捐棺服務不用上傳照片。';
       }else{
         skipText = `${name}不需上傳個人照片。`;
@@ -342,13 +345,14 @@
     if (contactPhotoWrap) contactPhotoWrap.style.display = need ? '' : 'none';
     if (contactPhotoSkipHint){
       contactPhotoSkipHint.textContent = skipText;
-      contactPhotoSkipHint.style.display = need ? 'none' : '';
+      contactPhotoSkipHint.style.display = (need || isCoffinDonation) ? 'none' : '';
     }
     if (contactPhotoTitle){
       contactPhotoTitle.textContent = need
         ? '上傳個人照片（祈福使用，必填）'
         : '上傳個人照片（祈福使用，可略過）';
     }
+    if (isCoffinDonation && contactPhotoWrap) contactPhotoWrap.style.display = 'none';
     if (!need){
       checkoutRitualPhoto = { url:'', name:'' };
       if (contactPhotoInput) contactPhotoInput.value = '';
@@ -843,12 +847,32 @@
       }
     }
   }
+  function setDetailQty(next){
+    if (!detailQtyInput) return;
+    const val = Math.max(1, Number(next || 1) || 1);
+    detailQtyInput.value = String(Math.floor(val));
+    if (detailQtyMinus) detailQtyMinus.disabled = val <= 1;
+    updateDetailPrice();
+  }
   if (detailQtyInput && !detailQtyInput.__bound){
     detailQtyInput.__bound = true;
     detailQtyInput.addEventListener('input', ()=>{
       const val = Math.max(1, Number(detailQtyInput.value||1) || 1);
-      detailQtyInput.value = String(Math.floor(val));
-      updateDetailPrice();
+      setDetailQty(val);
+    });
+  }
+  if (detailQtyMinus && !detailQtyMinus.__bound){
+    detailQtyMinus.__bound = true;
+    detailQtyMinus.addEventListener('click', ()=>{
+      if (!detailQtyInput) return;
+      setDetailQty(Number(detailQtyInput.value || 1) - 1);
+    });
+  }
+  if (detailQtyPlus && !detailQtyPlus.__bound){
+    detailQtyPlus.__bound = true;
+    detailQtyPlus.addEventListener('click', ()=>{
+      if (!detailQtyInput) return;
+      setDetailQty(Number(detailQtyInput.value || 1) + 1);
     });
   }
 
@@ -891,7 +915,7 @@
       const qtyEnabled = isQtyEnabled(service);
       if (qtyEnabled){
         detailQtyWrap.style.display = '';
-        detailQtyInput.value = '1';
+        setDetailQty(1);
         detailQtyInput.min = '1';
         detailQtyInput.step = '1';
         if (detailQtyLabel) detailQtyLabel.textContent = getServiceQtyLabel(service);
@@ -953,6 +977,20 @@
 
   function addCurrentSelection(){
     if (!detailDataset) return;
+    if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+      const msg = '請先登入後再加入購物車。';
+      if (window.authState && typeof window.authState.promptLogin === 'function'){
+        window.authState.promptLogin(msg);
+      }else{
+        alert(msg);
+      }
+      if (window.authState && typeof window.authState.login === 'function'){
+        window.authState.login();
+      }else{
+        window.location.href = '/api/auth/google/login';
+      }
+      return;
+    }
     const limitedTs = parseLimitedUntil(detailDataset && detailDataset.limitedUntil);
     if (limitedTs && Date.now() >= limitedTs){
       alert('此服務已結束上架');
