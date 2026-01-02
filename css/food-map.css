@@ -355,9 +355,12 @@
       .topbar{
         align-items:flex-start;
       }
+      .topbar{
+        align-items:center;
+      }
       .topbar-actions{
         width:100%;
-        justify-content:space-between;
+        justify-content:flex-start;
       }
       .topbar-actions .btn{
         height:32px;
@@ -369,10 +372,16 @@
         justify-content:flex-end;
         gap:6px;
       }
+      .mobile-auth-slot .action-group{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        flex-wrap:nowrap;
+      }
       .mobile-auth-slot .member-menu,
       .mobile-auth-slot .auth-widget{
         flex:0 0 auto;
-        width:auto;
+        width:140px;
       }
       .mobile-auth-slot .member-menu button,
       .mobile-auth-slot .auth-widget{
@@ -380,7 +389,7 @@
         min-height:32px;
         padding:4px 8px;
         border-radius:12px;
-        width:auto;
+        width:100%;
       }
       .mobile-auth-slot .auth-widget{
         gap:6px;
@@ -390,6 +399,9 @@
         font-size:12px;
         white-space:nowrap;
         line-height:1;
+        max-width:70px;
+        overflow:hidden;
+        text-overflow:ellipsis;
       }
       .mobile-auth-slot .auth-btn{
         height:24px;
