@@ -432,17 +432,20 @@
       .mobile-auth-slot .auth-widget{
         gap:6px;
         padding:4px 8px;
-        justify-content:space-between;
+        display:grid;
+        grid-template-columns:1fr auto;
+        align-items:center;
       }
       .mobile-auth-slot .auth-status{
         font-size:12px;
         white-space:nowrap;
         line-height:1;
-        flex:1 1 auto;
+        width:100%;
         text-align:center;
         max-width:none;
         overflow:hidden;
         text-overflow:ellipsis;
+        justify-self:center;
       }
       .mobile-auth-slot .auth-btn{
         height:22px;
