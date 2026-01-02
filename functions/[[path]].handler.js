@@ -3964,6 +3964,26 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
   }
 
+  if (pathname === '/api/foods/meta') {
+    if (request.method === 'GET'){
+      if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+      const raw = await env.FOODS.get('FOOD_MAP_META');
+      const meta = raw ? JSON.parse(raw) : {};
+      return json({ ok:true, meta });
+    }
+    if (request.method === 'POST'){
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+      if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+      const body = await request.json().catch(()=>({}));
+      const prev = await env.FOODS.get('FOOD_MAP_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
+      const next = Object.assign({}, prev, body);
+      await env.FOODS.put('FOOD_MAP_META', JSON.stringify(next));
+      return json({ ok:true, meta: next });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
   // Food map data (list / admin upsert)
   if (pathname === '/api/foods') {
     if (request.method === 'GET'){
