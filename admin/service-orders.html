@@ -21,6 +21,9 @@
   .lookup{margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .lookup input{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--text);}
   .lookup .btn{padding:10px 12px;border-radius:10px;}
+  .status-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .status-tab{border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;}
+  .status-tab.active{background:linear-gradient(135deg,#fb923c,#f97316);border-color:transparent;color:#fff;box-shadow:0 10px 24px rgba(249,115,22,.25);}
   .list{display:grid;gap:12px;}
   .order-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 28px rgba(15,23,42,.08);display:grid;gap:10px;}
   .order-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -72,6 +75,11 @@
       <button class="btn" id="btnReload">重新整理</button>
       <button class="btn" id="btnExport">匯出 CSV</button>
     </div>
+    <div class="status-tabs" id="statusTabs">
+      <button type="button" class="status-tab active" data-status="pending">待確認付款</button>
+      <button type="button" class="status-tab" data-status="paid">已付款祈福進行中</button>
+      <button type="button" class="status-tab" data-status="done">祈福完成</button>
+    </div>
     <div class="card">
       <div id="ordersBody" class="list"><div class="muted">載入中…</div></div>
     </div>
@@ -118,7 +126,9 @@
   const filterInput = document.getElementById('filter');
   const btnReload = document.getElementById('btnReload');
   const btnExport = document.getElementById('btnExport');
+  const statusTabs = document.getElementById('statusTabs');
   let orders = [];
+  let activeStatus = 'pending';
   const STATUSES = ['待處理','已確認付款，祈福進行中','祈福完成','祈福成果已通知'];
 
   function fmtCurrency(val){
@@ -269,12 +279,27 @@
     });
   }
 
+  function statusMatches(order, key){
+    const raw = String(order && order.status || '').trim();
+    if (!raw) return false;
+    if (key === 'pending') return raw.includes('待處理') || raw.includes('待確認');
+    if (key === 'paid') return raw.includes('祈福進行中');
+    if (key === 'done') return raw.includes('祈福完成') || raw.includes('成果已通知');
+    return true;
+  }
+  function syncStatusTabs(){
+    if (!statusTabs) return;
+    statusTabs.querySelectorAll('[data-status]').forEach(btn=>{
+      const val = btn.getAttribute('data-status') || '';
+      btn.classList.toggle('active', val === activeStatus);
+    });
+  }
   function render(){
     const q = (filterInput.value||'').toLowerCase();
     const view = orders.filter(o=>{
       if (!q) return true;
       return [o.id, o.serviceName, o.buyer && o.buyer.phone].join(' ').toLowerCase().includes(q);
-    });
+    }).filter(o=> statusMatches(o, activeStatus));
     if (!view.length){
       bodyEl.innerHTML = '<div class="muted">沒有符合的訂單。</div>';
       return;
@@ -337,6 +362,7 @@
     try{
       const data = await authedFetch('/api/service/orders');
       orders = Array.isArray(data.items) ? data.items : [];
+      syncStatusTabs();
       render();
       clearQnaUnread();
     }catch(err){
@@ -604,3 +630,12 @@
 </script>
 </body>
 </html>
+  if (statusTabs){
+    statusTabs.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-status]');
+      if (!btn) return;
+      activeStatus = btn.getAttribute('data-status') || 'pending';
+      syncStatusTabs();
+      render();
+    });
+  }
