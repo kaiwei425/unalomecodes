@@ -316,6 +316,17 @@
   }
 
   function isCheckoutPhotoRequired(){
+    try{
+      const cart = loadCart();
+      if (Array.isArray(cart) && cart.length){
+        const hit = cart.some(item => {
+          const name = String(item.serviceName || '').trim();
+          const opt = String(item.optionName || '').trim();
+          return /代捐棺/.test(name) || /代捐棺/.test(opt);
+        });
+        if (hit) return false;
+      }
+    }catch(_){}
     if (checkoutForm && checkoutForm.dataset && checkoutForm.dataset.photoRequired){
       return checkoutForm.dataset.photoRequired === '1';
     }
