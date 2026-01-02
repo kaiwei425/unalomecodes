@@ -6,6 +6,7 @@ export async function onScheduled(event, env, ctx) {
   if (!secret || !base) return;
   const origin = base.startsWith('http') ? base : `https://${base}`;
   const url = new URL('/api/cron/release-holds', origin);
+  const dashboardUrl = new URL('/api/admin/cron/update-dashboard', origin);
   const body = JSON.stringify({ limit, includeWaitingVerify });
   ctx.waitUntil(fetch(url.toString(), {
     method: 'POST',
@@ -14,5 +15,12 @@ export async function onScheduled(event, env, ctx) {
       'X-Cron-Key': secret
     },
     body
+  }));
+  ctx.waitUntil(fetch(dashboardUrl.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Cron-Key': secret
+    }
   }));
 }
