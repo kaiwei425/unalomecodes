@@ -192,37 +192,121 @@
       .nearby-map{height:160px;}
       .auth-widget .auth-status { display: none; }
     }
-    .member-menu { position: relative; display: none; }
-    .member-menu.active .dropdown-content { display: block; }
-    .member-menu .dropdown-content {
-      display: none; position: absolute; right: 0; top: 100%;
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-width: 140px; z-index: 20;
-      padding: 6px; margin-top: 4px;
+    .policy-dialog{border:none;border-radius:18px;padding:0;width:92%;max-width:560px;background:#fff;color:#0f172a;border:1px solid #e2e8f0;box-shadow:0 20px 60px rgba(15,23,42,.35);}
+    .policy-dialog header{padding:18px 20px;border-bottom:1px solid #e5e7eb;font-weight:800;font-size:18px;}
+    .policy-dialog .body{padding:20px;font-size:14px;line-height:1.7;color:#1e293b;max-height:60vh;overflow:auto;}
+    .policy-dialog footer{padding:18px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
+    .policy-dialog .btn{border:none;border-radius:999px;padding:8px 18px;background:#111827;color:#fff;font-weight:600;cursor:pointer;}
+    .auth-widget{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.08);min-height:52px;}
+    .auth-widget .auth-status{font-size:13px;font-weight:700;color:#475569;}
+    .auth-widget.is-authed .auth-status{color:#15803d;}
+    .auth-btn{border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 10px 20px rgba(16,149,214,.25);transition:transform .2s ease,filter .2s ease;}
+    .auth-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
+    .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
+    .member-menu{position:relative;display:none;}
+    .member-menu.is-visible{display:block;}
+    .member-menu button{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:999px;
+      padding:10px 16px;
+      font-weight:800;
+      font-size:14px;
+      cursor:pointer;
+      box-shadow:0 8px 18px rgba(15,23,42,.08);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:140px;
+      justify-content:center;
     }
-    .member-menu .dropdown-content button {
-      display: block; width: 100%; text-align: left; padding: 8px 12px;
-      background: none; border: none; font-size: 13px; color: #334155;
-      cursor: pointer; border-radius: 8px;
+    .member-menu button:hover{border-color:rgba(24,161,104,.35);}
+    .member-menu button .member-menu-badge{
+      min-width:18px;
+      height:18px;
+      padding:0 6px;
+      border-radius:999px;
+      background:#ef4444;
+      color:#fff;
+      font-size:11px;
+      font-weight:800;
+      display:none;
+      align-items:center;
+      justify-content:center;
     }
-    .member-menu .dropdown-content button:hover { background: #f1f5f9; color: #0f172a; }
-    .auth-widget { display: inline-flex; align-items: center; gap: 6px; }
-    .auth-status {
-      display: none; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #0f172a;
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 999px; padding: 6px 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s;
+    .member-menu button .member-menu-badge.show{display:inline-flex;}
+    .member-menu-panel{
+      position:absolute;
+      right:0;
+      top:calc(100% + 6px);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:0 14px 40px rgba(15,23,42,.18);
+      padding:8px;
+      display:none;
+      min-width:180px;
+      z-index:20;
     }
-    .auth-status:hover { border-color: #cbd5e1; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-    
-    /* 當 auth-widget 擁有 logged-in 類別時的顯示切換 */
-    .auth-widget.logged-in .auth-status { display: flex !important; }
-    .auth-widget.logged-in [data-auth-btn] { display: none !important; }
-
-    /* 登出按鈕樣式 (仿照 shop) */
-    .auth-status .logout-btn {
-      background:none; border:none; color:#64748b; text-decoration:none; cursor:pointer; font-size:12px; padding:0; margin-left:0; font-weight:400;
+    .member-menu-panel a{
+      display:block;
+      padding:12px 14px;
+      border-radius:12px;
+      color:#0f172a;
+      text-decoration:none;
+      font-weight:800;
+      font-size:14px;
     }
-    .auth-status .logout-btn:hover { text-decoration: underline; color: #ef4444; }
+    .member-menu-panel a.qna-link{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .member-menu-panel .qna-badge{
+      min-width:18px;
+      height:18px;
+      padding:0 6px;
+      border-radius:999px;
+      background:#ef4444;
+      color:#fff;
+      font-size:11px;
+      font-weight:800;
+      display:none;
+      align-items:center;
+      justify-content:center;
+    }
+    .member-menu-panel .qna-badge.show{display:inline-flex;}
+    .member-menu-panel a:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
+    .top-actions .member-menu button,
+    .top-actions .auth-widget{
+      min-height:52px;
+      height:52px;
+      padding:10px 16px;
+      width:auto;
+    }
+    @media(max-width:720px){
+      .top-actions{
+        width:100%;
+        align-items:stretch;
+        gap:8px;
+      }
+      .top-actions .member-menu{flex:1 1 48%;}
+      .top-actions .auth-widget{flex:1 1 48%;}
+      .top-actions .member-menu button,
+      .top-actions .auth-widget{
+        width:100%;
+        justify-content:center;
+        min-height:50px;
+        height:50px;
+        border-radius:16px;
+      }
+      .top-actions .auth-widget{
+        height:auto;
+      }
+      .auth-widget{gap:8px;padding:10px 12px;}
+      .auth-btn{font-size:13px;}
+    }
     #btnBackToTop {
       position: fixed; bottom: 80px; right: 20px; width: 44px; height: 44px;
       border-radius: 50%; background: #fff; color: #0f172a; border: 1px solid #e2e8f0;
@@ -274,18 +358,25 @@
             </div>
             <button class="btn ghost pill" id="btnFav">收藏清單</button>
             <div class="member-menu" id="memberMenuContainer">
-              <button class="btn ghost pill" id="memberMenuBtn">會員中心 ▾</button>
-              <div class="dropdown-content" id="memberMenuPanel">
-                <button onclick="location.href='/account-orders.html'">我的訂單</button>
-                <button onclick="location.href='/account-coupons.html'">我的優惠券</button>
-                <button onclick="location.href='/account-store.html'">門市預設</button>
+              <button type="button" id="memberMenuBtn">
+                <span class="member-menu-label">會員中心</span>
+                <span class="member-menu-arrow" id="memberMenuArrow">▾</span>
+                <span class="member-menu-badge" id="memberMenuBadge" style="display:none;">0</span>
+              </button>
+              <div class="member-menu-panel" id="memberMenuPanel">
+                <a href="#" data-profile>基本資料</a>
+                <a href="/account-coupons" id="userCouponsLink" class="qna-link">我的優惠券 <span class="qna-badge" id="userCouponBadge">0</span></a>
+                <a href="/account-orders" id="userOrdersLink" class="qna-link">我的訂單 <span class="qna-badge" id="userQnaBadge">0</span></a>
+                <a href="/account-store">門市預設</a>
+                <a href="/admin/orders" id="adminQnaLink" class="qna-link" data-admin-only data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadge">0</span></a>
+                <a href="/admin" data-admin-only data-admin-href="/admin" style="display:none;">後台管理</a>
               </div>
             </div>
           </div>
           <div class="action-group">
             <div class="auth-widget" data-auth-widget>
               <span class="auth-status" data-auth-status>登入狀態載入中…</span>
-              <button type="button" class="btn ghost pill auth-btn" data-auth-btn>登入會員</button>
+              <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
             </div>
             <div class="dropdown" id="adminDropdown" style="display: none;">
               <button class="btn ghost pill">更多</button>
@@ -293,7 +384,6 @@
                 <button class="btn ghost pill" id="btnAdd" style="display:none;">新增餐廳</button>
                 <button class="btn ghost pill" id="btnExport" style="display:none;">匯出備份</button>
                 <button class="btn ghost pill" id="btnImport" style="display:none; color: #16a34a; border-color: #86efac;">匯入救援檔</button>
-                <button class="btn ghost pill" id="btnStats" style="display:none; color: #2563eb; border-color: #93c5fd;">流量統計</button>
               </div>
             </div>
           </div>
@@ -384,6 +474,23 @@
   <dialog id="statsModal" style="border:none;border-radius:16px;padding:0;max-width:640px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
     <div id="statsModalBody"></div>
   </dialog>
+  <dialog id="profileDialog" class="policy-dialog">
+    <header>基本資料</header>
+    <div class="body">
+      <label>姓名</label>
+      <input id="profileName" type="text">
+      <label>Email</label>
+      <input id="profileEmail" type="email">
+      <label>手機號碼</label>
+      <input id="profilePhone" type="tel" placeholder="請輸入手機號碼">
+      <p class="muted" style="font-size:12px;margin-top:8px;">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
+      <div id="profileStatus" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="profileClose">取消</button>
+      <button type="button" class="btn primary" id="profileSave">儲存</button>
+    </footer>
+  </dialog>
   <button id="btnBackToTop" title="回到頂部">↑</button>
   <script src="/js/auth.js?v=20240930"></script>
 
@@ -406,16 +513,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  const memberBtn = document.getElementById('memberMenuBtn');
-  const memberMenu = document.getElementById('memberMenuContainer');
-  if(memberBtn && memberMenu){
-    memberBtn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      memberMenu.classList.toggle('active');
-    });
-    document.addEventListener('click', ()=>{ memberMenu.classList.remove('active'); });
-  }
-
   const btnBackToTop = document.getElementById('btnBackToTop');
   if (btnBackToTop) {
     window.addEventListener('scroll', () => {
@@ -435,27 +532,145 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // 手動補強：確保登入後樣式正確切換，並顯示會員名稱
-  if (window.authState && typeof window.authState.onProfile === 'function') {
-    window.authState.onProfile((user) => {
-      const widget = document.querySelector('[data-auth-widget]');
-      const memberMenuEl = document.getElementById('memberMenuContainer');
-      if (widget) {
-        if (user) {
-          widget.classList.add('logged-in');
-          if (memberMenuEl) memberMenuEl.style.display = 'inline-block';
-          const statusEl = widget.querySelector('[data-auth-status]');
-          if (statusEl) {
-            // 強制設定內容為：會員名稱 + 登出按鈕
-            statusEl.innerHTML = `${escapeHtml(user.name)} <span style="color:#e2e8f0;margin:0 2px">|</span> <button class="logout-btn" onclick="window.authState.logout()">登出</button>`;
-          }
-        } else {
-          widget.classList.remove('logged-in');
-          if (memberMenuEl) memberMenuEl.style.display = 'none';
+  // 會員中心下拉 (同步 shop)
+  (function(){
+    const toggle = document.getElementById('memberMenuBtn');
+    const panel = document.getElementById('memberMenuPanel');
+    const arrow = document.getElementById('memberMenuArrow');
+    const memberMenu = document.getElementById('memberMenuContainer');
+    const profileLink = panel ? panel.querySelector('a[data-profile]') : null;
+    const dlg = document.getElementById('profileDialog');
+    const nameInput = document.getElementById('profileName');
+    const emailInput = document.getElementById('profileEmail');
+    const phoneInput = document.getElementById('profilePhone');
+    const saveBtn = document.getElementById('profileSave');
+    const closeBtn = document.getElementById('profileClose');
+    const statusEl = document.getElementById('profileStatus');
+
+    async function openProfile(){
+      if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+        if (window.authState && typeof window.authState.promptLogin === 'function'){
+          window.authState.promptLogin('請先登入再編輯基本資料');
         }
+        return;
       }
-    });
-  }
+      try{
+        const res = await fetch('/api/me/profile',{credentials:'include',cache:'no-store'});
+        const data = await res.json().catch(()=>({}));
+        const profile = data.profile || data || {};
+        if (nameInput) nameInput.value = profile.name || profile.defaultContact?.name || '';
+        if (emailInput) emailInput.value = profile.email || profile.defaultContact?.email || '';
+        if (phoneInput) phoneInput.value = profile.defaultContact?.phone || profile.phone || '';
+        if (statusEl) statusEl.textContent = '';
+        if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+        else if (dlg) dlg.setAttribute('open','');
+      }catch(e){
+        if (statusEl) statusEl.textContent = '讀取失敗，請稍後再試';
+      }
+    }
+
+    async function saveProfile(){
+      if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+        if (window.authState && typeof window.authState.promptLogin === 'function'){
+          window.authState.promptLogin('請先登入再儲存');
+        }
+        return;
+      }
+      if (statusEl) statusEl.style.color = '#ef4444';
+      try{
+        const body = {
+          profile:{
+            name: nameInput ? nameInput.value.trim() : '',
+            email: emailInput ? emailInput.value.trim() : ''
+          },
+          defaultContact:{
+            name: nameInput ? nameInput.value.trim() : '',
+            email: emailInput ? emailInput.value.trim() : '',
+            phone: phoneInput ? phoneInput.value.trim() : ''
+          }
+        };
+        const res = await fetch('/api/me/profile',{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify(body)
+        });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data.ok){
+          throw new Error(data.error || ('HTTP '+res.status));
+        }
+        if (statusEl){
+          statusEl.style.color = '#16a34a';
+          statusEl.textContent = '已儲存，下次結帳自動帶入。';
+        }
+        if (window.authState && typeof window.authState.refreshProfile === 'function'){
+          window.authState.refreshProfile();
+        }
+        setTimeout(()=>{ if (closeBtn) closeBtn.click(); }, 800);
+      }catch(err){
+        if (statusEl) statusEl.textContent = err.message || '儲存失敗';
+      }
+    }
+
+    if (toggle && panel){
+      const setArrow = (isOpen)=>{
+        if (arrow){
+          arrow.textContent = isOpen ? '▴' : '▾';
+        }
+      };
+      const close = ()=>{
+        panel.style.display = 'none';
+        setArrow(false);
+      };
+      const open = ()=>{
+        panel.style.display = 'block';
+        setArrow(true);
+      };
+      toggle.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const isOpen = panel.style.display === 'block';
+        if (isOpen) close(); else open();
+      });
+      if (profileLink){
+        profileLink.addEventListener('click', ev=>{
+          ev.preventDefault();
+          close();
+          openProfile();
+        });
+      }
+      document.addEventListener('click', (ev)=>{
+        if (!panel.contains(ev.target) && ev.target !== toggle){
+          close();
+        }
+      });
+    }
+
+    if (closeBtn){
+      closeBtn.addEventListener('click', ()=>{
+        if (dlg && typeof dlg.close === 'function') dlg.close();
+        else if (dlg) dlg.removeAttribute('open');
+      });
+    }
+    if (saveBtn){
+      saveBtn.addEventListener('click', saveProfile);
+    }
+
+    if (memberMenu){
+      memberMenu.classList.remove('is-visible');
+    }
+    if (window.authState && typeof window.authState.subscribe === 'function'){
+      window.authState.subscribe(user=>{
+        if (!memberMenu) return;
+        if (user){
+          memberMenu.classList.add('is-visible');
+        }else{
+          memberMenu.classList.remove('is-visible');
+          if (panel) panel.style.display = 'none';
+          if (arrow) arrow.textContent = '▾';
+        }
+      });
+    }
+  })();
 });
 
 // --- 補上缺少的變數宣告，避免 ReferenceError ---
@@ -482,11 +697,13 @@ const TRANSLATIONS = {
     subtitle: '精選ＩＧ美食REELS 一鍵找出來離你最近的餐廳',
     home: '返回首頁',
     fav: '收藏清單',
+    memberLabel: '會員中心',
     langSwitch: '切換語言',
     langZh: '中文',
     langEn: '英文',
     member: '會員中心 ▾',
     login: '登入會員',
+    logout: '登出',
     more: '更多',
     add: '新增餐廳',
     export: '匯出備份',
@@ -643,11 +860,13 @@ const TRANSLATIONS = {
     subtitle: 'Curated IG Reels & One-click to find nearest restaurants',
     home: 'Home',
     fav: 'Favorites',
+    memberLabel: 'Member Center',
     langSwitch: 'Language',
     langZh: 'Chinese',
     langEn: 'English',
     member: 'Member ▾',
     login: 'Login',
+    logout: 'Logout',
     more: 'More',
     add: 'Add Place',
     export: 'Export',
@@ -1622,10 +1841,13 @@ function setLanguage(lang) {
   }
   if (btnBack) btnBack.textContent = t('home');
   if (btnFav) btnFav.textContent = t('fav');
-  const memBtn = document.getElementById('memberMenuBtn');
-  if (memBtn) memBtn.textContent = t('member');
+  const memLabel = document.querySelector('.member-menu-label');
+  if (memLabel) memLabel.textContent = t('memberLabel');
   const authBtn = document.querySelector('[data-auth-btn]');
-  if (authBtn) authBtn.textContent = t('login');
+  if (authBtn) {
+    const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn();
+    authBtn.textContent = loggedIn ? t('logout') : t('login');
+  }
   
   // Dropdown
   const dropBtn = document.querySelector('.dropdown > button');
