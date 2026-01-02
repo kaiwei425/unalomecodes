@@ -310,7 +310,8 @@
     if (Object.prototype.hasOwnProperty.call(service, 'photoRequired')) return !!service.photoRequired;
     if (Object.prototype.hasOwnProperty.call(service, 'requirePhoto')) return !!service.requirePhoto;
     const name = String(service.name || service.serviceName || '').trim();
-    if (name && /代捐棺/.test(name)) return false;
+    const option = String(service.optionName || service.option || '').trim();
+    if ((name && /代捐棺/.test(name)) || (option && /代捐棺/.test(option))) return false;
     return true;
   }
 
@@ -325,7 +326,15 @@
     const need = !!required;
     const name = String(serviceName || '').trim();
     let skipText = '此服務不需上傳個人照片。';
-    const isCoffinDonation = /代捐棺/.test(name);
+    let isCoffinDonation = /代捐棺/.test(name);
+    if (!isCoffinDonation && checkoutForm && checkoutForm.dataset){
+      try{
+        const opts = JSON.parse(checkoutForm.dataset.selectedOptions || '[]') || [];
+        if (opts.some(opt => /代捐棺/.test(String(opt && opt.name || '')))) {
+          isCoffinDonation = true;
+        }
+      }catch(_){}
+    }
     if (name){
       if (/義德善堂/.test(name) && /捐/.test(name)){
         skipText = `${name}不用上傳照片。`;
@@ -565,6 +574,14 @@
 
   function collectStepOneData(){
     if (!checkoutForm) return null;
+    try{
+      const cart = loadCart();
+      if (cart && cart.length){
+        const serviceName = cart[0].serviceName || '';
+        const photoRequired = cart.some(item => isRitualPhotoRequired(item));
+        applyPhotoRequirement(photoRequired, serviceName);
+      }
+    }catch(_){}
     const fd = new FormData(checkoutForm);
     const name = String(fd.get('name')||'').trim();
     const nameEn = String(fd.get('nameEn')||'').trim();
@@ -867,6 +884,11 @@
       if (!detailQtyInput) return;
       setDetailQty(Number(detailQtyInput.value || 1) - 1);
     });
+    detailQtyMinus.addEventListener('touchend', (ev)=>{
+      ev.preventDefault();
+      if (!detailQtyInput) return;
+      setDetailQty(Number(detailQtyInput.value || 1) - 1);
+    }, { passive: false });
   }
   if (detailQtyPlus && !detailQtyPlus.__bound){
     detailQtyPlus.__bound = true;
@@ -874,6 +896,11 @@
       if (!detailQtyInput) return;
       setDetailQty(Number(detailQtyInput.value || 1) + 1);
     });
+    detailQtyPlus.addEventListener('touchend', (ev)=>{
+      ev.preventDefault();
+      if (!detailQtyInput) return;
+      setDetailQty(Number(detailQtyInput.value || 1) + 1);
+    }, { passive: false });
   }
 
   function openServiceDetail(service){
@@ -979,6 +1006,8 @@
     if (!detailDataset) return;
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
       const msg = '請先登入後再加入購物車。';
+      closeDialog(detailDialog);
+      if (cartPanel) closeDialog(cartPanel);
       if (window.authState && typeof window.authState.promptLogin === 'function'){
         window.authState.promptLogin(msg);
       }else{

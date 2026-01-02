@@ -117,8 +117,9 @@ dialog[data-fallback-open]{display:block;}
 #svcCartForm label{display:grid;gap:4px;font-size:13px;color:#374151;font-weight:700;}
 #svcCartForm input,#svcCartForm textarea,#svcCartForm select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
 #svcCartForm textarea{min-height:110px;resize:vertical;}
-#svcCart{width:min(920px,96vw);max-height:92vh;overflow:hidden;}
-#svcCartForm{max-height:calc(92vh - 64px);overflow:auto;}
+#svcCart{width:min(920px,96vw);max-height:92vh;overflow:hidden;box-sizing:border-box;}
+#svcCartForm{max-height:calc(92vh - 64px);overflow:auto;display:flex;flex-direction:column;}
+#svcCart .svc-step-content{overflow:auto;}
 .qty-stepper{display:flex;align-items:center;gap:8px;}
 .qty-stepper button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:18px;line-height:1;cursor:pointer;}
 .qty-stepper input{width:72px;text-align:center;}
@@ -465,7 +466,7 @@ dialog[data-fallback-open]{display:block;}
     </div>
   </dialog>
 
-  <dialog id="svcCart" class="svc-dialog" data-bank-name="中國信託 (822)" data-bank-account="148540417073">
+  <dialog id="svcCart" class="svc-dialog" data-bank-name="中國信託 (822)" data-bank-account="148540417073" style="width:min(920px,96vw);max-height:92vh;overflow:hidden;">
     <div class="svc-stepper">
       <span data-step="1" class="active">1. 確認服務</span>
       <span data-step="2">2. 匯款資料</span>
