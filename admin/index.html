@@ -447,7 +447,8 @@ html,body{
       .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
       .then(({ ok, data })=>{
         if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');
-        if (data && data.fromCache === false){
+        const hasStats = data && data.stats && Object.keys(data.stats).length > 0;
+        if (data && data.fromCache === false && !hasStats){
           markReportLoading();
           if (attempt < maxDashboardAttempts){
             setTimeout(()=> loadDashboard(attempt + 1), retryDelay(attempt));

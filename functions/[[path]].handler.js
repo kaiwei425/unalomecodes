@@ -3390,7 +3390,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       });
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
-      headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict');
+      headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
       headers.append('Location', `${origin}${redirectPath}`);
       return new Response(null, { status:302, headers });
     }catch(err){
@@ -3430,7 +3430,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const token = await signSession(user, env.SESSION_SECRET || '');
     const h = new Headers(headers);
     h.append('Set-Cookie', `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
-    h.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
+    h.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
     return new Response(JSON.stringify({ ok:true, user:{
       id: user.id,
       name: user.name,
@@ -3518,7 +3518,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         'Set-Cookie': `auth=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
       });
       // 移除可能存在的 admin session，避免一般登入沿用先前的管理員憑證
-      headers.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict`);
+      headers.append('Set-Cookie', `admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
       // 若為管理員白名單且已設定 ADMIN_JWT_SECRET，直接簽發 admin_session，免二次登入
       try{
         const allowed = parseAdminEmails(env);
@@ -3533,7 +3533,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             exp: Date.now() + 60 * 60 * 1000 // 1 小時
           };
           const adminToken = await signSession(adminPayload, adminSecret);
-          headers.append('Set-Cookie', `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`);
+          headers.append('Set-Cookie', `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`);
         }
       }catch(_){}
       headers.append('Set-Cookie', clearStateCookie);
@@ -3682,7 +3682,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       };
       const adminToken = await signSession(adminPayload, adminSecret);
       const headers = new Headers({
-        'Set-Cookie': `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600`,
+        'Set-Cookie': `admin_session=${adminToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`,
       });
       headers.append('Set-Cookie', clearStateCookie);
       headers.append('Set-Cookie', clearRedirectCookie);
@@ -3895,7 +3895,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/logout' && request.method === 'POST') {
     const headers = new Headers({ 'Content-Type': 'application/json; charset=utf-8' });
     headers.append('Set-Cookie', 'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
-    headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict');
+    headers.append('Set-Cookie', 'admin_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
     return new Response(JSON.stringify({ ok:true }), { status:200, headers });
   }
 
