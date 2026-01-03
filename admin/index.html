@@ -10,95 +10,195 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
 :root{
-  --bg:#f7f8fb;
+  --bg:#f5f6fb;
   --fg:#0f172a;
   --muted:#6b7280;
-  --panel:#ffffff;
-  --line:#e5e7eb;
-  --accent:#2563eb;
-  --accent-2:#10b981;
-  --card-shadow:0 16px 40px rgba(15,23,42,.08);
+  --panel:rgba(255,255,255,0.92);
+  --line:rgba(148,163,184,0.25);
+  --accent:#f97316;
+  --accent-2:#0ea5e9;
+  --accent-3:#10b981;
+  --shadow:0 18px 40px rgba(15,23,42,.12);
+  --shadow-soft:0 12px 24px rgba(15,23,42,.08);
 }
 *{box-sizing:border-box;}
 html,body{
   margin:0;padding:0;min-height:100%;
   font-family:"Space Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;
-  background:radial-gradient(circle at 15% 20%, rgba(37,99,235,.08), transparent 30%), radial-gradient(circle at 85% 10%, rgba(16,185,129,.08), transparent 26%), var(--bg);
+  background:
+    radial-gradient(circle at 12% 12%, rgba(249,115,22,.16), transparent 36%),
+    radial-gradient(circle at 88% 10%, rgba(14,165,233,.16), transparent 32%),
+    radial-gradient(circle at 50% 88%, rgba(16,185,129,.14), transparent 40%),
+    var(--bg);
   color:var(--fg);
   -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1200px;margin:0 auto;padding:28px 18px 36px;}
-.backLink{margin-bottom:14px;}
+.wrap{max-width:1200px;margin:0 auto;padding:26px 18px 46px;}
+.backLink{margin-bottom:12px;}
 .backBtn{
   display:inline-flex;align-items:center;gap:6px;
-  padding:8px 14px;border-radius:999px;
-  background:#fff;border:1px solid var(--line);color:var(--fg);
-  text-decoration:none;font-weight:700;font-size:13px;
-  box-shadow:0 6px 16px rgba(15,23,42,.08);
+  padding:6px 12px;border-radius:999px;
+  background:rgba(255,255,255,0.9);border:1px solid var(--line);color:var(--fg);
+  text-decoration:none;font-weight:700;font-size:12px;
+  box-shadow:var(--shadow-soft);
   transition:all .18s ease;
 }
-.backBtn:hover{border-color:#93c5fd;color:#2563eb;}
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  background:var(--panel);border:1px solid var(--line);border-radius:16px;
-  padding:14px 16px;box-shadow:var(--card-shadow);
+.backBtn:hover{border-color:rgba(249,115,22,.5);color:#9a3412;}
+.entry-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);
+  gap:18px;
+  background:linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,255,255,0.78));
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:20px;
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+  animation:fadeUp .6s ease both;
 }
-.brand{display:flex;align-items:center;gap:10px;}
-.brand-badge{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#10b981);display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;}
-.brand h1{margin:0;font-size:20px;letter-spacing:.3px;}
-.brand .muted{margin:0;font-size:13px;}
-.nav{display:flex;gap:10px;flex-wrap:wrap;}
-.nav a{
+.entry-hero::after{
+  content:"";
+  position:absolute;
+  right:-70px;
+  top:-90px;
+  width:240px;
+  height:240px;
+  background:radial-gradient(circle, rgba(249,115,22,.25), transparent 60%);
+  pointer-events:none;
+}
+.entry-hero-text{display:flex;flex-direction:column;gap:10px;position:relative;z-index:1;}
+.entry-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.26em;color:var(--muted);font-weight:700;}
+.entry-hero h1{margin:0;font-size:28px;letter-spacing:.4px;}
+.entry-hero .muted{font-size:14px;}
+.entry-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(249,115,22,.12);
+  color:#9a3412;font-size:12px;font-weight:700;
+}
+.pill.alt{background:rgba(14,165,233,.12);color:#075985;}
+.entry-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  align-content:start;
+  position:relative;
+  z-index:1;
+}
+.entry-action{
   text-decoration:none;
   color:var(--fg);
   background:var(--panel);
   border:1px solid var(--line);
-  border-radius:999px;
-  padding:8px 12px;
+  border-radius:18px;
+  padding:12px 14px;
+  min-height:72px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
   font-weight:700;
-  display:inline-flex;align-items:center;gap:8px;
-  box-shadow:0 6px 16px rgba(15,23,42,.08);
+  box-shadow:var(--shadow-soft);
   transition:all .18s ease;
 }
-.nav a:hover{transform:translateY(-1px);border-color:#c7d2fe;}
-.grid{
-  margin-top:18px;
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:14px;
+.entry-action:hover{transform:translateY(-2px);border-color:rgba(249,115,22,.4);}
+.entry-action .action-title{font-size:15px;font-weight:800;}
+.entry-action .action-sub{font-size:12px;color:var(--muted);font-weight:600;}
+.entry-action.primary{
+  background:linear-gradient(135deg, #f97316, #ea580c);
+  border-color:#ea580c;
+  color:#fff;
 }
-.card{
+.entry-action.primary .action-sub{color:rgba(255,255,255,.78);}
+.entry-action.ghost{background:rgba(255,255,255,0.65);}
+.entry-section{margin-top:22px;display:grid;gap:12px;animation:fadeUp .6s ease both;}
+.entry-section:nth-of-type(2){animation-delay:.05s;}
+.entry-section:nth-of-type(3){animation-delay:.1s;}
+.entry-section:nth-of-type(4){animation-delay:.15s;}
+.entry-section:nth-of-type(5){animation-delay:.2s;}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.section-head h2{margin:0;font-size:20px;font-weight:800;}
+.section-note{font-size:12px;color:var(--muted);}
+.muted{color:var(--muted);font-size:14px;}
+.wrap .admin-stats{
+  margin:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:12px;
+}
+.wrap .admin-stat-card{
   background:var(--panel);
   border:1px solid var(--line);
   border-radius:16px;
+  padding:14px 16px;
+  color:var(--fg);
+  box-shadow:var(--shadow-soft);
+}
+.wrap .admin-stat-title{font-size:12px;color:var(--muted);font-weight:700;}
+.wrap .admin-stat-value{font-size:20px;font-weight:800;margin-top:6px;}
+.wrap .admin-stat-sub{font-size:12px;color:#64748b;margin-top:4px;}
+.entry-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:14px;
+}
+.entry-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
   padding:16px;
   display:flex;
   flex-direction:column;
   gap:10px;
-  box-shadow:var(--card-shadow);
+  box-shadow:var(--shadow-soft);
   transition:all .2s ease;
 }
-.card:hover{transform:translateY(-3px);border-color:#bfdbfe;box-shadow:0 20px 40px rgba(15,23,42,.12);}
-.card h3{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
-.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
-.tag::before{content:"●";color:var(--accent);font-size:10px;}
-.muted{color:var(--muted);font-size:14px;}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;}
+.entry-card:hover{transform:translateY(-3px);border-color:rgba(249,115,22,.35);box-shadow:0 20px 40px rgba(15,23,42,.12);}
+.entry-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.entry-card-title{display:flex;align-items:center;gap:8px;}
+.entry-card-title h3{margin:0;font-size:17px;font-weight:800;}
+.entry-icon{font-size:18px;}
+.tag{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;color:#0f172a;
+  background:rgba(249,115,22,.12);
+  padding:4px 8px;border-radius:999px;
+  font-weight:700;
+}
+.tag.alt{background:rgba(14,165,233,.12);color:#075985;}
+.entry-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;}
 .btn{
-  appearance:none;border:1px solid var(--line);background:#eff6ff;color:#0f172a;
-  border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:800;font-size:14px;
+  appearance:none;border:1px solid var(--line);background:#fff;color:var(--fg);
+  border-radius:999px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:13px;
   text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
   transition:all .18s ease;
 }
-.btn:hover{transform:translateY(-1px);border-color:#c7d2fe;box-shadow:0 10px 20px rgba(15,23,42,.08);}
-.btn.primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#1d4ed8;color:#fff;}
-.footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center;}
-.report-section{margin-top:18px;}
-.report-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-.report-head h2{margin:0;font-size:20px;font-weight:800;}
-.report-grid{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;}
-.report-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--card-shadow);display:grid;gap:12px;}
-.report-card h3{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.btn:hover{transform:translateY(-1px);border-color:rgba(249,115,22,.35);box-shadow:0 8px 18px rgba(15,23,42,.08);}
+.btn.primary{background:linear-gradient(135deg,#f97316,#ea580c);border-color:#ea580c;color:#fff;}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:8px 10px;}
+.btn.ghost:hover{color:var(--fg);background:rgba(15,23,42,.04);}
+.data-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:16px;
+}
+.data-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:var(--shadow);
+  display:grid;
+  gap:12px;
+}
+.data-card h3{margin:0;font-size:18px;font-weight:800;}
+.stat-accent{color:var(--accent);font-size:18px;font-weight:800;}
+.report-section{margin-top:0;}
+.report-head h2{margin:0;font-size:18px;font-weight:800;}
+.report-grid{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;}
+.report-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow-soft);display:grid;gap:12px;}
+.report-card h3{margin:0;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px;}
 .report-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;}
 .report-kpi{border:1px solid var(--line);border-radius:12px;padding:10px;background:#f8fafc;}
 .report-kpi .label{font-size:12px;color:var(--muted);}
@@ -106,11 +206,38 @@ html,body{
 .report-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);}
 .report-lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
 .report-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;}
-.report-list li{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#0f172a;}
+.report-list li{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--fg);}
 .report-list li.empty{color:var(--muted);}
 .report-list .name{font-weight:700;}
 .report-note{font-size:12px;color:var(--muted);}
-  html.admin-guard-hide{visibility:hidden;}
+.footer{margin-top:20px;color:var(--muted);font-size:12px;text-align:center;}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+@media (prefers-reduced-motion: reduce){
+  .entry-hero,.entry-section,.entry-card{animation:none;}
+}
+@media(max-width:960px){
+  .entry-hero{grid-template-columns:1fr;}
+  .entry-actions{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .entry-hero h1{font-size:24px;}
+}
+@media(max-width:720px){
+  .wrap{padding:18px 14px 40px;}
+  .entry-actions{grid-template-columns:1fr;}
+  .entry-action{min-height:64px;}
+  .section-head{align-items:flex-start;}
+  .entry-card-actions{gap:6px;}
+}
+@media(max-width:520px){
+  .entry-hero{padding:16px;}
+  .entry-hero h1{font-size:22px;}
+  .entry-grid{grid-template-columns:1fr;}
+  .data-grid{grid-template-columns:1fr;}
+  .report-grid{grid-template-columns:1fr;}
+}
+html.admin-guard-hide{visibility:hidden;}
 </style>
 <script>document.documentElement.classList.add('admin-guard-hide');</script>
 <script src="/js/admin-guard.js" defer></script>
@@ -123,227 +250,317 @@ html,body{
   <div class="backLink">
     <a class="backBtn" href="https://shop.unalomecodes.com/shop">← 返回商品首頁</a>
   </div>
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-badge">UA</div>
+  <header class="entry-hero">
+    <div class="entry-hero-text">
+      <div class="entry-eyebrow">控制中心</div>
+      <h1>後台控制中心</h1>
+      <p class="muted">把高頻任務與營運資訊集中在一頁，手機操作也能順手完成。</p>
+      <div class="entry-chips">
+        <span class="pill">訂單流程</span>
+        <span class="pill alt">商品上架</span>
+        <span class="pill">服務訂單</span>
+      </div>
+    </div>
+    <div class="entry-actions">
+      <a class="entry-action primary" href="/admin/orders">
+        <span class="action-title">處理訂單</span>
+        <span class="action-sub">付款 / 出貨</span>
+      </a>
+      <a class="entry-action" href="/admin/products">
+        <span class="action-title">新增商品</span>
+        <span class="action-sub">上架與庫存</span>
+      </a>
+      <a class="entry-action" href="/admin/service-orders">
+        <span class="action-title">服務訂單</span>
+        <span class="action-sub">祈福進度</span>
+      </a>
+      <a class="entry-action ghost" href="/admin/code-viewer">
+        <span class="action-title">查看留言</span>
+        <span class="action-sub">顧客回饋</span>
+      </a>
+    </div>
+  </header>
+
+  <section class="entry-section">
+    <div class="section-head">
       <div>
-        <h1>unalomecodes 後台</h1>
+        <h2>營運快覽</h2>
+        <p class="muted">即時總覽重點數據</p>
       </div>
+      <div class="section-note">統計以台灣時間計算</div>
     </div>
-    <div class="nav">
-      <a href="/admin/products">📦 商品</a>
-      <a href="/admin/code-viewer">💬 留言</a>
-      <a href="/admin/orders">📑 訂單</a>
-      <a href="/admin/members">👤 會員</a>
-      <a href="/admin/fortune-stats">📊 日籤統計</a>
-      <a href="/admin/service-products">🕯 服務商品</a>
-      <a href="/admin/service-orders">🧾 服務訂單</a>
-    </div>
-  </div>
-
-  <div class="admin-stats" id="adminStats">
-    <div class="admin-stat-card">
-      <div class="admin-stat-title">商品總數</div>
-      <div class="admin-stat-value" data-stat="products-total">—</div>
-      <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
-    </div>
-    <div class="admin-stat-card">
-      <div class="admin-stat-title">訂單總數</div>
-      <div class="admin-stat-value" data-stat="orders-total">—</div>
-      <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
-    </div>
-    <div class="admin-stat-card">
-      <div class="admin-stat-title">會員數</div>
-      <div class="admin-stat-value" data-stat="members-total">—</div>
-      <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
-    </div>
-    <div class="admin-stat-card">
-      <div class="admin-stat-title">優惠券使用</div>
-      <div class="admin-stat-value" data-stat="coupons-used">—</div>
-      <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:18px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="margin:0;">美食地圖流量統計</h3>
-      <div class="muted">
-        總累積不重複訪客：<strong id="foodMapTotal" style="color:var(--accent);font-size:18px;">—</strong>
+    <div class="admin-stats" id="adminStats">
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">商品總數</div>
+        <div class="admin-stat-value" data-stat="products-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
       </div>
-    </div>
-    <div style="position:relative;height:300px;width:100%;">
-      <canvas id="foodMapChart"></canvas>
-    </div>
-  </div>
-
-  <section class="report-section" id="reportSection">
-    <div class="report-head">
-      <h2>營運報表</h2>
-      <div class="report-note">統計以台灣時間計算</div>
-    </div>
-    <div class="report-grid">
-      <div class="report-card">
-        <h3>實體商品</h3>
-        <div class="report-kpis">
-          <div class="report-kpi">
-            <div class="label">今日營收</div>
-            <div class="value" data-report="physical-rev-today">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">7 天營收</div>
-            <div class="value" data-report="physical-rev-7">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">30 天營收</div>
-            <div class="value" data-report="physical-rev-30">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">今日訂單</div>
-            <div class="value" data-report="physical-ord-today">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">7 天訂單</div>
-            <div class="value" data-report="physical-ord-7">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">30 天訂單</div>
-            <div class="value" data-report="physical-ord-30">—</div>
-          </div>
-        </div>
-        <div class="report-row"><span>訂單狀態</span><span data-report="physical-status">—</span></div>
-        <div class="report-row"><span>掃描範圍</span><span data-report="physical-scan">—</span></div>
-        <div class="report-lists">
-          <div>
-            <div class="tag">熱賣 TOP10</div>
-            <ul class="report-list" data-report-list="physical-top"></ul>
-          </div>
-          <div>
-            <div class="tag">低庫存</div>
-            <ul class="report-list" data-report-list="physical-low"></ul>
-          </div>
-        </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">訂單總數</div>
+        <div class="admin-stat-value" data-stat="orders-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
       </div>
-      <div class="report-card">
-        <h3>服務商品</h3>
-        <div class="report-kpis">
-          <div class="report-kpi">
-            <div class="label">今日營收</div>
-            <div class="value" data-report="service-rev-today">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">7 天營收</div>
-            <div class="value" data-report="service-rev-7">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">30 天營收</div>
-            <div class="value" data-report="service-rev-30">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">今日訂單</div>
-            <div class="value" data-report="service-ord-today">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">7 天訂單</div>
-            <div class="value" data-report="service-ord-7">—</div>
-          </div>
-          <div class="report-kpi">
-            <div class="label">30 天訂單</div>
-            <div class="value" data-report="service-ord-30">—</div>
-          </div>
-        </div>
-        <div class="report-row"><span>訂單狀態</span><span data-report="service-status">—</span></div>
-        <div class="report-row"><span>掃描範圍</span><span data-report="service-scan">—</span></div>
-        <div class="report-lists">
-          <div>
-            <div class="tag">熱賣 TOP10</div>
-            <ul class="report-list" data-report-list="service-top"></ul>
-          </div>
-        </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">會員數</div>
+        <div class="admin-stat-value" data-stat="members-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">優惠券使用</div>
+        <div class="admin-stat-value" data-stat="coupons-used">—</div>
+        <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
       </div>
     </div>
   </section>
 
-  <div class="grid">
-    <div class="card">
-      <h3>商品管理</h3>
-      <div class="tag">新增 / 編輯 / 上架下架</div>
-      <p class="muted">維持原商品上架頁功能，可調整名稱、神祇代碼、分類、售價與規格。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/products">進入商品</a>
-        <a class="btn" href="/admin/products" target="_blank" rel="noopener">新分頁</a>
+  <section class="entry-section">
+    <div class="section-head">
+      <div>
+        <h2>核心工作區</h2>
+        <p class="muted">高頻任務集中處理</p>
       </div>
     </div>
+    <div class="entry-grid">
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">🧾</span>
+            <h3>訂單 / 出貨</h3>
+          </div>
+          <span class="tag alt">訂單查詢 / 狀態更新</span>
+        </div>
+        <p class="muted">查看訂單、更新付款與出貨狀態，對齊客服與物流資訊。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/orders">進入訂單</a>
+          <a class="btn ghost" href="/admin/orders" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
 
-    <div class="card">
-      <h3>留言管理</h3>
-      <div class="tag">顧客分享 / 單筆刪除 / 全刪</div>
-      <p class="muted">依神祇代碼載入留言，支援圖片預覽與批次刪除，與前台故事同步。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/code-viewer">進入留言</a>
-        <a class="btn" href="/admin/code-viewer" target="_blank" rel="noopener">新分頁</a>
-      </div>
-    </div>
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">📦</span>
+            <h3>商品管理</h3>
+          </div>
+          <span class="tag">新增 / 編輯 / 上架</span>
+        </div>
+        <p class="muted">維持原商品上架頁功能，可調整名稱、神祇代碼、分類、售價與規格。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/products">進入商品</a>
+          <a class="btn ghost" href="/admin/products" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
 
-    <div class="card">
-      <h3>訂單 / 出貨</h3>
-      <div class="tag">訂單查詢 / 狀態更新</div>
-      <p class="muted">查看訂單、更新付款與出貨狀態，對齊客服與物流資訊。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/orders">進入訂單</a>
-        <a class="btn" href="/admin/orders" target="_blank" rel="noopener">新分頁</a>
-      </div>
-    </div>
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">🧿</span>
+            <h3>服務訂單</h3>
+          </div>
+          <span class="tag">祈福進度 / 狀態更新</span>
+        </div>
+        <p class="muted">查看顧客的祈福訂單、更新進度並寄出通知，與實體訂單分開管理。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/service-orders">進入服務訂單</a>
+          <a class="btn ghost" href="/admin/service-orders" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
 
-    <div class="card">
-      <h3>服務型商品</h3>
-      <div class="tag">蠟燭祈福 / 儀式服務</div>
-      <p class="muted">管理服務專區的上架內容，包含價格、介紹、包含項目與示意圖。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/service-products">管理服務</a>
-        <a class="btn" href="/admin/service-products" target="_blank" rel="noopener">新分頁</a>
-      </div>
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">💬</span>
+            <h3>留言管理</h3>
+          </div>
+          <span class="tag alt">顧客分享 / 批次整理</span>
+        </div>
+        <p class="muted">依神祇代碼載入留言，支援圖片預覽與批次刪除，與前台故事同步。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/code-viewer">進入留言</a>
+          <a class="btn ghost" href="/admin/code-viewer" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
     </div>
+  </section>
 
-    <div class="card">
-      <h3>服務訂單</h3>
-      <div class="tag">祈福進度 / 狀態更新</div>
-      <p class="muted">查看顧客的祈福訂單、更新進度並寄出通知，與實體訂單分開管理。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/service-orders">進入服務訂單</a>
-        <a class="btn" href="/admin/service-orders" target="_blank" rel="noopener">新分頁</a>
+  <section class="entry-section">
+    <div class="section-head">
+      <div>
+        <h2>數據監控</h2>
+        <p class="muted">流量趨勢與營運報表</p>
       </div>
     </div>
+    <div class="data-grid">
+      <div class="data-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <h3>美食地圖流量統計</h3>
+          <div class="muted">
+            總累積不重複訪客：<span id="foodMapTotal" class="stat-accent">—</span>
+          </div>
+        </div>
+        <div style="position:relative;height:300px;width:100%;">
+          <canvas id="foodMapChart"></canvas>
+        </div>
+      </div>
 
-    <div class="card">
-      <h3>會員管理</h3>
-      <div class="tag">登入紀錄 / 聯絡資料</div>
-      <p class="muted">查看使用者基本資料、預設聯絡方式、登入時間與門市偏好。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/members">進入會員</a>
-        <a class="btn" href="/admin/members" target="_blank" rel="noopener">新分頁</a>
-      </div>
+      <section class="report-section data-card" id="reportSection">
+        <div class="report-head">
+          <h2>營運報表</h2>
+          <div class="report-note">統計以台灣時間計算</div>
+        </div>
+        <div class="report-grid">
+          <div class="report-card">
+            <h3>實體商品</h3>
+            <div class="report-kpis">
+              <div class="report-kpi">
+                <div class="label">今日營收</div>
+                <div class="value" data-report="physical-rev-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天營收</div>
+                <div class="value" data-report="physical-rev-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天營收</div>
+                <div class="value" data-report="physical-rev-30">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">今日訂單</div>
+                <div class="value" data-report="physical-ord-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天訂單</div>
+                <div class="value" data-report="physical-ord-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天訂單</div>
+                <div class="value" data-report="physical-ord-30">—</div>
+              </div>
+            </div>
+            <div class="report-row"><span>訂單狀態</span><span data-report="physical-status">—</span></div>
+            <div class="report-row"><span>掃描範圍</span><span data-report="physical-scan">—</span></div>
+            <div class="report-lists">
+              <div>
+                <div class="tag">熱賣 TOP10</div>
+                <ul class="report-list" data-report-list="physical-top"></ul>
+              </div>
+              <div>
+                <div class="tag alt">低庫存</div>
+                <ul class="report-list" data-report-list="physical-low"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="report-card">
+            <h3>服務商品</h3>
+            <div class="report-kpis">
+              <div class="report-kpi">
+                <div class="label">今日營收</div>
+                <div class="value" data-report="service-rev-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天營收</div>
+                <div class="value" data-report="service-rev-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天營收</div>
+                <div class="value" data-report="service-rev-30">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">今日訂單</div>
+                <div class="value" data-report="service-ord-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天訂單</div>
+                <div class="value" data-report="service-ord-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天訂單</div>
+                <div class="value" data-report="service-ord-30">—</div>
+              </div>
+            </div>
+            <div class="report-row"><span>訂單狀態</span><span data-report="service-status">—</span></div>
+            <div class="report-row"><span>掃描範圍</span><span data-report="service-scan">—</span></div>
+            <div class="report-lists">
+              <div>
+                <div class="tag">熱賣 TOP10</div>
+                <ul class="report-list" data-report-list="service-top"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
+  </section>
 
-    <div class="card">
-      <h3>日籤領取統計</h3>
-      <div class="tag">每日唯一領取人數</div>
-      <p class="muted">查看每天「領取日籤」的使用人數，支援自訂天數。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/fortune-stats">查看統計</a>
-        <a class="btn" href="/admin/fortune-stats" target="_blank" rel="noopener">新分頁</a>
+  <section class="entry-section">
+    <div class="section-head">
+      <div>
+        <h2>其他工具</h2>
+        <p class="muted">維持營運的支援功能</p>
       </div>
     </div>
+    <div class="entry-grid">
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">🕯️</span>
+            <h3>服務型商品</h3>
+          </div>
+          <span class="tag">蠟燭祈福 / 儀式服務</span>
+        </div>
+        <p class="muted">管理服務專區的上架內容，包含價格、介紹、包含項目與示意圖。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/service-products">管理服務</a>
+          <a class="btn ghost" href="/admin/service-products" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
 
-    <div class="card">
-      <h3>優惠券產生器</h3>
-      <div class="tag">建立 / 管理優惠券</div>
-      <p class="muted">在本域直接產生、管理優惠券，避免被瀏覽器阻擋外站。</p>
-      <div class="actions">
-        <a class="btn primary" href="/admin/coupons">開啟優惠券工具</a>
-        <a class="btn" href="/admin/coupons" target="_blank" rel="noopener">新分頁</a>
-      </div>
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">👤</span>
+            <h3>會員管理</h3>
+          </div>
+          <span class="tag alt">登入紀錄 / 聯絡資料</span>
+        </div>
+        <p class="muted">查看使用者基本資料、預設聯絡方式、登入時間與門市偏好。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/members">進入會員</a>
+          <a class="btn ghost" href="/admin/members" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
+
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">📊</span>
+            <h3>日籤領取統計</h3>
+          </div>
+          <span class="tag">每日唯一領取人數</span>
+        </div>
+        <p class="muted">查看每天「領取日籤」的使用人數，支援自訂天數。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/fortune-stats">查看統計</a>
+          <a class="btn ghost" href="/admin/fortune-stats" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
+
+      <article class="entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">🎟️</span>
+            <h3>優惠券產生器</h3>
+          </div>
+          <span class="tag alt">建立 / 管理優惠券</span>
+        </div>
+        <p class="muted">在本域直接產生、管理優惠券，避免被瀏覽器阻擋外站。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/coupons">開啟優惠券工具</a>
+          <a class="btn ghost" href="/admin/coupons" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
     </div>
-  </div>
+  </section>
 
   <div class="footer">需要新增模組？保留此入口並加入新卡片連結即可。</div>
 </div>
