@@ -6,15 +6,15 @@
     if (!wrap || wrap.dataset.adminShellApplied) return;
 
     var navItems = [
-      { href: '/admin', label: '總覽', icon: '🏠' },
-      { href: '/admin/orders', label: '訂單管理', icon: '🧾' },
-      { href: '/admin/products', label: '商品管理', icon: '📦' },
-      { href: '/admin/service-products', label: '服務商品', icon: '🕯️' },
-      { href: '/admin/service-orders', label: '服務訂單', icon: '🧿' },
-      { href: '/admin/members', label: '會員', icon: '👤' },
-      { href: '/admin/coupons', label: '優惠券', icon: '🎟️' },
-      { href: '/admin/code-viewer', label: '留言', icon: '💬' },
-      { href: '/admin/fortune-stats', label: '日籤統計', icon: '📊' }
+      { href: '/admin', label: '總覽', icon: '🏠', group: 'extra' },
+      { href: '/admin/orders', label: '訂單管理', icon: '🧾', group: 'primary' },
+      { href: '/admin/products', label: '商品管理', icon: '📦', group: 'primary' },
+      { href: '/admin/service-products', label: '服務商品', icon: '🕯️', group: 'extra' },
+      { href: '/admin/service-orders', label: '服務訂單', icon: '🧿', group: 'primary' },
+      { href: '/admin/members', label: '會員', icon: '👤', group: 'extra' },
+      { href: '/admin/coupons', label: '優惠券', icon: '🎟️', group: 'extra' },
+      { href: '/admin/code-viewer', label: '留言', icon: '💬', group: 'extra' },
+      { href: '/admin/fortune-stats', label: '日籤統計', icon: '📊', group: 'extra' }
     ];
 
     var path = location.pathname.replace(/\/$/, '');
@@ -37,11 +37,23 @@
       var a = document.createElement('a');
       a.href = item.href;
       a.setAttribute('data-nav', item.href);
+      if (item.group) a.setAttribute('data-nav-group', item.group);
       a.innerHTML = '<span class="nav-icon">' + item.icon + '</span>' +
         '<span class="nav-label">' + item.label + '</span>';
       if (path === item.href) a.classList.add('active');
       nav.appendChild(a);
     });
+
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'nav-toggle';
+    toggle.innerHTML = '<span class="nav-icon">⋯</span><span class="nav-label">更多</span>';
+    toggle.addEventListener('click', function(){
+      var expanded = nav.classList.toggle('is-expanded');
+      var label = toggle.querySelector('.nav-label');
+      if (label) label.textContent = expanded ? '收合' : '更多';
+    });
+    nav.appendChild(toggle);
 
     var foot = document.createElement('div');
     foot.className = 'admin-foot';
