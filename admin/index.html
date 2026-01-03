@@ -180,9 +180,14 @@ html,body{
 .btn.ghost:hover{color:var(--fg);background:rgba(15,23,42,.04);}
 .data-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);
   gap:16px;
   align-items:start;
+}
+.data-stack{
+  display:grid;
+  gap:16px;
+  align-content:start;
 }
 .data-card{
   background:var(--panel);
@@ -193,6 +198,7 @@ html,body{
   display:grid;
   gap:12px;
   align-content:start;
+  overflow:hidden;
 }
 .data-card h3{margin:0;font-size:18px;font-weight:800;}
 .stat-accent{color:var(--accent);font-size:18px;font-weight:800;}
@@ -225,16 +231,8 @@ html,body{
   .entry-actions{grid-template-columns:repeat(2,minmax(0,1fr));}
   .entry-hero h1{font-size:24px;}
 }
-@media(min-width:1100px){
-  .data-grid{
-    grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.4fr);
-    grid-template-areas:
-      "food report report"
-      "temple report report";
-  }
-  .data-card--food{grid-area:food;}
-  .data-card--temple{grid-area:temple;}
-  #reportSection{grid-area:report;}
+@media(max-width:1100px){
+  .data-grid{grid-template-columns:1fr;}
 }
 @media(max-width:720px){
   .wrap{padding:18px 14px 40px;}
@@ -404,27 +402,29 @@ html.admin-guard-hide{visibility:hidden;}
       </div>
     </div>
     <div class="data-grid">
-      <div class="data-card data-card--food">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-          <h3>美食地圖流量統計</h3>
-          <div class="muted">
-            總累積不重複訪客：<span id="foodMapTotal" class="stat-accent">—</span>
+      <div class="data-stack">
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>美食地圖流量統計</h3>
+            <div class="muted">
+              總累積不重複訪客：<span id="foodMapTotal" class="stat-accent">—</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="foodMapChart"></canvas>
           </div>
         </div>
-        <div style="position:relative;height:300px;width:100%;">
-          <canvas id="foodMapChart"></canvas>
-        </div>
-      </div>
 
-      <div class="data-card data-card--temple">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-          <h3>寺廟地圖流量統計</h3>
-          <div class="muted">
-            總累積不重複訪客：<span id="templeMapTotal" class="stat-accent">—</span>
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>寺廟地圖流量統計</h3>
+            <div class="muted">
+              總累積不重複訪客：<span id="templeMapTotal" class="stat-accent">—</span>
+            </div>
           </div>
-        </div>
-        <div style="position:relative;height:300px;width:100%;">
-          <canvas id="templeMapChart"></canvas>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="templeMapChart"></canvas>
+          </div>
         </div>
       </div>
 
