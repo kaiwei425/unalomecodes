@@ -7,6 +7,7 @@ let limitedTimer = null;
 let rawItems = [];
 let viewItems = [];
 let pendingProductId = '';
+let pendingProductSource = '';
 // 安全補丁：避免呼叫未定義
 function refreshWishlistButtons() {
   try{
@@ -50,6 +51,11 @@ function resolveTotalStock(p){
   return null;
 }
 
+function parseProductIdFromSearch(){
+  const params = new URLSearchParams(window.location.search || '');
+  return params.get('id') || params.get('pid') || params.get('productId') || '';
+}
+
 function parseProductIdFromHash(){
   const hash = String(window.location.hash || '').replace(/^#/, '');
   if (!hash || hash.includes('lookup=')) return '';
@@ -62,30 +68,50 @@ function parseProductIdFromHash(){
   }
 }
 
-function clearProductHash(){
-  if (!window.location.hash) return;
+function clearProductUrl(source){
   try{
-    if (history && typeof history.replaceState === 'function'){
-      history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
-    }else{
-      window.location.hash = '';
+    if (source === 'search'){
+      const params = new URLSearchParams(window.location.search || '');
+      params.delete('id');
+      params.delete('pid');
+      params.delete('productId');
+      const qs = params.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', next);
+      }else{
+        window.location.search = qs ? `?${qs}` : '';
+      }
+      return;
+    }
+    if (window.location.hash){
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
+      }else{
+        window.location.hash = '';
+      }
     }
   }catch(_){}
 }
 
-function openProductFromHash(){
-  const pid = pendingProductId || parseProductIdFromHash();
+function openProductFromUrl(){
+  const searchId = parseProductIdFromSearch();
+  const hashId = parseProductIdFromHash();
+  const pid = pendingProductId || searchId || hashId;
   if (!pid) return;
+  const source = pendingProductId ? pendingProductSource : (searchId ? 'search' : (hashId ? 'hash' : ''));
   if (!rawItems.length){
     pendingProductId = pid;
+    pendingProductSource = source;
     return;
   }
   const item = rawItems.find(it => String(it.id) === String(pid));
   pendingProductId = '';
+  pendingProductSource = '';
   if (!item) return;
   try{
     openDetail(item);
-    clearProductHash();
+    clearProductUrl(source);
   }catch(err){
     console.error('openDetail failed', err);
   }
@@ -171,7 +197,7 @@ async function loadProducts(){
     populateDeityFilter(rawItems);
     renderHotItems(rawItems);
     applyFilter();
-    openProductFromHash();
+    openProductFromUrl();
     banner.style.display = rawItems.length ? 'none' : 'block';
     banner.textContent = rawItems.length ? '' : '目前沒有上架商品'; const sk=document.getElementById('skeleton'); if(sk && rawItems.length===0) sk.style.display='none';
   }catch(e){

@@ -111,6 +111,7 @@
   let limitedTimer = null;
   let serviceItems = [];
   let pendingServiceId = '';
+  let pendingServiceSource = '';
   let hotOnly = false;
   const RECEIPT_MAX_SIZE = 20 * 1024 * 1024;
   const BANK_INFO = {
@@ -1917,7 +1918,7 @@
     bindHotToggle();
     renderHotServices(serviceItems);
     renderList(serviceItems);
-    openServiceFromHash();
+    openServiceFromUrl();
     if (emptyEl) emptyEl.remove();
     initLookupDialog();
     updateCartBadge();
@@ -1926,6 +1927,11 @@
   function resolveServiceId(service){
     if (!service) return '';
     return service.id || service._id || service.key || service._key || '';
+  }
+
+  function parseServiceIdFromSearch(){
+    const params = new URLSearchParams(window.location.search || '');
+    return params.get('id') || params.get('sid') || params.get('serviceId') || '';
   }
 
   function parseServiceIdFromHash(){
@@ -1939,29 +1945,49 @@
     }
   }
 
-  function clearServiceHash(){
-    if (!window.location.hash) return;
+  function clearServiceUrl(source){
     try{
-      if (history && typeof history.replaceState === 'function'){
-        history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
-      }else{
-        window.location.hash = '';
+      if (source === 'search'){
+        const params = new URLSearchParams(window.location.search || '');
+        params.delete('id');
+        params.delete('sid');
+        params.delete('serviceId');
+        const qs = params.toString();
+        const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+        if (history && typeof history.replaceState === 'function'){
+          history.replaceState(null, document.title || '', next);
+        }else{
+          window.location.search = qs ? `?${qs}` : '';
+        }
+        return;
+      }
+      if (window.location.hash){
+        if (history && typeof history.replaceState === 'function'){
+          history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
+        }else{
+          window.location.hash = '';
+        }
       }
     }catch(_){}
   }
 
-  function openServiceFromHash(){
-    const sid = pendingServiceId || parseServiceIdFromHash();
+  function openServiceFromUrl(){
+    const searchId = parseServiceIdFromSearch();
+    const hashId = parseServiceIdFromHash();
+    const sid = pendingServiceId || searchId || hashId;
     if (!sid) return;
+    const source = pendingServiceId ? pendingServiceSource : (searchId ? 'search' : (hashId ? 'hash' : ''));
     if (!serviceItems.length){
       pendingServiceId = sid;
+      pendingServiceSource = source;
       return;
     }
     const item = serviceItems.find(it => String(resolveServiceId(it)) === String(sid));
     pendingServiceId = '';
+    pendingServiceSource = '';
     if (!item) return;
     openServiceDetail(item);
-    clearServiceHash();
+    clearServiceUrl(source);
   }
   if (lookupCards){
     lookupCards.addEventListener('click', e=>{
@@ -2054,6 +2080,6 @@
   }
 
   window.addEventListener('hashchange', () => {
-    openServiceFromHash();
+    openServiceFromUrl();
   });
 })();
