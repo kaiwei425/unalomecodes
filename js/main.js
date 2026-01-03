@@ -6,6 +6,7 @@ let limitedTimer = null;
 
 let rawItems = [];
 let viewItems = [];
+let pendingProductId = '';
 // 安全補丁：避免呼叫未定義
 function refreshWishlistButtons() {
   try{
@@ -47,6 +48,47 @@ function resolveTotalStock(p){
     return Number.isFinite(n) ? n : 0;
   }
   return null;
+}
+
+function parseProductIdFromHash(){
+  const hash = String(window.location.hash || '').replace(/^#/, '');
+  if (!hash || hash.includes('lookup=')) return '';
+  if (!hash.includes('=')) return '';
+  try{
+    const params = new URLSearchParams(hash);
+    return params.get('id') || params.get('pid') || params.get('productId') || '';
+  }catch(_){
+    return '';
+  }
+}
+
+function clearProductHash(){
+  if (!window.location.hash) return;
+  try{
+    if (history && typeof history.replaceState === 'function'){
+      history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
+    }else{
+      window.location.hash = '';
+    }
+  }catch(_){}
+}
+
+function openProductFromHash(){
+  const pid = pendingProductId || parseProductIdFromHash();
+  if (!pid) return;
+  if (!rawItems.length){
+    pendingProductId = pid;
+    return;
+  }
+  const item = rawItems.find(it => String(it.id) === String(pid));
+  pendingProductId = '';
+  if (!item) return;
+  try{
+    openDetail(item);
+    clearProductHash();
+  }catch(err){
+    console.error('openDetail failed', err);
+  }
 }
 
 function getLimitedInfo(p){
@@ -129,6 +171,7 @@ async function loadProducts(){
     populateDeityFilter(rawItems);
     renderHotItems(rawItems);
     applyFilter();
+    openProductFromHash();
     banner.style.display = rawItems.length ? 'none' : 'block';
     banner.textContent = rawItems.length ? '' : '目前沒有上架商品'; const sk=document.getElementById('skeleton'); if(sk && rawItems.length===0) sk.style.display='none';
   }catch(e){
@@ -588,3 +631,7 @@ function runMain() {
 
 // 將 runMain 函式掛載到 window 物件上，以便 shop.html 可以呼叫它
 window.runMain = runMain;
+
+window.addEventListener('hashchange', () => {
+  openProductFromHash();
+});

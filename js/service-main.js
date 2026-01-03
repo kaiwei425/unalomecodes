@@ -110,6 +110,7 @@
   let lastRemitLast5 = '';
   let limitedTimer = null;
   let serviceItems = [];
+  let pendingServiceId = '';
   let hotOnly = false;
   const RECEIPT_MAX_SIZE = 20 * 1024 * 1024;
   const BANK_INFO = {
@@ -1916,6 +1917,7 @@
     bindHotToggle();
     renderHotServices(serviceItems);
     renderList(serviceItems);
+    openServiceFromHash();
     if (emptyEl) emptyEl.remove();
     initLookupDialog();
     updateCartBadge();
@@ -1924,6 +1926,42 @@
   function resolveServiceId(service){
     if (!service) return '';
     return service.id || service._id || service.key || service._key || '';
+  }
+
+  function parseServiceIdFromHash(){
+    const hash = String(window.location.hash || '').replace(/^#/, '');
+    if (!hash || !hash.includes('=')) return '';
+    try{
+      const params = new URLSearchParams(hash);
+      return params.get('id') || params.get('sid') || params.get('serviceId') || '';
+    }catch(_){
+      return '';
+    }
+  }
+
+  function clearServiceHash(){
+    if (!window.location.hash) return;
+    try{
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
+      }else{
+        window.location.hash = '';
+      }
+    }catch(_){}
+  }
+
+  function openServiceFromHash(){
+    const sid = pendingServiceId || parseServiceIdFromHash();
+    if (!sid) return;
+    if (!serviceItems.length){
+      pendingServiceId = sid;
+      return;
+    }
+    const item = serviceItems.find(it => String(resolveServiceId(it)) === String(sid));
+    pendingServiceId = '';
+    if (!item) return;
+    openServiceDetail(item);
+    clearServiceHash();
   }
   if (lookupCards){
     lookupCards.addEventListener('click', e=>{
@@ -2014,4 +2052,8 @@
     }
     return `<iframe src="${escapeHtml(src)}" allowtransparency="true" allowfullscreen="true" frameborder="0"></iframe>`;
   }
+
+  window.addEventListener('hashchange', () => {
+    openServiceFromHash();
+  });
 })();
