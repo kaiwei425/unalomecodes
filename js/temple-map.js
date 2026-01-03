@@ -1912,6 +1912,7 @@ function render(){
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="指定 Place ID 以修正評論"></label>
           <label>IG 連結<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
+          <label>YouTube 影片<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
           <label class="admin-cover">封面圖
             <div class="admin-upload">
               <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
@@ -2112,6 +2113,7 @@ function render(){
           google_place_id: getVal('googlePlaceId'),
           hours: getVal('hours'),
           ig: getVal('ig'),
+          youtube: getVal('youtube'),
           cover: getVal('cover'),
           coverPos: getVal('coverPos'),
           intro: introRaw,
@@ -2511,7 +2513,8 @@ if (btnAdd) btnAdd.onclick = ()=>{
           ig: '',
           cover: '',
           coverPos: '50% 50%',
-          intro: ''
+          intro: '',
+          youtube: ''
         };
       }
   editingId = newItem.__tempId;
