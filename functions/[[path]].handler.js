@@ -594,7 +594,10 @@ function isAllowedAdminOrigin(request, env){
   const originHeader = (request.headers.get('Origin') || '').trim();
   if (originHeader) return allow.has(originHeader);
   const ref = (request.headers.get('Referer') || '').trim();
-  if (!ref) return true;
+  if (!ref) {
+    const key = (request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key') || '').trim();
+    return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
+  }
   try{
     const refOrigin = new URL(ref).origin;
     return allow.has(refOrigin);
@@ -3226,7 +3229,7 @@ export async function onRequest(context) {
 
     // 商品列表 / 新增
   if ((pathname === "/api/products" || pathname === "/products") && request.method === "GET") {
-    return listProducts(url, env);
+    return listProducts(request, url, env);
   }
   if (pathname === "/api/products" && request.method === "POST") {
     const guard = await requireAdminWrite(request, env);
@@ -3793,7 +3796,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok: true, ...result, fromCache: false });
   }
 
-  if (pathname === '/api/admin/cron/update-dashboard' && (request.method === 'POST' || request.method === 'GET')) {
+  if (pathname === '/api/admin/cron/update-dashboard' && request.method === 'POST') {
     const guard = await requireCronOrAdmin(request, env);
     if (guard) return guard;
     const store = env.ORDERS;
@@ -7225,6 +7228,7 @@ function shouldNotifyStatus(status) {
   if (/祈福進行中/.test(txt)) return true;
   if (/祈福完成/.test(txt)) return true;
   if (/成果已通知/.test(txt)) return true;
+  if (/已完成訂單/.test(txt)) return true;
   if (/已付款/.test(txt) && /出貨|寄件|寄貨|出貨/.test(txt)) return true;
   if (/已寄件/.test(txt) || /已寄出/.test(txt) || /寄出/.test(txt)) return true;
   if (/已出貨/.test(txt)) return true;
@@ -9031,7 +9035,7 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
     }
 // Stories (reviews) endpoints
 if (pathname === "/api/stories" && request.method === "GET") {
-  return listStories(url, env);
+  return listStories(request, url, env);
 }
 if (pathname === "/api/stories" && request.method === "POST") {
   // Support method override: POST + _method=DELETE
@@ -9041,7 +9045,7 @@ if (pathname === "/api/stories" && request.method === "POST") {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
-    return deleteStories(url, env);
+    return deleteStories(request, url, env);
   }
   return createStory(request, env);
 }
@@ -9050,7 +9054,7 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
   }
-  return deleteStories(url, env);
+  return deleteStories(request, url, env);
 }
     if (pathname === "/api/maps-key" && request.method === "GET") {
       return getMapsKey(request, env);
@@ -9217,11 +9221,17 @@ function extractKeyFromProxyUrl(u) {
 /* ========== /api/products ========== */
 // 商品列表 API 支援分類查詢，可用 ?category=佛牌 只查該分類
 // 前端可於管理端提供分類下拉式選單（佛牌、蠟燭、靈符、服飾）供選擇
-async function listProducts(url, env) {
-  const active = url.searchParams.get("active");
+async function listProducts(request, url, env) {
+  let active = url.searchParams.get("active");
   const category = url.searchParams.get("category");
-  const indexRaw = await env.PRODUCTS.get("INDEX");
-  const ids = indexRaw ? JSON.parse(indexRaw) : [];
+  const isAdminUser = await isAdmin(request, env);
+  if (!isAdminUser && active !== "true") active = "true";
+  let ids = [];
+  try{
+    const indexRaw = await env.PRODUCTS.get("INDEX");
+    ids = indexRaw ? JSON.parse(indexRaw) : [];
+    if (!Array.isArray(ids)) ids = [];
+  }catch(_){ ids = []; }
   const nowMs = Date.now();
 
   const items = [];
@@ -9244,7 +9254,7 @@ async function listProducts(url, env) {
     if (category && p.category !== category) continue;
     items.push(p);
   }
-  return withCORS(json({ ok:true, items }));
+  return withCorsOrigin(json({ ok:true, items }), request, env);
 }
 
 // 新增商品時，若前端傳送 category，會一併存入
@@ -9548,6 +9558,25 @@ function jsonWithHeaders(data, status = 200, headers = {}) {
   });
 }
 
+function withCorsOrigin(res, request, env, extraOriginsRaw) {
+  const h = new Headers(res.headers);
+  const originHeader = (request.headers.get('Origin') || '').trim();
+  let selfOrigin = '';
+  try{ selfOrigin = new URL(request.url).origin; }catch(_){}
+  const allow = collectAllowedOrigins(env, request, extraOriginsRaw || '');
+  const origin = (originHeader && allow.has(originHeader)) ? originHeader : '';
+  if (origin || (selfOrigin && allow.has(selfOrigin))) {
+    h.set("Access-Control-Allow-Origin", origin || selfOrigin);
+    h.set("Vary", "Origin");
+  } else {
+    h.delete("Access-Control-Allow-Origin");
+  }
+  h.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  h.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key");
+  h.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  return new Response(res.body, { status: res.status, headers: h });
+}
+
 function withCORS(res) {
   const h = new Headers(res.headers);
   h.set("Access-Control-Allow-Origin", "*");
@@ -9772,11 +9801,15 @@ async function restoreStockCounters(env, items, fallbackProductId, fallbackVaria
 }
 
 /* ========== /api/stories ========== */
-async function listStories(url, env){
+async function listStories(request, url, env){
   const code = (url.searchParams.get("code")||"").toUpperCase();
-  if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
-  const idxRaw = await env.STORIES.get(`IDX:${code}`);
-  const ids = idxRaw ? JSON.parse(idxRaw) : [];
+  if (!code) return withCorsOrigin(json({ok:false, error:"Missing code"}, 400), request, env, env.STORY_ORIGINS || '');
+  let ids = [];
+  try{
+    const idxRaw = await env.STORIES.get(`IDX:${code}`);
+    ids = idxRaw ? JSON.parse(idxRaw) : [];
+    if (!Array.isArray(ids)) ids = [];
+  }catch(_){ ids = []; }
   const items = [];
   for (const id of ids.slice(0, 120)){
     const raw = await env.STORIES.get(`STORY:${id}`);
@@ -9784,7 +9817,7 @@ async function listStories(url, env){
     try{ items.push(JSON.parse(raw)); }catch{}
   }
   items.sort((a,b)=> new Date(b.ts||0) - new Date(a.ts||0));
-  return withCORS(json({ok:true, items}));
+  return withCorsOrigin(json({ok:true, items}), request, env, env.STORY_ORIGINS || '');
 }
 
 function normalizeStoryImageUrl(raw, requestUrl, env){
@@ -9931,7 +9964,9 @@ async function createStory(request, env){
   try{
     const reqUrl = new URL(request.url);
     const originHeader = (request.headers.get('Origin') || '').trim();
-    if (originHeader){
+    const refHeader = (request.headers.get('Referer') || '').trim();
+    const originValue = originHeader || (refHeader ? (()=>{ try{ return new URL(refHeader).origin; }catch(_){ return ''; } })() : '');
+    if (originValue){
       const allow = new Set([reqUrl.origin]);
       const addOrigin = (val)=>{
         if (!val) return;
@@ -9941,11 +9976,15 @@ async function createStory(request, env){
         }catch(_){}
       };
       addOrigin(env.SITE_URL);
+      addOrigin(env.PUBLIC_SITE_URL);
+      addOrigin(env.PUBLIC_ORIGIN);
       const extraOrigins = (env.STORY_ORIGINS || '').split(',').map(s=>s.trim()).filter(Boolean);
       extraOrigins.forEach(addOrigin);
-      if (!allow.has(originHeader)) {
-        return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
+      if (!allow.has(originValue)) {
+        return withCorsOrigin(json({ ok:false, error:"Forbidden origin" }, 403), request, env, env.STORY_ORIGINS || '');
       }
+    } else {
+      return withCorsOrigin(json({ ok:false, error:"Forbidden origin" }, 403), request, env, env.STORY_ORIGINS || '');
     }
     const body = await request.json();
     const code = String((body.code||"").toUpperCase());
@@ -9954,10 +9993,10 @@ async function createStory(request, env){
     const productName = String(body.productName || body.product || body.itemName || body.name || '').trim().slice(0, 80);
     const imageUrlRaw = String(body.imageUrl || "").trim();
     const imageUrl = normalizeStoryImageUrl(imageUrlRaw, request.url, env);
-    if (!code) return withCORS(json({ok:false, error:"Missing code"}, 400));
-    if (!msg || msg.length < 2) return withCORS(json({ok:false, error:"Message too short"}, 400));
-    if (msg.length > 800) return withCORS(json({ok:false, error:"Message too long"}, 400));
-    if (imageUrlRaw && !imageUrl) return withCORS(json({ ok:false, error:"Invalid imageUrl" }, 400));
+    if (!code) return withCorsOrigin(json({ok:false, error:"Missing code"}, 400), request, env, env.STORY_ORIGINS || '');
+    if (!msg || msg.length < 2) return withCorsOrigin(json({ok:false, error:"Message too short"}, 400), request, env, env.STORY_ORIGINS || '');
+    if (msg.length > 800) return withCorsOrigin(json({ok:false, error:"Message too long"}, 400), request, env, env.STORY_ORIGINS || '');
+    if (imageUrlRaw && !imageUrl) return withCorsOrigin(json({ ok:false, error:"Invalid imageUrl" }, 400), request, env, env.STORY_ORIGINS || '');
     try{
       const ipRaw = (request.headers.get('CF-Connecting-IP') || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '').toString();
       const ip = ipRaw.split(',')[0].trim();
@@ -9967,7 +10006,7 @@ async function createStory(request, env){
         const nowTs = Date.now();
         const lastTs = Number(lastRaw || 0) || 0;
         if (nowTs - lastTs < 15000){
-          return withCORS(json({ ok:false, error:"Too many requests" }, 429));
+          return withCorsOrigin(json({ ok:false, error:"Too many requests" }, 429), request, env, env.STORY_ORIGINS || '');
         }
         await env.STORIES.put(rlKey, String(nowTs), { expirationTtl: 120 });
       }
@@ -9991,9 +10030,9 @@ async function createStory(request, env){
     if (ids.length > 300) ids.length = 300;
     await env.STORIES.put(idxKey, JSON.stringify(ids));
     const mail = await maybeSendStoryEmail(env, item, request.url);
-    return withCORS(json({ok:true, item, mail}));
+    return withCorsOrigin(json({ok:true, item, mail}), request, env, env.STORY_ORIGINS || '');
   }catch(e){
-    return withCORS(json({ok:false, error:String(e)}, 500));
+    return withCorsOrigin(json({ok:false, error:String(e)}, 500), request, env, env.STORY_ORIGINS || '');
   }
 }
 
@@ -10001,10 +10040,10 @@ async function createStory(request, env){
 // Modes:
 //   A) ?code=XXXX&id=STORYID -> delete single story
 //   B) ?code=XXXX            -> delete all stories under this code (capped at 200)
-async function deleteStories(url, env){
+async function deleteStories(request, url, env){
   const code = (url.searchParams.get("code")||"").toUpperCase();
   const id   = url.searchParams.get("id") || "";
-  if (!code) return withCORS(json({ ok:false, error:"Missing code" }, 400));
+  if (!code) return withCorsOrigin(json({ ok:false, error:"Missing code" }, 400), request, env, env.STORY_ORIGINS || '');
 
   const idxKey = `IDX:${code}`;
   const idxRaw = await env.STORIES.get(idxKey);
@@ -10015,7 +10054,7 @@ async function deleteStories(url, env){
     await env.STORIES.delete(`STORY:${id}`);
     const next = ids.filter(x => x !== id);
     await env.STORIES.put(idxKey, JSON.stringify(next));
-    return withCORS(json({ ok:true, deleted: 1 }));
+    return withCorsOrigin(json({ ok:true, deleted: 1 }), request, env, env.STORY_ORIGINS || '');
   }
 
   // bulk delete (cap to avoid long-running)
@@ -10025,7 +10064,7 @@ async function deleteStories(url, env){
     n++;
   }
   await env.STORIES.put(idxKey, JSON.stringify([]));
-  return withCORS(json({ ok:true, deleted: n }));
+  return withCorsOrigin(json({ ok:true, deleted: n }), request, env, env.STORY_ORIGINS || '');
 }
 
 /* ========== /api/geo (Geocode helper) ========== */

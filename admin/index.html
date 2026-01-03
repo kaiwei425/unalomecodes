@@ -115,7 +115,7 @@ html,body{
 <script>document.documentElement.classList.add('admin-guard-hide');</script>
 <script src="/js/admin-guard.js" defer></script>
 <link rel="stylesheet" href="/admin/admin-ui.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/js/admin-shell.js" defer></script>
 </head>
 <body>
@@ -477,56 +477,61 @@ html,body{
         const labels = (data.stats || []).map(s => s.date.slice(5)); // MM-DD
         const counts = (data.stats || []).map(s => s.count);
         
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: '每日不重複訪客',
-              data: counts,
-              borderColor: '#2563eb',
-              backgroundColor: 'rgba(37,99,235,0.1)',
-              borderWidth: 2,
-              tension: 0.3,
-              fill: true,
-              pointBackgroundColor: '#ffffff',
-              pointBorderColor: '#2563eb',
-              pointRadius: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                mode: 'index',
-                intersect: false,
-                backgroundColor: 'rgba(15,23,42,0.9)',
-                titleColor: '#e2e8f0',
-                bodyColor: '#e2e8f0',
-                borderColor: 'rgba(255,255,255,0.1)',
-                borderWidth: 1
-              }
+        if (!window.Chart) return;
+        try{
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: '每日不重複訪客',
+                data: counts,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#2563eb',
+                pointRadius: 4
+              }]
             },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0,0,0,0.05)' },
-                ticks: { stepSize: 1, font: { size: 11 } }
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false,
+                  backgroundColor: 'rgba(15,23,42,0.9)',
+                  titleColor: '#e2e8f0',
+                  bodyColor: '#e2e8f0',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  borderWidth: 1
+                }
               },
-              x: {
-                grid: { display: false },
-                ticks: { font: { size: 11 } }
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: { color: 'rgba(0,0,0,0.05)' },
+                  ticks: { stepSize: 1, font: { size: 11 } }
+                },
+                x: {
+                  grid: { display: false },
+                  ticks: { font: { size: 11 } }
+                }
+              },
+              interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
               }
-            },
-            interaction: {
-              mode: 'nearest',
-              axis: 'x',
-              intersect: false
             }
-          }
-        });
+          });
+        }catch(err){
+          console.error(err);
+        }
       })
       .catch(console.error);
   }
