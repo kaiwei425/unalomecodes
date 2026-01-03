@@ -3133,6 +3133,9 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const origin = url.origin;
   const pathname = url.pathname;
+  if (pathname === '/temple-map' || pathname === '/temple-map/') {
+    return Response.redirect(`${origin}/templemap${url.search}`, 301);
+  }
   /*__CVS_CALLBACK_MERGE_FINAL__*/
   try{
     const _u = new URL(request.url);
