@@ -179,6 +179,31 @@
   function getRowId(item){
     return resolveServiceId(item) || item.__virtualId || '';
   }
+  function fallbackCopy(text){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); }catch(_){}
+    document.body.removeChild(ta);
+  }
+  async function copyText(text){
+    if (!text) return;
+    try{
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+      }else{
+        fallbackCopy(text);
+      }
+      alert('已複製 ID');
+    }catch(_){
+      fallbackCopy(text);
+      alert('已複製 ID');
+    }
+  }
   function findItemByRowId(rowId){
     if (!rowId) return null;
     return items.find(it => getRowId(it) === rowId) || null;
@@ -388,6 +413,7 @@
           <button class="btn" data-act="${it.active === false ? 'publish' : 'unpublish'}" data-id="${rowId}">
             ${it.active === false ? '上架' : '下架'}
           </button>
+          <button class="btn" data-act="copy" data-id="${rowId}">複製ID</button>
         </td>
       </tr>`;
     }).join('');
@@ -417,6 +443,16 @@
     if (act === 'edit'){
       const item = findItemByRowId(id);
       if (item) fillForm(item);
+      return;
+    }
+    if (act === 'copy'){
+      const item = findItemByRowId(id);
+      const realId = item ? resolveServiceId(item) : '';
+      if (!realId){
+        alert('此服務尚未產生 ID，請先編輯並儲存一次。');
+        return;
+      }
+      copyText(realId);
       return;
     }
     if (act === 'publish' || act === 'unpublish'){

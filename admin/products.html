@@ -288,6 +288,28 @@
     if (html) e.innerHTML = html;
     return e;
   };
+  const fallbackCopy = (text)=>{
+    const ta = el("textarea", { style:"position:fixed;left:-9999px;top:-9999px" });
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand("copy"); }catch(_){}
+    document.body.removeChild(ta);
+  };
+  const copyText = async (text)=>{
+    if (!text) return;
+    try{
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+      }else{
+        fallbackCopy(text);
+      }
+      alert("已複製 ID");
+    }catch(_){
+      fallbackCopy(text);
+      alert("已複製 ID");
+    }
+  };
 
   // ==== 新增商品：規格 UI ====
   const newVars = $("new_vars");
@@ -490,11 +512,13 @@
     const box = el("div",{ class:"tools" });
     const b1 = el("button",{ class:"btn" },"編輯");
     const b2 = el("button",{ class:"btn "+(p.active? "warn":"ok") }, p.active ? "下架" : "上架");
+    const bCopy = el("button",{ class:"btn" },"複製ID");
     const b3 = el("button",{ class:"btn danger" },"刪除");
     b1.addEventListener("click", ()=> openEdit(p.id));
     b2.addEventListener("click", ()=> toggleActive(p));
+    bCopy.addEventListener("click", ()=> copyText(p.id));
     b3.addEventListener("click", ()=> removeProduct(p.id));
-    box.append(b1,b2,b3);
+    box.append(b1,b2,bCopy,b3);
     td.append(box);
     return td;
   }
