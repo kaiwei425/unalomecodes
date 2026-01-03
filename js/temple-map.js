@@ -288,6 +288,10 @@ const TRANSLATIONS = {
     openGmaps: '開啟 Google Maps',
     viewIg: '在 IG 上查看',
     desc: '寺廟介紹',
+    detailInfo: '詳細介紹',
+    ctaTextLabel: 'CTA 按鈕文字',
+    ctaUrlLabel: 'CTA 連結',
+    ctaDefault: '前往連結',
     addr: '地址',
     reviews: 'Google 評分 & 評論',
     tripTitle: '參拜路線',
@@ -486,6 +490,10 @@ const TRANSLATIONS = {
     openGmaps: 'Open Google Maps',
     viewIg: 'View on IG',
     desc: 'Description',
+    detailInfo: 'More Details',
+    ctaTextLabel: 'CTA Button Text',
+    ctaUrlLabel: 'CTA Link',
+    ctaDefault: 'Open Link',
     addr: 'Address',
     reviews: 'Google Ratings & Reviews',
     tripTitle: 'Temple Route',
@@ -697,6 +705,29 @@ function safeUrl(input){
     if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
   }catch(_){}
   return '';
+}
+function linkifyText(input){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+  let out = '';
+  let lastIndex = 0;
+  let match;
+  while ((match = urlRegex.exec(raw)) !== null) {
+    const before = raw.slice(lastIndex, match.index);
+    if (before) out += escapeHtml(before);
+    const url = match[1];
+    const safe = safeUrl(url);
+    if (safe) {
+      out += `<a href="${escapeHtml(safe)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`;
+    } else {
+      out += escapeHtml(url);
+    }
+    lastIndex = match.index + url.length;
+  }
+  const tail = raw.slice(lastIndex);
+  if (tail) out += escapeHtml(tail);
+  return out.replace(/\n/g, '<br>');
 }
 const COVER_THUMB_QUALITY = 58;
 function getCoverThumbWidth(){
@@ -2069,6 +2100,8 @@ function render(){
           <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="${escapeHtml(t('placeIdHint'))}"></label>
           <label>${escapeHtml(t('igLink'))}<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>${escapeHtml(t('ytVideo'))}<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
+          <label>${escapeHtml(t('ctaTextLabel'))}<input class="admin-input" data-admin-field="ctaText" value="${escapeHtml(item.ctaText || '')}"></label>
+          <label>${escapeHtml(t('ctaUrlLabel'))}<input class="admin-input" data-admin-field="ctaUrl" value="${escapeHtml(item.ctaUrl || '')}"></label>
           <label class="admin-cover">${escapeHtml(t('coverImg'))}
             <div class="admin-upload">
               <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
@@ -2085,6 +2118,9 @@ function render(){
         </div>
         <label class="admin-field">${escapeHtml(t('desc'))}
           <textarea class="admin-textarea" data-admin-field="intro">${escapeHtml(introText)}</textarea>
+        </label>
+        <label class="admin-field">${escapeHtml(t('detailInfo'))}
+          <textarea class="admin-textarea" data-admin-field="detail">${escapeHtml(item.detail || '')}</textarea>
         </label>
         <div class="admin-actions">
           <button class="btn ghost" data-admin-save="${safeId}">${escapeHtml(t('saveBtn'))}</button>
@@ -2283,9 +2319,12 @@ function render(){
           hours: getVal('hours'),
           ig: getVal('ig'),
           youtube: getVal('youtube'),
+          ctaText: getVal('ctaText'),
+          ctaUrl: getVal('ctaUrl'),
           cover: getVal('cover'),
           coverPos: getVal('coverPos'),
           intro: introRaw,
+          detail: getVal('detail'),
           highlights: introLines,
           dishes: []
         };
@@ -2683,7 +2722,10 @@ if (btnAdd) btnAdd.onclick = ()=>{
           cover: '',
           coverPos: '50% 50%',
           intro: '',
-          youtube: ''
+          youtube: '',
+          ctaText: '',
+          ctaUrl: '',
+          detail: ''
         };
       }
   editingId = newItem.__tempId;
@@ -3018,6 +3060,11 @@ function openModal(id){
   const body = document.getElementById('foodModalBody');
   const dlg = document.getElementById('foodModal');
   const introText = buildIntroText(item);
+  const detailText = String(item.detail || '').trim();
+  const detailHtml = detailText ? linkifyText(detailText) : '';
+  const ctaUrl = safeUrl(item.ctaUrl);
+  const ctaLabelRaw = String(item.ctaText || '').trim();
+  const ctaLabel = ctaLabelRaw || t('ctaDefault');
   const ytEmbed = buildYouTubeEmbedUrl(item.youtube);
   const igEmbed = buildInstagramEmbedUrl(item.ig);
   const embedUrl = ytEmbed || igEmbed;
@@ -3057,6 +3104,12 @@ function openModal(id){
         <strong>${escapeHtml(t('desc'))}</strong>
         <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || t('noIntro'))}</div>
       </div>
+      ${detailHtml ? `
+      <div class="modal-section">
+        <strong>${escapeHtml(t('detailInfo'))}</strong>
+        <div style="line-height:1.8;color:#475569;">${detailHtml}</div>
+      </div>
+      ` : ''}
       <div class="modal-section">
         <div><strong>${escapeHtml(t('addr'))}：</strong>${escapeHtml(item.address || '') || escapeHtml(t('unknownAddr'))}</div>
         ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
@@ -3066,7 +3119,8 @@ function openModal(id){
         <div id="googleReviewsBox" style="margin-top:4px;"></div>
       </div>
       <div class="modal-actions">
-        <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
+        ${ctaUrl ? `<a class="btn primary" href="${escapeHtml(ctaUrl)}" target="_blank" rel="noopener">${escapeHtml(ctaLabel)}</a>` : ''}
+        <a class="btn ${ctaUrl ? 'ghost' : 'primary'}" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
         ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">${escapeHtml(t('viewIg'))}</a>` : ''}
         <button class="btn ghost" data-fav="${safeId}">${escapeHtml(t('addFav'))}</button>
       </div>

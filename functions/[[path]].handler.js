@@ -1211,7 +1211,7 @@ function normalizeTemplePayload(payload, fallbackId){
 
   str('name'); str('category'); str('area');
   str('address'); str('hours'); str('maps');
-  str('cover'); str('intro'); str('googlePlaceId');
+  str('cover'); str('intro'); str('detail'); str('ctaText'); str('ctaUrl'); str('googlePlaceId');
   str('ig'); str('youtube');
 
   if (body.coverPos !== undefined || body.cover_pos !== undefined) {
@@ -1247,6 +1247,9 @@ function mergeTempleRecord(existing, incoming, options){
   assignIf('cover', incoming.cover);
   assignIf('coverPos', incoming.coverPos);
   assignIf('intro', incoming.intro);
+  assignIf('detail', incoming.detail);
+  assignIf('ctaText', incoming.ctaText);
+  assignIf('ctaUrl', incoming.ctaUrl);
   assignIf('featured', incoming.featured);
   assignIf('rating', incoming.rating);
   assignIf('googlePlaceId', incoming.googlePlaceId);
