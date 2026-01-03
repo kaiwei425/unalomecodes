@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function openProfile(){
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
         if (window.authState && typeof window.authState.promptLogin === 'function'){
-          window.authState.promptLogin('請先登入再編輯基本資料');
+          window.authState.promptLogin(t('loginEditProfile'));
         }
         return;
       }
@@ -87,14 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
         else if (dlg) dlg.setAttribute('open','');
       }catch(e){
-        if (statusEl) statusEl.textContent = '讀取失敗，請稍後再試';
+        if (statusEl) statusEl.textContent = t('profileLoadFail');
       }
     }
 
     async function saveProfile(){
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
         if (window.authState && typeof window.authState.promptLogin === 'function'){
-          window.authState.promptLogin('請先登入再儲存');
+          window.authState.promptLogin(t('loginSaveProfile'));
         }
         return;
       }
@@ -123,14 +123,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (statusEl){
           statusEl.style.color = '#16a34a';
-          statusEl.textContent = '已儲存，下次結帳自動帶入。';
+          statusEl.textContent = t('profileSaveSuccess');
         }
         if (window.authState && typeof window.authState.refreshProfile === 'function'){
           window.authState.refreshProfile();
         }
         setTimeout(()=>{ if (closeBtn) closeBtn.click(); }, 800);
       }catch(err){
-        if (statusEl) statusEl.textContent = err.message || '儲存失敗';
+        if (statusEl) statusEl.textContent = err.message || t('profileSaveFail');
       }
     }
 
@@ -244,6 +244,13 @@ const TRANSLATIONS = {
     home: '返回首頁',
     fav: '收藏清單',
     memberLabel: '會員中心',
+    profileInfo: '基本資料',
+    myCoupons: '我的優惠券',
+    myOrders: '我的訂單',
+    storeDefault: '門市預設',
+    adminQna: '訂單問答',
+    adminPanel: '後台管理',
+    authLoading: '登入狀態載入中…',
     langSwitch: '切換語言',
     langZh: '中文',
     langEn: '英文',
@@ -273,6 +280,7 @@ const TRANSLATIONS = {
     searchNearby: '搜尋附近',
     mapMode: '地圖模式',
     listMode: '列表模式',
+    mapSwitchFood: '美食地圖',
     totalCount: '共 {n} 間寺廟',
     loadMore: '載入更多',
     details: '查看寺廟資訊',
@@ -322,9 +330,20 @@ const TRANSLATIONS = {
     loginFav: '請先登入會員才能查看收藏清單。',
     loginAddFav: '請先登入會員才能加入收藏。',
     loginRemoveFav: '請先登入會員才能移除收藏。',
+    loginEditProfile: '請先登入再編輯基本資料',
+    loginSaveProfile: '請先登入再儲存',
+    profileLoadFail: '讀取失敗，請稍後再試',
+    profileSaveSuccess: '已儲存，下次結帳自動帶入。',
+    profileSaveFail: '儲存失敗',
+    loadFailTitle: '載入失敗',
+    loadFailDesc: '請重新整理或稍後再試。',
+    loadingTitle: '載入中...',
+    loadingDesc: '正在抓取最新資料。',
     importing: '匯入中...',
     importSuccess: '救援成功！資料已寫回資料庫。頁面將重新整理。',
     importFail: '匯入失敗：',
+    importEmpty: '檔案內無資料',
+    importConfirm: '準備匯入 {n} 筆資料，這將會覆蓋現有資料。確定嗎？',
     saveFail: '儲存失敗：',
     delConfirm: '確定要刪除這筆寺廟嗎？刪除後無法復原。',
     delSuccess: '已刪除',
@@ -343,6 +362,8 @@ const TRANSLATIONS = {
     mapLoad: '正在載入地圖元件...',
     mapFail: '地圖載入失敗',
     noKey: '未設定 Google Maps Key',
+    mapKeyFail: '無法讀取 Google Maps Key',
+    mapKeyFailStatus: '無法讀取 Google Maps Key（HTTP {status}）',
     browserNoLoc: '此瀏覽器不支援定位',
     locPerm: '定位失敗，請允許位置權限',
     inputHotel: '請先輸入飯店或地址',
@@ -356,6 +377,8 @@ const TRANSLATIONS = {
     showing: '先顯示 {n} 間，正在補充附近寺廟…',
     locMy: '我的位置',
     locBtn: '📍 定位我的位置',
+    nearbyIdle: '尚未搜尋附近寺廟',
+    disclaimer: '營業時間與資訊可能變動，請以寺廟公告為準。',
     adminMode: '管理模式：儲存後會直接寫入資料庫。',
     dragHint: '拖曳圖片可調整顯示位置',
     autoUpload: '選擇圖片後會自動上傳',
@@ -363,6 +386,16 @@ const TRANSLATIONS = {
     featuredLabel: '置頂推薦 (Featured)',
     igVideo: 'IG 影片',
     ytVideo: 'YouTube 影片',
+    igLink: 'IG 連結',
+    coordsInput: '座標（緯度, 經度）',
+    coordsInvalid: '座標格式錯誤，請輸入「緯度, 經度」',
+    mapServiceWait: '地圖服務尚未載入，請稍候',
+    noCover: '尚未上傳',
+    saved: '已儲存',
+    favFail: '收藏失敗：',
+    removeFail: '移除失敗：',
+    startLocFail: '無法取得起點位置',
+    personUnit: '人',
     gMap: 'Google Maps',
     hours: '營業時間',
     lat: '緯度',
@@ -372,6 +405,10 @@ const TRANSLATIONS = {
     catInput: '類型',
     nameInput: '寺廟名稱',
     coverImg: '封面圖',
+    profileName: '姓名',
+    profilePhone: '手機號碼',
+    profilePhonePlaceholder: '請輸入手機號碼',
+    profileHint: '儲存後，實體商品與服務商品結帳會自動帶入這三項資料。',
     saveBtn: '儲存',
     cancelBtn: '取消',
     delBtn: '刪除',
@@ -395,7 +432,8 @@ const TRANSLATIONS = {
     readFail: '讀取失敗: ',
     editSub: '編輯副標題',
     editSubPrompt: '編輯副標題',
-    unknownError: 'unknown',
+    backToTop: '回到頂部',
+    unknownError: '未知',
     ok: '完成'
   },
   en: {
@@ -404,6 +442,13 @@ const TRANSLATIONS = {
     home: 'Home',
     fav: 'Favorites',
     memberLabel: 'Member Center',
+    profileInfo: 'Profile',
+    myCoupons: 'My Coupons',
+    myOrders: 'My Orders',
+    storeDefault: 'Default Store',
+    adminQna: 'Order Q&A',
+    adminPanel: 'Admin',
+    authLoading: 'Loading login status...',
     langSwitch: 'Language',
     langZh: 'Chinese',
     langEn: 'English',
@@ -433,6 +478,7 @@ const TRANSLATIONS = {
     searchNearby: 'Search Nearby',
     mapMode: 'Map Mode',
     listMode: 'List Mode',
+    mapSwitchFood: 'Food Map',
     totalCount: '{n} temples',
     loadMore: 'Load More',
     details: 'Details',
@@ -482,9 +528,20 @@ const TRANSLATIONS = {
     loginFav: 'Please login to view favorites.',
     loginAddFav: 'Please login to add favorites.',
     loginRemoveFav: 'Please login to remove favorites.',
+    loginEditProfile: 'Please log in to edit your profile.',
+    loginSaveProfile: 'Please log in to save changes.',
+    profileLoadFail: 'Failed to load. Please try again later.',
+    profileSaveSuccess: 'Saved. We will auto-fill next checkout.',
+    profileSaveFail: 'Save failed.',
+    loadFailTitle: 'Load failed',
+    loadFailDesc: 'Please refresh or try again later.',
+    loadingTitle: 'Loading...',
+    loadingDesc: 'Fetching the latest data.',
     importing: 'Importing...',
     importSuccess: 'Import success! Reloading...',
     importFail: 'Import failed: ',
+    importEmpty: 'No data in file.',
+    importConfirm: 'About to import {n} items. This will overwrite existing data. Continue?',
     saveFail: 'Save failed: ',
     delConfirm: 'Delete this place? Cannot be undone.',
     delSuccess: 'Deleted',
@@ -503,6 +560,8 @@ const TRANSLATIONS = {
     mapLoad: 'Loading map...',
     mapFail: 'Map load failed',
     noKey: 'Google Maps Key missing',
+    mapKeyFail: 'Unable to load Google Maps key',
+    mapKeyFailStatus: 'Unable to load Google Maps key (HTTP {status})',
     browserNoLoc: 'Browser does not support geolocation',
     locPerm: 'Geolocation failed, please allow permission',
     inputHotel: 'Please enter hotel or address',
@@ -516,6 +575,8 @@ const TRANSLATIONS = {
     showing: 'Showing {n} places, loading more...',
     locMy: 'My Location',
     locBtn: '📍 Locate Me',
+    nearbyIdle: 'No nearby search yet.',
+    disclaimer: 'Hours and info may change. Please check temple notices.',
     adminMode: 'Admin Mode: Saves directly to DB.',
     dragHint: 'Drag image to adjust position',
     autoUpload: 'Auto upload on select',
@@ -523,6 +584,16 @@ const TRANSLATIONS = {
     featuredLabel: 'Featured',
     igVideo: 'IG Video',
     ytVideo: 'YouTube Video',
+    igLink: 'Instagram link',
+    coordsInput: 'Coordinates (lat, lng)',
+    coordsInvalid: 'Invalid coordinates. Use "lat, lng".',
+    mapServiceWait: 'Map service is still loading. Please try again.',
+    noCover: 'Not uploaded yet',
+    saved: 'Saved',
+    favFail: 'Favorite failed: ',
+    removeFail: 'Remove failed: ',
+    startLocFail: 'Unable to get the start location',
+    personUnit: 'people',
     gMap: 'Google Maps',
     hours: 'Hours',
     lat: 'Lat',
@@ -532,6 +603,10 @@ const TRANSLATIONS = {
     catInput: 'Type',
     nameInput: 'Name',
     coverImg: 'Cover',
+    profileName: 'Name',
+    profilePhone: 'Phone',
+    profilePhonePlaceholder: 'Enter phone number',
+    profileHint: 'Saved profile will auto-fill checkout for physical and service items.',
     saveBtn: 'Save',
     cancelBtn: 'Cancel',
     delBtn: 'Delete',
@@ -555,6 +630,7 @@ const TRANSLATIONS = {
     readFail: 'Read failed: ',
     editSub: 'Edit Subtitle',
     editSubPrompt: 'Edit Subtitle',
+    backToTop: 'Back to top',
     unknownError: 'unknown',
     ok: 'Done'
   }
@@ -761,7 +837,7 @@ let toastTimer = null;
 function showToast(text){
   const el = document.getElementById('saveToast');
   if (!el) return;
-  el.textContent = text || '完成';
+  el.textContent = text || t('ok');
   el.style.display = 'block';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{ el.style.display = 'none'; }, 1600);
@@ -1023,13 +1099,13 @@ function safeRender(){
     render();
   }catch(err){
     if (!cardsEl) return;
-    cardsEl.innerHTML = '<div class="empty-state"><h3>載入失敗</h3><p>請重新整理或稍後再試。</p></div>';
+    cardsEl.innerHTML = `<div class="empty-state"><h3>${escapeHtml(t('loadFailTitle'))}</h3><p>${escapeHtml(t('loadFailDesc'))}</p></div>`;
   }
 }
 
 function showLoadingState(){
   if (!cardsEl) return;
-  cardsEl.innerHTML = '<div class="empty-state"><h3>載入中...</h3><p>正在抓取最新資料。</p></div>';
+  cardsEl.innerHTML = `<div class="empty-state"><h3>${escapeHtml(t('loadingTitle'))}</h3><p>${escapeHtml(t('loadingDesc'))}</p></div>`;
 }
 
 function setSyncIndicator(loading){
@@ -1042,7 +1118,7 @@ function setNearbyCollapsed(collapsed){
   nearbyPanel.classList.toggle('collapsed', collapsed);
   if (nearbyBody) nearbyBody.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
   if (nearbyToggle){
-    nearbyToggle.textContent = collapsed ? '展開' : '收合';
+    nearbyToggle.textContent = collapsed ? t('expand') : t('collapse');
     nearbyToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
   }
 }
@@ -1104,7 +1180,9 @@ async function getGoogleMapsKey(){
       return googleMapsKey;
     }
     if (nearbyMapEl){
-      const msg = res.status ? `無法讀取 Google Maps Key（HTTP ${res.status}）` : '無法讀取 Google Maps Key';
+      const msg = res.status
+        ? t('mapKeyFailStatus', { status: res.status })
+        : t('mapKeyFail');
       nearbyMapEl.textContent = msg;
     }
   }catch(_){}
@@ -1115,7 +1193,7 @@ async function ensureGoogleMaps(){
   if (googleLoadingPromise) return googleLoadingPromise;
   
   googleLoadingPromise = new Promise(async (resolve) => {
-    if (nearbyMapEl) nearbyMapEl.textContent = '正在載入地圖元件...';
+    if (nearbyMapEl) nearbyMapEl.textContent = t('mapLoad');
     const key = await getGoogleMapsKey();
     if (!key){
       if (nearbyMapEl) nearbyMapEl.textContent = t('noKey');
@@ -1229,10 +1307,10 @@ async function checkAdmin(){
                 try { obj = JSON.parse(obj); } catch(_) {}
               }
               const items = Array.isArray(obj) ? obj : (obj && obj.items || []);
-              if (!items.length) return alert('檔案內無資料');
-              if (!confirm(`準備匯入 ${items.length} 筆資料，這將會覆蓋現有資料。確定嗎？`)) return;
+              if (!items.length) return alert(t('importEmpty'));
+              if (!confirm(t('importConfirm', { n: items.length }))) return;
               
-              btnImport.textContent = '匯入中...';
+              btnImport.textContent = t('importing');
               btnImport.disabled = true;
               
               // 使用批次同步接口寫入資料庫
@@ -1243,11 +1321,11 @@ async function checkAdmin(){
                 body: JSON.stringify({ items })
               });
               
-              alert('救援成功！資料已寫回資料庫。頁面將重新整理。');
+              alert(t('importSuccess'));
               location.reload();
             } catch (err) {
-              alert('匯入失敗：' + err.message);
-              btnImport.textContent = '匯入救援檔';
+              alert(t('importFail') + err.message);
+              btnImport.textContent = t('import');
               btnImport.disabled = false;
             }
           };
@@ -1264,7 +1342,7 @@ async function checkAdmin(){
       btnSub.onclick = async () => {
         const el = document.getElementById('pageSubtitle');
         const oldVal = el.textContent;
-        const newVal = prompt('編輯副標題', oldVal);
+        const newVal = prompt(t('editSubPrompt'), oldVal);
         if (newVal && newVal !== oldVal) {
           try {
             const res = await fetch('/api/temples/meta', {
@@ -1277,10 +1355,10 @@ async function checkAdmin(){
             if (data.ok) {
               el.textContent = newVal;
             } else {
-              alert('儲存失敗: ' + (data.error || 'unknown'));
+              alert(t('saveFail') + (data.error || t('unknownError')));
             }
           } catch(e) {
-            alert('儲存失敗: ' + e.message);
+            alert(t('saveFail') + e.message);
           }
         }
       };
@@ -1293,7 +1371,7 @@ async function checkAdmin(){
         if (!statsModal) return;
 
         btnStats.disabled = true;
-        btnStats.textContent = '讀取中...';
+        btnStats.textContent = t('reading');
         try {
           // Ensure Chart.js is loaded
           if (typeof Chart === 'undefined') {
@@ -1308,7 +1386,7 @@ async function checkAdmin(){
 
           const res = await fetch('/api/admin/temple-stats?days=14', { credentials: 'include' });
           const data = await res.json();
-          if (!data.ok) throw new Error(data.error || '讀取失敗');
+          if (!data.ok) throw new Error(data.error || t('readFail'));
           
           const statsModalBody = document.getElementById('statsModalBody');
           if (!statsModalBody) return;
@@ -1320,12 +1398,12 @@ async function checkAdmin(){
           statsModalBody.innerHTML = `
             <div style="padding:16px; display:grid; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size:18px; font-weight:800;">流量統計</div>
-                <button class="modal-close" onclick="document.getElementById('statsModal').close()">關閉</button>
+                <div style="font-size:18px; font-weight:800;">${escapeHtml(t('trafficStats'))}</div>
+                <button class="modal-close" onclick="document.getElementById('statsModal').close()">${escapeHtml(t('close'))}</button>
               </div>
               <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px;">
-                <div style="font-size:12px; color:#64748b;">總累積不重複訪客</div>
-                <div style="font-size:24px; font-weight:800; color:#0f172a;">${totalUsers.toLocaleString()} 人</div>
+                <div style="font-size:12px; color:#64748b;">${escapeHtml(t('totalVisitors'))}</div>
+                <div style="font-size:24px; font-weight:800; color:#0f172a;">${totalUsers.toLocaleString()} ${escapeHtml(t('personUnit'))}</div>
               </div>
               <div><canvas id="statsChartCanvas"></canvas></div>
             </div>
@@ -1336,14 +1414,14 @@ async function checkAdmin(){
           const ctx = document.getElementById('statsChartCanvas').getContext('2d');
           new Chart(ctx, {
             type: 'bar',
-            data: { labels, datasets: [{ label: '每日不重複訪客', data: counts, backgroundColor: 'rgba(255, 90, 60, 0.6)', borderColor: 'rgba(255, 90, 60, 1)', borderWidth: 1 }] },
-            options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false }, title: { display: true, text: '過去 14 天每日流量' } } }
+            data: { labels, datasets: [{ label: t('dailyVisitors'), data: counts, backgroundColor: 'rgba(255, 90, 60, 0.6)', borderColor: 'rgba(255, 90, 60, 1)', borderWidth: 1 }] },
+            options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false }, title: { display: true, text: t('past14Days') } } }
           });
         } catch (e) {
-          alert('讀取失敗: ' + e.message);
+          alert(t('readFail') + e.message);
         } finally {
           btnStats.disabled = false;
-          btnStats.textContent = '流量統計';
+          btnStats.textContent = t('stats');
         }
       };
     }
@@ -1371,6 +1449,26 @@ function setLanguage(lang) {
   if (btnFav) btnFav.textContent = t('fav');
   const memLabel = document.querySelector('.member-menu-label');
   if (memLabel) memLabel.textContent = t('memberLabel');
+  const replaceLinkTextWithBadge = (link, text) => {
+    if (!link) return;
+    const badge = link.querySelector('span');
+    link.textContent = '';
+    link.append(document.createTextNode(text + (badge ? ' ' : '')));
+    if (badge) link.appendChild(badge);
+  };
+  const profileLink = document.querySelector('a[data-profile]');
+  if (profileLink) profileLink.textContent = t('profileInfo');
+  replaceLinkTextWithBadge(document.getElementById('userCouponsLink'), t('myCoupons'));
+  replaceLinkTextWithBadge(document.getElementById('userOrdersLink'), t('myOrders'));
+  const storeLink = document.querySelector('a[href="/account-store"]');
+  if (storeLink) storeLink.textContent = t('storeDefault');
+  replaceLinkTextWithBadge(document.getElementById('adminQnaLink'), t('adminQna'));
+  const adminPanelLink = document.querySelector('[data-admin-href="/admin"]');
+  if (adminPanelLink) adminPanelLink.textContent = t('adminPanel');
+  const authStatus = document.querySelector('[data-auth-status]');
+  if (authStatus && (authStatus.textContent === TRANSLATIONS['zh']['authLoading'] || authStatus.textContent === TRANSLATIONS['en']['authLoading'] || !authStatus.textContent)) {
+    authStatus.textContent = t('authLoading');
+  }
   const authBtn = document.querySelector('[data-auth-btn]');
   if (authBtn) {
     const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn();
@@ -1390,6 +1488,33 @@ function setLanguage(lang) {
   if (btnExport) btnExport.textContent = t('export');
   if (btnImport) btnImport.textContent = t('import');
   if (btnStats) btnStats.textContent = t('stats');
+  const mapSwitchLink = document.querySelector('a[href="/food-map"]');
+  if (mapSwitchLink) mapSwitchLink.textContent = t('mapSwitchFood');
+  const editSubtitleBtn = document.getElementById('btnEditSubtitle');
+  if (editSubtitleBtn) editSubtitleBtn.title = t('editSub');
+  const footerNote = document.querySelector('footer .footer-inner div:last-child');
+  if (footerNote) footerNote.textContent = t('disclaimer');
+  const toastEl = document.getElementById('saveToast');
+  if (toastEl) toastEl.textContent = t('saved');
+  if (countSyncEl) countSyncEl.textContent = t('syncing');
+  const profileDialog = document.getElementById('profileDialog');
+  if (profileDialog) {
+    const header = profileDialog.querySelector('header');
+    if (header) header.textContent = t('profileInfo');
+    const labels = profileDialog.querySelectorAll('.body label');
+    if (labels[0]) labels[0].textContent = t('profileName');
+    if (labels[2]) labels[2].textContent = t('profilePhone');
+    const profilePhoneEl = document.getElementById('profilePhone');
+    if (profilePhoneEl) profilePhoneEl.placeholder = t('profilePhonePlaceholder');
+    const hint = profileDialog.querySelector('.body .muted');
+    if (hint) hint.textContent = t('profileHint');
+    const profileCloseBtn = document.getElementById('profileClose');
+    if (profileCloseBtn) profileCloseBtn.textContent = t('cancelBtn');
+    const profileSaveBtn = document.getElementById('profileSave');
+    if (profileSaveBtn) profileSaveBtn.textContent = t('saveBtn');
+  }
+  const backToTop = document.getElementById('btnBackToTop');
+  if (backToTop) backToTop.title = t('backToTop');
 
   // Filters
   if (kwInput) kwInput.placeholder = t('searchPlaceholder');
@@ -1417,6 +1542,12 @@ function setLanguage(lang) {
   if (nearbyInput) nearbyInput.placeholder = t('nearbyPlaceholder');
   if (nearbySearch) nearbySearch.textContent = t('searchNearby');
   if (modeToggle) modeToggle.textContent = isMapMode ? t('listMode') : t('mapMode');
+  if (nearbyStatus && (nearbyStatus.textContent === TRANSLATIONS['zh']['nearbyIdle'] || nearbyStatus.textContent === TRANSLATIONS['en']['nearbyIdle'] || !nearbyStatus.textContent)) {
+    nearbyStatus.textContent = t('nearbyIdle');
+  }
+  if (nearbyMapEl && nearbyMapEl.childElementCount === 0) {
+    nearbyMapEl.textContent = t('mapLoad');
+  }
 
   safeRender();
 }
@@ -1903,7 +2034,9 @@ function render(){
     const coverImg = coverThumb
       ? `<img src="${escapeHtml(coverThumb)}" alt="${safeName}"${coverStyle} loading="${eager ? 'eager' : 'lazy'}" decoding="async"${eager ? ' fetchpriority="high"' : ''}>`
       : '';
-    const coverPreview = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}"${coverStyle}>` : '<div class="admin-preview-empty">尚未上傳</div>';
+    const coverPreview = coverUrl
+      ? `<img src="${escapeHtml(coverUrl)}" alt="${safeName}"${coverStyle}>`
+      : `<div class="admin-preview-empty">${escapeHtml(t('noCover'))}</div>`;
     const mapsUrl = safeUrl(item.maps);
     const introText = buildIntroText(item);
     const snippet = buildCardSnippet(item);
@@ -1914,52 +2047,52 @@ function render(){
     const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
         <div class="admin-grid">
-          <label>寺廟名稱<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
-          <label>類型<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
-          <label>地區<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
-          <label>評分
+          <label>${escapeHtml(t('nameInput'))}<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
+          <label>${escapeHtml(t('catInput'))}<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
+          <label>${escapeHtml(t('areaInput'))}<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
+          <label>${escapeHtml(t('rating'))}
             <div style="display:flex;gap:4px">
               <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5">
-              <button class="btn pill" type="button" data-fetch-rating="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">同步G</button>
+              <button class="btn pill" type="button" data-fetch-rating="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">${escapeHtml(t('syncG'))}</button>
             </div>
           </label>
           <label style="display:flex;align-items:center;gap:6px;grid-column:1/-1;background:#fff7ed;padding:8px;border-radius:8px;border:1px dashed #fdba74;">
             <input type="checkbox" data-admin-field="featured" ${(item.featured || item.featured_) ? 'checked' : ''}>
-            <span style="font-weight:700;color:#c2410c;font-size:12px;">置頂推薦 (Featured)</span>
+            <span style="font-weight:700;color:#c2410c;font-size:12px;">${escapeHtml(t('featuredLabel'))}</span>
           </label>
-          <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
-          <label>座標（緯度, 經度）
+          <label>${escapeHtml(t('addr'))}<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
+          <label>${escapeHtml(t('coordsInput'))}
             <input class="admin-input" data-admin-field="coords" value="${escapeHtml(coordValue)}" placeholder="13.7563, 100.5018">
           </label>
-          <label>營業時間<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
-          <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
-          <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="指定 Place ID 以修正評論"></label>
-          <label>IG 連結<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
-          <label>YouTube 影片<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
-          <label class="admin-cover">封面圖
+          <label>${escapeHtml(t('hours'))}<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
+          <label>${escapeHtml(t('gMap'))}<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
+          <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="${escapeHtml(t('placeIdHint'))}"></label>
+          <label>${escapeHtml(t('igLink'))}<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
+          <label>${escapeHtml(t('ytVideo'))}<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
+          <label class="admin-cover">${escapeHtml(t('coverImg'))}
             <div class="admin-upload">
               <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
               <div>
                 <input class="admin-file" data-admin-file="cover" type="file" accept="image/*">
                 <input type="hidden" class="admin-input" data-admin-field="cover" value="${escapeHtml(item.cover || '')}">
                 <input type="hidden" class="admin-input" data-admin-field="coverPos" value="${escapeHtml(coverPos)}">
-                <div class="admin-upload-hint">選擇圖片後會自動上傳</div>
-                <div class="admin-upload-hint">拖曳圖片可調整顯示位置</div>
+                <div class="admin-upload-hint">${escapeHtml(t('autoUpload'))}</div>
+                <div class="admin-upload-hint">${escapeHtml(t('dragHint'))}</div>
                 <div class="admin-upload-status" data-admin-status="cover"></div>
               </div>
             </div>
           </label>
         </div>
-        <label class="admin-field">寺廟介紹
+        <label class="admin-field">${escapeHtml(t('desc'))}
           <textarea class="admin-textarea" data-admin-field="intro">${escapeHtml(introText)}</textarea>
         </label>
         <div class="admin-actions">
-          <button class="btn ghost" data-admin-save="${safeId}">儲存</button>
-          <button class="btn ghost" data-admin-cancel>取消</button>
-          ${item.id ? '<button class="btn ghost" data-admin-delete>刪除</button>' : ''}
+          <button class="btn ghost" data-admin-save="${safeId}">${escapeHtml(t('saveBtn'))}</button>
+          <button class="btn ghost" data-admin-cancel>${escapeHtml(t('cancelBtn'))}</button>
+          ${item.id ? `<button class="btn ghost" data-admin-delete>${escapeHtml(t('delBtn'))}</button>` : ''}
           <span class="admin-msg" data-admin-msg></span>
         </div>
-        <div class="admin-hint">管理模式：儲存後會直接寫入資料庫。</div>
+        <div class="admin-hint">${escapeHtml(t('adminMode'))}</div>
       </div>
     ` : '';
     return `<article class="card" ${cardStyle} data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
@@ -2024,7 +2157,7 @@ function render(){
         favs = data.favorites || [];
         safeRender();
       }catch(err){
-        alert('收藏失敗：'+ (err.message||err));
+        alert(t('favFail') + (err.message||err));
       }
     };
   });
@@ -2038,7 +2171,7 @@ function render(){
       const input = wrap.querySelector('[data-admin-field="rating"]');
       
       if(!window.google || !window.google.maps || !window.google.maps.places){
-        alert('地圖服務尚未載入，請稍候');
+        alert(t('mapServiceWait'));
         ensureGoogleMaps();
         return;
       }
@@ -2049,12 +2182,12 @@ function render(){
       const service = new google.maps.places.PlacesService(document.createElement('div'));
       
       const onResult = (place, status) => {
-        btn.textContent = '同步G';
+        btn.textContent = t('syncG');
         btn.disabled = false;
         if(status === google.maps.places.PlacesServiceStatus.OK && place && place.rating){
           input.value = place.rating;
         } else {
-          alert('無法取得 Google 評分');
+          alert(t('ratingFail'));
         }
       };
 
@@ -2083,9 +2216,9 @@ function render(){
         if(stat === google.maps.places.PlacesServiceStatus.OK && res && res[0]){
           service.getDetails({ placeId: res[0].place_id, fields:['rating'] }, onResult);
         } else {
-          btn.textContent = '同步G';
+          btn.textContent = t('syncG');
           btn.disabled = false;
-          alert('Google Maps 上找不到此地點');
+          alert(t('gmapFail'));
         }
       });
     };
@@ -2125,7 +2258,7 @@ function render(){
         if (hasCoords){
           const pair = parseLatLngInput(coordRaw);
           if (!pair){
-            alert('座標格式錯誤，請輸入「緯度, 經度」');
+            alert(t('coordsInvalid'));
             return;
           }
           latVal = pair.lat;
@@ -2172,17 +2305,17 @@ function render(){
           });
           const data = await res.json().catch(()=>({}));
           if (res.status === 401){
-            alert('需要管理員權限才能編輯。');
+            alert(t('needAdmin'));
             return;
           }
           if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-          setMsg('已儲存');
-          showToast('已儲存');
+          setMsg(t('saved'));
+          showToast(t('saved'));
           editingId = '';
           newItem = null;
           await loadRemote();
         }catch(err){
-          alert('儲存失敗：' + (err.message||err));
+          alert(t('saveFail') + (err.message||err));
         }finally{
           btn.disabled = false;
         }
@@ -2194,7 +2327,7 @@ function render(){
         if (!wrap) return;
         const id = wrap.getAttribute('data-admin-id');
         if (!id) return;
-        if (!confirm('確定要刪除這筆寺廟嗎？刪除後無法復原。')) return;
+        if (!confirm(t('delConfirm'))) return;
         const msgEl = wrap.querySelector('[data-admin-msg]');
         const setMsg = (text)=>{
           if (!msgEl) return;
@@ -2209,16 +2342,16 @@ function render(){
           });
           const data = await res.json().catch(()=>({}));
           if (res.status === 401){
-            alert('需要管理員權限才能刪除。');
+            alert(t('needAdmin'));
             return;
           }
           if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
-          setMsg('已刪除');
-          showToast('已刪除');
+          setMsg(t('delSuccess'));
+          showToast(t('delSuccess'));
           editingId = '';
           await loadRemote();
         }catch(err){
-          alert('刪除失敗：' + (err.message||err));
+          alert(t('delFail') + (err.message||err));
         }finally{
           btn.disabled = false;
         }
@@ -2242,14 +2375,14 @@ function render(){
         const posInput = wrap.querySelector('[data-admin-field="coverPos"]');
         const statusEl = wrap.querySelector('[data-admin-status="cover"]');
         const setStatus = (text)=>{ if (statusEl) statusEl.textContent = text || ''; };
-        setStatus('上傳中…');
+        setStatus(t('uploading'));
         try{
           const url = await uploadCoverFile(file);
           if (hidden) hidden.value = url;
           if (posInput && !posInput.value) posInput.value = '50% 50%';
           const posVal = posInput ? posInput.value : '50% 50%';
           if (previewEl) previewEl.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="object-position:${escapeHtml(posVal)};">`;
-          setStatus('已上傳');
+          setStatus(t('uploaded'));
           const card = wrap.closest('.card');
           if (card){
             const coverImg = card.querySelector('.cover img');
@@ -2269,8 +2402,8 @@ function render(){
           }
           initCoverPositionControls(previewEl);
         }catch(err){
-          setStatus('上傳失敗');
-          alert('封面圖上傳失敗：' + (err.message||err));
+          setStatus(t('uploadFail'));
+          alert(t('coverFail') + (err.message||err));
         }
       };
     });
@@ -2283,7 +2416,7 @@ if (modeToggle) {
   modeToggle.onclick = () => {
     isMapMode = !isMapMode;
     if (isMapMode) {
-      modeToggle.textContent = '列表模式';
+      modeToggle.textContent = t('listMode');
       cardsEl.style.display = 'none';
       mainMapEl.style.display = 'block';
       // 切換到地圖模式時，若地圖尚未初始化則初始化，否則觸發 resize 並更新標記
@@ -2350,7 +2483,7 @@ function initMainMap() {
               strokeColor: "white",
               strokeWeight: 2,
             },
-            title: "您的位置"
+            title: t('locMy')
           });
           locBtn.innerHTML = t('locBtn');
         },
@@ -2739,7 +2872,7 @@ function loadGooglePlaceDetails(item, container) {
       <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; text-align:center;">
         <div style="color:#94a3b8; font-size:13px; display:flex; align-items:center; justify-content:center; gap:8px;">
           <span style="display:inline-block; width:14px; height:14px; border:2px solid #cbd5e1; border-top-color:#64748b; border-radius:50%; animation:spin 1s linear infinite;"></span>
-          正在載入 Google 評價...
+          ${escapeHtml(t('loadingReviews'))}
         </div>
       </div>`;
     return;
@@ -2755,7 +2888,7 @@ function loadGooglePlaceDetails(item, container) {
       if (statusDet === google.maps.places.PlacesServiceStatus.OK && place) {
         renderGoogleReviews(place, container);
       } else {
-        container.innerHTML = '<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">無法取得詳細評價 (ID 無效)</div>';
+        container.innerHTML = `<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">${escapeHtml(t('failReviewsId'))}</div>`;
       }
     });
     return;
@@ -2795,11 +2928,11 @@ function loadGooglePlaceDetails(item, container) {
         if (statusDet === google.maps.places.PlacesServiceStatus.OK && place) {
           renderGoogleReviews(place, container);
         } else {
-          container.innerHTML = '<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">無法取得詳細評價</div>';
+          container.innerHTML = `<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">${escapeHtml(t('failReviews'))}</div>`;
         }
       });
     } else {
-      container.innerHTML = '<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">Google Maps 上找不到此地點</div>';
+      container.innerHTML = `<div style="padding:15px;color:#94a3b8;font-size:13px;text-align:center;background:#f8fafc;border-radius:12px;">${escapeHtml(t('gmapFail'))}</div>`;
     }
   });
 }
@@ -2828,8 +2961,8 @@ function renderGoogleReviews(place, container) {
         <div style="display:flex; align-items:center; gap:10px;">
           <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style="width:20px; height:20px;">
           <div>
-            <div style="font-weight:700; font-size:13px; color:#0f172a; line-height:1.2;">Google 評價</div>
-            <div style="font-size:11px; color:#64748b;">${total.toLocaleString()} 則評論</div>
+            <div style="font-weight:700; font-size:13px; color:#0f172a; line-height:1.2;">${escapeHtml(t('gReviews'))}</div>
+            <div style="font-size:11px; color:#64748b;">${escapeHtml(t('reviewsCount', { n: total.toLocaleString() }))}</div>
           </div>
         </div>
         <div style="text-align:right;">
@@ -2865,12 +2998,12 @@ function renderGoogleReviews(place, container) {
     });
     html += `</div>`;
   } else {
-    html += `<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">暫無評論內容</div>`;
+    html += `<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">${escapeHtml(t('noReviews'))}</div>`;
   }
 
   html += `
       <a href="${escapeHtml(safeUrl(place.url) || '#')}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:13px; font-weight:600; color:#2563eb; text-decoration:none; transition:background 0.2s;">
-        查看更多 Google Maps 評論 →
+        ${escapeHtml(t('seeMore'))}
       </a>
     </div>
   `;
@@ -2961,7 +3094,7 @@ async function refreshFavorites(){
   }catch(_){ return false; }
 }
 async function toggleFav(id){
-  if (!checkLoginOrRedirect('請先登入會員才能加入收藏。')) return;
+  if (!checkLoginOrRedirect(t('loginAddFav'))) return;
   try{
     const action = favs.includes(id) ? 'remove' : 'add';
     const res = await fetch('/api/me/temple-favs',{
@@ -2971,12 +3104,12 @@ async function toggleFav(id){
       body: JSON.stringify({ id, action })
     });
     const data = await res.json().catch(()=>({}));
-    if (res.status === 401){ alert('請先登入後再收藏'); return; }
+    if (res.status === 401){ alert(t('loginAddFav')); return; }
     if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
     favs = data.favorites || [];
     safeRender();
   }catch(err){
-    alert('收藏失敗：' + (err.message||err));
+    alert(t('favFail') + (err.message||err));
   }
 }
 function openFavList(){
@@ -3037,7 +3170,7 @@ function openFavList(){
               const firstItem = DATA.find(it => it.id === favs[0]);
               const coords = getCachedCoords(firstItem);
               if (coords) resolve(coords);
-              else reject(new Error('無法取得起點位置'));
+              else reject(new Error(t('startLocFail')));
             }
           );
         });
@@ -3049,7 +3182,7 @@ function openFavList(){
         renderTripResult(sorted, gmapsUrl, startCoords);
         tripResultModal.showModal();
       } catch (err) {
-        alert('路線規劃失敗：' + err.message);
+        alert(t('tripFail') + err.message);
       } finally {
         planBtn.textContent = t('planTrip');
         planBtn.disabled = false;
@@ -3058,7 +3191,7 @@ function openFavList(){
   }
 }
 async function removeFav(id){
-  if (!checkLoginOrRedirect('請先登入會員才能移除收藏。')) return;
+  if (!checkLoginOrRedirect(t('loginRemoveFav'))) return;
   try{
     const res = await fetch('/api/me/temple-favs',{
       method:'POST',
@@ -3073,7 +3206,7 @@ async function removeFav(id){
     const dlg = document.getElementById('foodModal');
     if (dlg.open) openFavList();
   }catch(err){
-    alert('移除失敗：' + (err.message||err));
+    alert(t('removeFail') + (err.message||err));
   }
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
