@@ -622,11 +622,19 @@ function safeUrl(input){
   }catch(_){}
   return '';
 }
-function buildThumbUrl(input, width=520){
+const COVER_THUMB_QUALITY = 58;
+function getCoverThumbWidth(){
+  if (typeof window === 'undefined') return 520;
+  const vw = Math.max(320, Math.min(1200, window.innerWidth || 1200));
+  if (vw <= 520) return 360;
+  if (vw <= 900) return 420;
+  return 520;
+}
+function buildThumbUrl(input, width){
   const raw = safeUrl(input);
   if (!raw) return '';
-  const w = Math.max(120, Math.min(1200, Number(width)||520));
-  return `/api/img?u=${encodeURIComponent(raw)}&w=${w}&q=65&fmt=webp`;
+  const w = Math.max(120, Math.min(1200, Number(width || getCoverThumbWidth()) || 520));
+  return `/api/img?u=${encodeURIComponent(raw)}&w=${w}&q=${COVER_THUMB_QUALITY}&fmt=webp`;
 }
 function isIgCoverUrl(input){
   const raw = safeUrl(input);
@@ -919,7 +927,7 @@ function applyCoverToDom(item, url){
   if (!cover) return;
   item.cover = cover;
   const pos = safeObjectPosition(item.coverPos || item.cover_pos || '50% 50%');
-  const coverThumb = buildThumbUrl(cover, 520);
+  const coverThumb = buildThumbUrl(cover);
   const card = findCardById(item.id);
   if (!card) return;
   const coverBox = card.querySelector('.cover');
@@ -1885,7 +1893,7 @@ function render(){
     let coverUrl = safeUrl(item.cover);
     const isIgCover = isIgCoverUrl(coverUrl);
     if (isIgCover && !ALLOW_IG_COVER) coverUrl = '';
-    const coverThumb = coverUrl && !isIgCover ? buildThumbUrl(coverUrl, 520) : '';
+    const coverThumb = coverUrl && !isIgCover ? buildThumbUrl(coverUrl) : '';
     const coverPos = safeObjectPosition(item.coverPos || item.cover_pos);
     const hasLat = item.lat !== undefined && item.lat !== null && String(item.lat).trim() !== '';
     const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
