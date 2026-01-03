@@ -674,8 +674,11 @@ function makeCouponCode(deity){
 // Foods helpers (for food map)
 function foodKey(id){ return `FOOD:${id}`; }
 function parseLatLngPair(lat, lng){
-  const latNum = Number(lat);
-  const lngNum = Number(lng);
+  const latStr = String(lat ?? '').trim();
+  const lngStr = String(lng ?? '').trim();
+  if (!latStr || !lngStr) return null;
+  const latNum = Number(latStr);
+  const lngNum = Number(lngStr);
   if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return null;
   if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return null;
   return { lat: latNum, lng: lngNum };

@@ -1515,11 +1515,22 @@ function markGeoCacheDirty(){
   }, 1200);
 }
 function parseLatLngPair(lat, lng){
-  const latNum = Number(lat);
-  const lngNum = Number(lng);
+  const latStr = String(lat ?? '').trim();
+  const lngStr = String(lng ?? '').trim();
+  if (!latStr || !lngStr) return null;
+  const latNum = Number(latStr);
+  const lngNum = Number(lngStr);
   if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return null;
   if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return null;
   return { lat: latNum, lng: lngNum };
+}
+function parseLatLngInput(input){
+  const raw = String(input ?? '').trim();
+  if (!raw) return null;
+  const normalized = raw.replace(/，/g, ',');
+  const parts = normalized.split(/[,\s]+/).filter(Boolean);
+  if (parts.length < 2) return null;
+  return parseLatLngPair(parts[0], parts[1]);
 }
 function extractLatLngFromText(text){
   const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
@@ -1876,6 +1887,9 @@ function render(){
     if (isIgCover && !ALLOW_IG_COVER) coverUrl = '';
     const coverThumb = coverUrl && !isIgCover ? buildThumbUrl(coverUrl, 520) : '';
     const coverPos = safeObjectPosition(item.coverPos || item.cover_pos);
+    const hasLat = item.lat !== undefined && item.lat !== null && String(item.lat).trim() !== '';
+    const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
+    const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -1906,8 +1920,9 @@ function render(){
             <span style="font-weight:700;color:#c2410c;font-size:12px;">置頂推薦 (Featured)</span>
           </label>
           <label>地址<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
-          <label>緯度<input class="admin-input" data-admin-field="lat" value="${escapeHtml(item.lat ?? '')}"></label>
-          <label>經度<input class="admin-input" data-admin-field="lng" value="${escapeHtml(item.lng ?? '')}"></label>
+          <label>座標（緯度, 經度）
+            <input class="admin-input" data-admin-field="coords" value="${escapeHtml(coordValue)}" placeholder="13.7563, 100.5018">
+          </label>
           <label>營業時間<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
           <label>Google Maps<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="指定 Place ID 以修正評論"></label>
@@ -2095,6 +2110,19 @@ function render(){
         
         const introRaw = getVal('intro') || '';
         const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : [];
+        const coordRaw = read('coords');
+        const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
+        let latVal;
+        let lngVal;
+        if (hasCoords){
+          const pair = parseLatLngInput(coordRaw);
+          if (!pair){
+            alert('座標格式錯誤，請輸入「緯度, 經度」');
+            return;
+          }
+          latVal = pair.lat;
+          lngVal = pair.lng;
+        }
 
         const payload = {
           ...original,
@@ -2106,8 +2134,8 @@ function render(){
           featured_: read('featured') ?? original.featured_,
           rating: getVal('rating'),
           address: getVal('address'),
-          lat: getVal('lat'),
-          lng: getVal('lng'),
+          lat: latVal,
+          lng: lngVal,
           maps: getVal('maps'),
           googlePlaceId: getVal('googlePlaceId'),
           google_place_id: getVal('googlePlaceId'),
