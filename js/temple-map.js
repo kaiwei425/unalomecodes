@@ -3088,6 +3088,10 @@ function openModal(id){
     .filter(Boolean)
     .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
     .join('');
+  const ctaHtml = ctaUrl
+    ? `<a class="btn pill primary" href="${escapeHtml(ctaUrl)}" target="_blank" rel="noopener" style="padding:6px 10px;font-size:12px;">${escapeHtml(ctaLabel)}</a>`
+    : '';
+  const metaRow = [metaTags, ctaHtml].filter(Boolean).join('');
   body.innerHTML = `
     <div class="modal-body">
       <div class="modal-head">
@@ -3112,15 +3116,14 @@ function openModal(id){
       ` : ''}
       <div class="modal-section">
         <div><strong>${escapeHtml(t('addr'))}：</strong>${escapeHtml(item.address || '') || escapeHtml(t('unknownAddr'))}</div>
-        ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
+        ${metaRow ? `<div class="modal-tags" style="margin-top:8px;align-items:center;gap:8px;">${metaRow}</div>` : ''}
       </div>
       <div class="modal-section">
         <strong>${escapeHtml(t('reviews'))}</strong>
         <div id="googleReviewsBox" style="margin-top:4px;"></div>
       </div>
       <div class="modal-actions">
-        ${ctaUrl ? `<a class="btn primary" href="${escapeHtml(ctaUrl)}" target="_blank" rel="noopener">${escapeHtml(ctaLabel)}</a>` : ''}
-        <a class="btn ${ctaUrl ? 'ghost' : 'primary'}" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
+        <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
         ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">${escapeHtml(t('viewIg'))}</a>` : ''}
         <button class="btn ghost" data-fav="${safeId}">${escapeHtml(t('addFav'))}</button>
       </div>
