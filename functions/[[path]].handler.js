@@ -994,7 +994,7 @@ function normalizeFoodPayload(payload, fallbackId){
   str('name'); str('category'); str('area'); str('price');
   str('address'); str('hours'); str('maps'); str('ig');
   str('youtube'); str('igComment'); str('cover');
-  str('ownerId'); str('ownerName');
+  str('ownerId'); str('ownerName'); str('creatorLabel');
   
   if (body.coverPos !== undefined || body.cover_pos !== undefined) {
     out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
@@ -1038,6 +1038,7 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('intro', incoming.intro);
   assignIf('ownerId', incoming.ownerId);
   assignIf('ownerName', incoming.ownerName);
+  assignIf('creatorLabel', incoming.creatorLabel);
   assignIf('highlights', incoming.highlights);
   assignIf('dishes', incoming.dishes);
   assignIf('featured', incoming.featured);

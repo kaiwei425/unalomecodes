@@ -322,7 +322,8 @@ const TRANSLATIONS = {
     openGmaps: '開啟 Google Maps',
     viewIg: '在 IG 上查看',
     desc: '店家介紹',
-    creatorPick: '創作者精選',
+    creatorPick: '精選',
+    creatorTagLabel: '精選標籤名稱',
     allCreators: '全部創作者',
     creatorInvite: '輸入邀請碼',
     creatorInvitePrompt: '請輸入邀請碼',
@@ -543,7 +544,8 @@ const TRANSLATIONS = {
     openGmaps: 'Open Google Maps',
     viewIg: 'View on IG',
     desc: 'Description',
-    creatorPick: 'Creator Picks',
+    creatorPick: ' Picks',
+    creatorTagLabel: 'Featured tag name',
     allCreators: 'All Creators',
     creatorInvite: 'Enter Invite Code',
     creatorInvitePrompt: 'Enter invite code',
@@ -1782,6 +1784,10 @@ function setLanguage(lang) {
 function getOwnerName(item){
   return String(item && (item.ownerName || item.creatorName || item.creator || item.owner) || '').trim();
 }
+function getCreatorLabel(item){
+  const raw = String(item && (item.creatorLabel || item.creatorTag) || '').trim();
+  return raw || getOwnerName(item);
+}
 
 function updateCreatorFilterVisibility(){
   if (!fCreator) return;
@@ -2386,7 +2392,17 @@ function render(){
     const introText = buildIntroText(item);
     const snippet = buildCardSnippet(item);
     const ownerName = getOwnerName(item);
-    const creatorBadge = ownerName ? `<span class="badge-creator">${escapeHtml(ownerName)} ${escapeHtml(t('creatorPick'))}</span>` : '';
+    const creatorLabel = getCreatorLabel(item);
+    const pickSuffix = String(t('creatorPick') || '');
+    const pickTrim = pickSuffix.trim();
+    let creatorText = '';
+    if (creatorLabel){
+      creatorText = creatorLabel;
+      if (pickTrim && !creatorText.endsWith(pickTrim)){
+        creatorText += pickSuffix;
+      }
+    }
+    const creatorBadge = creatorText ? `<span class="badge-creator">${escapeHtml(creatorText)}</span>` : '';
     const canEditItem = isAdmin || (isCreator && creatorId && String(item.ownerId || '') === String(creatorId));
     const isEditing = canEditItem && editingId === editKey;
     
@@ -2398,6 +2414,7 @@ function render(){
           <label>${escapeHtml(t('nameInput'))}<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
           <label>${escapeHtml(t('catInput'))}<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>${escapeHtml(t('areaInput'))}<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
+          <label>${escapeHtml(t('creatorTagLabel'))}<input class="admin-input" data-admin-field="creatorLabel" value="${escapeHtml(item.creatorLabel || '')}"></label>
           <label>${escapeHtml(t('priceInput'))}
             <select class="admin-input" data-admin-field="price">
               <option value="">-</option>
@@ -2641,6 +2658,7 @@ function render(){
           ig: getVal('ig'),
           youtube: getVal('youtube'),
           igComment: getVal('igComment'),
+          creatorLabel: getVal('creatorLabel'),
           cover: getVal('cover'),
           coverPos: getVal('coverPos'),
           intro: introRaw,
@@ -3044,6 +3062,7 @@ function openNewItem(){
       ig: '',
       youtube: '',
       igComment: '',
+      creatorLabel: isCreator ? creatorName : '',
       cover: '',
       coverPos: '50% 50%',
       intro: '',
@@ -3053,6 +3072,7 @@ function openNewItem(){
   }else if (isCreator){
     newItem.ownerId = creatorId;
     newItem.ownerName = creatorName;
+    if (!newItem.creatorLabel) newItem.creatorLabel = creatorName;
   }
   editingId = newItem.__tempId;
   safeRender();
