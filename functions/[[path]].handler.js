@@ -994,6 +994,7 @@ function normalizeFoodPayload(payload, fallbackId){
   str('name'); str('category'); str('area'); str('price');
   str('address'); str('hours'); str('maps'); str('ig');
   str('youtube'); str('igComment'); str('cover');
+  str('ownerId'); str('ownerName');
   
   if (body.coverPos !== undefined || body.cover_pos !== undefined) {
     out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
@@ -1035,6 +1036,8 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('cover', incoming.cover);
   assignIf('coverPos', incoming.coverPos);
   assignIf('intro', incoming.intro);
+  assignIf('ownerId', incoming.ownerId);
+  assignIf('ownerName', incoming.ownerName);
   assignIf('highlights', incoming.highlights);
   assignIf('dishes', incoming.dishes);
   assignIf('featured', incoming.featured);
@@ -1877,6 +1880,27 @@ async function recordTempleMapStat(env, dateKey, clientId){
       await env.TEMPLES.put(totalCountKey, String(totalCount));
     }
   }catch(_){}
+}
+const CREATOR_INVITE_TTL = 60 * 60 * 24 * 30;
+function creatorInviteKey(code){
+  return `CREATOR_INVITE:${code}`;
+}
+function normalizeCreatorCode(input){
+  return String(input || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+}
+function generateCreatorInviteCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < 8; i++){
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+function isFoodCreator(record){
+  return !!(record && record.creatorFoods);
+}
+function resolveCreatorName(record){
+  return String(record && (record.creatorName || record.name || record.email) || '').trim();
 }
 const TRACK_EVENT_TTL = 60 * 60 * 24 * 180;
 function pickTrackStore(env){
@@ -4041,7 +4065,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             memberPerks: refreshed.memberPerks || {},
             wishlist: Array.isArray(refreshed.wishlist) ? refreshed.wishlist : [],
             guardian: refreshed.guardian || null,
-            quiz: refreshed.quiz || null
+            quiz: refreshed.quiz || null,
+            creatorFoods: !!refreshed.creatorFoods,
+            creatorName: resolveCreatorName(refreshed)
           }});
         }
       }catch(_){}
@@ -4057,8 +4083,83 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       memberPerks: record.memberPerks || {},
       wishlist: Array.isArray(record.wishlist) ? record.wishlist : [],
       guardian: record.guardian || null,
-      quiz: record.quiz || null
+      quiz: record.quiz || null,
+      creatorFoods: !!record.creatorFoods,
+      creatorName: resolveCreatorName(record)
     }});
+  }
+
+  if (pathname === '/api/creator/status' && request.method === 'GET'){
+    const record = await getSessionUserRecord(request, env);
+    if (!record){
+      return json({ ok:true, creator:false }, 200);
+    }
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record) }, 200);
+  }
+
+  if (pathname === '/api/creator/claim' && request.method === 'POST'){
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    const store = getUserStore(env);
+    if (!store) return json({ ok:false, error:'USER store not bound' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const code = normalizeCreatorCode(body.code);
+    if (!code) return json({ ok:false, error:'missing code' }, 400);
+    if (record.creatorFoods){
+      return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200);
+    }
+    const key = creatorInviteKey(code);
+    let invite = null;
+    try{
+      const raw = await store.get(key);
+      if (raw) invite = JSON.parse(raw);
+    }catch(_){}
+    if (!invite || !invite.code) return json({ ok:false, error:'invalid code' }, 400);
+    if (invite.used) return json({ ok:false, error:'code used' }, 400);
+    invite.used = true;
+    invite.usedBy = record.id;
+    invite.usedAt = new Date().toISOString();
+    try{
+      await store.put(key, JSON.stringify(invite), { expirationTtl: CREATOR_INVITE_TTL });
+    }catch(_){}
+    record.creatorFoods = true;
+    if (!record.creatorName){
+      record.creatorName = String(invite.label || record.name || record.email || '').trim();
+    }
+    record.creatorInviteCode = code;
+    await saveUserRecord(env, record);
+    return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200);
+  }
+
+  if (pathname === '/api/admin/creator/invite' && request.method === 'POST'){
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    const store = getUserStore(env);
+    if (!store) return json({ ok:false, error:'USER store not bound' }, 500);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const label = String(body.label || '').trim().slice(0, 80);
+    let code = '';
+    for (let i = 0; i < 5; i++){
+      const candidate = generateCreatorInviteCode();
+      const exists = await store.get(creatorInviteKey(candidate));
+      if (!exists){
+        code = candidate;
+        break;
+      }
+    }
+    if (!code) return json({ ok:false, error:'code_generation_failed' }, 500);
+    const invite = {
+      code,
+      label,
+      createdAt: new Date().toISOString(),
+      used: false
+    };
+    await store.put(creatorInviteKey(code), JSON.stringify(invite), { expirationTtl: CREATOR_INVITE_TTL });
+    return json({ ok:true, code, label });
   }
 
   if (pathname === '/api/fortune' && request.method === 'GET') {
@@ -4320,9 +4421,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return jsonWithHeaders({ ok:true, items }, 200, { 'Cache-Control': 'public, max-age=300, s-maxage=300' });
     }
     if (request.method === 'DELETE'){
-      {
-        const guard = await requireAdminWrite(request, env);
-        if (guard) return guard;
+      const isAdminUser = await isAdmin(request, env);
+      let creatorRecord = null;
+      if (!isAdminUser){
+        creatorRecord = await getSessionUserRecord(request, env);
+        if (!isFoodCreator(creatorRecord)) return json({ ok:false, error:'unauthorized' }, 401);
       }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       let id = url.searchParams.get('id') || '';
@@ -4333,6 +4436,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }catch(_){}
       }
       if (!id) return json({ ok:false, error:'missing id' }, 400);
+      if (!isAdminUser && creatorRecord){
+        const existing = await readFood(env, id);
+        if (!existing) return json({ ok:false, error:'not found' }, 404);
+        if (String(existing.ownerId || '') !== String(creatorRecord.id)){
+          return json({ ok:false, error:'forbidden' }, 403);
+        }
+      }
       const now = new Date().toISOString();
       await saveFood(env, { id, deleted:true, updatedAt: now });
       resetFoodsListMemoryCache();
@@ -4340,9 +4450,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return json({ ok:true, id, deleted:true });
     }
     if (request.method === 'POST'){
-      {
-        const guard = await requireAdminWrite(request, env);
-        if (guard) return guard;
+      const isAdminUser = await isAdmin(request, env);
+      let creatorRecord = null;
+      if (!isAdminUser){
+        creatorRecord = await getSessionUserRecord(request, env);
+        if (!isFoodCreator(creatorRecord)) return json({ ok:false, error:'unauthorized' }, 401);
       }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       try{
@@ -4351,7 +4463,18 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const incoming = normalizeFoodPayload(body, `food-${Date.now()}`);
         if (!incoming) return json({ ok:false, error:'missing id' }, 400);
         const existing = await readFood(env, incoming.id);
+        if (!isAdminUser && creatorRecord){
+          if (existing && String(existing.ownerId || '') !== String(creatorRecord.id)){
+            return json({ ok:false, error:'forbidden' }, 403);
+          }
+          incoming.ownerId = creatorRecord.id;
+          if (!incoming.ownerName) incoming.ownerName = resolveCreatorName(creatorRecord);
+        }
         const obj = mergeFoodRecord(existing, incoming);
+        if (!isAdminUser && creatorRecord){
+          obj.ownerId = creatorRecord.id;
+          if (!obj.ownerName) obj.ownerName = resolveCreatorName(creatorRecord);
+        }
         obj.updatedAt = now;
         if (!parseLatLngPair(obj.lat, obj.lng)){
           const coords = await resolveFoodCoords(env, obj);

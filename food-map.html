@@ -76,6 +76,12 @@
                     <button type="button" id="btnAdd" style="display:none;">新增餐廳</button>
                     <button type="button" id="btnExport" style="display:none;">匯出備份</button>
                     <button type="button" id="btnImport" style="display:none;">匯入救援檔</button>
+                    <button type="button" id="btnCreatorCode" style="display:none;">產生邀請碼</button>
+                  </div>
+                  <button type="button" id="creatorToolsToggle" style="display:none;">創作者專區 ▾</button>
+                  <div class="member-menu-subpanel" id="creatorToolsPanel" style="display:none;">
+                    <button type="button" id="btnCreatorAdd" style="display:none;">新增餐廳</button>
+                    <button type="button" id="btnCreatorInvite">輸入邀請碼</button>
                   </div>
                 </div>
               </div>
@@ -99,6 +105,9 @@
             </select>
             <select id="fArea" class="filter-select">
               <option value="">全部地區</option>
+            </select>
+            <select id="fCreator" class="filter-select" style="display:none;">
+              <option value="">創作者專區</option>
             </select>
             <select id="fPrice" class="filter-select">
               <option value="">全部價位</option>
@@ -151,6 +160,7 @@
       <div class="count-tags" id="categoryCounts"></div>
       <button class="btn pill primary" id="modeToggle" style="margin-left:auto;">地圖模式</button>
     </div>
+    <div class="zone-tabs" id="zoneTabs"></div>
     <div class="cat-tabs" id="catTabs"></div>
     <div id="mainMap" class="main-map"></div>
     <div class="cards" id="cards"></div>

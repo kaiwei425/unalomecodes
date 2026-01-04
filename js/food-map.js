@@ -188,6 +188,27 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isOpen) closeAdmin(); else openAdmin();
       });
     }
+    const creatorToolsToggle = document.getElementById('creatorToolsToggle');
+    const creatorToolsPanel = document.getElementById('creatorToolsPanel');
+    if (creatorToolsToggle && creatorToolsPanel){
+      const setCreatorArrow = (isOpen)=>{
+        creatorToolsToggle.textContent = `${t('creatorZone')} ${isOpen ? '▴' : '▾'}`;
+      };
+      const closeCreator = ()=>{
+        creatorToolsPanel.style.display = 'none';
+        setCreatorArrow(false);
+      };
+      const openCreator = ()=>{
+        creatorToolsPanel.style.display = 'grid';
+        setCreatorArrow(true);
+      };
+      setCreatorArrow(false);
+      creatorToolsToggle.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const isOpen = creatorToolsPanel.style.display === 'grid';
+        if (isOpen) closeCreator(); else openCreator();
+      });
+    }
 
     if (closeBtn){
       closeBtn.addEventListener('click', ()=>{
@@ -207,12 +228,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!memberMenu) return;
         if (user){
           memberMenu.classList.add('is-visible');
+          checkCreator();
         }else{
           memberMenu.classList.remove('is-visible');
           if (panel) panel.style.display = 'none';
           if (arrow) arrow.textContent = '▾';
           if (adminToolsPanel) adminToolsPanel.style.display = 'none';
           if (adminToolsToggle) adminToolsToggle.textContent = `${t('adminTools')} ▾`;
+          if (creatorToolsPanel) creatorToolsPanel.style.display = 'none';
+          if (creatorToolsToggle) creatorToolsToggle.textContent = `${t('creatorZone')} ▾`;
+          isCreator = false;
+          creatorId = '';
+          creatorName = '';
+          renderZoneTabs();
         }
       });
     }
@@ -284,6 +312,9 @@ const TRANSLATIONS = {
     mapMode: '地圖模式',
     listMode: '列表模式',
     mapSwitchTemple: '寺廟地圖',
+    zoneAll: '全部',
+    creatorZone: '創作者專區',
+    myZone: '我的投稿',
     totalCount: '共 {n} 間',
     loadMore: '載入更多',
     details: '查看店家資訊',
@@ -291,6 +322,16 @@ const TRANSLATIONS = {
     openGmaps: '開啟 Google Maps',
     viewIg: '在 IG 上查看',
     desc: '店家介紹',
+    creatorPick: '創作者精選',
+    allCreators: '全部創作者',
+    creatorInvite: '輸入邀請碼',
+    creatorInvitePrompt: '請輸入邀請碼',
+    creatorInviteSuccess: '已開通創作者權限',
+    creatorInviteFail: '邀請碼無效或已使用',
+    creatorInviteCreate: '產生邀請碼',
+    creatorInviteLabel: '創作者名稱（可留空）',
+    creatorInviteReady: '邀請碼已產生',
+    creatorMode: '創作者模式：儲存後會直接寫入資料庫。',
     addr: '地址',
     reviews: 'Google 評分 & 評論',
     tripTitle: '半日吃喝路線',
@@ -340,6 +381,7 @@ const TRANSLATIONS = {
     loginRemoveFav: '請先登入會員才能移除收藏。',
     loginEditProfile: '請先登入再編輯基本資料',
     loginSaveProfile: '請先登入再儲存',
+    noPermission: '沒有權限執行此動作',
     profileLoadFail: '讀取失敗，請稍後再試',
     profileSaveSuccess: '已儲存，下次結帳自動帶入。',
     profileSaveFail: '儲存失敗',
@@ -491,6 +533,9 @@ const TRANSLATIONS = {
     mapMode: 'Map Mode',
     listMode: 'List Mode',
     mapSwitchTemple: 'Temple Map',
+    zoneAll: 'All',
+    creatorZone: 'Creators',
+    myZone: 'My Entries',
     totalCount: '{n} places',
     loadMore: 'Load More',
     details: 'Details',
@@ -498,6 +543,16 @@ const TRANSLATIONS = {
     openGmaps: 'Open Google Maps',
     viewIg: 'View on IG',
     desc: 'Description',
+    creatorPick: 'Creator Picks',
+    allCreators: 'All Creators',
+    creatorInvite: 'Enter Invite Code',
+    creatorInvitePrompt: 'Enter invite code',
+    creatorInviteSuccess: 'Creator access enabled',
+    creatorInviteFail: 'Invalid or used code',
+    creatorInviteCreate: 'Generate Invite Code',
+    creatorInviteLabel: 'Creator name (optional)',
+    creatorInviteReady: 'Invite code generated',
+    creatorMode: 'Creator mode: Saves directly to DB.',
     addr: 'Address',
     reviews: 'Google Ratings & Reviews',
     tripTitle: 'Half-day Trip',
@@ -547,6 +602,7 @@ const TRANSLATIONS = {
     loginRemoveFav: 'Please login to remove favorites.',
     loginEditProfile: 'Please log in to edit your profile.',
     loginSaveProfile: 'Please log in to save changes.',
+    noPermission: 'No permission to perform this action',
     profileLoadFail: 'Failed to load. Please try again later.',
     profileSaveSuccess: 'Saved. We will auto-fill next checkout.',
     profileSaveFail: 'Save failed.',
@@ -684,6 +740,7 @@ const categoryCountsEl = document.getElementById('categoryCounts');
 const countSyncEl = document.getElementById('countSync');
 const modeToggle = document.getElementById('modeToggle');
 const mainMapEl = document.getElementById('mainMap');
+const zoneTabs = document.getElementById('zoneTabs');
 
 const nearbyPanel = document.getElementById('nearbyPanel');
 const nearbyBody = document.getElementById('nearbyBody');
@@ -703,6 +760,12 @@ const btnAdd = document.getElementById('btnAdd');
 let btnExport = document.getElementById('btnExport');
 let btnImport = document.getElementById('btnImport');
 let btnStats = document.getElementById('btnStats');
+const btnCreatorCode = document.getElementById('btnCreatorCode');
+const fCreator = document.getElementById('fCreator');
+const creatorToolsToggle = document.getElementById('creatorToolsToggle');
+const creatorToolsPanel = document.getElementById('creatorToolsPanel');
+const btnCreatorAdd = document.getElementById('btnCreatorAdd');
+const btnCreatorInvite = document.getElementById('btnCreatorInvite');
 // ---------------------------
 
 function escapeHtml(s){
@@ -1387,6 +1450,10 @@ function geocodeWithGoogle(query){
 let DATA = [];
 let favs = [];
 let isAdmin = false;
+let isCreator = false;
+let creatorId = '';
+let creatorName = '';
+let currentZone = 'all';
 let editingId = '';
 let newItem = null;
 let currentLimit = 20;
@@ -1399,6 +1466,7 @@ function resetFilters(){
   if (kwInput) kwInput.value = '';
   if (fCat) fCat.value = '';
   if (fArea) fArea.value = '';
+  if (fCreator) fCreator.value = '';
   if (fPrice) fPrice.value = '';
   if (fSort) fSort.value = '';
   if (fStatus) fStatus.value = '';
@@ -1417,6 +1485,7 @@ async function checkAdmin(){
   if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnImport) btnImport.style.display = isAdmin ? 'inline-flex' : 'none';
   if (btnStats) btnStats.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (btnCreatorCode) btnCreatorCode.style.display = isAdmin ? 'inline-flex' : 'none';
 
   if (isAdmin) {
     // 匯出按鈕 (備份用)
@@ -1625,6 +1694,12 @@ function setLanguage(lang) {
     const isOpen = adminPanel && adminPanel.style.display === 'block';
     adminToolsToggle.textContent = `${t('adminTools')} ${isOpen ? '▴' : '▾'}`;
   }
+  const creatorToggle = document.getElementById('creatorToolsToggle');
+  if (creatorToggle) {
+    const creatorPanel = document.getElementById('creatorToolsPanel');
+    const isOpen = creatorPanel && creatorPanel.style.display === 'grid';
+    creatorToggle.textContent = `${t('creatorZone')} ${isOpen ? '▴' : '▾'}`;
+  }
   
   // Dropdown
   const dropBtn = document.querySelector('#adminDropdown > button');
@@ -1633,6 +1708,9 @@ function setLanguage(lang) {
   if (btnExport) btnExport.textContent = t('export');
   if (btnImport) btnImport.textContent = t('import');
   if (btnStats) btnStats.textContent = t('stats');
+  if (btnCreatorCode) btnCreatorCode.textContent = t('creatorInviteCreate');
+  if (btnCreatorAdd) btnCreatorAdd.textContent = t('add');
+  if (btnCreatorInvite) btnCreatorInvite.textContent = t('creatorInvite');
   const mapSwitchLink = document.querySelector('a[href="/templemap"]');
   if (mapSwitchLink) mapSwitchLink.textContent = t('mapSwitchTemple');
   const editSubtitleBtn = document.getElementById('btnEditSubtitle');
@@ -1700,10 +1778,74 @@ function setLanguage(lang) {
   safeRender();
 }
 
+function getOwnerName(item){
+  return String(item && (item.ownerName || item.creatorName || item.creator || item.owner) || '').trim();
+}
+
+function updateCreatorFilterVisibility(){
+  if (!fCreator) return;
+  const showCreator = currentZone === 'creator';
+  fCreator.style.display = showCreator ? '' : 'none';
+  if (!showCreator) fCreator.value = '';
+}
+
+function renderZoneTabs(){
+  if (!zoneTabs) return;
+  zoneTabs.innerHTML = '';
+  const zones = [
+    { value: 'all', label: t('zoneAll') },
+    { value: 'creator', label: t('creatorZone') }
+  ];
+  if (isCreator) zones.push({ value:'mine', label: t('myZone') });
+  zones.forEach(z => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'zone-tab';
+    btn.textContent = z.label;
+    btn.dataset.value = z.value;
+    btn.addEventListener('click', ()=>{
+      currentZone = z.value;
+      currentLimit = PAGE_SIZE;
+      updateCreatorFilterVisibility();
+      safeRender();
+    });
+    zoneTabs.appendChild(btn);
+  });
+  zoneTabs.querySelectorAll('.zone-tab').forEach(btn=>{
+    btn.classList.toggle('active', (btn.dataset.value || 'all') === currentZone);
+  });
+  updateCreatorFilterVisibility();
+}
+
+async function checkCreator(){
+  try{
+    const res = await fetch('/api/creator/status', { credentials:'include', cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    isCreator = !!(data && data.creator);
+    creatorId = data && data.id ? String(data.id) : '';
+    creatorName = data && data.name ? String(data.name) : '';
+  }catch(_){
+    isCreator = false;
+    creatorId = '';
+    creatorName = '';
+  }
+  if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
+  if (btnCreatorInvite) btnCreatorInvite.style.display = isCreator ? 'none' : 'inline-flex';
+  if (creatorToolsToggle){
+    creatorToolsToggle.style.display = (isCreator || (window.authState && window.authState.isLoggedIn && window.authState.isLoggedIn())) ? 'block' : 'none';
+    const panelOpen = creatorToolsPanel && creatorToolsPanel.style.display === 'grid';
+    creatorToolsToggle.textContent = `${t('creatorZone')} ${panelOpen ? '▴' : '▾'}`;
+  }
+  renderZoneTabs();
+  safeRender();
+}
+
 function initFilters(){
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object' && !item.deleted) : [];
+  const prevCreator = fCreator ? fCreator.value : '';
   fCat.innerHTML = `<option value="">${escapeHtml(t('allCats'))}</option>`;
   fArea.innerHTML= `<option value="">${escapeHtml(t('allAreas'))}</option>`;
+  if (fCreator) fCreator.innerHTML = `<option value="">${escapeHtml(t('allCreators'))}</option>`;
   const cats = Array.from(new Set(source.map(d=>mapCategory(d.category)).filter(Boolean)))
     .sort((a,b)=>{
       const ai = CATEGORY_ORDER.indexOf(a);
@@ -1748,6 +1890,17 @@ function initFilters(){
   fArea.options[0].textContent = t('allAreas');
   const areas = Array.from(new Set(source.map(d=>d.area).filter(Boolean))).sort();
   areas.forEach(a=>{ const opt=document.createElement('option');opt.value=a;opt.textContent=a;fArea.appendChild(opt); });
+  if (fCreator){
+    const creators = Array.from(new Set(source.map(getOwnerName).filter(Boolean))).sort();
+    creators.forEach(name=>{
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      fCreator.appendChild(opt);
+    });
+    if (prevCreator && creators.includes(prevCreator)) fCreator.value = prevCreator;
+  }
+  renderZoneTabs();
 }
 
 function mapCategory(value){
@@ -2090,6 +2243,8 @@ function render(){
   const price= fPrice.value;
   const status = fStatus ? fStatus.value : '';
   const sort = fSort ? fSort.value : '';
+  const zone = currentZone || 'all';
+  const creatorFilter = fCreator ? fCreator.value : '';
   const hasFilters = !!(kw || cat || area || price);
   const source = Array.isArray(DATA) ? DATA.filter(item=>item && typeof item === 'object') : [];
   let list = source.filter(item=>{
@@ -2108,6 +2263,15 @@ function render(){
     if (area && item.area !== area) return false;
     if (price && item.price !== price) return false;
     if (status === 'open' && !isOpenNow(item.hours)) return false;
+    if (zone === 'creator'){
+      const ownerName = getOwnerName(item);
+      if (!ownerName) return false;
+      if (creatorFilter && ownerName !== creatorFilter) return false;
+    }
+    if (zone === 'mine'){
+      if (!creatorId) return false;
+      if (String(item.ownerId || '') !== String(creatorId)) return false;
+    }
     return true;
   });
   
@@ -2150,8 +2314,14 @@ function render(){
       btn.classList.toggle('active', val === (fCat.value || ''));
     });
   }
-  const canEdit = isAdmin;
-  const renderList = (canEdit && newItem) ? [newItem, ...list] : list;
+  if (zoneTabs){
+    zoneTabs.querySelectorAll('.zone-tab').forEach(btn=>{
+      const val = btn.dataset.value || '';
+      btn.classList.toggle('active', val === currentZone);
+    });
+  }
+  const canAdd = isAdmin || isCreator;
+  const renderList = (canAdd && newItem) ? [newItem, ...list] : list;
   const totalLen = renderList.length;
   const displayList = renderList.slice(0, currentLimit);
   if (!displayList.length){
@@ -2198,7 +2368,10 @@ function render(){
     const mapsUrl = safeUrl(item.maps);
     const introText = buildIntroText(item);
     const snippet = buildCardSnippet(item);
-    const isEditing = canEdit && editingId === editKey;
+    const ownerName = getOwnerName(item);
+    const creatorBadge = ownerName ? `<span class="badge-creator">${escapeHtml(ownerName)} ${escapeHtml(t('creatorPick'))}</span>` : '';
+    const canEditItem = isAdmin || (isCreator && creatorId && String(item.ownerId || '') === String(creatorId));
+    const isEditing = canEditItem && editingId === editKey;
     
     const cardStyle = isFeatured ? 'style="border:2px solid #fda4af;background:#fff1f2;box-shadow:0 12px 32px rgba(251,113,133,0.12);"' : '';
 
@@ -2253,7 +2426,7 @@ function render(){
           ${item.id ? `<button class="btn ghost" data-admin-delete>${escapeHtml(t('delBtn'))}</button>` : ''}
           <span class="admin-msg" data-admin-msg></span>
         </div>
-        <div class="admin-hint">${escapeHtml(t('adminMode'))}</div>
+        <div class="admin-hint">${escapeHtml(isAdmin ? t('adminMode') : t('creatorMode'))}</div>
       </div>
     ` : '';
     return `<article class="card" ${cardStyle} data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
@@ -2265,11 +2438,11 @@ function render(){
             <div class="card-sub">${escapeHtml(displayCat || '')} · ${escapeHtml(item.area || '')}${item.price ? ` · ${escapeHtml(t('priceLabel'))} ${escapeHtml(item.price)}` : ''}</div>
           </div>
           <div class="card-head-actions">
-            ${canEdit ? `<button class="edit-btn" data-edit="${escapeHtml(editKey)}">${escapeHtml(t('edit'))}</button>` : ''}
+            ${canEditItem ? `<button class="edit-btn" data-edit="${escapeHtml(editKey)}">${escapeHtml(t('edit'))}</button>` : ''}
             ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="${escapeHtml(t('favBtn'))}">${liked?'★':'☆'}</button>` : ''}
           </div>
         </div>
-        <div class="card-tags">${featuredTag}${tags}${ratingTag}<span class="badge-hot">${escapeHtml(t('recommend'))}</span></div>
+        <div class="card-tags">${featuredTag}${creatorBadge}${tags}${ratingTag}<span class="badge-hot">${escapeHtml(t('recommend'))}</span></div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
@@ -2384,7 +2557,7 @@ function render(){
       });
     };
   });
-  if (isAdmin){
+  if (isAdmin || isCreator){
     cardsEl.querySelectorAll('button[data-edit]').forEach(btn=>{
       btn.onclick = ()=>{
         const id = btn.getAttribute('data-edit') || '';
@@ -2455,7 +2628,11 @@ function render(){
           });
           const data = await res.json().catch(()=>({}));
           if (res.status === 401){
-            alert(t('needAdmin'));
+            alert(t('loginReq'));
+            return;
+          }
+          if (res.status === 403){
+            alert(t('noPermission'));
             return;
           }
           if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
@@ -2492,7 +2669,11 @@ function render(){
           });
           const data = await res.json().catch(()=>({}));
           if (res.status === 401){
-            alert(t('needAdmin'));
+            alert(t('loginReq'));
+            return;
+          }
+          if (res.status === 403){
+            alert(t('noPermission'));
             return;
           }
           if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
@@ -2808,6 +2989,41 @@ function checkLoginOrRedirect(msg){
   return false;
 }
 
+function openNewItem(){
+  if (!isAdmin && !isCreator) return;
+  if (!newItem){
+    newItem = {
+      __tempId: `new-${Date.now()}`,
+      id: '',
+      name: '',
+      category: '',
+      area: '',
+      price: '',
+      featured_: false,
+      featured: false,
+      rating: '',
+      address: '',
+      hours: '',
+      maps: '',
+      googlePlaceId: '',
+      ig: '',
+      youtube: '',
+      igComment: '',
+      cover: '',
+      coverPos: '50% 50%',
+      intro: '',
+      ownerId: isCreator ? creatorId : '',
+      ownerName: isCreator ? creatorName : ''
+    };
+  }else if (isCreator){
+    newItem.ownerId = creatorId;
+    newItem.ownerName = creatorName;
+  }
+  editingId = newItem.__tempId;
+  safeRender();
+  if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
 if (btnFav) btnFav.onclick = ()=> {
   if (checkLoginOrRedirect(t('loginFav'))) {
     openFavList();
@@ -2816,32 +3032,50 @@ if (btnFav) btnFav.onclick = ()=> {
 
 if (btnAdd) btnAdd.onclick = ()=>{
   if (!isAdmin) return;
-      if (!newItem){
-        newItem = {
-          __tempId: `new-${Date.now()}`,
-          id: '',
-          name: '',
-          category: '',
-          area: '',
-          price: '',
-          featured_: false,
-          featured: false,
-          rating: '',
-          address: '',
-          hours: '',
-          maps: '',
-          googlePlaceId: '',
-          ig: '',
-          youtube: '',
-          igComment: '',
-          cover: '',
-          coverPos: '50% 50%',
-          intro: ''
-        };
-      }
-  editingId = newItem.__tempId;
-        safeRender();
-  if (cardsEl) cardsEl.scrollIntoView({ behavior:'smooth', block:'start' });
+  openNewItem();
+};
+if (btnCreatorAdd) btnCreatorAdd.onclick = ()=> {
+  if (!isCreator) return;
+  openNewItem();
+};
+if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
+  if (!checkLoginOrRedirect(t('loginReq'))) return;
+  const code = prompt(t('creatorInvitePrompt'));
+  if (!code) return;
+  try{
+    const res = await fetch('/api/creator/claim', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || 'invalid');
+    }
+    showToast(t('creatorInviteSuccess'));
+    await checkCreator();
+  }catch(_){
+    alert(t('creatorInviteFail'));
+  }
+};
+if (btnCreatorCode) btnCreatorCode.onclick = async ()=>{
+  try{
+    const label = prompt(t('creatorInviteLabel')) || '';
+    const res = await fetch('/api/admin/creator/invite', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify({ label })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || 'failed');
+    }
+    window.prompt(t('creatorInviteReady'), data.code || '');
+  }catch(_){
+    alert(t('saveFail') + t('unknownError'));
+  }
 };
 
 function bootFoodMap(){
@@ -2865,9 +3099,10 @@ function bootFoodMap(){
   showNearbyToggle(false);
   setNearbyCollapsed(false);
   checkAdmin().then(()=>{ safeRender(); });
+  checkCreator();
   initFilters();
   resetFilters();
-  [kwInput, fCat, fArea, fPrice, fStatus].filter(Boolean).forEach(el=> el.addEventListener('input', () => {
+  [kwInput, fCat, fArea, fCreator, fPrice, fStatus].filter(Boolean).forEach(el=> el.addEventListener('input', () => {
     currentLimit = PAGE_SIZE;
     safeRender();
   }));
