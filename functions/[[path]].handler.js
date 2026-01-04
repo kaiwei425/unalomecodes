@@ -4132,6 +4132,38 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), inviteAllowed: !!record.creatorInviteAllowed }, 200);
   }
 
+  if (pathname === '/api/creator/profile' && request.method === 'POST'){
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (!isFoodCreator(record)) return json({ ok:false, error:'forbidden' }, 403);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){ body = {}; }
+    const name = String(body.creatorName || body.name || '').trim().slice(0, 60);
+    if (!name) return json({ ok:false, error:'missing_name' }, 400);
+    record.creatorName = name;
+    await saveUserRecord(env, record);
+    let updated = 0;
+    if (env.FOODS && env.FOODS.list){
+      try{
+        const items = await listFoods(env, 2000, { cache:false });
+        const now = new Date().toISOString();
+        for (const item of items){
+          if (!item || String(item.ownerId || '') !== String(record.id)) continue;
+          if (String(item.ownerName || '') === name) continue;
+          item.ownerName = name;
+          item.updatedAt = now;
+          await saveFood(env, item);
+          updated += 1;
+        }
+        if (updated){
+          resetFoodsListMemoryCache();
+          await deleteFoodsListCache(env);
+        }
+      }catch(_){}
+    }
+    return json({ ok:true, name, updated });
+  }
+
   if (pathname === '/api/creator/claim' && request.method === 'POST'){
     const record = await getSessionUserRecord(request, env);
     if (!record) return json({ ok:false, error:'unauthorized' }, 401);

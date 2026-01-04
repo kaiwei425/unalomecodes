@@ -326,6 +326,55 @@
       border-radius:10px;
       font-weight:700;
     }
+    .member-menu-panel .icon-btn{
+      display:inline-flex;
+      width:auto;
+      padding:8px;
+      align-items:center;
+      justify-content:center;
+      gap:0;
+      justify-self:flex-start;
+      text-align:center;
+    }
+    .member-menu-panel .icon-btn svg{
+      width:18px;
+      height:18px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .creator-name-field{
+      display:grid;
+      gap:6px;
+      grid-column:1 / -1;
+    }
+    .creator-name-field label{
+      font-size:12px;
+      color:#475569;
+      font-weight:700;
+    }
+    .creator-name-field input{
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:12px;
+      font-family:inherit;
+      width:100%;
+      box-sizing:border-box;
+    }
+    .creator-name-field button{
+      padding:9px 12px;
+      font-size:12px;
+      font-weight:700;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      cursor:pointer;
+      text-align:center;
+    }
     .top-actions .member-menu button,
     .top-actions .auth-widget{
       min-height:52px;

@@ -82,7 +82,20 @@
                   <div class="member-menu-subpanel" id="creatorToolsPanel" style="display:none;">
                     <button type="button" id="btnCreatorAdd" style="display:none;">新增餐廳</button>
                     <button type="button" id="btnCreatorInvite">輸入邀請碼</button>
-                    <button type="button" id="btnCreatorShare" style="display:none;">複製專區連結</button>
+                    <div class="creator-name-field" id="creatorNameField" style="display:none;">
+                      <label for="creatorNameInput">創作者名稱</label>
+                      <input id="creatorNameInput" type="text" placeholder="輸入創作者名稱">
+                      <button type="button" id="btnCreatorNameSave">儲存名稱</button>
+                    </div>
+                    <button type="button" id="btnCreatorShare" class="icon-btn" style="display:none;" title="複製專區連結" aria-label="複製專區連結">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <path d="M8.7 13.5l6.4 3.2"></path>
+                        <path d="M15.1 7.3l-6.4 3.2"></path>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>

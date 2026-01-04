@@ -323,8 +323,13 @@ const TRANSLATIONS = {
     viewIg: '在 IG 上查看',
     desc: '店家介紹',
     creatorPick: '精選',
-    creatorTagLabel: '精選標籤名稱',
     creatorShare: '複製專區連結',
+    creatorNameLabel: '創作者名稱',
+    creatorNamePlaceholder: '輸入創作者名稱',
+    creatorNameSave: '儲存名稱',
+    creatorNameSaved: '已更新創作者名稱',
+    creatorNameFail: '更新失敗',
+    creatorNameEmpty: '請輸入創作者名稱',
     allCreators: '全部創作者',
     creatorInvite: '輸入邀請碼',
     creatorInvitePrompt: '請輸入邀請碼',
@@ -549,8 +554,13 @@ const TRANSLATIONS = {
     viewIg: 'View on IG',
     desc: 'Description',
     creatorPick: ' Picks',
-    creatorTagLabel: 'Featured tag name',
     creatorShare: 'Copy creator link',
+    creatorNameLabel: 'Creator Name',
+    creatorNamePlaceholder: 'Enter creator name',
+    creatorNameSave: 'Save Name',
+    creatorNameSaved: 'Creator name updated',
+    creatorNameFail: 'Update failed',
+    creatorNameEmpty: 'Please enter a creator name',
     allCreators: 'All Creators',
     creatorInvite: 'Enter Invite Code',
     creatorInvitePrompt: 'Enter invite code',
@@ -776,6 +786,9 @@ const creatorToolsToggle = document.getElementById('creatorToolsToggle');
 const creatorToolsPanel = document.getElementById('creatorToolsPanel');
 const btnCreatorAdd = document.getElementById('btnCreatorAdd');
 const btnCreatorInvite = document.getElementById('btnCreatorInvite');
+const creatorNameField = document.getElementById('creatorNameField');
+const creatorNameInput = document.getElementById('creatorNameInput');
+const btnCreatorNameSave = document.getElementById('btnCreatorNameSave');
 const btnCreatorShare = document.getElementById('btnCreatorShare');
 // ---------------------------
 
@@ -1796,7 +1809,16 @@ function setLanguage(lang) {
   if (btnCreatorCode) btnCreatorCode.textContent = t('creatorInviteCreate');
   if (btnCreatorAdd) btnCreatorAdd.textContent = t('add');
   if (btnCreatorInvite) btnCreatorInvite.textContent = t('creatorInvite');
-  if (btnCreatorShare) btnCreatorShare.textContent = t('creatorShare');
+  if (btnCreatorShare){
+    btnCreatorShare.title = t('creatorShare');
+    btnCreatorShare.setAttribute('aria-label', t('creatorShare'));
+  }
+  if (creatorNameField){
+    const label = creatorNameField.querySelector('label');
+    if (label) label.textContent = t('creatorNameLabel');
+  }
+  if (creatorNameInput) creatorNameInput.placeholder = t('creatorNamePlaceholder');
+  if (btnCreatorNameSave) btnCreatorNameSave.textContent = t('creatorNameSave');
   const mapSwitchLink = document.querySelector('a[href="/templemap"]');
   if (mapSwitchLink) mapSwitchLink.textContent = t('mapSwitchTemple');
   const editSubtitleBtn = document.getElementById('btnEditSubtitle');
@@ -1867,10 +1889,6 @@ function setLanguage(lang) {
 function getOwnerName(item){
   return String(item && (item.ownerName || item.creatorName || item.creator || item.owner) || '').trim();
 }
-function getCreatorLabel(item){
-  const raw = String(item && (item.creatorLabel || item.creatorTag) || '').trim();
-  return raw || getOwnerName(item);
-}
 
 function updateCreatorFilterVisibility(){
   if (!fCreator) return;
@@ -1924,6 +1942,8 @@ async function checkCreator(){
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
   if (btnCreatorShare) btnCreatorShare.style.display = isCreator ? 'inline-flex' : 'none';
+  if (creatorNameField) creatorNameField.style.display = isCreator ? 'grid' : 'none';
+  if (creatorNameInput) creatorNameInput.value = creatorName || '';
   if (creatorToolsToggle){
     creatorToolsToggle.style.display = (isCreator || creatorInviteAllowed) ? 'block' : 'none';
     const panelOpen = creatorToolsPanel && creatorToolsPanel.style.display === 'grid';
@@ -2480,12 +2500,11 @@ function render(){
     const introText = buildIntroText(item);
     const snippet = buildCardSnippet(item);
     const ownerName = getOwnerName(item);
-    const creatorLabel = getCreatorLabel(item);
     const pickSuffix = String(t('creatorPick') || '');
     const pickTrim = pickSuffix.trim();
     let creatorText = '';
-    if (creatorLabel){
-      creatorText = creatorLabel;
+    if (ownerName){
+      creatorText = ownerName;
       if (pickTrim && !creatorText.endsWith(pickTrim)){
         creatorText += pickSuffix;
       }
@@ -2502,7 +2521,6 @@ function render(){
           <label>${escapeHtml(t('nameInput'))}<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
           <label>${escapeHtml(t('catInput'))}<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>${escapeHtml(t('areaInput'))}<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
-          <label>${escapeHtml(t('creatorTagLabel'))}<input class="admin-input" data-admin-field="creatorLabel" value="${escapeHtml(item.creatorLabel || '')}"></label>
           <label>${escapeHtml(t('priceInput'))}
             <select class="admin-input" data-admin-field="price">
               <option value="">-</option>
@@ -2746,7 +2764,6 @@ function render(){
           ig: getVal('ig'),
           youtube: getVal('youtube'),
           igComment: getVal('igComment'),
-          creatorLabel: getVal('creatorLabel'),
           cover: getVal('cover'),
           coverPos: getVal('coverPos'),
           intro: introRaw,
@@ -3150,7 +3167,6 @@ function openNewItem(){
       ig: '',
       youtube: '',
       igComment: '',
-      creatorLabel: isCreator ? creatorName : '',
       cover: '',
       coverPos: '50% 50%',
       intro: '',
@@ -3160,7 +3176,6 @@ function openNewItem(){
   }else if (isCreator){
     newItem.ownerId = creatorId;
     newItem.ownerName = creatorName;
-    if (!newItem.creatorLabel) newItem.creatorLabel = creatorName;
   }
   editingId = newItem.__tempId;
   safeRender();
@@ -3200,6 +3215,40 @@ if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
     await checkCreator();
   }catch(_){
     alert(t('creatorInviteFail'));
+  }
+};
+if (btnCreatorNameSave) btnCreatorNameSave.onclick = async ()=>{
+  if (!isCreator) return;
+  const nextName = creatorNameInput ? creatorNameInput.value.trim() : '';
+  if (!nextName){
+    alert(t('creatorNameEmpty'));
+    return;
+  }
+  try{
+    const res = await fetch('/api/creator/profile', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify({ creatorName: nextName })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || 'failed');
+    }
+    creatorName = data.name ? String(data.name) : nextName;
+    if (creatorNameInput) creatorNameInput.value = creatorName;
+    if (creatorId && Array.isArray(DATA)){
+      DATA.forEach(item=>{
+        if (String(item.ownerId || '') === String(creatorId)){
+          item.ownerName = creatorName;
+        }
+      });
+    }
+    initFilters();
+    safeRender();
+    showToast(t('creatorNameSaved'));
+  }catch(err){
+    alert(`${t('creatorNameFail')}${err && err.message ? '：' + err.message : ''}`);
   }
 };
 if (btnCreatorShare) btnCreatorShare.onclick = async ()=>{
