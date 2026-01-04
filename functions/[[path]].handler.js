@@ -2416,8 +2416,12 @@ async function ensureUserRecord(env, profile){
       memberPerks: {}
     };
   }
-  record.email = profile.email || record.email || '';
-  record.name = profile.name || record.name || '';
+  if (profile.email && (!record.profileEmailLocked || !record.email)){
+    record.email = profile.email || record.email || '';
+  }
+  if (profile.name && (!record.profileNameLocked || !record.name)){
+    record.name = profile.name || record.name || '';
+  }
   record.picture = profile.picture || record.picture || '';
   record.provider = profile.provider || record.provider || 'google';
   record.lastLoginAt = now;
@@ -4020,20 +4024,24 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (body && body.profile){
           if (Object.prototype.hasOwnProperty.call(body.profile, 'name')){
             record.name = String(body.profile.name || '').trim();
+            record.profileNameLocked = true;
             changed = true;
           }
           if (Object.prototype.hasOwnProperty.call(body.profile, 'email')){
             record.email = String(body.profile.email || '').trim();
+            record.profileEmailLocked = true;
             changed = true;
           }
         }
         if (body && (Object.prototype.hasOwnProperty.call(body, 'name') || Object.prototype.hasOwnProperty.call(body, 'email'))){
           if (Object.prototype.hasOwnProperty.call(body, 'name')){
             record.name = String(body.name || '').trim();
+            record.profileNameLocked = true;
             changed = true;
           }
           if (Object.prototype.hasOwnProperty.call(body, 'email')){
             record.email = String(body.email || '').trim();
+            record.profileEmailLocked = true;
             changed = true;
           }
         }
