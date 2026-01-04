@@ -1878,6 +1878,50 @@ async function recordTempleMapStat(env, dateKey, clientId){
     }
   }catch(_){}
 }
+const TRACK_EVENT_TTL = 60 * 60 * 24 * 180;
+function pickTrackStore(env){
+  return env.TRACKING || env.ANALYTICS || env.STATS || env.ORDERS || env.SERVICE_ORDERS || env.FOODS || env.TEMPLES || null;
+}
+function normalizeTrackEvent(input){
+  const raw = String(input || '').trim().toLowerCase();
+  if (!raw) return '';
+  return raw.replace(/[^a-z0-9_.-]+/g, '_').slice(0, 48);
+}
+function normalizeTrackLabel(input, fallback){
+  const raw = String(input || '').trim();
+  if (!raw) return fallback || '';
+  return raw.toLowerCase().replace(/\s+/g, ' ').slice(0, 80);
+}
+async function recordTrackEvent(env, eventName, utm){
+  const store = pickTrackStore(env);
+  if (!store || !eventName) return false;
+  const source = normalizeTrackLabel(utm && (utm.source || utm.utm_source), 'direct');
+  const campaign = normalizeTrackLabel(utm && (utm.campaign || utm.utm_campaign), '');
+  const dateKey = taipeiDateKey();
+  const key = `TRACK:${dateKey}:EVENT:${eventName}`;
+  let data = { total: 0, sources: {}, campaigns: {} };
+  try{
+    const raw = await store.get(key);
+    if (raw){
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') data = parsed;
+    }
+  }catch(_){}
+  data.total = (parseInt(data.total || 0, 10) || 0) + 1;
+  if (source){
+    data.sources = data.sources && typeof data.sources === 'object' ? data.sources : {};
+    data.sources[source] = (parseInt(data.sources[source] || 0, 10) || 0) + 1;
+  }
+  if (campaign){
+    data.campaigns = data.campaigns && typeof data.campaigns === 'object' ? data.campaigns : {};
+    data.campaigns[campaign] = (parseInt(data.campaigns[campaign] || 0, 10) || 0) + 1;
+  }
+  data.updatedAt = new Date().toISOString();
+  try{
+    await store.put(key, JSON.stringify(data), { expirationTtl: TRACK_EVENT_TTL });
+  }catch(_){}
+  return true;
+}
 function taipeiDateParts(ts=Date.now()){
   const d = new Date(ts + 8 * 3600 * 1000);
   return {
@@ -4492,6 +4536,21 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, saved, updated, failed, total: limit, geocode });
   }
 
+  if (pathname === '/api/track' && request.method === 'POST'){
+    const store = pickTrackStore(env);
+    if (!store) return json({ ok:false, error:'TRACK store not bound' }, 500);
+    const ip = getClientIp(request) || 'unknown';
+    const allowed = await checkRateLimit(env, `track:${ip}`, 90, 60);
+    if (!allowed) return json({ ok:false, error:'Too many requests' }, 429);
+    let body = {};
+    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    const eventName = normalizeTrackEvent(body.event);
+    if (!eventName) return json({ ok:false, error:'missing event' }, 400);
+    const utm = body && body.utm && typeof body.utm === 'object' ? body.utm : {};
+    await recordTrackEvent(env, eventName, utm);
+    return json({ ok:true });
+  }
+
   if (pathname === '/api/foods/track' && request.method === 'POST'){
     const ip = getClientIp(request) || 'unknown';
     let clientId = ip;
@@ -4529,6 +4588,54 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     } catch(_) {}
 
     return json({ ok:true, stats: out, total: totalUnique });
+  }
+
+  if (pathname === '/api/admin/track-stats' && request.method === 'GET'){
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    const store = pickTrackStore(env);
+    if (!store) return json({ ok:false, error:'TRACK store not bound' }, 500);
+    const eventName = normalizeTrackEvent(url.searchParams.get('event') || 'order_submit');
+    const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
+    const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
+    const stats = [];
+    const sourceTotals = {};
+    const campaignTotals = {};
+    let total = 0;
+    for (let i = days - 1; i >= 0; i--){
+      const dateKey = taipeiDateKey(Date.now() - i * 86400000);
+      const key = `TRACK:${dateKey}:EVENT:${eventName}`;
+      let count = 0;
+      try{
+        const raw = await store.get(key);
+        if (raw){
+          const data = JSON.parse(raw);
+          count = parseInt(data.total || 0, 10) || 0;
+          total += count;
+          if (data.sources && typeof data.sources === 'object'){
+            Object.entries(data.sources).forEach(([name, val])=>{
+              sourceTotals[name] = (sourceTotals[name] || 0) + (parseInt(val || 0, 10) || 0);
+            });
+          }
+          if (data.campaigns && typeof data.campaigns === 'object'){
+            Object.entries(data.campaigns).forEach(([name, val])=>{
+              campaignTotals[name] = (campaignTotals[name] || 0) + (parseInt(val || 0, 10) || 0);
+            });
+          }
+        }
+      }catch(_){}
+      stats.push({ date: dateKey, count });
+    }
+    const topSources = Object.entries(sourceTotals)
+      .sort((a,b)=> b[1]-a[1])
+      .slice(0, 8)
+      .map(([name, count])=>({ name, count }));
+    const topCampaigns = Object.entries(campaignTotals)
+      .sort((a,b)=> b[1]-a[1])
+      .slice(0, 8)
+      .map(([name, count])=>({ name, count }));
+    return json({ ok:true, event: eventName, total, stats, sources: topSources, campaigns: topCampaigns });
   }
 
   

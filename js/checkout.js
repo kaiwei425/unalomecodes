@@ -899,6 +899,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         alert(success ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
         if (success){
           try{
+            if (window.trackEvent) window.trackEvent('order_submit', { method:'bank', value: (data && data.order && data.order.amount) || null });
+          }catch(_){}
+          try{
             if (typeof scheduleOrderRefresh === 'function') scheduleOrderRefresh(600);
             else if (typeof window.__scheduleOrderRefresh === 'function') window.__scheduleOrderRefresh(600);
             else setTimeout(function(){ try{ window.location.reload(); }catch(_){ } }, 600);
@@ -1870,6 +1873,10 @@ function __cartPricing(includePendingDetail){
         });
         const data = await res.json().catch(()=>({}));
         if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        try{
+          const amount = payload.grand || payload.total || payload.amount || null;
+          if (window.trackEvent) window.trackEvent('order_submit', { method:'credit', value: amount });
+        }catch(_){}
         try{
           if (typeof clearCouponState === 'function') clearCouponState();
           else if (typeof window.__clearCouponState === 'function') window.__clearCouponState();

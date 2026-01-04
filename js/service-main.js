@@ -1005,6 +1005,9 @@
     openDialog(detailDialog);
     updateLimitedCountdowns(detailDialog);
     scheduleLimitedTimer();
+    try{
+      if (window.trackEvent) window.trackEvent('service_detail_open', { itemId: resolveServiceId(service) });
+    }catch(_){}
   }
 
   function ensureSingleService(cart, serviceId){
@@ -1076,6 +1079,9 @@
     closeDialog(detailDialog);
     renderCartPanel();
     if (cartPanel) openDialog(cartPanel);
+    try{
+      if (window.trackEvent) window.trackEvent('service_add_to_cart', { itemId: svcId, qty });
+    }catch(_){}
   }
 
   function renderCheckoutSummary(cart){
@@ -1140,6 +1146,9 @@
     ensureContactFromProfile(6);
     renderCheckoutSummary(cart);
     openDialog(checkoutDialog);
+    try{
+      if (window.trackEvent) window.trackEvent('service_checkout_start', { itemId: cart[0].serviceId || '' });
+    }catch(_){}
   }
 
   function getCheckoutOptions(){
@@ -1857,6 +1866,9 @@
         updateCartBadge([]);
         const finalAmount = (result && result.order && Number(result.order.amount)) || Number(result.amount) || totalAmount;
         renderCheckoutSuccess(result.orderId || result.id || '', finalAmount);
+        try{
+          if (window.trackEvent) window.trackEvent('service_order_submit', { itemId: serviceId, value: finalAmount });
+        }catch(_){}
         if (result && result.order && result.order.memberDiscount){
           updateMemberPerkHint({ memberPerks:{ welcomeDiscount:{ used:true } } });
         }

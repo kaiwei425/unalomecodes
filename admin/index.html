@@ -426,6 +426,34 @@ html.admin-guard-hide{visibility:hidden;}
             <canvas id="templeMapChart"></canvas>
           </div>
         </div>
+
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>UTM 轉換統計</h3>
+            <div class="muted">近 14 天</div>
+          </div>
+          <div class="report-kpis">
+            <div class="report-kpi">
+              <div class="label">實體商品轉換</div>
+              <div class="value" data-report="utm-physical-total">—</div>
+            </div>
+            <div class="report-kpi">
+              <div class="label">服務商品轉換</div>
+              <div class="value" data-report="utm-service-total">—</div>
+            </div>
+          </div>
+          <div class="report-lists">
+            <div>
+              <div class="tag">實體商品入口</div>
+              <ul class="report-list" data-report-list="utm-physical-source"></ul>
+            </div>
+            <div>
+              <div class="tag alt">服務商品入口</div>
+              <ul class="report-list" data-report-list="utm-service-source"></ul>
+            </div>
+          </div>
+          <div class="report-note">依 UTM source 統計，未帶參數視為 direct。</div>
+        </div>
       </div>
 
       <section class="report-section data-card" id="reportSection">
@@ -622,6 +650,13 @@ html.admin-guard-hide{visibility:hidden;}
       return;
     }
     el.innerHTML = items.map(formatter).join('');
+  };
+  const renderUtmList = (key, items)=>{
+    renderList(key, items, (item)=>{
+      const name = esc(item.name || 'direct');
+      const count = fmtNum(item.count || 0);
+      return `<li><span class="name">${name}</span><span>${count} 筆</span></li>`;
+    });
   };
   const markReportLoading = ()=>{
     setSub('products-sub', '統計更新中…');
@@ -849,6 +884,19 @@ html.admin-guard-hide{visibility:hidden;}
       })
       .catch(console.error);
   }
+
+  const loadUtmStats = (eventName, totalKey, listKey)=>{
+    fetch(`/api/admin/track-stats?event=${encodeURIComponent(eventName)}&days=14`, { credentials:'include', cache:'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.ok) return;
+        setReport(totalKey, `${fmtNum(data.total || 0)} 筆`);
+        renderUtmList(listKey, data.sources || []);
+      })
+      .catch(console.error);
+  };
+  loadUtmStats('order_submit', 'utm-physical-total', 'utm-physical-source');
+  loadUtmStats('service_order_submit', 'utm-service-total', 'utm-service-source');
 })();
 </script>
 </body>

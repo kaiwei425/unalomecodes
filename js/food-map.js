@@ -905,6 +905,9 @@ async function copyText(text){
 
 async function shareFood(item){
   if (!item || !item.id) return;
+  try{
+    if (window.trackEvent) window.trackEvent('food_share', { itemId: item.id });
+  }catch(_){}
   const url = buildFoodShareUrl(item.id);
   const title = item.name ? String(item.name) : document.title;
   if (navigator.share){
@@ -2890,6 +2893,9 @@ function bootFoodMap(){
   loadRemote();
   loadMeta();
   fetch('/api/foods/track', { method:'POST' }).catch(()=>{});
+  try{
+    if (window.trackEvent) window.trackEvent('food_map_view');
+  }catch(_){}
 }
 
 async function runNearby(origin, label){
@@ -3167,6 +3173,9 @@ function renderGoogleReviews(place, container) {
 function openModal(id){
   const item = DATA.find(x=>x.id===id);
   if (!item) return;
+  try{
+    if (window.trackEvent) window.trackEvent('food_detail_open', { itemId: item.id });
+  }catch(_){}
   const body = document.getElementById('foodModalBody');
   const dlg = document.getElementById('foodModal');
   const introText = buildIntroText(item);

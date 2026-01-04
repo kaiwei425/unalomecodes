@@ -2791,6 +2791,9 @@ function bootFoodMap(){
   loadRemote();
   loadMeta();
   fetch('/api/temples/track', { method:'POST' }).catch(()=>{});
+  try{
+    if (window.trackEvent) window.trackEvent('temple_map_view');
+  }catch(_){}
 }
 
 async function runNearby(origin, label){
@@ -3090,6 +3093,9 @@ async function copyText(text){
 
 async function shareTemple(item){
   if (!item || !item.id) return;
+  try{
+    if (window.trackEvent) window.trackEvent('temple_share', { itemId: item.id });
+  }catch(_){}
   const url = buildTempleShareUrl(item.id);
   const title = item.name ? String(item.name) : document.title;
   if (navigator.share){
@@ -3173,6 +3179,9 @@ function openTempleFromUrl(){
 function openModal(id){
   const item = DATA.find(x=>x.id===id);
   if (!item) return;
+  try{
+    if (window.trackEvent) window.trackEvent('temple_detail_open', { itemId: item.id });
+  }catch(_){}
   const body = document.getElementById('foodModalBody');
   const dlg = document.getElementById('foodModal');
   const introText = buildIntroText(item);
@@ -3216,7 +3225,7 @@ function openModal(id){
     .map(t=>`<span class="modal-chip">${escapeHtml(t)}</span>`)
     .join('');
   const ctaHtml = ctaUrl
-    ? `<a class="btn pill primary" href="${escapeHtml(ctaUrl)}" target="_blank" rel="noopener" style="padding:6px 10px;font-size:12px;">${escapeHtml(ctaLabel)}</a>`
+    ? `<a class="btn pill primary" href="${escapeHtml(ctaUrl)}" target="_blank" rel="noopener" data-cta="temple" style="padding:6px 10px;font-size:12px;">${escapeHtml(ctaLabel)}</a>`
     : '';
   const metaRow = [metaTags, ctaHtml].filter(Boolean).join('');
   body.innerHTML = `
@@ -3261,6 +3270,14 @@ function openModal(id){
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
+  const ctaBtn = body.querySelector('[data-cta="temple"]');
+  if (ctaBtn){
+    ctaBtn.onclick = ()=> {
+      try{
+        if (window.trackEvent) window.trackEvent('temple_cta_click', { itemId: item.id, url: ctaUrl });
+      }catch(_){}
+    };
+  }
   const shareBtnEl = document.getElementById('templeShare');
   if (shareBtnEl) shareBtnEl.onclick = ()=> shareTemple(item);
   ensureGoogleMaps().then(() => {

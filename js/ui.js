@@ -281,6 +281,9 @@ function openDetail(p){
       showToast('已加入購物車');
       updateCartBadge();
       openCart();
+      try{
+        if (window.trackEvent) window.trackEvent('add_to_cart', { itemId: p.id, qty, value: unit * qty });
+      }catch(_){}
       try{ window.__coupon && window.__coupon.updateTotalsDisplay(); }catch(e){}
     }catch(e){ alert('加入購物車失敗'); }
   };
@@ -356,6 +359,9 @@ function stashPendingDetail(){
   };
 
   dlg.showModal();
+  try{
+    if (window.trackEvent) window.trackEvent('product_view', { itemId: p.id });
+  }catch(_){}
 }
 
 function buildInstagramEmbed(url){
