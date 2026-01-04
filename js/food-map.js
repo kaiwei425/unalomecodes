@@ -1451,6 +1451,7 @@ let DATA = [];
 let favs = [];
 let isAdmin = false;
 let isCreator = false;
+let creatorInviteAllowed = false;
 let creatorId = '';
 let creatorName = '';
 let currentZone = 'all';
@@ -1822,19 +1823,24 @@ async function checkCreator(){
     const res = await fetch('/api/creator/status', { credentials:'include', cache:'no-store' });
     const data = await res.json().catch(()=>({}));
     isCreator = !!(data && data.creator);
+    creatorInviteAllowed = !!(data && data.inviteAllowed);
     creatorId = data && data.id ? String(data.id) : '';
     creatorName = data && data.name ? String(data.name) : '';
   }catch(_){
     isCreator = false;
+    creatorInviteAllowed = false;
     creatorId = '';
     creatorName = '';
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
-  if (btnCreatorInvite) btnCreatorInvite.style.display = isCreator ? 'none' : 'inline-flex';
+  if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
   if (creatorToolsToggle){
-    creatorToolsToggle.style.display = (isCreator || (window.authState && window.authState.isLoggedIn && window.authState.isLoggedIn())) ? 'block' : 'none';
+    creatorToolsToggle.style.display = (isCreator || creatorInviteAllowed) ? 'block' : 'none';
     const panelOpen = creatorToolsPanel && creatorToolsPanel.style.display === 'grid';
     creatorToolsToggle.textContent = `${t('creatorZone')} ${panelOpen ? '▴' : '▾'}`;
+  }
+  if (!isCreator && !creatorInviteAllowed && creatorToolsPanel){
+    creatorToolsPanel.style.display = 'none';
   }
   renderZoneTabs();
   safeRender();

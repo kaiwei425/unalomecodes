@@ -68,10 +68,11 @@
           <th style="min-width:180px">預設門市</th>
           <th style="min-width:140px">守護神</th>
           <th style="min-width:160px">登入 / 建立</th>
+          <th style="min-width:120px">創作者</th>
           <th style="min-width:140px">操作</th>
         </tr>
       </thead>
-      <tbody id="tbody"><tr><td colspan="6" class="muted">載入中…</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="7" class="muted">載入中…</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -80,6 +81,7 @@
   const API = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users';
   const API_RESET = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/reset-guardian';
   const API_DELETE = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/delete';
+  const API_CREATOR_INVITE = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/creator-invite';
   const q = document.getElementById('q');
   const tbody = document.getElementById('tbody');
   const sortSel = document.getElementById('sortSel');
@@ -105,6 +107,8 @@
       const store = u.defaultStore || {};
       const storeText = store.name ? `${store.name}${store.id ? '（'+store.id+'）' : ''}` : '';
       const guardianName = (u.guardian && (u.guardian.name || u.guardian.code)) ? (u.guardian.name || u.guardian.code) : '';
+      const creatorBadge = u.creatorFoods ? '<span class="badge green">創作者</span>' : (u.creatorInviteAllowed ? '<span class="badge blue">可輸入邀請碼</span>' : '<span class="muted">未開放</span>');
+      const creatorAction = u.creatorFoods ? '<span class="muted">已是創作者</span>' : `<button class="action-btn" data-creator-id="${escapeHtml(u.id||'')}" data-creator-name="${escapeHtml(u.name||u.email||'')}" data-creator-allow="${u.creatorInviteAllowed ? '0' : '1'}">${u.creatorInviteAllowed ? '取消邀請權限' : '開放邀請權限'}</button>`;
       return `<tr>
         <td>
           <div style="font-weight:700">${escapeHtml(u.name||'（未填寫）')}</div>
@@ -117,12 +121,14 @@
           <div class="muted">登入：${fmt(u.lastLoginAt)}</div>
           <div class="muted">建立：${fmt(u.createdAt)}</div>
         </td>
+        <td>${creatorBadge}</td>
         <td>
+          ${creatorAction}
           <button class="action-btn" data-reset-id="${escapeHtml(u.id||'')}" data-reset-name="${escapeHtml(u.name||u.email||'')}">重置守護神</button>
           <button class="action-btn danger" data-del-id="${escapeHtml(u.id||'')}" data-del-name="${escapeHtml(u.name||u.email||'')}">刪除會員</button>
         </td>
       </tr>`;
-    }).join('') || '<tr><td colspan="6" class="muted">目前沒有資料</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="muted">目前沒有資料</td></tr>';
   }
 
   function escapeHtml(s){
@@ -152,6 +158,30 @@
   q.addEventListener('input', ()=>{ clearTimeout(q._t); q._t=setTimeout(render,200); });
   sortSel.addEventListener('change', render);
   tbody.addEventListener('click', async e=>{
+    const creatorBtn = e.target.closest('[data-creator-id]');
+    if (creatorBtn){
+      const id = creatorBtn.getAttribute('data-creator-id');
+      const name = creatorBtn.getAttribute('data-creator-name') || '';
+      const allow = creatorBtn.getAttribute('data-creator-allow') === '1';
+      if (!id) return;
+      const confirmText = allow ? '開放邀請權限' : '取消邀請權限';
+      if (!confirm(`確定要${confirmText}${name ? '給 ' + name : ''}？`)) return;
+      try{
+        const res = await fetch(API_CREATOR_INVITE, {
+          method:'POST',
+          credentials:'include',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ id, allow })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        await load();
+        alert(allow ? '已開放邀請權限' : '已取消邀請權限');
+      }catch(err){
+        alert('更新失敗：' + (err.message || err));
+      }
+      return;
+    }
     const resetBtn = e.target.closest('[data-reset-id]');
     if (resetBtn){
       const id = resetBtn.getAttribute('data-reset-id');

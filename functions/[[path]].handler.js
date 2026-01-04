@@ -3945,6 +3945,30 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     await store.delete(userKey(id));
     return json({ ok:true, id, revokedCoupons });
   }
+  if (pathname === '/api/admin/users/creator-invite' && request.method === 'POST') {
+    {
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    const store = getUserStore(env);
+    if (!store){
+      return json({ ok:false, error:'USERS KV not bound' }, 500);
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const id = String(body.id || body.userId || '').trim();
+    const allow = body.allow === true || body.allow === 'true' || body.allow === 1 || body.allow === '1';
+    if (!id){
+      return json({ ok:false, error:'missing_user_id' }, 400);
+    }
+    const record = await loadUserRecord(env, id);
+    if (!record){
+      return json({ ok:false, error:'user_not_found' }, 404);
+    }
+    record.creatorInviteAllowed = allow;
+    await saveUserRecord(env, record);
+    return json({ ok:true, id, allow });
+  }
 
   if (pathname === '/api/me/store') {
     const record = await getSessionUserRecord(request, env);
@@ -4067,7 +4091,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             guardian: refreshed.guardian || null,
             quiz: refreshed.quiz || null,
             creatorFoods: !!refreshed.creatorFoods,
-            creatorName: resolveCreatorName(refreshed)
+            creatorName: resolveCreatorName(refreshed),
+            creatorInviteAllowed: !!refreshed.creatorInviteAllowed
           }});
         }
       }catch(_){}
@@ -4085,16 +4110,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       guardian: record.guardian || null,
       quiz: record.quiz || null,
       creatorFoods: !!record.creatorFoods,
-      creatorName: resolveCreatorName(record)
+      creatorName: resolveCreatorName(record),
+      creatorInviteAllowed: !!record.creatorInviteAllowed
     }});
   }
 
   if (pathname === '/api/creator/status' && request.method === 'GET'){
     const record = await getSessionUserRecord(request, env);
     if (!record){
-      return json({ ok:true, creator:false }, 200);
+      return json({ ok:true, creator:false, inviteAllowed:false }, 200);
     }
-    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record) }, 200);
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), inviteAllowed: !!record.creatorInviteAllowed }, 200);
   }
 
   if (pathname === '/api/creator/claim' && request.method === 'POST'){
@@ -4108,6 +4134,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!code) return json({ ok:false, error:'missing code' }, 400);
     if (record.creatorFoods){
       return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200);
+    }
+    if (!record.creatorInviteAllowed){
+      return json({ ok:false, error:'invite_not_allowed' }, 403);
     }
     const key = creatorInviteKey(code);
     let invite = null;
