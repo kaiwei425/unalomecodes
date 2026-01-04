@@ -324,6 +324,7 @@ const TRANSLATIONS = {
     desc: '店家介紹',
     creatorPick: '精選',
     creatorTagLabel: '精選標籤名稱',
+    creatorShare: '複製專區連結',
     allCreators: '全部創作者',
     creatorInvite: '輸入邀請碼',
     creatorInvitePrompt: '請輸入邀請碼',
@@ -350,6 +351,9 @@ const TRANSLATIONS = {
     emptyList: '目前沒有符合的店家',
     clearFilter: '清除篩選',
     priceLabel: '價位',
+    priceOpt1: '$（≤200）',
+    priceOpt2: '$$（200-1000）',
+    priceOpt3: '$$$（1000+）',
     openLabel: '營業',
     igComment: 'IG 留言',
     close: '關閉',
@@ -546,6 +550,7 @@ const TRANSLATIONS = {
     desc: 'Description',
     creatorPick: ' Picks',
     creatorTagLabel: 'Featured tag name',
+    creatorShare: 'Copy creator link',
     allCreators: 'All Creators',
     creatorInvite: 'Enter Invite Code',
     creatorInvitePrompt: 'Enter invite code',
@@ -572,6 +577,9 @@ const TRANSLATIONS = {
     emptyList: 'No matching places found.',
     clearFilter: 'Clear Filters',
     priceLabel: 'Price',
+    priceOpt1: '$ (<=200)',
+    priceOpt2: '$$ (200-1000)',
+    priceOpt3: '$$$ (1000+)',
     openLabel: 'Open',
     igComment: 'IG Comment',
     close: 'Close',
@@ -768,6 +776,7 @@ const creatorToolsToggle = document.getElementById('creatorToolsToggle');
 const creatorToolsPanel = document.getElementById('creatorToolsPanel');
 const btnCreatorAdd = document.getElementById('btnCreatorAdd');
 const btnCreatorInvite = document.getElementById('btnCreatorInvite');
+const btnCreatorShare = document.getElementById('btnCreatorShare');
 // ---------------------------
 
 function escapeHtml(s){
@@ -951,6 +960,15 @@ function buildFoodShareUrl(id){
   return url.toString();
 }
 
+function buildCreatorShareUrl(){
+  const base = window.location.origin + '/food-map';
+  const url = new URL(base);
+  url.searchParams.set('zone', 'creator');
+  if (creatorId) url.searchParams.set('creatorId', creatorId);
+  if (creatorName) url.searchParams.set('creator', creatorName);
+  return url.toString();
+}
+
 async function copyText(text){
   if (navigator.clipboard && navigator.clipboard.writeText){
     return navigator.clipboard.writeText(text);
@@ -1050,6 +1068,66 @@ function openFoodFromUrl(){
   if (!item) return;
   openModal(item.id);
   clearFoodUrl(source);
+}
+
+function readCreatorShareParams(){
+  try{
+    const params = new URLSearchParams(window.location.search || '');
+    return {
+      zone: params.get('zone') || '',
+      creatorId: params.get('creatorId') || params.get('creator_id') || '',
+      creatorName: params.get('creator') || params.get('creatorName') || ''
+    };
+  }catch(_){
+    return null;
+  }
+}
+
+function syncCreatorShareFilter(){
+  if (!fCreator) return;
+  if (creatorShareName){
+    const hasOption = Array.from(fCreator.options).some(opt=>opt.value === creatorShareName);
+    if (hasOption){
+      suppressCreatorShareClear = true;
+      fCreator.value = creatorShareName;
+      suppressCreatorShareClear = false;
+    }
+    return;
+  }
+  if (creatorShareId && Array.isArray(DATA)){
+    const match = DATA.find(item=>String(item.ownerId || '') === String(creatorShareId));
+    if (match){
+      const name = getOwnerName(match);
+      if (name){
+        creatorShareName = name;
+        const hasOption = Array.from(fCreator.options).some(opt=>opt.value === creatorShareName);
+        if (hasOption){
+          suppressCreatorShareClear = true;
+          fCreator.value = creatorShareName;
+          suppressCreatorShareClear = false;
+        }
+      }
+    }
+  }
+}
+
+function applyCreatorShareFromUrl(){
+  if (creatorShareApplied) return;
+  const params = readCreatorShareParams();
+  if (!params) return;
+  const zoneParam = String(params.zone || '').toLowerCase();
+  const creatorIdParam = String(params.creatorId || '').trim();
+  const creatorNameParam = String(params.creatorName || '').trim();
+  if (!zoneParam && !creatorIdParam && !creatorNameParam) return;
+  if (zoneParam === 'creator' || creatorIdParam || creatorNameParam){
+    currentZone = 'creator';
+  }
+  if (creatorIdParam) creatorShareId = creatorIdParam;
+  if (creatorNameParam) creatorShareName = creatorNameParam;
+  creatorShareApplied = true;
+  syncCreatorShareFilter();
+  renderZoneTabs();
+  if (dataReady) safeRender();
 }
 
 const nameCollator = (typeof Intl !== 'undefined' && Intl.Collator)
@@ -1454,6 +1532,10 @@ let favs = [];
 let isAdmin = false;
 let isCreator = false;
 let creatorInviteAllowed = false;
+let creatorShareId = '';
+let creatorShareName = '';
+let creatorShareApplied = false;
+let suppressCreatorShareClear = false;
 let creatorId = '';
 let creatorName = '';
 let currentZone = 'all';
@@ -1714,6 +1796,7 @@ function setLanguage(lang) {
   if (btnCreatorCode) btnCreatorCode.textContent = t('creatorInviteCreate');
   if (btnCreatorAdd) btnCreatorAdd.textContent = t('add');
   if (btnCreatorInvite) btnCreatorInvite.textContent = t('creatorInvite');
+  if (btnCreatorShare) btnCreatorShare.textContent = t('creatorShare');
   const mapSwitchLink = document.querySelector('a[href="/templemap"]');
   if (mapSwitchLink) mapSwitchLink.textContent = t('mapSwitchTemple');
   const editSubtitleBtn = document.getElementById('btnEditSubtitle');
@@ -1840,6 +1923,7 @@ async function checkCreator(){
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
+  if (btnCreatorShare) btnCreatorShare.style.display = isCreator ? 'inline-flex' : 'none';
   if (creatorToolsToggle){
     creatorToolsToggle.style.display = (isCreator || creatorInviteAllowed) ? 'block' : 'none';
     const panelOpen = creatorToolsPanel && creatorToolsPanel.style.display === 'grid';
@@ -2287,6 +2371,10 @@ function render(){
       const ownerName = getOwnerName(item);
       if (!ownerName) return false;
       if (creatorFilter && ownerName !== creatorFilter) return false;
+      if (!creatorFilter){
+        if (creatorShareId && String(item.ownerId || '') !== String(creatorShareId)) return false;
+        if (!creatorShareId && creatorShareName && ownerName !== creatorShareName) return false;
+      }
     }
     if (zone === 'mine'){
       if (!creatorId) return false;
@@ -2418,9 +2506,9 @@ function render(){
           <label>${escapeHtml(t('priceInput'))}
             <select class="admin-input" data-admin-field="price">
               <option value="">-</option>
-              <option value="$" ${item.price === '$' ? 'selected' : ''}>$</option>
-              <option value="$$" ${item.price === '$$' ? 'selected' : ''}>$$</option>
-              <option value="$$$" ${item.price === '$$$' ? 'selected' : ''}>$$$</option>
+              <option value="$" ${item.price === '$' ? 'selected' : ''}>${escapeHtml(t('priceOpt1'))}</option>
+              <option value="$$" ${item.price === '$$' ? 'selected' : ''}>${escapeHtml(t('priceOpt2'))}</option>
+              <option value="$$$" ${item.price === '$$$' ? 'selected' : ''}>${escapeHtml(t('priceOpt3'))}</option>
             </select>
           </label>
           <label>${escapeHtml(t('rating'))}
@@ -3114,6 +3202,16 @@ if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
     alert(t('creatorInviteFail'));
   }
 };
+if (btnCreatorShare) btnCreatorShare.onclick = async ()=>{
+  if (!isCreator) return;
+  const url = buildCreatorShareUrl();
+  try{
+    await copyText(url);
+    showToast(t('shareCopied'));
+  }catch(_){
+    window.prompt(t('sharePrompt'), url);
+  }
+};
 if (btnCreatorCode) btnCreatorCode.onclick = async ()=>{
   try{
     const label = prompt(t('creatorInviteLabel')) || '';
@@ -3157,10 +3255,20 @@ function bootFoodMap(){
   checkCreator();
   initFilters();
   resetFilters();
+  applyCreatorShareFromUrl();
+  syncCreatorShareFilter();
   [kwInput, fCat, fArea, fCreator, fPrice, fStatus].filter(Boolean).forEach(el=> el.addEventListener('input', () => {
     currentLimit = PAGE_SIZE;
     safeRender();
   }));
+  if (fCreator){
+    fCreator.addEventListener('change', ()=>{
+      if (!suppressCreatorShareClear){
+        creatorShareId = '';
+        creatorShareName = '';
+      }
+    });
+  }
   if (fSort) {
     fSort.addEventListener('change', ()=>{
       currentLimit = PAGE_SIZE;
@@ -3310,6 +3418,8 @@ async function loadRemote(){
   setSyncIndicator(false);
   await refreshFavorites();
   initFilters();
+  applyCreatorShareFromUrl();
+  syncCreatorShareFilter();
   safeRender();
   openFoodFromUrl();
 }
