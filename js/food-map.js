@@ -1984,6 +1984,14 @@ function parseLatLngPair(lat, lng){
   if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) return null;
   return { lat: latNum, lng: lngNum };
 }
+function parseLatLngInput(input){
+  const raw = String(input ?? '').trim();
+  if (!raw) return null;
+  const normalized = raw.replace(/，/g, ',');
+  const parts = normalized.split(/[,\s]+/).filter(Boolean);
+  if (parts.length < 2) return null;
+  return parseLatLngPair(parts[0], parts[1]);
+}
 function extractLatLngFromText(text){
   const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
   return m ? parseLatLngPair(m[1], m[2]) : null;
@@ -2363,6 +2371,9 @@ function render(){
     if (isIgCover && !ALLOW_IG_COVER) coverUrl = '';
     const coverThumb = coverUrl && !isIgCover ? buildThumbUrl(coverUrl) : '';
     const coverPos = safeObjectPosition(item.coverPos || item.cover_pos);
+    const hasLat = item.lat !== undefined && item.lat !== null && String(item.lat).trim() !== '';
+    const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
+    const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -2387,7 +2398,14 @@ function render(){
           <label>${escapeHtml(t('nameInput'))}<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
           <label>${escapeHtml(t('catInput'))}<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>${escapeHtml(t('areaInput'))}<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
-          <label>${escapeHtml(t('priceInput'))}<input class="admin-input" data-admin-field="price" value="${escapeHtml(item.price || '')}"></label>
+          <label>${escapeHtml(t('priceInput'))}
+            <select class="admin-input" data-admin-field="price">
+              <option value="">-</option>
+              <option value="$" ${item.price === '$' ? 'selected' : ''}>$</option>
+              <option value="$$" ${item.price === '$$' ? 'selected' : ''}>$$</option>
+              <option value="$$$" ${item.price === '$$$' ? 'selected' : ''}>$$$</option>
+            </select>
+          </label>
           <label>${escapeHtml(t('rating'))}
             <div style="display:flex;gap:4px">
               <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5">
@@ -2399,15 +2417,16 @@ function render(){
             <span style="font-weight:700;color:#c2410c;font-size:12px;">${escapeHtml(t('featuredLabel'))}</span>
           </label>
           <label>${escapeHtml(t('addr'))}<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
-          <label>${escapeHtml(t('lat'))}<input class="admin-input" data-admin-field="lat" value="${escapeHtml(item.lat ?? '')}"></label>
-          <label>${escapeHtml(t('lng'))}<input class="admin-input" data-admin-field="lng" value="${escapeHtml(item.lng ?? '')}"></label>
+          <label>${escapeHtml(t('coordsInput'))}
+            <input class="admin-input" data-admin-field="coords" value="${escapeHtml(coordValue)}" placeholder="13.7563, 100.5018">
+          </label>
           <label>${escapeHtml(t('hours'))}<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
           <label>${escapeHtml(t('gMap'))}<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="${escapeHtml(t('placeIdHint'))}"></label>
           <label>${escapeHtml(t('igVideo'))}<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>${escapeHtml(t('ytVideo'))}<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
-          <label class="admin-field">${escapeHtml(t('igComment'))}
-            <textarea class="admin-textarea" data-admin-field="igComment">${escapeHtml(item.igComment || '')}</textarea>
+          <label class="admin-cover">${escapeHtml(t('desc'))}
+            <textarea class="admin-textarea admin-textarea-large" data-admin-field="intro">${escapeHtml(introText)}</textarea>
           </label>
           <label class="admin-cover">${escapeHtml(t('coverImg'))}
             <div class="admin-upload">
@@ -2423,9 +2442,6 @@ function render(){
             </div>
           </label>
         </div>
-        <label class="admin-field">${escapeHtml(t('desc'))}
-          <textarea class="admin-textarea" data-admin-field="intro">${escapeHtml(introText)}</textarea>
-        </label>
         <div class="admin-actions">
           <button class="btn ghost" data-admin-save="${safeId}">${escapeHtml(t('saveBtn'))}</button>
           <button class="btn ghost" data-admin-cancel>${escapeHtml(t('cancelBtn'))}</button>
@@ -2591,6 +2607,19 @@ function render(){
         
         const introRaw = getVal('intro') || '';
         const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : (original.highlights || []);
+        const coordRaw = read('coords');
+        const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
+        let latVal;
+        let lngVal;
+        if (hasCoords){
+          const pair = parseLatLngInput(coordRaw);
+          if (!pair){
+            alert(t('coordsInvalid'));
+            return;
+          }
+          latVal = pair.lat;
+          lngVal = pair.lng;
+        }
 
         const payload = {
           ...original,
@@ -2603,8 +2632,8 @@ function render(){
           featured_: read('featured') ?? original.featured_,
           rating: getVal('rating'),
           address: getVal('address'),
-          lat: getVal('lat'),
-          lng: getVal('lng'),
+          lat: latVal,
+          lng: lngVal,
           maps: getVal('maps'),
           googlePlaceId: getVal('googlePlaceId'),
           google_place_id: getVal('googlePlaceId'),
@@ -3423,7 +3452,6 @@ function openModal(id){
   const ytEmbed = buildYouTubeEmbedUrl(item.youtube || item.ig);
   const iframe = ytEmbed ? `<iframe src="${escapeHtml(ytEmbed)}" allowfullscreen></iframe>` : '';
   const embedClass = ytEmbed ? 'modal-embed yt' : 'modal-embed';
-  const igComment = String(item.igComment || '').trim();
   const hoursText = String(item.hours || '').trim();
   const mapsUrl = safeUrl(item.maps);
   const igUrl = safeUrl(item.ig);
@@ -3469,11 +3497,6 @@ function openModal(id){
           ${iframe || `<div style="padding:20px;color:#94a3b8;text-align:center;">${escapeHtml(t('noYt'))}</div>`}
         </div>
       </div>
-      ${igComment ? `
-        <div class="modal-section">
-          <strong>${escapeHtml(t('igComment'))}</strong>
-          <div style="white-space:pre-wrap;color:#475569;line-height:1.8;">${escapeHtml(igComment)}</div>
-        </div>` : ''}
       <div class="modal-section">
         <strong>${escapeHtml(t('desc'))}</strong>
         <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || t('noIntro'))}</div>
