@@ -312,6 +312,9 @@ const TRANSLATIONS = {
     close: '關閉',
     copy: '複製',
     copied: '已複製',
+    share: '分享',
+    shareCopied: '分享連結已複製',
+    sharePrompt: '複製這個連結：',
     save: '儲存',
     cancel: '取消',
     delete: '刪除',
@@ -514,6 +517,9 @@ const TRANSLATIONS = {
     close: 'Close',
     copy: 'Copy',
     copied: 'Copied',
+    share: 'Share',
+    shareCopied: 'Link copied',
+    sharePrompt: 'Copy this link:',
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
@@ -656,6 +662,8 @@ function t(key, params){
 let userLocation = null;
 let dataLoading = false;
 let dataReady = false;
+let pendingTempleId = '';
+let pendingTempleSource = '';
 let foodBooted = false;
 
 // DOM Elements
@@ -1106,6 +1114,7 @@ function loadCacheData(){
     DATA = cached.items.filter(it=>it && !it.deleted);
     dataReady = true;
     safeRender();
+    openTempleFromUrl();
     return true;
   }catch(_){
     return false;
@@ -2743,6 +2752,7 @@ function bootFoodMap(){
   } else if (DATA && DATA.length > 0) {
     dataReady = true;
     safeRender();
+    openTempleFromUrl();
   } else {
     dataLoading = true;
     dataReady = false;
@@ -2906,6 +2916,7 @@ async function loadRemote(){
   await refreshFavorites();
   initFilters();
   safeRender();
+  openTempleFromUrl();
 }
 
 function loadGooglePlaceDetails(item, container) {
@@ -3053,6 +3064,111 @@ function renderGoogleReviews(place, container) {
   container.innerHTML = html;
 }
 
+function buildTempleShareUrl(id){
+  const base = window.location.origin + window.location.pathname;
+  const url = new URL(base);
+  if (id) url.searchParams.set('id', id);
+  return url.toString();
+}
+
+async function copyText(text){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'fixed';
+  input.style.top = '-9999px';
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(input);
+  if (!ok) throw new Error('copy failed');
+}
+
+async function shareTemple(item){
+  if (!item || !item.id) return;
+  const url = buildTempleShareUrl(item.id);
+  const title = item.name ? String(item.name) : document.title;
+  if (navigator.share){
+    try{
+      await navigator.share({ title, url });
+      return;
+    }catch(err){
+      if (err && err.name === 'AbortError') return;
+    }
+  }
+  try{
+    await copyText(url);
+    showToast(t('shareCopied'));
+  }catch(_){
+    window.prompt(t('sharePrompt'), url);
+  }
+}
+
+function parseTempleIdFromSearch(){
+  const params = new URLSearchParams(window.location.search || '');
+  return params.get('id') || params.get('tid') || params.get('templeId') || '';
+}
+
+function parseTempleIdFromHash(){
+  const hash = String(window.location.hash || '').replace(/^#/, '');
+  if (!hash || !hash.includes('=')) return '';
+  try{
+    const params = new URLSearchParams(hash);
+    return params.get('id') || params.get('tid') || params.get('templeId') || '';
+  }catch(_){
+    return '';
+  }
+}
+
+function clearTempleUrl(source){
+  try{
+    if (source === 'search'){
+      const params = new URLSearchParams(window.location.search || '');
+      params.delete('id');
+      params.delete('tid');
+      params.delete('templeId');
+      const qs = params.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', next);
+      }else{
+        window.location.search = qs ? `?${qs}` : '';
+      }
+      return;
+    }
+    if (window.location.hash){
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
+      }else{
+        window.location.hash = '';
+      }
+    }
+  }catch(_){}
+}
+
+function openTempleFromUrl(){
+  const searchId = parseTempleIdFromSearch();
+  const hashId = parseTempleIdFromHash();
+  const tid = pendingTempleId || searchId || hashId;
+  if (!tid) return;
+  const source = pendingTempleId ? pendingTempleSource : (searchId ? 'search' : (hashId ? 'hash' : ''));
+  if (!DATA || !DATA.length){
+    pendingTempleId = tid;
+    pendingTempleSource = source;
+    return;
+  }
+  const item = DATA.find(it => String(it.id) === String(tid));
+  pendingTempleId = '';
+  pendingTempleSource = '';
+  if (!item) return;
+  openModal(item.id);
+  clearTempleUrl(source);
+}
+
 // Modal：寺廟資訊
 function openModal(id){
   const item = DATA.find(x=>x.id===id);
@@ -3074,6 +3190,15 @@ function openModal(id){
   const mapsUrl = safeUrl(item.maps);
   const igUrl = safeUrl(item.ig);
   const safeId = escapeHtml(item.id || '');
+  const shareBtn = item.id
+    ? `<button id="templeShare" class="modal-icon-btn" title="${escapeHtml(t('share'))}" aria-label="${escapeHtml(t('share'))}">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14 3h7v7"></path>
+          <path d="M21 3L10 14"></path>
+          <path d="M5 7v11a1 1 0 0 0 1 1h11"></path>
+        </svg>
+      </button>`
+    : '';
   const displayCat = mapCategory(item.category) || item.category;
   const tags = [
     displayCat,
@@ -3096,7 +3221,10 @@ function openModal(id){
     <div class="modal-body">
       <div class="modal-head">
         <div class="modal-title">${escapeHtml(item.name || '')}</div>
-        <button id="foodClose" class="modal-close">${escapeHtml(t('close'))}</button>
+        <div class="modal-head-actions">
+          ${shareBtn}
+          <button id="foodClose" class="modal-close">${escapeHtml(t('close'))}</button>
+        </div>
       </div>
       <div class="modal-tags">${tags}</div>
       <div class="${embedClass}">
@@ -3131,6 +3259,8 @@ function openModal(id){
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
+  const shareBtnEl = document.getElementById('templeShare');
+  if (shareBtnEl) shareBtnEl.onclick = ()=> shareTemple(item);
   ensureGoogleMaps().then(() => {
     loadGooglePlaceDetails(item, document.getElementById('googleReviewsBox'));
   });
@@ -3267,3 +3397,4 @@ async function removeFav(id){
   }
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
+window.addEventListener('hashchange', openTempleFromUrl);

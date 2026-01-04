@@ -165,6 +165,9 @@
     .admin-cover{grid-column:1 / -1;}
     .modal-body{padding:16px;display:grid;gap:14px;background:#fff;max-height:80vh;overflow:auto;}
     .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+    .modal-head-actions{display:flex;align-items:center;gap:8px;}
+    .modal-icon-btn{border:none;background:#f1f5f9;border-radius:10px;padding:6px;cursor:pointer;color:#0f172a;display:flex;align-items:center;justify-content:center;}
+    .modal-icon-btn svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
     .modal-title{font-size:18px;font-weight:800;color:#0f172a;}
     .modal-close{border:none;background:#f1f5f9;border-radius:10px;padding:6px 10px;cursor:pointer;color:#0f172a;font-weight:700;font-size:12px;}
     .modal-tags{display:flex;gap:6px;flex-wrap:wrap;}
