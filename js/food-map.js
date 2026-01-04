@@ -313,6 +313,9 @@ const TRANSLATIONS = {
     close: '關閉',
     copy: '複製',
     copied: '已複製',
+    share: '分享',
+    shareCopied: '分享連結已複製',
+    sharePrompt: '複製這個連結：',
     save: '儲存',
     cancel: '取消',
     delete: '刪除',
@@ -517,6 +520,9 @@ const TRANSLATIONS = {
     close: 'Close',
     copy: 'Copy',
     copied: 'Copied',
+    share: 'Share',
+    shareCopied: 'Link copied',
+    sharePrompt: 'Copy this link:',
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
@@ -660,6 +666,8 @@ function t(key, params){
 let userLocation = null;
 let dataLoading = false;
 let dataReady = false;
+let pendingFoodId = '';
+let pendingFoodSource = '';
 let foodBooted = false;
 
 // DOM Elements
@@ -869,6 +877,111 @@ function showToast(text){
   el.style.display = 'block';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{ el.style.display = 'none'; }, 1600);
+}
+
+function buildFoodShareUrl(id){
+  const base = window.location.origin + window.location.pathname;
+  const url = new URL(base);
+  if (id) url.searchParams.set('id', id);
+  return url.toString();
+}
+
+async function copyText(text){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'fixed';
+  input.style.top = '-9999px';
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(input);
+  if (!ok) throw new Error('copy failed');
+}
+
+async function shareFood(item){
+  if (!item || !item.id) return;
+  const url = buildFoodShareUrl(item.id);
+  const title = item.name ? String(item.name) : document.title;
+  if (navigator.share){
+    try{
+      await navigator.share({ title, url });
+      return;
+    }catch(err){
+      if (err && err.name === 'AbortError') return;
+    }
+  }
+  try{
+    await copyText(url);
+    showToast(t('shareCopied'));
+  }catch(_){
+    window.prompt(t('sharePrompt'), url);
+  }
+}
+
+function parseFoodIdFromSearch(){
+  const params = new URLSearchParams(window.location.search || '');
+  return params.get('id') || params.get('fid') || params.get('foodId') || '';
+}
+
+function parseFoodIdFromHash(){
+  const hash = String(window.location.hash || '').replace(/^#/, '');
+  if (!hash || !hash.includes('=')) return '';
+  try{
+    const params = new URLSearchParams(hash);
+    return params.get('id') || params.get('fid') || params.get('foodId') || '';
+  }catch(_){
+    return '';
+  }
+}
+
+function clearFoodUrl(source){
+  try{
+    if (source === 'search'){
+      const params = new URLSearchParams(window.location.search || '');
+      params.delete('id');
+      params.delete('fid');
+      params.delete('foodId');
+      const qs = params.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', next);
+      }else{
+        window.location.search = qs ? `?${qs}` : '';
+      }
+      return;
+    }
+    if (window.location.hash){
+      if (history && typeof history.replaceState === 'function'){
+        history.replaceState(null, document.title || '', window.location.pathname + window.location.search);
+      }else{
+        window.location.hash = '';
+      }
+    }
+  }catch(_){}
+}
+
+function openFoodFromUrl(){
+  const searchId = parseFoodIdFromSearch();
+  const hashId = parseFoodIdFromHash();
+  const fid = pendingFoodId || searchId || hashId;
+  if (!fid) return;
+  const source = pendingFoodId ? pendingFoodSource : (searchId ? 'search' : (hashId ? 'hash' : ''));
+  if (!DATA || !DATA.length){
+    pendingFoodId = fid;
+    pendingFoodSource = source;
+    return;
+  }
+  const item = DATA.find(it => String(it.id) === String(fid));
+  pendingFoodId = '';
+  pendingFoodSource = '';
+  if (!item) return;
+  openModal(item.id);
+  clearFoodUrl(source);
 }
 
 const nameCollator = (typeof Intl !== 'undefined' && Intl.Collator)
@@ -1103,6 +1216,7 @@ function loadCacheData(){
     DATA = cached.items.filter(it=>it && !it.deleted);
     dataReady = true;
     safeRender();
+    openFoodFromUrl();
     return true;
   }catch(_){
     return false;
@@ -2737,6 +2851,7 @@ function bootFoodMap(){
   } else if (DATA && DATA.length > 0) {
     dataReady = true;
     safeRender();
+    openFoodFromUrl();
   } else {
     dataLoading = true;
     dataReady = false;
@@ -2900,6 +3015,7 @@ async function loadRemote(){
   await refreshFavorites();
   initFilters();
   safeRender();
+  openFoodFromUrl();
 }
 
 function loadGooglePlaceDetails(item, container) {
@@ -3062,6 +3178,17 @@ function openModal(id){
   const mapsUrl = safeUrl(item.maps);
   const igUrl = safeUrl(item.ig);
   const safeId = escapeHtml(item.id || '');
+  const shareBtn = item.id
+    ? `<button id="foodShare" class="modal-icon-btn" title="${escapeHtml(t('share'))}" aria-label="${escapeHtml(t('share'))}">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <path d="M8.7 13.5l6.4 3.2"></path>
+          <path d="M15.1 7.3l-6.4 3.2"></path>
+        </svg>
+      </button>`
+    : '';
   const displayCat = mapCategory(item.category) || item.category;
   const tags = [
     displayCat,
@@ -3081,7 +3208,10 @@ function openModal(id){
     <div class="modal-body">
       <div class="modal-head">
         <div class="modal-title">${escapeHtml(item.name || '')}</div>
-        <button id="foodClose" class="modal-close">${escapeHtml(t('close'))}</button>
+        <div class="modal-head-actions">
+          ${shareBtn}
+          <button id="foodClose" class="modal-close">${escapeHtml(t('close'))}</button>
+        </div>
       </div>
       <div class="modal-tags">${tags}</div>
       <div class="${embedClass}">
@@ -3115,6 +3245,8 @@ function openModal(id){
   `;
   dlg.showModal();
   document.getElementById('foodClose').onclick = ()=> dlg.close();
+  const shareBtnEl = document.getElementById('foodShare');
+  if (shareBtnEl) shareBtnEl.onclick = ()=> shareFood(item);
   ensureGoogleMaps().then(() => {
     loadGooglePlaceDetails(item, document.getElementById('googleReviewsBox'));
   });
@@ -3251,3 +3383,4 @@ async function removeFav(id){
   }
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
+window.addEventListener('hashchange', openFoodFromUrl);

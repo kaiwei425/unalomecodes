@@ -3193,9 +3193,11 @@ function openModal(id){
   const shareBtn = item.id
     ? `<button id="templeShare" class="modal-icon-btn" title="${escapeHtml(t('share'))}" aria-label="${escapeHtml(t('share'))}">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M14 3h7v7"></path>
-          <path d="M21 3L10 14"></path>
-          <path d="M5 7v11a1 1 0 0 0 1 1h11"></path>
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <path d="M8.7 13.5l6.4 3.2"></path>
+          <path d="M15.1 7.3l-6.4 3.2"></path>
         </svg>
       </button>`
     : '';
