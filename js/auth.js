@@ -281,9 +281,10 @@
   function addPendingDetailToCart(){
     let pending = null;
     try{
-      const raw = sessionStorage.getItem('__pendingDetail__');
+      const raw = localStorage.getItem('__pendingAddToCart__') || sessionStorage.getItem('__pendingDetail__');
       if (raw) pending = JSON.parse(raw);
     }catch(_){}
+    try{ localStorage.removeItem('__pendingAddToCart__'); }catch(_){}
     try{ sessionStorage.removeItem('__pendingDetail__'); }catch(_){}
     if (!pending) return false;
 
@@ -363,14 +364,18 @@
     maybeNotifyWelcomeCoupon();
     if (state.user){
       try{
-        const shouldAdd = sessionStorage.getItem('__addPendingAfterLogin') === '1';
-        const shouldOpen = sessionStorage.getItem('__openCartAfterLogin') === '1';
+        const shouldAdd = sessionStorage.getItem('__addPendingAfterLogin') === '1'
+          || localStorage.getItem('__addPendingAfterLogin') === '1';
+        const shouldOpen = sessionStorage.getItem('__openCartAfterLogin') === '1'
+          || localStorage.getItem('__openCartAfterLogin') === '1';
         if (shouldAdd){
           sessionStorage.removeItem('__addPendingAfterLogin');
+          try{ localStorage.removeItem('__addPendingAfterLogin'); }catch(_){}
           try{ addPendingDetailToCart(); }catch(_){}
         }
         if (shouldOpen){
           sessionStorage.removeItem('__openCartAfterLogin');
+          try{ localStorage.removeItem('__openCartAfterLogin'); }catch(_){}
           if (typeof window.openCart === 'function') window.openCart();
         }
       }catch(_){}

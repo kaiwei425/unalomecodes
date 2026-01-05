@@ -219,7 +219,13 @@ function openDetail(p){
         if (!window.authState.isLoggedIn()){
           try{ sessionStorage.setItem('__addPendingAfterLogin','1'); }catch(_){}
           try{ stashPendingDetail(); }catch(_){}
+          try{
+            const raw = sessionStorage.getItem('__pendingDetail__');
+            if (raw) localStorage.setItem('__pendingAddToCart__', raw);
+            localStorage.setItem('__addPendingAfterLogin','1');
+          }catch(_){}
           try{ sessionStorage.setItem('__openCartAfterLogin','1'); }catch(_){}
+          try{ localStorage.setItem('__openCartAfterLogin','1'); }catch(_){}
           try{
             if (dlg && typeof dlg.close === 'function') dlg.close();
           }catch(_){}
