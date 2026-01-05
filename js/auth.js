@@ -303,6 +303,14 @@
     refreshProfile();
     refreshAdmin();
     maybeNotifyWelcomeCoupon();
+    if (state.user){
+      try{
+        if (sessionStorage.getItem('__openCartAfterLogin') === '1'){
+          sessionStorage.removeItem('__openCartAfterLogin');
+          if (typeof window.openCart === 'function') window.openCart();
+        }
+      }catch(_){}
+    }
   }
 
   function lineLogin(){

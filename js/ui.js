@@ -217,6 +217,10 @@ function openDetail(p){
     try{
       if (window.authState && typeof window.authState.isLoggedIn === 'function'){
         if (!window.authState.isLoggedIn()){
+          try{ sessionStorage.setItem('__openCartAfterLogin','1'); }catch(_){}
+          try{
+            if (dlg && typeof dlg.close === 'function') dlg.close();
+          }catch(_){}
           if (typeof window.authState.login === 'function'){
             window.authState.login();
           }else if (typeof window.authState.promptLogin === 'function'){
