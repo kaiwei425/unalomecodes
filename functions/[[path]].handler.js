@@ -3114,7 +3114,7 @@ async function updateDashboardStats(env) {
     orders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
     serviceOrders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
     members: { total: 0, approx: false },
-    coupons: { total: 0, used: 0, approx: false }
+    coupons: { total: 0, used: 0, total7: 0, used7: 0, approx: false }
   };
   const nowTs = Date.now();
   const todayKey = taipeiDateKey(nowTs);
@@ -3353,7 +3353,11 @@ async function updateDashboardStats(env) {
         if (!raw) continue;
         try{
           const c = JSON.parse(raw);
+          const issuedAtTs = c.issuedAt ? Date.parse(c.issuedAt) : 0;
+          if (issuedAtTs && issuedAtTs >= last7Ts) stats.coupons.total7++;
           if (c.used) stats.coupons.used++;
+          const usedAtTs = c.usedAt ? Date.parse(c.usedAt) : 0;
+          if (usedAtTs && usedAtTs >= last7Ts) stats.coupons.used7++;
         }catch(_){}
       }
     }catch(_){}

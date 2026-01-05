@@ -327,7 +327,7 @@ html.admin-guard-hide{visibility:hidden;}
         <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
       </div>
       <div class="admin-stat-card">
-        <div class="admin-stat-title">優惠券使用</div>
+      <div class="admin-stat-title">優惠券使用（近 7 日）</div>
         <div class="admin-stat-value" data-stat="coupons-used">—</div>
         <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
       </div>
@@ -690,8 +690,8 @@ html.admin-guard-hide{visibility:hidden;}
     set('members-total', s.members ? s.members.total : '—');
     setSub('members-sub', s.members && s.members.approx ? '資料量較大，顯示估算' : '同步完成');
     if (s.coupons){
-      set('coupons-used', `${s.coupons.used || 0}/${s.coupons.total || 0}`);
-      setSub('coupons-sub', s.coupons.approx ? '資料量較大，顯示估算' : '使用率統計');
+      set('coupons-used', `${s.coupons.used7 || 0}/${s.coupons.total7 || 0}`);
+      setSub('coupons-sub', s.coupons.approx ? '資料量較大，顯示估算' : '近 7 日使用 / 發放');
     }
 
     const r = data.reports || {};

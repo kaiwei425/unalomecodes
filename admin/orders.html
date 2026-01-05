@@ -290,6 +290,15 @@ function orderShippingFee711(o){
   return 38;
 }
 
+function formatOrderDate711(o){
+  const raw = (o && (o.createdAt || o.created_at || o.ts || o.updatedAt || o.updated_at)) || '';
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n)=> String(n).padStart(2,'0');
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function build711Rows(orders){
   const rows = [];
   const warnings = [];
@@ -302,12 +311,14 @@ function build711Rows(orders){
     const storeDigits = normalizeDigits(storeRaw);
     const store = storeDigits.length >= 6 ? storeDigits.slice(0, 6) : String(storeRaw || '');
     const product = orderItemsSummary711(o);
+    const orderDate = formatOrderDate711(o);
+    const orderNote = String(o.id || '').trim();
     const totalAmount = orderTotalAmount(o);
     const shipping = orderShippingFee711(o);
     const productAmount = Math.max(0, totalAmount - shipping);
     const total = productAmount + shipping;
     const cols = ['A','B','C','D','E','F','G','H','I','J','K'];
-    const values = [name, phone, store, '常溫', product, String(productAmount), String(shipping), '', '', '', ''];
+    const values = [name, phone, store, '常溫', product, String(productAmount), String(shipping), orderDate, orderNote, '', ''];
 
     if (!name) warnings.push(`${o.id || '未知訂單'}：缺少取件人姓名`);
     if (!phone || phone.length !== 10) warnings.push(`${o.id || '未知訂單'}：取件人手機格式可能不正確`);
