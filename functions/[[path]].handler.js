@@ -10309,10 +10309,16 @@ async function maybeSendStoryEmail(env, item, requestUrl){
   try{
     const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
     const fromDefault = (env.STORY_EMAIL_FROM || env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
-    const toList = (env.STORY_NOTIFY_EMAIL || '')
+    const gatherEmails = (input)=> (input || '')
       .split(',')
       .map(s => s.trim())
       .filter(s => s && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+    const toList = [
+      ...gatherEmails(env.STORY_NOTIFY_EMAIL),
+      ...gatherEmails(env.ORDER_NOTIFY_EMAIL),
+      ...gatherEmails(env.ORDER_ALERT_EMAIL),
+      ...gatherEmails(env.ADMIN_EMAIL)
+    ];
     const fallbackTo = 'bkkaiwei@gmail.com';
     const finalTo = Array.from(new Set([fallbackTo, ...toList]));
     if (!apiKey || !fromDefault || !finalTo.length) {
