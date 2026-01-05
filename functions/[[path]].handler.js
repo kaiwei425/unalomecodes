@@ -5896,6 +5896,11 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     const deity = selection.deity;
     const variantName = selection.variantName;
 
+    const methodToken = String(body?.method || body?.paymentMethod || body?.payment || '').trim();
+    const methodKey = methodToken.toLowerCase();
+    const isCod711 = methodKey.includes('cod') || methodKey.includes('貨到付款') || methodKey.includes('711');
+    const methodLabel = isCod711 ? '貨到付款(7-11)' : '轉帳匯款';
+
     const buyer = {
       name:  String((body?.buyer?.name)  || body?.name  || body?.buyer_name  || body?.bfName    || ''),
       email: String((body?.buyer?.email) || body?.email || body?.buyer_email || body?.bfEmail   || ''),
@@ -5932,11 +5937,13 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       body?.bfNote ??
       ''
     ).trim();
-    if (!receiptUrl) {
-      return new Response(JSON.stringify({ ok:false, error:'缺少匯款憑證' }), { status:400, headers: jsonHeaders });
-    }
-    if (!/^\d{5}$/.test(transferLast5)) {
-      return new Response(JSON.stringify({ ok:false, error:'請輸入匯款末五碼' }), { status:400, headers: jsonHeaders });
+    if (!isCod711) {
+      if (!receiptUrl) {
+        return new Response(JSON.stringify({ ok:false, error:'缺少匯款憑證' }), { status:400, headers: jsonHeaders });
+      }
+      if (!/^\d{5}$/.test(transferLast5)) {
+        return new Response(JSON.stringify({ ok:false, error:'請輸入匯款末五碼' }), { status:400, headers: jsonHeaders });
+      }
     }
     let amount = items.reduce((s, it) => {
       const unit = Number(it.price ?? it.unitPrice ?? 0) || 0;
@@ -6042,7 +6049,8 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     // Optional candle ritual metadata
     const fallbackText = `${body?.category || ''} ${productName || body?.productName || ''}`.trim();
     const shippingNeeded = needShippingFee(items, fallbackText);
-    const baseShipping = resolveShippingFee(env);
+    const codShippingFee = Number(env.COD_711_SHIPPING_FEE || 38) || 38;
+    const baseShipping = isCod711 ? codShippingFee : resolveShippingFee(env);
     let shippingFee = shippingNeeded ? baseShipping : 0;
     const shippingDiscount = Math.max(0, Number((couponApplied && couponApplied.shippingDiscount) || 0));
     if (shippingDiscount > 0){
@@ -6081,8 +6089,9 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       productId, productName, price, qty,
       deity, variantName,
       items: useCartOnly && items.length ? items : undefined,
-      method: '轉帳匯款',
-      buyer, transferLast5, receiptUrl,
+      method: methodLabel,
+      buyer,
+      ...(isCod711 ? {} : { transferLast5, receiptUrl }),
       note: noteVal,
       amount: Math.max(0, Math.round(amount || 0)),
       shippingFee: shippingFee || 0,
@@ -6123,7 +6132,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       await env.ORDERS.put(order.id, JSON.stringify(order));
     } catch(_){}
     try {
-      await maybeSendOrderEmails(env, order, { origin, channel: 'bank' });
+      await maybeSendOrderEmails(env, order, { origin, channel: order.method || methodLabel });
     } catch (err) {
       console.error('sendOrderEmails(bank) error', err);
     }
@@ -7348,6 +7357,7 @@ function composeOrderEmail(order, opts = {}) {
   const methodRaw = opts.channelLabel || order.method || '訂單';
   const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || /服務/.test(String(order?.method||''));
   const method = (isServiceOrder && (!order.paymentMethod || /服務/.test(methodRaw))) ? '轉帳匯款' : methodRaw;
+  const isCod711 = /貨到付款|cod|711/i.test(method || '');
   const context = opts.context || 'order_created';
   const items = buildOrderItems(order);
   const shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
@@ -7409,7 +7419,7 @@ function composeOrderEmail(order, opts = {}) {
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
+      <p>${isCod711 ? '我們已收到您的訂單，將儘速安排出貨。' : '我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。'}請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const lookupLine = opts.lookupUrl
@@ -7492,7 +7502,10 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push(lookupText);
     }
   } else {
-    textParts.push(`親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
+    const waitLine = isCod711
+      ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
+      : `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`;
+    textParts.push(waitLine);
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);

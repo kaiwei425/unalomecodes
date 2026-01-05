@@ -1,6 +1,8 @@
 const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
 const SHIPPING_FEE = (typeof window !== 'undefined' && Number(window.__shippingFee)) ? Number(window.__shippingFee) : 60;
 try{ if (typeof window !== 'undefined') window.__shippingFee = SHIPPING_FEE; }catch(_){}
+const COD_SHIPPING_FEE = (typeof window !== 'undefined' && Number(window.__codShippingFee)) ? Number(window.__codShippingFee) : 38;
+try{ if (typeof window !== 'undefined') window.__codShippingFee = COD_SHIPPING_FEE; }catch(_){}
 const PROFILE_URL = (function(){
   try{ return (window.__SHOP_ORIGIN || window.location.origin || '') + '/api/me/profile'; }
   catch(_){ return '/api/me/profile'; }
@@ -345,7 +347,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var title = opts.title || '訂單建立成功';
       var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
       var note = opts.note || '請截圖保存本頁資訊，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
-      var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : '轉帳匯款');
+      var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : ((opts.channel === 'cod' || opts.channel === 'cod-711') ? '貨到付款(7-11)' : '轉帳匯款'));
       var lookupDigits = opts.orderLookupDigits || suffixId;
       var phone = opts.phone || '';
       var last5 = opts.last5 || (order.transferLast5 || '');
@@ -513,14 +515,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{ navigator.clipboard.writeText(text); }catch(e){
       const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
     }
-    alert('已複製匯款資訊');
+    alert('已複製付款資訊');
   }
 
   window.openBankDialog = function(from){
     window.__checkoutSource = (from === 'cart') ? 'cart' : 'direct';
     // 若需要門市且尚未選擇，先跳到門市步驟（避免直接落到 Step3）
     try{
-      const pricing = __cartPricing(true);
+      const pricing = __cartPricing(true, { shippingFee: COD_SHIPPING_FEE });
       const needStore = (!Array.isArray(pricing.items) || pricing.items.length === 0)
         ? true
         : pricing.items.some(it=>!isCandleItemLike(it));
@@ -544,7 +546,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }catch(_){}
     try{
       const dlg = document.getElementById('dlgBank');
-      if(!dlg) return alert('無法顯示匯款視窗');
+      if(!dlg) return alert('無法顯示結帳視窗');
       // 先清表單，避免之後回填被 reset 掉
       const f = document.getElementById('bankForm');
       if (f) f.reset();
@@ -578,11 +580,6 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           }, 1000);
         }
       })();
-      // 填入展示資訊
-      const bankEl = document.getElementById('bankBankVal');
-      const noEl   = document.getElementById('bankNoVal');
-      if (bankEl) bankEl.textContent = BANK.bank;
-      if (noEl)   noEl.textContent   = BANK.no;
       // 同步 7-11 門市資訊到匯款視窗（若已在前一步選好）
       try{
         var storeFromDlg = document.getElementById('dlgStoreInput');
@@ -687,7 +684,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         if (!hint) return;
         var baseText = '系統自動帶入金額，無需修改';
         if (shippingFee > 0){
-          baseText = '含 7-11 店到店運費 NT$' + SHIPPING_FEE + '，請確認金額後再送出';
+          baseText = '含 7-11 店到店運費 NT$' + COD_SHIPPING_FEE + '，請確認金額後再送出';
         }
         if (off > 0){
           hint.textContent = '已套用優惠折抵 NT$' + (Number(off)||0) + (shippingFee>0 ? '；' + baseText : '');
@@ -722,7 +719,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
       }catch(e){}
 
-    }catch(e){ console.error(e); alert('開啟匯款視窗失敗'); }
+    }catch(e){ console.error(e); alert('開啟結帳視窗失敗'); }
   };
 
   document.addEventListener('click', (e)=>{
@@ -784,9 +781,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           submitBtn.disabled = false;
         }
         if (auth && typeof auth.promptLogin === 'function'){
-          auth.promptLogin('請先登入後再送出匯款資料。');
+          auth.promptLogin('請先登入後再送出訂單。');
         }else{
-          alert('請先登入後再送出匯款資料。');
+          alert('請先登入後再送出訂單。');
           window.location.href = '/api/auth/google/login';
         }
         return;
@@ -831,7 +828,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           }
         }catch(e){}
         fd.set('cart', JSON.stringify(cart));
-        fd.set('method', 'BANK_TRANSFER');
+        fd.set('method', 'COD_711');
         if (Array.isArray(cart) && cart.length > 0) {
           fd.set('mode', 'cart');
           fd.set('useCart', '1');
@@ -861,7 +858,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             fd.set('coupons', JSON.stringify(multiCoupons.map(function(item){
               var amt = (item.amount != null ? Number(item.amount) : undefined);
               var deity = String(item.deity||'').trim().toUpperCase();
-              if ((amt == null || isNaN(amt)) && deity === 'SHIP') amt = SHIPPING_FEE;
+              if ((amt == null || isNaN(amt)) && deity === 'SHIP') amt = COD_SHIPPING_FEE;
               return {
                 code: String(item.code||'').trim().toUpperCase(),
                 deity: deity,
@@ -870,15 +867,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             })));
           }
           if (couponState.assignment){
-            var totalOffAssign = Number(couponState.assignment.total||0) + (pricing.hasShipCoupon ? SHIPPING_FEE : 0);
+            var totalOffAssign = Number(couponState.assignment.total||0) + (pricing.hasShipCoupon ? COD_SHIPPING_FEE : 0);
             fd.set('coupon_assignment', JSON.stringify(couponState.assignment));
             fd.set('coupon_total', String(totalOffAssign));
           }else{
-            var totalOff = (pricing.off || 0) + (pricing.hasShipCoupon ? SHIPPING_FEE : 0);
+            var totalOff = (pricing.off || 0) + (pricing.hasShipCoupon ? COD_SHIPPING_FEE : 0);
             if (totalOff > 0) fd.set('coupon_total', String(totalOff));
           }
           fd.set('shipping', String(pricing.shipping || 0));
-          if (pricing.hasShipCoupon) fd.set('shipping_discount', String(SHIPPING_FEE));
+          if (pricing.hasShipCoupon) fd.set('shipping_discount', String(COD_SHIPPING_FEE));
           fd.set('subtotal', String(pricing.subtotal||0));
           fd.set('grand', String(pricing.grand||0));
         }catch(_){}
@@ -896,10 +893,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         if (willShowDialog){
           try{ window.__orderSuccessWillOpen = true; }catch(_){}
         }
-        alert(success ? '✅ 已送出匯款資訊，我們將盡快核對！' : '✅ 已送出，感謝！');
+        alert(success ? '✅ 已送出訂單，我們將盡快安排出貨！' : '✅ 已送出，感謝！');
         if (success){
           try{
-            if (window.trackEvent) window.trackEvent('order_submit', { method:'bank', value: (data && data.order && data.order.amount) || null });
+            if (window.trackEvent) window.trackEvent('order_submit', { method:'cod-711', value: (data && data.order && data.order.amount) || null });
           }catch(_){}
           try{
             if (typeof scheduleOrderRefresh === 'function') scheduleOrderRefresh(600);
@@ -911,12 +908,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         // Show a rich success panel with an action button to open the lookup dialog (prefilled)
         try{
           var phoneVal = (document.getElementById('bfContact') && document.getElementById('bfContact').value) || '';
-          var last5Val = (document.getElementById('bfLast5') && document.getElementById('bfLast5').value) || '';
           if (willShowDialog){
             window.showOrderSuccessPanel({
-              channel:'bank',
+              channel:'cod',
               phone: phoneVal,
-              last5: last5Val,
+              last5: '',
               orderId: (data && data.id) || '',
               order: (data && data.order) || null,
               items: data && data.order && data.order.items,
@@ -967,7 +963,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           localStorage.setItem('bankSubmits', JSON.stringify(stash));
         }catch{}
         try{ sessionStorage.removeItem('__pendingDetail__'); }catch(e){}
-        alert('已送出訂單，核對匯款資訊無誤後會盡快安排出貨。');
+        alert('已送出訂單，我們將盡快安排出貨。');
         if (dlg) dlg.close();
       }finally{
         if (pendingOverlay) {
@@ -982,7 +978,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 })();
 
 // 統一的購物車計算（實體商品/信用卡/轉帳共用）
-function __cartPricing(includePendingDetail){
+function __cartPricing(includePendingDetail, opts){
+  opts = opts || {};
+  const overrideFee = (typeof opts.shippingFee === 'number' && !Number.isNaN(opts.shippingFee)) ? opts.shippingFee : null;
   function readCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; } }
   function activeCoupon(){
     try{ if (window.__coupon && typeof window.__coupon.getActiveCoupon==='function') return window.__coupon.getActiveCoupon(); }catch(e){}
@@ -1032,6 +1030,9 @@ function __cartPricing(includePendingDetail){
       }
     }
   }catch(_){}
+  if (overrideFee != null){
+    shipping = 0;
+  }
   const coupon = hasCandle ? null : (couponFromState || activeCoupon());
   if (!off && coupon && coupon.code){
     const want = toDeityCode(coupon.deity || coupon.code || '');
@@ -1045,7 +1046,7 @@ function __cartPricing(includePendingDetail){
     if (hasShipCoupon){
       shipping = 0;
     }else if (hasPhysical){
-      shipping = SHIPPING_FEE;
+      shipping = (overrideFee != null) ? overrideFee : SHIPPING_FEE;
     }
   }
   const grand = Math.max(0, Math.round(subtotal - off + shipping));
