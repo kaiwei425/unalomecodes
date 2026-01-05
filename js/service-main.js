@@ -61,6 +61,7 @@
   const bankMemoInput = document.getElementById('svcBankMemo');
   const memberPerkHintEl = document.getElementById('svcMemberPerkHint');
   const requestDateInput = checkoutForm ? checkoutForm.querySelector('input[name="requestDate"]') : null;
+  const requestDateWrap = requestDateInput ? requestDateInput.closest('label') : null;
   const contactNameInput = checkoutForm ? checkoutForm.querySelector('input[name="name"]') : null;
   const contactNameEnInput = checkoutForm ? checkoutForm.querySelector('input[name="nameEn"]') : null;
   const contactPhoneInput = checkoutForm ? checkoutForm.querySelector('input[name="phone"]') : null;
@@ -315,6 +316,21 @@
     const option = String(service.optionName || service.option || '').trim();
     if ((name && /代捐棺/.test(name)) || (option && /代捐棺/.test(option))) return false;
     return true;
+  }
+
+  function isCandleService(service){
+    if (!service) return false;
+    const name = String(service.serviceName || service.name || '').trim();
+    const option = String(service.optionName || service.option || '').trim();
+    return /蠟燭|candle/i.test(name) || /蠟燭|candle/i.test(option);
+  }
+
+  function applyRequestDateVisibility(cart){
+    if (!requestDateWrap) return;
+    const list = Array.isArray(cart) ? cart : [];
+    const shouldShow = list.some(item => isCandleService(item));
+    requestDateWrap.style.display = shouldShow ? '' : 'none';
+    if (!shouldShow && requestDateInput) requestDateInput.value = '';
   }
 
   function isCheckoutPhotoRequired(){
@@ -1091,6 +1107,7 @@
     const photoRequired = cart.some(item => isRitualPhotoRequired(item));
     const serviceName = cart[0] && cart[0].serviceName ? cart[0].serviceName : '';
     applyPhotoRequirement(photoRequired, serviceName);
+    applyRequestDateVisibility(cart);
     const selectedOpts = [];
     cart.filter(it => it.optionName).forEach(it => {
       const qty = getItemQty(it);
