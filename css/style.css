@@ -765,16 +765,16 @@ html,body{
   padding:8px 10px;
   border:1px solid var(--line);
   border-radius:10px;
-  background:#0f172a;
-  color:#e5e7eb;
+  background:#fff;
+  color:#0f172a;
   font-weight:700;
   text-align:left;
 }
 #sideDeities .cats .list button.active,
 #sideDeities .side-cat-btn.active{
-  background:#111827;
-  border-color:#2b2f3a;
-  color:#eab308;
+  background:#fff7ed;
+  border-color:#fdba74;
+  color:#c2410c;
 }
 @media(max-width:900px){
   #sideDeities{order:-1}
