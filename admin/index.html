@@ -312,6 +312,11 @@ html.admin-guard-hide{visibility:hidden;}
         <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
       </div>
       <div class="admin-stat-card">
+        <div class="admin-stat-title">服務訂單總數</div>
+        <div class="admin-stat-value" data-stat="service-orders-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="service-orders-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
         <div class="admin-stat-title">會員數</div>
         <div class="admin-stat-value" data-stat="members-total">—</div>
         <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
@@ -661,6 +666,7 @@ html.admin-guard-hide{visibility:hidden;}
   const markReportLoading = ()=>{
     setSub('products-sub', '統計更新中…');
     setSub('orders-sub', '統計更新中…');
+    setSub('service-orders-sub', '統計更新中…');
     setSub('members-sub', '統計更新中…');
     setSub('coupons-sub', '統計更新中…');
     setReport('physical-status', '統計更新中…');
@@ -674,6 +680,8 @@ html.admin-guard-hide{visibility:hidden;}
     setSub('products-sub', s.products ? `上架 ${s.products.active || 0}｜低庫存 ${s.products.lowStock || 0}` : '—');
     set('orders-total', s.orders ? s.orders.total : '—');
     setSub('orders-sub', s.orders ? `訂單待處理 ${s.orders.pending || 0}｜待出貨 ${s.orders.paid || 0}｜已取件（訂單完成） ${s.orders.done || 0}` : '—');
+    set('service-orders-total', s.serviceOrders ? s.serviceOrders.total : '—');
+    setSub('service-orders-sub', s.serviceOrders ? `新訂單 ${s.serviceOrders.pending || 0}｜已確認付款 ${s.serviceOrders.paid || 0}｜已完成訂單 ${s.serviceOrders.done || 0}` : '—');
     set('members-total', s.members ? s.members.total : '—');
     setSub('members-sub', s.members && s.members.approx ? '資料量較大，顯示估算' : '同步完成');
     if (s.coupons){
@@ -720,7 +728,7 @@ html.admin-guard-hide{visibility:hidden;}
     });
   };
   const loadDashboard = (attempt = 0)=>{
-    fetch('/api/admin/dashboard', { credentials:'include', cache:'no-store' })
+    fetch('/api/admin/dashboard?fresh=1', { credentials:'include', cache:'no-store' })
       .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
       .then(({ ok, data })=>{
         if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');

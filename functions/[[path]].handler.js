@@ -3112,6 +3112,7 @@ async function updateDashboardStats(env) {
   const stats = {
     products: { total: 0, active: 0, lowStock: 0, approx: false },
     orders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
+    serviceOrders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
     members: { total: 0, approx: false },
     coupons: { total: 0, used: 0, approx: false }
   };
@@ -3254,7 +3255,7 @@ async function updateDashboardStats(env) {
     }
   }
 
-  // Service orders (report only)
+  // Service orders
   {
     const svcStore = env.SERVICE_ORDERS || env.ORDERS;
     if (svcStore){
@@ -3264,16 +3265,23 @@ async function updateDashboardStats(env) {
         ids = idxRaw ? JSON.parse(idxRaw) : [];
         if (!Array.isArray(ids)) ids = [];
       }catch(_){ ids = []; }
-      const slice = ids.slice(0, scanLimit);
-      if (ids.length > slice.length) reports.service.approx = true;
-      for (const oid of slice){
+      const scanAll = ids.length <= scanLimit;
+      const scanIds = scanAll ? ids : ids.slice(0, scanLimit);
+      if (!scanAll && ids.length > scanIds.length) stats.serviceOrders.approx = true;
+      const aliveIds = [];
+      for (const oid of scanIds){
         const raw = await svcStore.get(oid);
         if (!raw) continue;
+        if (scanAll) aliveIds.push(oid);
       try{
         const o = JSON.parse(raw);
         const isDone = statusIsCompleted(o.status);
         const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
         const isCanceled = statusIsCanceled(o.status);
+        if (isDone) stats.serviceOrders.done++;
+        else if (isPaid) stats.serviceOrders.paid++;
+        else if (isCanceled) stats.serviceOrders.canceled++;
+        else stats.serviceOrders.pending++;
         if (isDone) reports.service.status.done++;
         else if (isPaid) reports.service.status.paid++;
         else if (isCanceled) reports.service.status.canceled++;
@@ -3309,6 +3317,14 @@ async function updateDashboardStats(env) {
           }
         }catch(_){}
       }
+      if (scanAll){
+        stats.serviceOrders.total = aliveIds.length;
+        if (aliveIds.length !== ids.length){
+          try{ await svcStore.put('SERVICE_ORDER_INDEX', JSON.stringify(aliveIds)); }catch(_){}
+        }
+      }else{
+        stats.serviceOrders.total = ids.length;
+      }
     }
   }
 
@@ -3343,6 +3359,7 @@ async function updateDashboardStats(env) {
     }catch(_){}
   }
   reports.physical.approx = stats.orders.approx || stats.products.approx;
+  reports.service.approx = reports.service.approx || stats.serviceOrders.approx;
   reports.physical.topItems = Array.from(topPhysicalMap.values())
     .sort((a,b)=> (b.qty - a.qty) || (b.amount - a.amount))
     .slice(0, 10);
@@ -4021,14 +4038,20 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const store = env.ORDERS; // Use a consistent KV store for the cache
     if (!store) return json({ ok: false, error: 'STATS_CACHE_STORE not bound' }, 500);
-    const raw = await store.get('DASHBOARD_STATS_CACHE');
-    if (raw) {
-      const data = JSON.parse(raw);
-      return json({ ok: true, ...data, fromCache: true });
+    const forceFresh = url.searchParams.get('fresh') === '1' || url.searchParams.get('refresh') === '1';
+    const dashboardCacheTtl = Math.max(60, Math.min(Number(env.DASHBOARD_CACHE_TTL || 600) || 600, 3600));
+    if (!forceFresh){
+      const raw = await store.get('DASHBOARD_STATS_CACHE');
+      if (raw) {
+        try{
+          const data = JSON.parse(raw);
+          return json({ ok: true, ...data, fromCache: true });
+        }catch(_){}
+      }
     }
     // Cache empty: compute once, return immediately, and cache the result.
     const result = await updateDashboardStats(env);
-    await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: 60 * 60 }); // Cache for 1 hour
+    await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: dashboardCacheTtl });
     return json({ ok: true, ...result, fromCache: false });
   }
 
@@ -4038,7 +4061,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const store = env.ORDERS;
     if (!store) return json({ ok: false, error: 'STATS_CACHE_STORE not bound' }, 500);
     const result = await updateDashboardStats(env);
-    await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: 60 * 60 * 2 }); // Cache for 2 hours
+    const dashboardCacheTtl = Math.max(60, Math.min(Number(env.DASHBOARD_CACHE_TTL || 600) || 600, 3600));
+    await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: dashboardCacheTtl });
     return json({ ok: true, ...result });
   }
 
