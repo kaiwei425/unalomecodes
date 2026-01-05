@@ -334,8 +334,8 @@ const TRANSLATIONS = {
     creatorProfileSaved: '已更新創作者資料',
     creatorProfileFail: '更新失敗',
     creatorProfileNameEmpty: '請輸入創作者名稱',
-    creatorProfileAvatarPlaceholder: 'https://...',
-    creatorProfileCoverPlaceholder: 'https://...',
+    creatorProfilePreview: '預覽小卡',
+    creatorProfileAvatarHint: '尚未上傳',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: '請輸入創作者簡介',
     creatorShare: '分享連結',
@@ -574,8 +574,8 @@ const TRANSLATIONS = {
     creatorProfileSaved: 'Creator profile updated',
     creatorProfileFail: 'Update failed',
     creatorProfileNameEmpty: 'Please enter a creator name',
-    creatorProfileAvatarPlaceholder: 'https://...',
-    creatorProfileCoverPlaceholder: 'https://...',
+    creatorProfilePreview: 'Preview Card',
+    creatorProfileAvatarHint: 'Not uploaded',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: 'Enter creator bio',
     creatorShare: 'Share link',
@@ -808,11 +808,20 @@ const btnCreatorProfile = document.getElementById('btnCreatorProfile');
 const btnCreatorShare = document.getElementById('btnCreatorShare');
 const creatorProfileDialog = document.getElementById('creatorProfileDialog');
 const creatorProfileName = document.getElementById('creatorProfileName');
-const creatorProfileAvatar = document.getElementById('creatorProfileAvatar');
-const creatorProfileCover = document.getElementById('creatorProfileCover');
+const creatorProfileAvatarFile = document.getElementById('creatorProfileAvatarFile');
+const creatorProfileAvatarUrl = document.getElementById('creatorProfileAvatarUrl');
+const creatorProfileAvatarPreview = document.getElementById('creatorAvatarPreview');
+const creatorProfileAvatarSize = document.getElementById('creatorAvatarSize');
+const creatorProfileAvatarStatus = document.getElementById('creatorAvatarStatus');
+const creatorProfileCoverFile = document.getElementById('creatorProfileCoverFile');
+const creatorProfileCoverUrl = document.getElementById('creatorProfileCoverUrl');
+const creatorProfileCoverPreview = document.getElementById('creatorCoverPreview');
+const creatorProfileCoverSize = document.getElementById('creatorCoverSize');
+const creatorProfileCoverStatus = document.getElementById('creatorCoverStatus');
 const creatorProfileIg = document.getElementById('creatorProfileIg');
 const creatorProfileIntro = document.getElementById('creatorProfileIntro');
 const creatorProfileStatus = document.getElementById('creatorProfileStatus');
+const creatorProfilePreview = document.getElementById('creatorProfilePreview');
 const creatorProfileClose = document.getElementById('creatorProfileClose');
 const creatorProfileSave = document.getElementById('creatorProfileSave');
 // ---------------------------
@@ -837,6 +846,42 @@ function normalizeIgUrl(input){
   const trimmed = raw.replace(/^@/, '');
   if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
   return safeUrl(`https://instagram.com/${trimmed.replace(/^\//,'')}`);
+}
+function setImagePreviewFromUrl(previewEl, sizeEl, url, emptyText){
+  if (!previewEl) return;
+  const safe = safeUrl(url);
+  if (!safe){
+    previewEl.textContent = emptyText || '';
+    if (sizeEl) sizeEl.textContent = '';
+    return;
+  }
+  previewEl.innerHTML = `<img src="${escapeHtml(safe)}" alt="">`;
+  if (sizeEl){
+    const img = new Image();
+    img.onload = ()=>{ sizeEl.textContent = `${img.naturalWidth} x ${img.naturalHeight}`; };
+    img.onerror = ()=>{ sizeEl.textContent = ''; };
+    img.src = safe;
+  }
+}
+function setImagePreviewFromFile(previewEl, sizeEl, file){
+  if (!previewEl || !file) return;
+  const prev = previewEl.dataset.blobUrl;
+  if (prev) URL.revokeObjectURL(prev);
+  const blobUrl = URL.createObjectURL(file);
+  previewEl.dataset.blobUrl = blobUrl;
+  previewEl.innerHTML = `<img src="${blobUrl}" alt="">`;
+  if (sizeEl){
+    const img = new Image();
+    img.onload = ()=>{ sizeEl.textContent = `${img.naturalWidth} x ${img.naturalHeight}`; };
+    img.onerror = ()=>{ sizeEl.textContent = ''; };
+    img.src = blobUrl;
+  }
+}
+function clearImagePreviewBlob(previewEl){
+  if (!previewEl) return;
+  const prev = previewEl.dataset.blobUrl;
+  if (prev) URL.revokeObjectURL(prev);
+  delete previewEl.dataset.blobUrl;
 }
 const COVER_THUMB_QUALITY = 58;
 function getCoverThumbWidth(){
@@ -1046,6 +1091,22 @@ function buildCreatorProfileCard(profile){
       </div>
     </div>
   `;
+}
+
+function updateCreatorProfilePreview(){
+  if (!creatorProfilePreview) return;
+  const name = creatorProfileName ? creatorProfileName.value.trim() : '';
+  const ig = creatorProfileIg ? creatorProfileIg.value.trim() : '';
+  const intro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
+  const avatar = creatorProfileAvatarUrl ? creatorProfileAvatarUrl.value.trim() : '';
+  const cover = creatorProfileCoverUrl ? creatorProfileCoverUrl.value.trim() : '';
+  creatorProfilePreview.innerHTML = buildCreatorProfileCard({
+    name: name || creatorName || '',
+    ig,
+    intro,
+    avatar,
+    cover
+  });
 }
 
 async function copyText(text){
@@ -1915,12 +1976,18 @@ function setLanguage(lang) {
     if (labels[2]) labels[2].textContent = t('creatorProfileCover');
     if (labels[3]) labels[3].textContent = t('creatorProfileIg');
     if (labels[4]) labels[4].textContent = t('creatorProfileIntro');
-    if (creatorProfileAvatar) creatorProfileAvatar.placeholder = t('creatorProfileAvatarPlaceholder');
-    if (creatorProfileCover) creatorProfileCover.placeholder = t('creatorProfileCoverPlaceholder');
     if (creatorProfileIg) creatorProfileIg.placeholder = t('creatorProfileIgPlaceholder');
     if (creatorProfileIntro) creatorProfileIntro.placeholder = t('creatorProfileIntroPlaceholder');
     if (creatorProfileClose) creatorProfileClose.textContent = t('cancelBtn');
     if (creatorProfileSave) creatorProfileSave.textContent = t('creatorProfileSave');
+  }
+  const previewTitle = document.querySelector('.creator-preview-title');
+  if (previewTitle) previewTitle.textContent = t('creatorProfilePreview');
+  if (creatorProfileAvatarPreview && !creatorProfileAvatarPreview.querySelector('img')) {
+    creatorProfileAvatarPreview.textContent = t('creatorProfileAvatarHint');
+  }
+  if (creatorProfileCoverPreview && !creatorProfileCoverPreview.querySelector('img')) {
+    creatorProfileCoverPreview.textContent = t('creatorProfileAvatarHint');
   }
   const backToTop = document.getElementById('btnBackToTop');
   if (backToTop) backToTop.title = t('backToTop');
@@ -2031,10 +2098,13 @@ async function checkCreator(){
   if (btnCreatorShare) btnCreatorShare.style.display = isCreator ? 'inline-flex' : 'none';
   if (isCreator){
     if (creatorProfileName) creatorProfileName.value = creatorName || '';
-    if (creatorProfileAvatar) creatorProfileAvatar.value = creatorAvatar || '';
-    if (creatorProfileCover) creatorProfileCover.value = creatorCover || '';
+    if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar || '';
+    if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover || '';
     if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
+    setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
+    setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
+    updateCreatorProfilePreview();
   }
   if (creatorToolsToggle){
     creatorToolsToggle.style.display = (isCreator || creatorInviteAllowed) ? 'block' : 'none';
@@ -3351,23 +3421,30 @@ if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
 if (btnCreatorProfile) btnCreatorProfile.onclick = ()=>{
   if (!isCreator) return;
   if (creatorProfileName) creatorProfileName.value = creatorName || '';
-  if (creatorProfileAvatar) creatorProfileAvatar.value = creatorAvatar || '';
-  if (creatorProfileCover) creatorProfileCover.value = creatorCover || '';
+  if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar || '';
+  if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover || '';
+  setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
+  setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
   if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
   if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
   if (creatorProfileStatus) creatorProfileStatus.textContent = '';
+  if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = '';
+  if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = '';
+  updateCreatorProfilePreview();
   if (creatorProfileDialog && typeof creatorProfileDialog.showModal === 'function') creatorProfileDialog.showModal();
   else if (creatorProfileDialog) creatorProfileDialog.setAttribute('open', '');
 };
 if (creatorProfileClose) creatorProfileClose.onclick = ()=>{
   if (creatorProfileDialog && typeof creatorProfileDialog.close === 'function') creatorProfileDialog.close();
   else if (creatorProfileDialog) creatorProfileDialog.removeAttribute('open');
+  clearImagePreviewBlob(creatorProfileAvatarPreview);
+  clearImagePreviewBlob(creatorProfileCoverPreview);
 };
 if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
   if (!isCreator) return;
   const nextName = creatorProfileName ? creatorProfileName.value.trim() : '';
-  const nextAvatar = creatorProfileAvatar ? creatorProfileAvatar.value.trim() : '';
-  const nextCover = creatorProfileCover ? creatorProfileCover.value.trim() : '';
+  const nextAvatar = creatorProfileAvatarUrl ? creatorProfileAvatarUrl.value.trim() : '';
+  const nextCover = creatorProfileCoverUrl ? creatorProfileCoverUrl.value.trim() : '';
   const nextIg = creatorProfileIg ? creatorProfileIg.value.trim() : '';
   const nextIntro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   if (!nextName){
@@ -3392,10 +3469,13 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
     creatorIg = data.ig ? String(data.ig) : nextIg;
     creatorIntro = data.intro ? String(data.intro) : nextIntro;
     if (creatorProfileName) creatorProfileName.value = creatorName;
-    if (creatorProfileAvatar) creatorProfileAvatar.value = creatorAvatar;
-    if (creatorProfileCover) creatorProfileCover.value = creatorCover;
+    if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar;
+    if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover;
     if (creatorProfileIg) creatorProfileIg.value = creatorIg;
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro;
+    setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
+    setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
+    updateCreatorProfilePreview();
     if (creatorId && Array.isArray(DATA)){
       DATA.forEach(item=>{
         if (String(item.ownerId || '') === String(creatorId)){
@@ -3416,6 +3496,43 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
     if (creatorProfileStatus) creatorProfileStatus.textContent = t('creatorProfileFail') + (err && err.message ? '：' + err.message : '');
   }
 };
+if (creatorProfileAvatarFile){
+  creatorProfileAvatarFile.addEventListener('change', async ()=>{
+    const file = creatorProfileAvatarFile.files && creatorProfileAvatarFile.files[0];
+    if (!file) return;
+    setImagePreviewFromFile(creatorProfileAvatarPreview, creatorProfileAvatarSize, file);
+    if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = t('uploading');
+    try{
+      const url = await uploadCoverFile(file);
+      if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = url;
+      setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, url, t('creatorProfileAvatarHint'));
+      if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = t('uploaded');
+      updateCreatorProfilePreview();
+    }catch(_){
+      if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = t('uploadFail');
+    }
+  });
+}
+if (creatorProfileCoverFile){
+  creatorProfileCoverFile.addEventListener('change', async ()=>{
+    const file = creatorProfileCoverFile.files && creatorProfileCoverFile.files[0];
+    if (!file) return;
+    setImagePreviewFromFile(creatorProfileCoverPreview, creatorProfileCoverSize, file);
+    if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploading');
+    try{
+      const url = await uploadCoverFile(file);
+      if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = url;
+      setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, url, t('creatorProfileAvatarHint'));
+      if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploaded');
+      updateCreatorProfilePreview();
+    }catch(_){
+      if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploadFail');
+    }
+  });
+}
+if (creatorProfileName) creatorProfileName.addEventListener('input', updateCreatorProfilePreview);
+if (creatorProfileIg) creatorProfileIg.addEventListener('input', updateCreatorProfilePreview);
+if (creatorProfileIntro) creatorProfileIntro.addEventListener('input', updateCreatorProfilePreview);
 if (btnCreatorShare) btnCreatorShare.onclick = async ()=>{
   if (!isCreator) return;
   const url = buildCreatorShareUrl();

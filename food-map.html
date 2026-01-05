@@ -207,14 +207,38 @@
       <label>創作者名稱</label>
       <input id="creatorProfileName" type="text">
       <label>創作者頭像</label>
-      <input id="creatorProfileAvatar" type="text" placeholder="https://...">
+      <div class="creator-upload">
+        <div class="creator-upload-preview" id="creatorAvatarPreview">尚未上傳</div>
+        <div class="creator-upload-meta">
+          <input id="creatorProfileAvatarFile" type="file" accept="image/*">
+          <input id="creatorProfileAvatarUrl" type="hidden">
+          <div class="creator-upload-info">
+            <span id="creatorAvatarSize">-</span>
+            <span id="creatorAvatarStatus"></span>
+          </div>
+        </div>
+      </div>
       <label>創作者封面</label>
-      <input id="creatorProfileCover" type="text" placeholder="https://...">
+      <div class="creator-upload">
+        <div class="creator-upload-preview creator-upload-cover" id="creatorCoverPreview">尚未上傳</div>
+        <div class="creator-upload-meta">
+          <input id="creatorProfileCoverFile" type="file" accept="image/*">
+          <input id="creatorProfileCoverUrl" type="hidden">
+          <div class="creator-upload-info">
+            <span id="creatorCoverSize">-</span>
+            <span id="creatorCoverStatus"></span>
+          </div>
+        </div>
+      </div>
       <label>創作者 IG</label>
       <input id="creatorProfileIg" type="text" placeholder="https://instagram.com/xxx">
       <label>創作者簡介</label>
       <textarea id="creatorProfileIntro" rows="4" placeholder="請輸入創作者簡介"></textarea>
       <div id="creatorProfileStatus" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
+      <div class="creator-preview-wrap">
+        <div class="creator-preview-title">預覽小卡</div>
+        <div id="creatorProfilePreview"></div>
+      </div>
     </div>
     <footer>
       <button type="button" class="btn" id="creatorProfileClose">取消</button>

@@ -428,6 +428,59 @@
       font-family:inherit;
       resize:vertical;
     }
+    .creator-upload{
+      display:grid;
+      gap:8px;
+      margin-top:6px;
+    }
+    .creator-upload-preview{
+      border:1px dashed #e2e8f0;
+      border-radius:12px;
+      background:#f8fafc;
+      min-height:120px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#94a3b8;
+      font-size:12px;
+      overflow:hidden;
+    }
+    .creator-upload-preview.creator-upload-cover{
+      min-height:140px;
+    }
+    .creator-upload-preview img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .creator-upload-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .creator-upload-meta input[type="file"]{
+      font-size:12px;
+    }
+    .creator-upload-info{
+      font-size:12px;
+      color:#64748b;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .creator-preview-wrap{
+      margin-top:16px;
+      display:grid;
+      gap:10px;
+    }
+    .creator-preview-title{
+      font-size:12px;
+      color:#64748b;
+      font-weight:700;
+    }
     .top-actions .member-menu button,
     .top-actions .auth-widget{
       min-height:52px;
