@@ -820,6 +820,7 @@ const creatorProfileAvatarPreview = document.getElementById('creatorAvatarPrevie
 const creatorProfileAvatarSize = document.getElementById('creatorAvatarSize');
 const creatorProfileAvatarStatus = document.getElementById('creatorAvatarStatus');
 const creatorAvatarSpec = document.getElementById('creatorAvatarSpec');
+const creatorAvatarSpecInline = document.getElementById('creatorAvatarSpecInline');
 const creatorProfileCoverFile = document.getElementById('creatorProfileCoverFile');
 const creatorProfileCoverUrl = document.getElementById('creatorProfileCoverUrl');
 const creatorProfileCoverPos = document.getElementById('creatorProfileCoverPos');
@@ -827,6 +828,7 @@ const creatorProfileCoverPreview = document.getElementById('creatorCoverPreview'
 const creatorProfileCoverSize = document.getElementById('creatorCoverSize');
 const creatorProfileCoverStatus = document.getElementById('creatorCoverStatus');
 const creatorCoverSpec = document.getElementById('creatorCoverSpec');
+const creatorCoverSpecInline = document.getElementById('creatorCoverSpecInline');
 const creatorCoverHint = document.getElementById('creatorCoverHint');
 const creatorProfileIg = document.getElementById('creatorProfileIg');
 const creatorProfileIntro = document.getElementById('creatorProfileIntro');
@@ -2079,6 +2081,8 @@ function setLanguage(lang) {
   }
   if (creatorAvatarSpec) creatorAvatarSpec.textContent = t('creatorAvatarSpec');
   if (creatorCoverSpec) creatorCoverSpec.textContent = t('creatorCoverSpec');
+  if (creatorAvatarSpecInline) creatorAvatarSpecInline.textContent = t('creatorAvatarSpec');
+  if (creatorCoverSpecInline) creatorCoverSpecInline.textContent = t('creatorCoverSpec');
   if (creatorCoverHint) creatorCoverHint.textContent = t('creatorCoverDragHint');
   const backToTop = document.getElementById('btnBackToTop');
   if (backToTop) backToTop.title = t('backToTop');
