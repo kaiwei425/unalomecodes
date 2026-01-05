@@ -349,6 +349,7 @@ const TRANSLATIONS = {
     creatorTermsAgree: '我同意',
     creatorTermsFail: '同意條款失敗：',
     creatorTermsAcceptedToast: '已同意創作者條款',
+    creatorTermsAcceptedAt: '你已於 {time} 同意本條款',
     creatorTermsHtml: `<div class="terms-section">
       <div class="terms-title">一、目的與適用範圍</div>
       <p>本功能旨在邀請創作者協助補充美食地圖資訊，讓資料庫更完整。以下條款適用於你新增或編輯的所有內容。</p>
@@ -643,6 +644,7 @@ const TRANSLATIONS = {
     creatorTermsAgree: 'I Agree',
     creatorTermsFail: 'Unable to agree: ',
     creatorTermsAcceptedToast: 'Creator terms accepted',
+    creatorTermsAcceptedAt: 'Agreed to these terms on {time}',
     creatorTermsHtml: `<div class="terms-section">
       <div class="terms-title">1. Purpose & Scope</div>
       <p>This feature helps creators enrich the Food Map database. These terms apply to all content you add or edit.</p>
@@ -986,6 +988,14 @@ function renderCoordsHelpSteps(){
   const keys = ['coordsHelpStep1', 'coordsHelpStep2', 'coordsHelpStep3', 'coordsHelpStep4'];
   coordsHelpSteps.innerHTML = keys.map(key => `<li>${escapeHtml(t(key))}</li>`).join('');
 }
+function formatTermsTime(raw){
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return '';
+  const opts = { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' };
+  const locale = currentLang === 'en' ? 'en-US' : 'zh-TW';
+  return d.toLocaleString(locale, opts);
+}
 function updateCreatorTermsUi(){
   if (creatorTermsRow) creatorTermsRow.style.display = isCreator ? 'flex' : 'none';
   if (btnCreatorTerms) btnCreatorTerms.style.display = isCreator ? 'inline-flex' : 'none';
@@ -995,8 +1005,24 @@ function updateCreatorTermsUi(){
     creatorTermsHint.style.display = needs ? 'inline' : 'none';
   }
 }
+function updateCreatorTermsDialogState(opts){
+  if (creatorTermsAgree) creatorTermsAgree.style.display = creatorTermsAccepted ? 'none' : '';
+  if (creatorTermsStatus){
+    if (creatorTermsAccepted){
+      const timeLabel = formatTermsTime(creatorTermsAcceptedAt) || t('unknown');
+      creatorTermsStatus.textContent = t('creatorTermsAcceptedAt', { time: timeLabel });
+      creatorTermsStatus.classList.add('ok');
+    } else {
+      if (opts && opts.clear){
+        creatorTermsStatus.textContent = '';
+      }
+      creatorTermsStatus.classList.remove('ok');
+    }
+  }
+}
 function openCreatorTermsDialog(){
   if (creatorTermsStatus) creatorTermsStatus.textContent = '';
+  updateCreatorTermsDialogState({ clear: true });
   if (creatorTermsDialog && typeof creatorTermsDialog.showModal === 'function') creatorTermsDialog.showModal();
   else if (creatorTermsDialog) creatorTermsDialog.setAttribute('open', '');
 }
@@ -1903,6 +1929,7 @@ let creatorAvatar = '';
 let creatorCover = '';
 let creatorCoverPos = '50% 50%';
 let creatorTermsAccepted = false;
+let creatorTermsAcceptedAt = '';
 let currentZone = 'all';
 let editingId = '';
 let newItem = null;
@@ -2219,6 +2246,7 @@ function setLanguage(lang) {
   if (creatorTermsClose) creatorTermsClose.textContent = t('close');
   if (creatorTermsAgree) creatorTermsAgree.textContent = t('creatorTermsAgree');
   updateCreatorTermsUi();
+  updateCreatorTermsDialogState();
   if (coordsHelpTitle) coordsHelpTitle.textContent = t('coordsHelpTitle');
   if (coordsHelpDesc) coordsHelpDesc.textContent = t('coordsHelpDesc');
   if (coordsHelpImage) coordsHelpImage.alt = t('coordsHelpImageAlt');
@@ -2319,6 +2347,7 @@ async function checkCreator(){
     creatorCover = data && data.cover ? String(data.cover) : '';
     creatorCoverPos = data && data.coverPos ? String(data.coverPos) : creatorCoverPos;
     creatorTermsAccepted = !!(data && data.termsAccepted);
+    creatorTermsAcceptedAt = data && data.termsAcceptedAt ? String(data.termsAcceptedAt) : '';
   }catch(_){
     isCreator = false;
     creatorInviteAllowed = false;
@@ -2330,6 +2359,7 @@ async function checkCreator(){
     creatorCover = '';
     creatorCoverPos = '50% 50%';
     creatorTermsAccepted = false;
+    creatorTermsAcceptedAt = '';
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
@@ -2353,6 +2383,7 @@ async function checkCreator(){
     creatorToolsToggle.textContent = `${t('creatorZone')} ${panelOpen ? '▴' : '▾'}`;
   }
   updateCreatorTermsUi();
+  updateCreatorTermsDialogState();
   if (!isCreator && !creatorInviteAllowed && creatorToolsPanel){
     creatorToolsPanel.style.display = 'none';
   }
@@ -3818,7 +3849,9 @@ if (creatorTermsAgree) creatorTermsAgree.onclick = async ()=>{
       throw new Error((data && data.error) || ('HTTP '+res.status));
     }
     creatorTermsAccepted = true;
+    creatorTermsAcceptedAt = data && data.acceptedAt ? String(data.acceptedAt) : new Date().toISOString();
     updateCreatorTermsUi();
+    updateCreatorTermsDialogState();
     showToast(t('creatorTermsAcceptedToast'));
     if (creatorTermsDialog && typeof creatorTermsDialog.close === 'function') creatorTermsDialog.close();
     else if (creatorTermsDialog) creatorTermsDialog.removeAttribute('open');
@@ -3826,6 +3859,7 @@ if (creatorTermsAgree) creatorTermsAgree.onclick = async ()=>{
     const msg = t('creatorTermsFail') + (err && err.message ? err.message : '');
     if (creatorTermsStatus) creatorTermsStatus.textContent = msg;
     else alert(msg);
+    if (creatorTermsStatus) creatorTermsStatus.classList.remove('ok');
   }finally{
     creatorTermsAgree.disabled = false;
   }
