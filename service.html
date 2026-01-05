@@ -13,6 +13,28 @@
 body.service-view{background:var(--bg);color:var(--fg);}
 .line-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:999px;background:#16a34a;color:#fff;font-weight:700;text-decoration:none;box-shadow:0 6px 14px rgba(22,163,74,.35);}
 .line-btn span{font-size:18px;}
+.tool-link{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid #fed7aa;
+  background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);
+  color:#ea580c;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow:0 10px 20px rgba(234,88,12,0.12);
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.tool-link:hover{
+  transform:translateY(-1px);
+  border-color:#fdba74;
+  box-shadow:0 14px 24px rgba(234,88,12,0.16);
+}
+.tool-link-title{display:flex;align-items:center;gap:8px;}
+.tool-link-dot{width:10px;height:10px;border-radius:999px;background:#fb923c;box-shadow:0 0 0 4px rgba(251,146,60,.18);}
 .service-hero{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);}
 .service-hero h1{margin:0;font-size:26px;font-weight:800;}
 .svc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 12px;}
@@ -37,6 +59,31 @@ body.service-view{background:var(--bg);color:var(--fg);}
 #svcRvList > .rvItem:last-child{border-bottom:none;}
 #svcRvList:empty::before{content:"還沒有人分享故事，成為第一個分享的人吧！";display:block;padding:20px;text-align:center;color:#94a3b8;font-size:14px;border:1px dashed #e5e7eb;}
 #sideDeities .list a.line-btn{display:flex;border:none;background:#16a34a;color:#fff;font-weight:700;justify-content:center;align-items:center;gap:8px;padding:10px 18px;box-shadow:0 6px 14px rgba(22,163,74,.35);}
+#sideDeities .side-cat-btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(148,163,184,.25);
+  background:linear-gradient(135deg,#0f172a 0%,#1f2937 100%);
+  color:#f8fafc;
+  font-weight:800;
+  box-shadow:0 10px 18px rgba(15,23,42,.22);
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+#sideDeities .side-cat-btn:hover{
+  transform:translateY(-1px);
+  border-color:rgba(249,115,22,.45);
+  box-shadow:0 14px 24px rgba(15,23,42,.28);
+}
+#sideDeities .side-cat-btn.active{
+  border-color:#fdba74;
+  color:#f97316;
+  background:linear-gradient(135deg,#111827 0%,#1f2937 100%);
+  box-shadow:0 14px 24px rgba(249,115,22,.2);
+}
 .policy-link{color:#2563eb;text-decoration:underline;cursor:pointer;font-weight:600;}
 .policy-dialog{border:none;border-radius:18px;padding:0;background:#fff;color:#0f172a;max-width:640px;width:95%;box-shadow:0 30px 60px rgba(15,23,42,.35);}
 .dialog-fallback-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);z-index:1000;display:none;}
@@ -283,14 +330,18 @@ dialog[data-fallback-open]{display:block;}
             <a href="/shop">返回商品館</a>
             <a href="#" id="linkServiceLookup">祈福進度查詢</a>
             <button id="svcHotToggle" class="side-cat-btn" type="button">熱賣中服務</button>
-            <a class="line-btn" href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener"><span>💬</span>官方LINE客服</a>
           </div>
         </div>
         <div class="tools-box">
           <h4>實用工具連結</h4>
           <div class="list">
-            <a href="https://shop.unalomecodes.com/food-map">泰國美食地圖</a>
-            <a href="https://shop.unalomecodes.com/templemap">泰國寺廟地圖</a>
+            <a href="https://shop.unalomecodes.com/food-map" class="tool-link">
+              <span class="tool-link-title"><span class="tool-link-dot"></span>泰國美食地圖</span>
+            </a>
+            <a href="https://shop.unalomecodes.com/templemap" class="tool-link">
+              <span class="tool-link-title"><span class="tool-link-dot"></span>泰國寺廟地圖</span>
+            </a>
+            <a class="line-btn" href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener"><span>💬</span>官方LINE客服</a>
           </div>
         </div>
       </aside>
