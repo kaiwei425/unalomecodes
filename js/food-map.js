@@ -336,6 +336,9 @@ const TRANSLATIONS = {
     creatorProfileNameEmpty: '請輸入創作者名稱',
     creatorProfilePreview: '預覽小卡',
     creatorProfileAvatarHint: '尚未上傳',
+    creatorAvatarSpec: '建議尺寸 400 x 400',
+    creatorCoverSpec: '建議尺寸 1200 x 400',
+    creatorCoverDragHint: '可拖曳小卡封面調整位置',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: '請輸入創作者簡介',
     creatorShare: '分享連結',
@@ -576,6 +579,9 @@ const TRANSLATIONS = {
     creatorProfileNameEmpty: 'Please enter a creator name',
     creatorProfilePreview: 'Preview Card',
     creatorProfileAvatarHint: 'Not uploaded',
+    creatorAvatarSpec: 'Suggested 400 x 400',
+    creatorCoverSpec: 'Suggested 1200 x 400',
+    creatorCoverDragHint: 'Drag cover to reposition',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: 'Enter creator bio',
     creatorShare: 'Share link',
@@ -813,11 +819,15 @@ const creatorProfileAvatarUrl = document.getElementById('creatorProfileAvatarUrl
 const creatorProfileAvatarPreview = document.getElementById('creatorAvatarPreview');
 const creatorProfileAvatarSize = document.getElementById('creatorAvatarSize');
 const creatorProfileAvatarStatus = document.getElementById('creatorAvatarStatus');
+const creatorAvatarSpec = document.getElementById('creatorAvatarSpec');
 const creatorProfileCoverFile = document.getElementById('creatorProfileCoverFile');
 const creatorProfileCoverUrl = document.getElementById('creatorProfileCoverUrl');
+const creatorProfileCoverPos = document.getElementById('creatorProfileCoverPos');
 const creatorProfileCoverPreview = document.getElementById('creatorCoverPreview');
 const creatorProfileCoverSize = document.getElementById('creatorCoverSize');
 const creatorProfileCoverStatus = document.getElementById('creatorCoverStatus');
+const creatorCoverSpec = document.getElementById('creatorCoverSpec');
+const creatorCoverHint = document.getElementById('creatorCoverHint');
 const creatorProfileIg = document.getElementById('creatorProfileIg');
 const creatorProfileIntro = document.getElementById('creatorProfileIntro');
 const creatorProfileStatus = document.getElementById('creatorProfileStatus');
@@ -840,6 +850,13 @@ function safeUrl(input){
   }catch(_){}
   return '';
 }
+function safeImageUrl(input, opts){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  if (opts && opts.allowBlob && raw.startsWith('blob:')) return raw;
+  if (opts && opts.allowData && raw.startsWith('data:image/')) return raw;
+  return safeUrl(raw);
+}
 function normalizeIgUrl(input){
   const raw = String(input || '').trim();
   if (!raw) return '';
@@ -849,7 +866,7 @@ function normalizeIgUrl(input){
 }
 function setImagePreviewFromUrl(previewEl, sizeEl, url, emptyText){
   if (!previewEl) return;
-  const safe = safeUrl(url);
+  const safe = safeImageUrl(url, { allowBlob: true, allowData: true });
   if (!safe){
     previewEl.textContent = emptyText || '';
     if (sizeEl) sizeEl.textContent = '';
@@ -882,6 +899,69 @@ function clearImagePreviewBlob(previewEl){
   const prev = previewEl.dataset.blobUrl;
   if (prev) URL.revokeObjectURL(prev);
   delete previewEl.dataset.blobUrl;
+}
+function applyCreatorCoverPos(pos){
+  const safe = safeObjectPosition(pos || '50% 50%');
+  creatorCoverPos = safe;
+  if (creatorProfileCoverPos) creatorProfileCoverPos.value = safe;
+  const previewImg = creatorProfileCoverPreview ? creatorProfileCoverPreview.querySelector('img') : null;
+  if (previewImg) previewImg.style.objectPosition = safe;
+  const cardImg = creatorProfilePreview ? creatorProfilePreview.querySelector('.creator-cover img') : null;
+  if (cardImg) cardImg.style.objectPosition = safe;
+}
+function initCreatorCoverDrag(){
+  if (!creatorProfilePreview) return;
+  const img = creatorProfilePreview.querySelector('.creator-cover img');
+  if (!img || img.dataset.dragReady === '1') return;
+  img.dataset.dragReady = '1';
+  img.style.cursor = 'grab';
+  const coverEl = img.closest('.creator-cover');
+  if (coverEl && !coverEl.querySelector('.creator-cover-hint')){
+    const hint = document.createElement('div');
+    hint.className = 'creator-cover-hint';
+    hint.textContent = t('creatorCoverDragHint');
+    coverEl.appendChild(hint);
+  }
+  img.draggable = false;
+  let dragging = null;
+  const startDrag = (clientX, clientY)=>{
+    const rect = img.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const pos = safeObjectPosition(img.style.objectPosition || creatorCoverPos || '50% 50%');
+    const [xStr,yStr] = pos.split(' ');
+    dragging = {
+      startX: clientX,
+      startY: clientY,
+      startPosX: parseFloat(xStr),
+      startPosY: parseFloat(yStr),
+      width: rect.width,
+      height: rect.height
+    };
+    img.style.cursor = 'grabbing';
+    if (coverEl) coverEl.classList.add('dragging');
+  };
+  const moveDrag = (clientX, clientY)=>{
+    if (!dragging) return;
+    const dx = clientX - dragging.startX;
+    const dy = clientY - dragging.startY;
+    const nx = Math.max(0, Math.min(100, dragging.startPosX + (dx / dragging.width) * 100));
+    const ny = Math.max(0, Math.min(100, dragging.startPosY + (dy / dragging.height) * 100));
+    applyCreatorCoverPos(`${nx.toFixed(1)}% ${ny.toFixed(1)}%`);
+  };
+  const endDrag = ()=>{
+    if (!dragging) return;
+    dragging = null;
+    img.style.cursor = 'grab';
+    if (coverEl) coverEl.classList.remove('dragging');
+  };
+  img.addEventListener('pointerdown', (e)=>{
+    img.setPointerCapture(e.pointerId);
+    startDrag(e.clientX, e.clientY);
+  });
+  img.addEventListener('pointermove', (e)=>{ moveDrag(e.clientX, e.clientY); });
+  img.addEventListener('pointerup', endDrag);
+  img.addEventListener('pointercancel', endDrag);
+  img.addEventListener('pointerleave', endDrag);
 }
 const COVER_THUMB_QUALITY = 58;
 function getCoverThumbWidth(){
@@ -1059,13 +1139,16 @@ function buildCreatorShareUrl(){
   return url.toString();
 }
 
-function buildCreatorProfileCard(profile){
+function buildCreatorProfileCard(profile, opts){
   if (!profile || !profile.name) return '';
+  const allowBlob = !!(opts && opts.allowBlob);
   const name = escapeHtml(profile.name);
   const intro = escapeHtml(profile.intro || '');
   const igUrl = normalizeIgUrl(profile.ig || '');
-  const avatarUrl = safeUrl(profile.avatar || '');
-  const coverUrl = safeUrl(profile.cover || '');
+  const avatarUrl = safeImageUrl(profile.avatar || '', { allowBlob });
+  const coverUrl = safeImageUrl(profile.cover || '', { allowBlob });
+  const coverPos = safeObjectPosition(profile.coverPos || '50% 50%');
+  const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
   const initial = name ? name.trim().slice(0, 1) : 'C';
   const igButton = igUrl
     ? `<a class="creator-ig" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
@@ -1078,7 +1161,7 @@ function buildCreatorProfileCard(profile){
     : '';
   return `
     <div class="creator-card">
-      ${coverUrl ? `<div class="creator-cover"><img src="${escapeHtml(coverUrl)}" alt="${name}"></div>` : '<div class="creator-cover"></div>'}
+      ${coverUrl ? `<div class="creator-cover"><img src="${escapeHtml(coverUrl)}" alt="${name}"${coverStyle}></div>` : '<div class="creator-cover"></div>'}
       <div class="creator-card-body">
         <div class="creator-avatar">
           ${avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="${name}">` : `<span>${escapeHtml(initial)}</span>`}
@@ -1100,13 +1183,17 @@ function updateCreatorProfilePreview(){
   const intro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   const avatar = creatorProfileAvatarUrl ? creatorProfileAvatarUrl.value.trim() : '';
   const cover = creatorProfileCoverUrl ? creatorProfileCoverUrl.value.trim() : '';
+  const coverPos = creatorProfileCoverPos ? creatorProfileCoverPos.value.trim() : creatorCoverPos;
   creatorProfilePreview.innerHTML = buildCreatorProfileCard({
     name: name || creatorName || '',
     ig,
     intro,
     avatar,
-    cover
-  });
+    cover,
+    coverPos: coverPos || creatorCoverPos
+  }, { allowBlob: true });
+  applyCreatorCoverPos(coverPos || creatorCoverPos);
+  initCreatorCoverDrag();
 }
 
 async function copyText(text){
@@ -1682,6 +1769,7 @@ let creatorIg = '';
 let creatorIntro = '';
 let creatorAvatar = '';
 let creatorCover = '';
+let creatorCoverPos = '50% 50%';
 let currentZone = 'all';
 let editingId = '';
 let newItem = null;
@@ -1989,6 +2077,9 @@ function setLanguage(lang) {
   if (creatorProfileCoverPreview && !creatorProfileCoverPreview.querySelector('img')) {
     creatorProfileCoverPreview.textContent = t('creatorProfileAvatarHint');
   }
+  if (creatorAvatarSpec) creatorAvatarSpec.textContent = t('creatorAvatarSpec');
+  if (creatorCoverSpec) creatorCoverSpec.textContent = t('creatorCoverSpec');
+  if (creatorCoverHint) creatorCoverHint.textContent = t('creatorCoverDragHint');
   const backToTop = document.getElementById('btnBackToTop');
   if (backToTop) backToTop.title = t('backToTop');
 
@@ -2082,6 +2173,7 @@ async function checkCreator(){
     creatorIntro = data && data.intro ? String(data.intro) : '';
     creatorAvatar = data && data.avatar ? String(data.avatar) : '';
     creatorCover = data && data.cover ? String(data.cover) : '';
+    creatorCoverPos = data && data.coverPos ? String(data.coverPos) : creatorCoverPos;
   }catch(_){
     isCreator = false;
     creatorInviteAllowed = false;
@@ -2091,6 +2183,7 @@ async function checkCreator(){
     creatorIntro = '';
     creatorAvatar = '';
     creatorCover = '';
+    creatorCoverPos = '50% 50%';
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
@@ -2100,10 +2193,12 @@ async function checkCreator(){
     if (creatorProfileName) creatorProfileName.value = creatorName || '';
     if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar || '';
     if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover || '';
+    if (creatorProfileCoverPos) creatorProfileCoverPos.value = creatorCoverPos || '50% 50%';
     if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
     setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
     setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
+    applyCreatorCoverPos(creatorCoverPos || '50% 50%');
     updateCreatorProfilePreview();
   }
   if (creatorToolsToggle){
@@ -2638,7 +2733,8 @@ function render(){
         ig: profileSource.creatorIg || '',
         intro: profileSource.creatorIntro || '',
         avatar: profileSource.creatorAvatar || '',
-        cover: profileSource.creatorCover || ''
+        cover: profileSource.creatorCover || '',
+        coverPos: profileSource.creatorCoverPos || '50% 50%'
       };
       if (isCreator && creatorId && String(profileSource.ownerId || '') === String(creatorId)){
         profile.name = profile.name || creatorName || '';
@@ -2646,6 +2742,7 @@ function render(){
         profile.intro = profile.intro || creatorIntro || '';
         profile.avatar = profile.avatar || creatorAvatar || '';
         profile.cover = profile.cover || creatorCover || '';
+        profile.coverPos = profile.coverPos || creatorCoverPos || '50% 50%';
       }
       creatorCardHtml = buildCreatorProfileCard(profile);
     }else if (profileName){
@@ -3423,8 +3520,10 @@ if (btnCreatorProfile) btnCreatorProfile.onclick = ()=>{
   if (creatorProfileName) creatorProfileName.value = creatorName || '';
   if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar || '';
   if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover || '';
+  if (creatorProfileCoverPos) creatorProfileCoverPos.value = creatorCoverPos || '50% 50%';
   setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
   setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
+  applyCreatorCoverPos(creatorCoverPos || '50% 50%');
   if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
   if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
   if (creatorProfileStatus) creatorProfileStatus.textContent = '';
@@ -3445,6 +3544,7 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
   const nextName = creatorProfileName ? creatorProfileName.value.trim() : '';
   const nextAvatar = creatorProfileAvatarUrl ? creatorProfileAvatarUrl.value.trim() : '';
   const nextCover = creatorProfileCoverUrl ? creatorProfileCoverUrl.value.trim() : '';
+  const nextCoverPos = creatorProfileCoverPos ? creatorProfileCoverPos.value.trim() : creatorCoverPos;
   const nextIg = creatorProfileIg ? creatorProfileIg.value.trim() : '';
   const nextIntro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   if (!nextName){
@@ -3457,7 +3557,7 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       credentials:'include',
-      body: JSON.stringify({ creatorName: nextName, creatorAvatar: nextAvatar, creatorCover: nextCover, creatorIg: nextIg, creatorIntro: nextIntro })
+      body: JSON.stringify({ creatorName: nextName, creatorAvatar: nextAvatar, creatorCover: nextCover, creatorCoverPos: nextCoverPos, creatorIg: nextIg, creatorIntro: nextIntro })
     });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
@@ -3466,15 +3566,18 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
     creatorName = data.name ? String(data.name) : nextName;
     creatorAvatar = data.avatar ? String(data.avatar) : nextAvatar;
     creatorCover = data.cover ? String(data.cover) : nextCover;
+    creatorCoverPos = data.coverPos ? String(data.coverPos) : (nextCoverPos || creatorCoverPos);
     creatorIg = data.ig ? String(data.ig) : nextIg;
     creatorIntro = data.intro ? String(data.intro) : nextIntro;
     if (creatorProfileName) creatorProfileName.value = creatorName;
     if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar;
     if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover;
+    if (creatorProfileCoverPos) creatorProfileCoverPos.value = creatorCoverPos || '50% 50%';
     if (creatorProfileIg) creatorProfileIg.value = creatorIg;
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro;
     setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
     setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
+    applyCreatorCoverPos(creatorCoverPos || '50% 50%');
     updateCreatorProfilePreview();
     if (creatorId && Array.isArray(DATA)){
       DATA.forEach(item=>{
@@ -3484,6 +3587,7 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
           item.creatorIntro = creatorIntro;
           item.creatorAvatar = creatorAvatar;
           item.creatorCover = creatorCover;
+          item.creatorCoverPos = creatorCoverPos || '50% 50%';
         }
       });
     }
@@ -3521,6 +3625,7 @@ if (creatorProfileCoverFile){
     if (!file) return;
     setImagePreviewFromFile(creatorProfileCoverPreview, creatorProfileCoverSize, file);
     if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorProfileCoverPreview?.dataset?.blobUrl || '';
+    applyCreatorCoverPos(creatorCoverPos || '50% 50%');
     updateCreatorProfilePreview();
     if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploading');
     try{
@@ -3528,6 +3633,7 @@ if (creatorProfileCoverFile){
       if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = url;
       setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, url, t('creatorProfileAvatarHint'));
       if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploaded');
+      applyCreatorCoverPos(creatorCoverPos || '50% 50%');
       updateCreatorProfilePreview();
     }catch(_){
       if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploadFail');

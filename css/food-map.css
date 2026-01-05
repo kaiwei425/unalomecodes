@@ -157,6 +157,24 @@
       object-fit:cover;
       display:block;
     }
+    .creator-cover-hint{
+      position:absolute;
+      right:10px;
+      bottom:10px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,.68);
+      color:#fff;
+      font-size:11px;
+      font-weight:700;
+      pointer-events:none;
+      opacity:.9;
+      transition:opacity .2s ease, transform .2s ease;
+    }
+    .creator-cover.dragging .creator-cover-hint{
+      opacity:.3;
+      transform:translateY(2px);
+    }
     .creator-card-body{
       display:flex;
       align-items:center;
@@ -433,6 +451,9 @@
       gap:8px;
       margin-top:6px;
     }
+    .creator-upload.creator-upload-avatar{
+      max-width:220px;
+    }
     .creator-upload-preview{
       border:1px dashed #e2e8f0;
       border-radius:12px;
@@ -447,6 +468,12 @@
     }
     .creator-upload-preview.creator-upload-cover{
       min-height:140px;
+    }
+    .creator-upload-preview.creator-upload-avatar{
+      min-height:120px;
+      height:120px;
+      width:120px;
+      justify-self:flex-start;
     }
     .creator-upload-preview img{
       width:100%;
@@ -470,6 +497,10 @@
       display:flex;
       gap:8px;
       align-items:center;
+      flex-wrap:wrap;
+    }
+    .creator-upload-hint{
+      color:#94a3b8;
     }
     .creator-preview-wrap{
       margin-top:16px;

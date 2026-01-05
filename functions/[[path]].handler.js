@@ -4128,7 +4128,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!record){
       return json({ ok:true, creator:false, inviteAllowed:false }, 200);
     }
-    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', inviteAllowed: !!record.creatorInviteAllowed }, 200);
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', inviteAllowed: !!record.creatorInviteAllowed }, 200);
   }
 
   if (pathname === '/api/creator/profile' && request.method === 'POST'){
@@ -4144,6 +4144,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const hasIntro = Object.prototype.hasOwnProperty.call(body, 'creatorIntro') || Object.prototype.hasOwnProperty.call(body, 'intro') || Object.prototype.hasOwnProperty.call(body, 'bio');
     const hasAvatar = Object.prototype.hasOwnProperty.call(body, 'creatorAvatar') || Object.prototype.hasOwnProperty.call(body, 'avatar');
     const hasCover = Object.prototype.hasOwnProperty.call(body, 'creatorCover') || Object.prototype.hasOwnProperty.call(body, 'cover');
+    const hasCoverPos = Object.prototype.hasOwnProperty.call(body, 'creatorCoverPos') || Object.prototype.hasOwnProperty.call(body, 'coverPos');
     if (hasIg){
       record.creatorIg = String(body.creatorIg ?? body.ig ?? '').trim().slice(0, 200);
     }
@@ -4156,6 +4157,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (hasCover){
       record.creatorCover = String(body.creatorCover ?? body.cover ?? '').trim().slice(0, 300);
     }
+    if (hasCoverPos){
+      record.creatorCoverPos = String(body.creatorCoverPos ?? body.coverPos ?? '').trim().slice(0, 20) || '50% 50%';
+    }
     await saveUserRecord(env, record);
     let updated = 0;
     if (env.FOODS && env.FOODS.list){
@@ -4164,12 +4168,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const now = new Date().toISOString();
         for (const item of items){
           if (!item || String(item.ownerId || '') !== String(record.id)) continue;
-          if (String(item.ownerName || '') === name && item.creatorIg === record.creatorIg && item.creatorIntro === record.creatorIntro && item.creatorAvatar === record.creatorAvatar && item.creatorCover === record.creatorCover) continue;
+          if (String(item.ownerName || '') === name && item.creatorIg === record.creatorIg && item.creatorIntro === record.creatorIntro && item.creatorAvatar === record.creatorAvatar && item.creatorCover === record.creatorCover && item.creatorCoverPos === record.creatorCoverPos) continue;
           item.ownerName = name;
           item.creatorIg = record.creatorIg || '';
           item.creatorIntro = record.creatorIntro || '';
           item.creatorAvatar = record.creatorAvatar || '';
           item.creatorCover = record.creatorCover || '';
+          item.creatorCoverPos = record.creatorCoverPos || '50% 50%';
           item.updatedAt = now;
           await saveFood(env, item);
           updated += 1;
@@ -4180,7 +4185,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
       }catch(_){}
     }
-    return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', updated });
+    return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', updated });
   }
 
   if (pathname === '/api/creator/claim' && request.method === 'POST'){
@@ -4567,6 +4572,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           obj.creatorIntro = creatorRecord.creatorIntro || '';
           obj.creatorAvatar = creatorRecord.creatorAvatar || '';
           obj.creatorCover = creatorRecord.creatorCover || '';
+          obj.creatorCoverPos = creatorRecord.creatorCoverPos || '50% 50%';
         }
         obj.updatedAt = now;
         if (!parseLatLngPair(obj.lat, obj.lng)){

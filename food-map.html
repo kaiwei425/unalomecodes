@@ -207,26 +207,30 @@
       <label>創作者名稱</label>
       <input id="creatorProfileName" type="text">
       <label>創作者頭像</label>
-      <div class="creator-upload">
-        <div class="creator-upload-preview" id="creatorAvatarPreview">尚未上傳</div>
+      <div class="creator-upload creator-upload-avatar">
+        <div class="creator-upload-preview creator-upload-avatar" id="creatorAvatarPreview">尚未上傳</div>
         <div class="creator-upload-meta">
           <input id="creatorProfileAvatarFile" type="file" accept="image/*">
           <input id="creatorProfileAvatarUrl" type="hidden">
           <div class="creator-upload-info">
+            <span id="creatorAvatarSpec"></span>
             <span id="creatorAvatarSize">-</span>
             <span id="creatorAvatarStatus"></span>
           </div>
         </div>
       </div>
       <label>創作者封面</label>
-      <div class="creator-upload">
+      <div class="creator-upload creator-upload-cover">
         <div class="creator-upload-preview creator-upload-cover" id="creatorCoverPreview">尚未上傳</div>
         <div class="creator-upload-meta">
           <input id="creatorProfileCoverFile" type="file" accept="image/*">
           <input id="creatorProfileCoverUrl" type="hidden">
+          <input id="creatorProfileCoverPos" type="hidden">
           <div class="creator-upload-info">
+            <span id="creatorCoverSpec"></span>
             <span id="creatorCoverSize">-</span>
             <span id="creatorCoverStatus"></span>
+            <span class="creator-upload-hint" id="creatorCoverHint"></span>
           </div>
         </div>
       </div>
