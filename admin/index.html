@@ -119,7 +119,9 @@ html,body{
 .entry-section:nth-of-type(5){animation-delay:.2s;}
 .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .section-head h2{margin:0;font-size:20px;font-weight:800;}
-.section-note{font-size:12px;color:var(--muted);}
+.section-note{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.section-note .btn{font-size:12px;padding:6px 10px;}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none;}
 .muted{color:var(--muted);font-size:14px;}
 .wrap .admin-stats{
   margin:0;
@@ -298,7 +300,10 @@ html.admin-guard-hide{visibility:hidden;}
         <h2>營運快覽</h2>
         <p class="muted">即時總覽重點數據</p>
       </div>
-      <div class="section-note">統計以台灣時間計算</div>
+      <div class="section-note">
+        <span>統計以台灣時間計算</span>
+        <button class="btn ghost" id="refreshDashboardStats" type="button">重新整理</button>
+      </div>
     </div>
     <div class="admin-stats" id="adminStats">
       <div class="admin-stat-card">
@@ -727,8 +732,9 @@ html.admin-guard-hide{visibility:hidden;}
       return `<li><span class="name">${name}</span><span>× ${qty}</span></li>`;
     });
   };
-  const loadDashboard = (attempt = 0)=>{
-    fetch('/api/admin/dashboard?fresh=1', { credentials:'include', cache:'no-store' })
+  const loadDashboard = (attempt = 0, forceFresh = false)=>{
+    const url = forceFresh ? '/api/admin/dashboard?fresh=1' : '/api/admin/dashboard';
+    return fetch(url, { credentials:'include', cache:'no-store' })
       .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
       .then(({ ok, data })=>{
         if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');
@@ -736,7 +742,7 @@ html.admin-guard-hide{visibility:hidden;}
         if (data && data.fromCache === false && !hasStats){
           markReportLoading();
           if (attempt < maxDashboardAttempts){
-            setTimeout(()=> loadDashboard(attempt + 1), retryDelay(attempt));
+            setTimeout(()=> loadDashboard(attempt + 1, forceFresh), retryDelay(attempt));
           }
           return;
         }
@@ -748,6 +754,21 @@ html.admin-guard-hide{visibility:hidden;}
       });
   };
   loadDashboard();
+
+  const refreshBtn = document.getElementById('refreshDashboardStats');
+  if (refreshBtn){
+    const label = refreshBtn.textContent || '重新整理';
+    refreshBtn.addEventListener('click', ()=>{
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '更新中…';
+      markReportLoading();
+      loadDashboard(0, true)
+        .finally(()=>{
+          refreshBtn.disabled = false;
+          refreshBtn.textContent = label;
+        });
+    });
+  }
 
   // Load Food Map Stats
   const ctx = document.getElementById('foodMapChart');
