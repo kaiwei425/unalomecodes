@@ -620,6 +620,90 @@ html,body{
   box-shadow:0 8px 18px rgba(15,23,42,.12);
 }
 
+/* 購物車優惠券 Dialog（卡片版） */
+.coupon-dialog-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,0.55);
+  z-index:2147483000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter:blur(2px);
+}
+.coupon-dialog-panel{
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 20px 40px rgba(15,23,42,0.25);
+  padding:16px;
+  width:min(760px, 92vw);
+  max-height:80vh;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.coupon-dialog-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.coupon-dialog-title{
+  font-weight:800;
+  font-size:16px;
+}
+.coupon-dialog-close{
+  border:none;
+  background:#f1f5f9;
+  color:#475569;
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  font-size:18px;
+  cursor:pointer;
+}
+.coupon-dialog-list{
+  display:grid;
+  gap:10px;
+  overflow:auto;
+}
+.coupon-card{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px;
+  background:#fff;
+  display:grid;
+  gap:8px;
+}
+@media(min-width:640px){
+  .coupon-card{
+    grid-template-columns:1fr auto;
+    align-items:center;
+  }
+}
+.coupon-code{font-weight:800;font-size:16px;}
+.coupon-meta{color:#6b7280;font-size:13px;line-height:1.6;}
+.coupon-chips{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;}
+.coupon-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#eef2ff;
+  border:1px solid #c7d2fe;
+  font-size:12px;
+  color:#1d4ed8;
+  font-weight:700;
+}
+.coupon-chip.ok{background:#dcfce7;border-color:#16a34a;color:#166534;}
+.coupon-actions{display:flex;justify-content:flex-end;}
+.coupon-actions .btn{
+  flex:0 0 auto;
+  padding:8px 12px;
+  font-size:13px;
+}
+
   /* --- Stage 1 additions (safe & minimal) --- */
   .badge{background:#111827;color:#eab308;border:1px solid #2b2f3a;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}
   @media(max-width:640px){ .badge{font-size:11px} }

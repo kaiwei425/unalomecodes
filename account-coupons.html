@@ -17,6 +17,10 @@
   h1{margin:6px 0 14px;font-size:24px;font-weight:800;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 12px 24px rgba(0,0,0,.06);}
   .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px;}
+  .tab-btn{border:1px solid var(--line);background:#fff;color:#0f172a;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;}
+  .tab-btn.active{background:#eef2ff;border-color:#c7d2fe;color:#1d4ed8;box-shadow:0 6px 14px rgba(37,99,235,.15);}
+  .tab-hint{font-size:12px;color:var(--muted);margin-top:4px;}
   .controls input{padding:10px 12px;border:1px solid var(--line);border-radius:10px;flex:1;min-width:220px;}
   .controls button{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer;}
   .list{display:grid;gap:10px;}
@@ -43,6 +47,11 @@
         <button id="btnAdd">加入我的優惠券</button>
         <button id="btnReload">重新整理</button>
       </div>
+      <div class="tabs" id="couponTabs">
+        <button class="tab-btn active" data-tab="unused">未使用</button>
+        <button class="tab-btn" data-tab="used">已使用</button>
+      </div>
+      <div id="usedHint" class="tab-hint" style="display:none">已使用的優惠券 7 天後會自動消失。</div>
       <div id="list" class="list"><div class="muted">載入中…</div></div>
     </div>
   </div>
@@ -50,7 +59,10 @@
   const listEl = document.getElementById('list');
   const q = document.getElementById('q');
   const addCode = document.getElementById('addCode');
+  const tabs = document.getElementById('couponTabs');
+  const usedHint = document.getElementById('usedHint');
   let items = [];
+  let activeTab = 'unused';
 
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c)); }
 
@@ -75,9 +87,21 @@
     if (d && map[d]) return `可用於「${map[d]}」系列商品。`;
     return '可用於指定守護神商品。';
   }
+  function isUsedExpired(c, days){
+    if (!c || !c.used) return false;
+    const raw = c.usedAt || c.used_at || c.usedTime || '';
+    const ts = Date.parse(raw);
+    if (!Number.isFinite(ts)) return false;
+    return (Date.now() - ts) > (Number(days||7) * 86400000);
+  }
   function render(){
     const key = (q.value||'').trim().toLowerCase();
     let list = items.slice();
+    if (activeTab === 'unused'){
+      list = list.filter(c=> !c.used);
+    } else if (activeTab === 'used'){
+      list = list.filter(c=> c.used && !isUsedExpired(c, 7));
+    }
     if (key){ list = list.filter(x=> JSON.stringify(x).toLowerCase().includes(key)); }
     if (!list.length){ listEl.innerHTML = '<div class="muted">目前沒有優惠券</div>'; return; }
     listEl.innerHTML = list.map(c=>{
@@ -173,6 +197,16 @@
   document.getElementById('btnReload').addEventListener('click', load);
   document.getElementById('btnAdd').addEventListener('click', add);
   q.addEventListener('input', ()=>{ clearTimeout(q._t); q._t=setTimeout(render,200); });
+  if (tabs){
+    tabs.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-tab]');
+      if (!btn) return;
+      activeTab = btn.getAttribute('data-tab') || 'unused';
+      tabs.querySelectorAll('button[data-tab]').forEach(b=> b.classList.toggle('active', b === btn));
+      if (usedHint) usedHint.style.display = (activeTab === 'used') ? '' : 'none';
+      render();
+    });
+  }
   load();
 </script>
 </body>

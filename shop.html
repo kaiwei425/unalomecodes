@@ -3348,108 +3348,100 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           return;
         }
 
-        // 建立輕量選單
+        // 建立優惠券選擇 Dialog（卡片版）
         function openPicker(list){
-          const overlay = document.createElement('div');
-          overlay.style.position = 'fixed';
-          overlay.style.inset = '0';
-          overlay.style.background = 'rgba(0,0,0,0.55)';
-          overlay.style.zIndex = '2147483000';
-          overlay.style.display = 'flex';
-          overlay.style.alignItems = 'center';
-          overlay.style.justifyContent = 'center';
-          overlay.style.backdropFilter = 'blur(2px)';
-
-          const panel = document.createElement('div');
-          panel.style.background = '#fff';
-          panel.style.borderRadius = '14px';
-          panel.style.boxShadow = '0 20px 40px rgba(15,23,42,0.25)';
-          panel.style.padding = '16px';
-          panel.style.width = 'min(420px, 92vw)';
-          panel.style.maxWidth = '420px';
-          panel.style.display = 'grid';
-          panel.style.gap = '10px';
-
-          const title = document.createElement('div');
-          title.textContent = '選擇要套用的優惠券';
-          title.style.fontWeight = '800';
-          title.style.fontSize = '16px';
-
-          const select = document.createElement('select');
-          select.style.width = '100%';
-          select.style.padding = '12px 12px';
-          select.style.border = '1px solid #e5e7eb';
-          select.style.borderRadius = '10px';
-          select.style.fontSize = '15px';
-
+          function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c)); }
           const deityNames = {
             FM:'四面神', GA:'象神', CD:'崇迪', KP:'坤平', HM:'哈魯曼',
             RH:'拉胡', JL:'迦樓羅', ZD:'澤度金', ZF:'招財女神',
             WE:'五眼四耳', XZ:'徐祝老人', HP:'魂魄勇'
           };
+          function typeLabel(c){
+            const t = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
+            if (t === 'ALL') return '全館折扣券（全站適用）';
+            if (t === 'SHIP') return '免運券（運費折抵）';
+            return '神祇券';
+          }
+          function deityLabel(c){
+            const d = (c.deity||'').toUpperCase();
+            if (!d || d==='ALL' || d==='SHIP') return '';
+            return deityNames[d] ? `${deityNames[d]}（${d}）` : d;
+          }
+          function usageText(c){
+            const t = (c.type||'DEITY').toUpperCase();
+            const d = (c.deity||'').toUpperCase();
+            if (t === 'ALL') return '可用於全館任一商品（全館券與神祇券擇一）。';
+            if (t === 'SHIP') return '折抵運費，可搭配折扣券使用。';
+            if (d && deityNames[d]) return `可用於「${deityNames[d]}」系列商品。`;
+            return '可用於指定守護神商品。';
+          }
 
-          list.forEach((c, idx)=>{
-            const opt = document.createElement('option');
-            const labelType = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
-            const deityCode = (c.deity || '').toUpperCase();
-            const deityText = (deityCode && deityCode!=='ALL' && deityCode!=='SHIP')
-              ? `${deityNames[deityCode] || deityCode}（${deityCode}）`
-              : (labelType === 'SHIP' ? '免運券（運費折抵）' : (labelType === 'ALL' ? '全館折扣券（全站適用）' : labelType));
-            opt.value = String(idx);
-            opt.textContent = `${c.code}｜${deityText}｜${labelType}｜NT$${c.amount||0}`;
-            select.appendChild(opt);
-          });
+          const overlay = document.createElement('div');
+          overlay.className = 'coupon-dialog-overlay';
 
-          const actions = document.createElement('div');
-          actions.style.display = 'flex';
-          actions.style.gap = '8px';
-          actions.style.justifyContent = 'flex-end';
+          const panel = document.createElement('div');
+          panel.className = 'coupon-dialog-panel';
 
-          const cancel = document.createElement('button');
-          cancel.textContent = '取消';
-          cancel.style.padding = '8px 12px';
-          cancel.style.borderRadius = '10px';
-          cancel.style.border = '1px solid #e5e7eb';
-          cancel.style.background = '#fff';
-          cancel.style.cursor = 'pointer';
+          panel.innerHTML = `
+            <div class="coupon-dialog-header">
+              <div class="coupon-dialog-title">選擇要套用的優惠券</div>
+              <button type="button" class="coupon-dialog-close" aria-label="關閉">×</button>
+            </div>
+            <div class="coupon-dialog-list"></div>
+          `;
 
-          const ok = document.createElement('button');
-          ok.textContent = '套用';
-          ok.style.padding = '8px 12px';
-          ok.style.borderRadius = '10px';
-          ok.style.border = 'none';
-          ok.style.background = '#2563eb';
-          ok.style.color = '#fff';
-          ok.style.cursor = 'pointer';
-          ok.style.fontWeight = '700';
+          const listBox = panel.querySelector('.coupon-dialog-list');
+          listBox.innerHTML = list.map(c=>{
+            const dLabel = deityLabel(c);
+            const chips = [
+              `<span class="coupon-chip">類型：${esc(typeLabel(c))}</span>`
+            ];
+            if (dLabel){
+              chips.push(`<span class="coupon-chip">守護神：${esc(dLabel)}</span>`);
+            }else if ((c.deity||'').toUpperCase()==='ALL'){
+              chips.push(`<span class="coupon-chip">適用範圍：全館</span>`);
+            }else if ((c.deity||'').toUpperCase()==='SHIP'){
+              chips.push(`<span class="coupon-chip">適用範圍：運費</span>`);
+            }
+            chips.push(`<span class="coupon-chip ok">未使用</span>`);
+            return `
+              <div class="coupon-card">
+                <div>
+                  <div class="coupon-code">${esc(c.code||'')}</div>
+                  <div class="coupon-meta">折抵：NT$ ${Number(c.amount||0)}｜${esc(typeLabel(c))}</div>
+                  <div class="coupon-meta">發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+                  <div class="coupon-meta">${esc(usageText(c))}</div>
+                  ${c.startAt ? `<div class="coupon-meta">生效：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
+                  ${c.expireAt ? `<div class="coupon-meta">到期：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
+                  <div class="coupon-chips">${chips.join('')}</div>
+                </div>
+                <div class="coupon-actions">
+                  <button type="button" class="btn primary" data-coupon-code="${esc(c.code||'')}">套用</button>
+                </div>
+              </div>
+            `;
+          }).join('');
 
-          actions.appendChild(cancel);
-          actions.appendChild(ok);
-
-          panel.appendChild(title);
-          panel.appendChild(select);
-          panel.appendChild(actions);
           overlay.appendChild(panel);
 
           function close(){
             try{ overlay.remove(); }catch(_){}
           }
-          cancel.onclick = close;
           overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) close(); });
-
-          ok.onclick = ()=>{
-            const idx = Number(select.value);
-            if (!Number.isFinite(idx) || idx<0 || idx>=list.length){ close(); return; }
-            const chosen = list[idx];
+          panel.querySelector('.coupon-dialog-close').addEventListener('click', close);
+          listBox.addEventListener('click', (ev)=>{
+            const btn = ev.target.closest && ev.target.closest('button[data-coupon-code]');
+            if (!btn) return;
+            const code = btn.getAttribute('data-coupon-code') || '';
+            if (!code) return;
             const input = document.getElementById('cartCouponInput');
-            if (input){ input.value = chosen.code; }
+            if (input){ input.value = code; }
             close();
             document.getElementById('cartApply')?.click();
-          };
+          });
 
           const host = document.getElementById('dlgCart') || document.body;
           host.appendChild(overlay);
-          select.focus();
         }
 
         openPicker(items);
