@@ -668,7 +668,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
       }catch(e){}
       // 自動帶入金額：購物車合計優先，否則詳情價
-      const pricing = __cartPricing(true);
+      const pricing = __cartPricing(true, { shippingFee: COD_SHIPPING_FEE });
       var amount = pricing.subtotal;
       var off = pricing.off;
       var shippingFee = pricing.shipping;
@@ -851,7 +851,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           if (c){ fd.set('coupon', String(c.code||'')); fd.set('coupon_deity', String(c.deity||'')); }
         }catch(e){}
         try{
-          var pricing = __cartPricing(true);
+          var pricing = __cartPricing(true, { shippingFee: COD_SHIPPING_FEE });
           var couponState = window.__cartCouponState || {};
           var multiCoupons = Array.isArray(couponState.coupons) ? couponState.coupons : [];
           if (multiCoupons.length){

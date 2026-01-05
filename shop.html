@@ -80,6 +80,7 @@
 <script>
   window.__shippingFee = window.__shippingFee || 60;
   window.__codShippingFee = window.__codShippingFee || 38;
+  window.__disableBankTransferUI = true;
   window.isCandleItemLike = window.isCandleItemLike || function(obj){
     try{
       var text = '';
@@ -2197,6 +2198,18 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 <script id="bankRestorePatch">
 (function(){
   if (window.__bankRestorePatched) return; window.__bankRestorePatched = true;
+  if (window.__disableBankTransferUI){
+    try{
+      var dlg = document.getElementById('dlgBank');
+      var box = document.getElementById('bankFourLines');
+      if (box) box.remove();
+      if (dlg){
+        var title = dlg.querySelector('.bankHeader .bankTitle'); if (title) title.style.display='none';
+        var grid  = dlg.querySelector('.bankInfoGrid'); if (grid) grid.style.display='none';
+      }
+    }catch(_){}
+    return;
+  }
 
   function digitsOnly(s){ return String(s||'').replace(/[^0-9]/g,''); }
 
@@ -2988,9 +3001,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       });
     }
     var needsShipping = needsShippingForItems(items);
-    var shippingFee = needsShipping ? (window.__shippingFee || 60) : 0;
+    var showShipping = false;
+    var shippingFee = 0;
     var shipOff = 0;
-    if (needsShipping && assign && assign.ship){
+    if (showShipping && needsShipping && assign && assign.ship){
       shipOff = Math.min(shippingFee, Number(assign.ship.amount||shippingFee)||shippingFee);
       shippingFee = Math.max(0, shippingFee - shipOff);
       // shipOff 只影響運費，不計入折扣欄位
@@ -3002,9 +3016,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     // 對外輸出目前分配結果，給上方 bar / 其他模組使用
     window.__cartCouponState = window.__cartCouponState || {};
     window.__cartCouponState.assignment = assign;
-    window.__cartCouponState.shipping = shippingFee;
-    window.__cartCouponState.hasShipping = needsShipping;
-    window.__cartCouponState.shippingDiscount = shipOff;
+    window.__cartCouponState.shipping = showShipping ? shippingFee : 0;
+    window.__cartCouponState.hasShipping = showShipping && needsShipping;
+    window.__cartCouponState.shippingDiscount = showShipping ? shipOff : 0;
 
     function setText(selList, val){
       selList.forEach(function(sel){
@@ -3045,7 +3059,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{
       var shipRow = document.querySelector('.cartSum.cartShip');
       if (shipRow){
-        shipRow.style.display = needsShipping ? '' : 'none';
+        shipRow.style.display = 'none';
         var shipVal = document.getElementById('cartShipping');
         if (shipVal){
           var labelFee = shippingFee;
@@ -3460,7 +3474,10 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   // 之後所有地方只要呼叫 getUnifiedCartTotals()，就會用同一套邏輯：
   // 讀取 cart 內容 + 多張優惠券分配結果，算出小計 / 折扣 / 應付金額。
   try{
-    window.getUnifiedCartTotals = function(){
+    window.getUnifiedCartTotals = function(opts){
+      opts = opts || {};
+      var includeShipping = opts.includeShipping === true;
+      var overrideFee = (typeof opts.shippingFee === 'number' && !Number.isNaN(opts.shippingFee)) ? opts.shippingFee : null;
       var items = readCart();
       var coupons = getCartCoupons();
       var assign = assignCouponsToItems(items, coupons);
@@ -3469,12 +3486,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var needsShipping = items.length && items.some(function(it){
         return typeof window.isCandleItemLike === 'function' ? !window.isCandleItemLike(it) : !/蠟燭/.test(String((it&&it.category)||'') + String((it&&(it.name||it.title||''))||''));
       });
-      var shipping = needsShipping ? (window.__shippingFee || 60) : 0;
+      var shipping = 0;
       var shipOff = 0;
-      if (needsShipping && assign && assign.ship){
-        shipOff = Math.min(shipping, Number(assign.ship.amount||shipping)||shipping);
-        shipping = Math.max(0, shipping - shipOff);
-        // shipOff 僅影響運費，不計入商品折扣
+      if (includeShipping && needsShipping){
+        shipping = (overrideFee != null) ? overrideFee : (window.__shippingFee || 60);
+        if (assign && assign.ship){
+          shipOff = Math.min(shipping, Number(assign.ship.amount||shipping)||shipping);
+          shipping = Math.max(0, shipping - shipOff);
+          // shipOff 僅影響運費，不計入商品折扣
+        }
       }
       var grand  = Math.max(0, sub - off + shipping);
       return {
@@ -3721,7 +3741,24 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 
     ensureBankBackButton(dlg);
 
-    var totals = window.getUnifiedCartTotals();
+    function resolveCheckoutChannel(){
+      try{
+        if (window.__checkoutChannelRef && typeof window.__checkoutChannelRef.get === 'function'){
+          return window.__checkoutChannelRef.get();
+        }
+      }catch(_){}
+      try{
+        var v = sessionStorage.getItem('__checkout_channel');
+        if (v) return v;
+      }catch(_){}
+      return 'bank';
+    }
+    function resolveCheckoutShippingFee(){
+      return resolveCheckoutChannel() === 'cc'
+        ? (window.__shippingFee || 60)
+        : (window.__codShippingFee || 38);
+    }
+    var totals = window.getUnifiedCartTotals({ includeShipping:true, shippingFee: resolveCheckoutShippingFee() });
     // Render order items section
     renderBankOrderItems(totals);
     var amtInput = document.getElementById('bfAmount');
@@ -4136,9 +4173,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
   }
 
   function getTotals(){
+    function resolveCheckoutShippingFee(){
+      return checkoutChannel === 'cc'
+        ? (window.__shippingFee || 60)
+        : (window.__codShippingFee || 38);
+    }
     try{
       if (typeof window.getUnifiedCartTotals === 'function'){
-        return window.getUnifiedCartTotals();
+        return window.getUnifiedCartTotals({ includeShipping: true, shippingFee: resolveCheckoutShippingFee() });
       }
     }catch(e){}
     var items = readCartLS();
@@ -4170,7 +4212,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         if (!/蠟燭/.test(text)) needsShipping = true;
       }
     });
-    var shipping = needsShipping ? (window.__shippingFee || 60) : 0;
+    var shipping = needsShipping ? resolveCheckoutShippingFee() : 0;
     return {
       items: items,
       coupons: [],
