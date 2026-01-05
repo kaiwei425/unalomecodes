@@ -571,13 +571,13 @@ html,body{
 
 /* 付款按鈕質感升級（信用卡／貨到付款） */
 #cartPayCC, #payCC, .pay-cc {
-  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 60%, #0ea5e9 100%);
-  border-color: #1d4ed8;
+  background: linear-gradient(135deg, #18a168 0%, #0ea5e9 100%);
+  border-color: #0ea5e9;
   color: #fff;
-  box-shadow: 0 12px 22px rgba(30, 64, 175, 0.25);
+  box-shadow: 0 12px 22px rgba(14, 165, 233, 0.22);
 }
 #cartPayCC:hover, #payCC:hover, .pay-cc:hover {
-  filter: brightness(1.03);
+  filter: brightness(1.04);
 }
 
 #cartGo711, #pay711, .pay-711 {
@@ -599,6 +599,25 @@ html,body{
   background: url("/img/brand/logo-711.svg") no-repeat center / contain;
   display: inline-block;
   flex: 0 0 auto;
+}
+
+/* Step3 修改門市按鈕（更小、更精緻） */
+.store-edit-btn{
+  padding:6px 12px;
+  font-size:13px;
+  font-weight:700;
+  border-radius:999px;
+  background:linear-gradient(180deg,#ffffff,#f1f5f9);
+  border:1px solid #e2e8f0;
+  color:#0f172a;
+  box-shadow:0 6px 14px rgba(15,23,42,.08);
+  width:auto;
+  align-self:flex-start;
+  justify-self:flex-start;
+}
+.store-edit-btn:hover{
+  border-color:#cbd5f5;
+  box-shadow:0 8px 18px rgba(15,23,42,.12);
 }
 
   /* --- Stage 1 additions (safe & minimal) --- */
