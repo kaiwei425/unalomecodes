@@ -84,6 +84,10 @@
                     <button type="button" id="btnCreatorInvite">輸入邀請碼</button>
                     <button type="button" id="btnCreatorProfile" style="display:none;">創作者資料</button>
                     <button type="button" id="btnCreatorShare" style="display:none;">分享連結</button>
+                    <div class="creator-terms-row" id="creatorTermsRow" style="display:none;">
+                      <button type="button" id="btnCreatorTerms">創作者條款</button>
+                      <span class="creator-terms-hint" id="creatorTermsHint">請先同意</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -251,6 +255,52 @@
     <footer>
       <button type="button" class="btn" id="creatorProfileClose">取消</button>
       <button type="button" class="btn primary" id="creatorProfileSave">儲存</button>
+    </footer>
+  </dialog>
+  <dialog id="creatorTermsDialog" class="policy-dialog">
+    <header id="creatorTermsTitle">創作者新增餐廳使用條款</header>
+    <div class="body">
+      <div class="terms-content" id="creatorTermsContent">
+        <div class="terms-section">
+          <div class="terms-title">一、目的與適用範圍</div>
+          <p>本功能旨在邀請創作者協助補充美食地圖資訊，讓資料庫更完整。以下條款適用於你新增或編輯的所有內容。</p>
+        </div>
+        <div class="terms-section">
+          <div class="terms-title">二、內容真實性</div>
+          <p>你應確保填寫內容為真實、可驗證且不具誤導性。如有錯誤或爭議內容，本網站得進行修正或下架。</p>
+        </div>
+        <div class="terms-section">
+          <div class="terms-title">三、權利與使用範圍（讓你安心的使用方式）</div>
+          <p>你保證對上傳內容擁有必要權利（包含文字、圖片、連結等）。你同意本網站得在提供與維護美食地圖服務所必要的範圍內使用你的內容（例如：站內展示、分類、搜尋、站內推薦、備份、與改善使用者體驗）。</p>
+          <p>本網站不會將你的內容用於獨立商業廣告或對外授權；若未來有其他用途，會事先取得你的同意。</p>
+        </div>
+        <div class="terms-section">
+          <div class="terms-title">四、禁止內容</div>
+          <ul>
+            <li>虛假、誤導、詐騙或重複垃圾內容</li>
+            <li>侵犯第三方權利之內容</li>
+            <li>違法、仇恨、歧視、暴力或成人內容</li>
+            <li>未經同意的個人隱私資訊</li>
+          </ul>
+        </div>
+        <div class="terms-section">
+          <div class="terms-title">五、平台管理權</div>
+          <p>本網站保留審查、調整、隱藏或下架內容之權利，包含但不限於違反條款、品質不佳、或收到申訴之情況。</p>
+        </div>
+        <div class="terms-section">
+          <div class="terms-title">六、第三方連結與責任限制</div>
+          <p>你提供之 Google Map、YouTube、IG 等第三方連結，其可用性由第三方負責；本網站不對其變動或失效負責。</p>
+        </div>
+        <div class="terms-section">
+          <div class="terms-title">七、條款更新</div>
+          <p>本網站可視需要調整條款，更新後於網站公告。你持續使用即視為同意更新內容。</p>
+        </div>
+      </div>
+      <div class="terms-status" id="creatorTermsStatus"></div>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="creatorTermsClose">關閉</button>
+      <button type="button" class="btn primary" id="creatorTermsAgree">我同意</button>
     </footer>
   </dialog>
   <dialog id="coordsHelpDialog" class="policy-dialog coords-help-dialog">

@@ -1899,6 +1899,9 @@ function generateCreatorInviteCode(){
 function isFoodCreator(record){
   return !!(record && record.creatorFoods);
 }
+function hasCreatorTermsAccepted(record){
+  return !!(record && (record.creatorTermsAccepted || record.creatorTermsAcceptedAt));
+}
 function resolveCreatorName(record){
   return String(record && (record.creatorName || record.name || record.email) || '').trim();
 }
@@ -4128,7 +4131,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!record){
       return json({ ok:true, creator:false, inviteAllowed:false }, 200);
     }
-    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', inviteAllowed: !!record.creatorInviteAllowed }, 200);
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', inviteAllowed: !!record.creatorInviteAllowed, termsAccepted: hasCreatorTermsAccepted(record) }, 200);
   }
 
   if (pathname === '/api/creator/profile' && request.method === 'POST'){
@@ -4186,6 +4189,16 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }catch(_){}
     }
     return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', updated });
+  }
+
+  if (pathname === '/api/creator/terms' && request.method === 'POST'){
+    const record = await getSessionUserRecord(request, env);
+    if (!record) return json({ ok:false, error:'unauthorized' }, 401);
+    if (!isFoodCreator(record)) return json({ ok:false, error:'forbidden' }, 403);
+    record.creatorTermsAccepted = true;
+    record.creatorTermsAcceptedAt = new Date().toISOString();
+    await saveUserRecord(env, record);
+    return json({ ok:true, accepted:true, acceptedAt: record.creatorTermsAcceptedAt });
   }
 
   if (pathname === '/api/creator/claim' && request.method === 'POST'){
@@ -4520,6 +4533,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (!isAdminUser){
         creatorRecord = await getSessionUserRecord(request, env);
         if (!isFoodCreator(creatorRecord)) return json({ ok:false, error:'unauthorized' }, 401);
+        if (!hasCreatorTermsAccepted(creatorRecord)) return json({ ok:false, error:'terms_required' }, 403);
       }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       let id = url.searchParams.get('id') || '';
@@ -4549,6 +4563,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (!isAdminUser){
         creatorRecord = await getSessionUserRecord(request, env);
         if (!isFoodCreator(creatorRecord)) return json({ ok:false, error:'unauthorized' }, 401);
+        if (!hasCreatorTermsAccepted(creatorRecord)) return json({ ok:false, error:'terms_required' }, 403);
       }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       try{

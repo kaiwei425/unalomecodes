@@ -342,6 +342,47 @@ const TRANSLATIONS = {
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: '請輸入創作者簡介',
     creatorShare: '分享連結',
+    creatorTerms: '創作者條款',
+    creatorTermsHint: '請先同意',
+    creatorTermsNeed: '請先同意創作者條款才能新增或編輯餐廳。',
+    creatorTermsTitle: '創作者新增餐廳使用條款',
+    creatorTermsAgree: '我同意',
+    creatorTermsFail: '同意條款失敗：',
+    creatorTermsAcceptedToast: '已同意創作者條款',
+    creatorTermsHtml: `<div class="terms-section">
+      <div class="terms-title">一、目的與適用範圍</div>
+      <p>本功能旨在邀請創作者協助補充美食地圖資訊，讓資料庫更完整。以下條款適用於你新增或編輯的所有內容。</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">二、內容真實性</div>
+      <p>你應確保填寫內容為真實、可驗證且不具誤導性。如有錯誤或爭議內容，本網站得進行修正或下架。</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">三、權利與使用範圍（讓你安心的使用方式）</div>
+      <p>你保證對上傳內容擁有必要權利（包含文字、圖片、連結等）。你同意本網站得在提供與維護美食地圖服務所必要的範圍內使用你的內容（例如：站內展示、分類、搜尋、站內推薦、備份、與改善使用者體驗）。</p>
+      <p>本網站不會將你的內容用於獨立商業廣告或對外授權；若未來有其他用途，會事先取得你的同意。</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">四、禁止內容</div>
+      <ul>
+        <li>虛假、誤導、詐騙或重複垃圾內容</li>
+        <li>侵犯第三方權利之內容</li>
+        <li>違法、仇恨、歧視、暴力或成人內容</li>
+        <li>未經同意的個人隱私資訊</li>
+      </ul>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">五、平台管理權</div>
+      <p>本網站保留審查、調整、隱藏或下架內容之權利，包含但不限於違反條款、品質不佳、或收到申訴之情況。</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">六、第三方連結與責任限制</div>
+      <p>你提供之 Google Map、YouTube、IG 等第三方連結，其可用性由第三方負責；本網站不對其變動或失效負責。</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">七、條款更新</div>
+      <p>本網站可視需要調整條款，更新後於網站公告。你持續使用即視為同意更新內容。</p>
+    </div>`,
     allCreators: '全部創作者',
     creatorInvite: '輸入邀請碼',
     creatorInvitePrompt: '請輸入邀請碼',
@@ -595,6 +636,47 @@ const TRANSLATIONS = {
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: 'Enter creator bio',
     creatorShare: 'Share link',
+    creatorTerms: 'Creator Terms',
+    creatorTermsHint: 'Please agree',
+    creatorTermsNeed: 'Please agree to the creator terms before adding or editing restaurants.',
+    creatorTermsTitle: 'Creator Add Restaurant Terms',
+    creatorTermsAgree: 'I Agree',
+    creatorTermsFail: 'Unable to agree: ',
+    creatorTermsAcceptedToast: 'Creator terms accepted',
+    creatorTermsHtml: `<div class="terms-section">
+      <div class="terms-title">1. Purpose & Scope</div>
+      <p>This feature helps creators enrich the Food Map database. These terms apply to all content you add or edit.</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">2. Accuracy</div>
+      <p>Please ensure all information is accurate and not misleading. We may correct or remove disputed content.</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">3. Rights & Limited Use</div>
+      <p>You confirm you have the rights to the content you upload. You agree we may use it only as needed to operate and maintain the Food Map (on-site display, categorize, search, on-site recommendations, backup, and improve the service).</p>
+      <p>We will not use your content for standalone commercial ads or third-party licensing. If any other use is needed, we will ask for your permission first.</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">4. Prohibited Content</div>
+      <ul>
+        <li>False, misleading, or spam content</li>
+        <li>Content that infringes third-party rights</li>
+        <li>Illegal, hateful, violent, adult, or discriminatory content</li>
+        <li>Personal data shared without consent</li>
+      </ul>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">5. Moderation</div>
+      <p>We may review, adjust, hide, or remove content that violates these terms or receives complaints.</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">6. Third-party Links</div>
+      <p>Google Map, YouTube, or IG links are maintained by third parties. We are not responsible for their availability.</p>
+    </div>
+    <div class="terms-section">
+      <div class="terms-title">7. Updates</div>
+      <p>We may update these terms. Continued use means you accept the updates.</p>
+    </div>`,
     allCreators: 'All Creators',
     creatorInvite: 'Enter Invite Code',
     creatorInvitePrompt: 'Enter invite code',
@@ -854,6 +936,15 @@ const creatorProfileStatus = document.getElementById('creatorProfileStatus');
 const creatorProfilePreview = document.getElementById('creatorProfilePreview');
 const creatorProfileClose = document.getElementById('creatorProfileClose');
 const creatorProfileSave = document.getElementById('creatorProfileSave');
+const creatorTermsRow = document.getElementById('creatorTermsRow');
+const btnCreatorTerms = document.getElementById('btnCreatorTerms');
+const creatorTermsHint = document.getElementById('creatorTermsHint');
+const creatorTermsDialog = document.getElementById('creatorTermsDialog');
+const creatorTermsTitle = document.getElementById('creatorTermsTitle');
+const creatorTermsContent = document.getElementById('creatorTermsContent');
+const creatorTermsStatus = document.getElementById('creatorTermsStatus');
+const creatorTermsClose = document.getElementById('creatorTermsClose');
+const creatorTermsAgree = document.getElementById('creatorTermsAgree');
 const coordsHelpDialog = document.getElementById('coordsHelpDialog');
 const coordsHelpTitle = document.getElementById('coordsHelpTitle');
 const coordsHelpDesc = document.getElementById('coordsHelpDesc');
@@ -894,6 +985,20 @@ function renderCoordsHelpSteps(){
   if (!coordsHelpSteps) return;
   const keys = ['coordsHelpStep1', 'coordsHelpStep2', 'coordsHelpStep3', 'coordsHelpStep4'];
   coordsHelpSteps.innerHTML = keys.map(key => `<li>${escapeHtml(t(key))}</li>`).join('');
+}
+function updateCreatorTermsUi(){
+  if (creatorTermsRow) creatorTermsRow.style.display = isCreator ? 'flex' : 'none';
+  if (btnCreatorTerms) btnCreatorTerms.style.display = isCreator ? 'inline-flex' : 'none';
+  if (creatorTermsHint){
+    const needs = isCreator && !creatorTermsAccepted;
+    creatorTermsHint.textContent = t('creatorTermsHint');
+    creatorTermsHint.style.display = needs ? 'inline' : 'none';
+  }
+}
+function openCreatorTermsDialog(){
+  if (creatorTermsStatus) creatorTermsStatus.textContent = '';
+  if (creatorTermsDialog && typeof creatorTermsDialog.showModal === 'function') creatorTermsDialog.showModal();
+  else if (creatorTermsDialog) creatorTermsDialog.setAttribute('open', '');
 }
 function setImagePreviewFromUrl(previewEl, sizeEl, url, emptyText){
   if (!previewEl) return;
@@ -1797,6 +1902,7 @@ let creatorIntro = '';
 let creatorAvatar = '';
 let creatorCover = '';
 let creatorCoverPos = '50% 50%';
+let creatorTermsAccepted = false;
 let currentZone = 'all';
 let editingId = '';
 let newItem = null;
@@ -2057,6 +2163,7 @@ function setLanguage(lang) {
   if (btnCreatorInvite) btnCreatorInvite.textContent = t('creatorInvite');
   if (btnCreatorProfile) btnCreatorProfile.textContent = t('creatorProfile');
   if (btnCreatorShare) btnCreatorShare.textContent = t('creatorShare');
+  if (btnCreatorTerms) btnCreatorTerms.textContent = t('creatorTerms');
   const mapSwitchLink = document.querySelector('a[href="/templemap"]');
   if (mapSwitchLink) mapSwitchLink.textContent = t('mapSwitchTemple');
   const editSubtitleBtn = document.getElementById('btnEditSubtitle');
@@ -2107,6 +2214,11 @@ function setLanguage(lang) {
   if (creatorAvatarSpecInline) creatorAvatarSpecInline.textContent = t('creatorAvatarSpec');
   if (creatorCoverSpecInline) creatorCoverSpecInline.textContent = t('creatorCoverSpec');
   if (creatorCoverHint) creatorCoverHint.textContent = t('creatorCoverDragHint');
+  if (creatorTermsTitle) creatorTermsTitle.textContent = t('creatorTermsTitle');
+  if (creatorTermsContent) creatorTermsContent.innerHTML = t('creatorTermsHtml');
+  if (creatorTermsClose) creatorTermsClose.textContent = t('close');
+  if (creatorTermsAgree) creatorTermsAgree.textContent = t('creatorTermsAgree');
+  updateCreatorTermsUi();
   if (coordsHelpTitle) coordsHelpTitle.textContent = t('coordsHelpTitle');
   if (coordsHelpDesc) coordsHelpDesc.textContent = t('coordsHelpDesc');
   if (coordsHelpImage) coordsHelpImage.alt = t('coordsHelpImageAlt');
@@ -2206,6 +2318,7 @@ async function checkCreator(){
     creatorAvatar = data && data.avatar ? String(data.avatar) : '';
     creatorCover = data && data.cover ? String(data.cover) : '';
     creatorCoverPos = data && data.coverPos ? String(data.coverPos) : creatorCoverPos;
+    creatorTermsAccepted = !!(data && data.termsAccepted);
   }catch(_){
     isCreator = false;
     creatorInviteAllowed = false;
@@ -2216,6 +2329,7 @@ async function checkCreator(){
     creatorAvatar = '';
     creatorCover = '';
     creatorCoverPos = '50% 50%';
+    creatorTermsAccepted = false;
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
@@ -2238,6 +2352,7 @@ async function checkCreator(){
     const panelOpen = creatorToolsPanel && creatorToolsPanel.style.display === 'grid';
     creatorToolsToggle.textContent = `${t('creatorZone')} ${panelOpen ? '▴' : '▾'}`;
   }
+  updateCreatorTermsUi();
   if (!isCreator && !creatorInviteAllowed && creatorToolsPanel){
     creatorToolsPanel.style.display = 'none';
   }
@@ -3057,6 +3172,11 @@ function render(){
   if (isAdmin || isCreator){
     cardsEl.querySelectorAll('button[data-edit]').forEach(btn=>{
       btn.onclick = ()=>{
+        if (!isAdmin && isCreator && !creatorTermsAccepted){
+          alert(t('creatorTermsNeed'));
+          openCreatorTermsDialog();
+          return;
+        }
         const id = btn.getAttribute('data-edit') || '';
         editingId = (editingId === id) ? '' : id;
         safeRender();
@@ -3142,6 +3262,11 @@ function render(){
             return;
           }
           if (res.status === 403){
+            if (data && data.error === 'terms_required'){
+              alert(t('creatorTermsNeed'));
+              openCreatorTermsDialog();
+              return;
+            }
             alert(t('noPermission'));
             return;
           }
@@ -3183,6 +3308,11 @@ function render(){
             return;
           }
           if (res.status === 403){
+            if (data && data.error === 'terms_required'){
+              alert(t('creatorTermsNeed'));
+              openCreatorTermsDialog();
+              return;
+            }
             alert(t('noPermission'));
             return;
           }
@@ -3546,6 +3676,11 @@ if (btnAdd) btnAdd.onclick = ()=>{
 };
 if (btnCreatorAdd) btnCreatorAdd.onclick = ()=> {
   if (!isCreator) return;
+  if (!creatorTermsAccepted){
+    alert(t('creatorTermsNeed'));
+    openCreatorTermsDialog();
+    return;
+  }
   openNewItem();
 };
 if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
@@ -3568,6 +3703,10 @@ if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
   }catch(_){
     alert(t('creatorInviteFail'));
   }
+};
+if (btnCreatorTerms) btnCreatorTerms.onclick = ()=>{
+  if (!checkLoginOrRedirect(t('loginReq'))) return;
+  openCreatorTermsDialog();
 };
 if (btnCreatorProfile) btnCreatorProfile.onclick = ()=>{
   if (!isCreator) return;
@@ -3592,6 +3731,10 @@ if (creatorProfileClose) creatorProfileClose.onclick = ()=>{
   else if (creatorProfileDialog) creatorProfileDialog.removeAttribute('open');
   clearImagePreviewBlob(creatorProfileAvatarPreview);
   clearImagePreviewBlob(creatorProfileCoverPreview);
+};
+if (creatorTermsClose) creatorTermsClose.onclick = ()=>{
+  if (creatorTermsDialog && typeof creatorTermsDialog.close === 'function') creatorTermsDialog.close();
+  else if (creatorTermsDialog) creatorTermsDialog.removeAttribute('open');
 };
 if (coordsHelpClose) coordsHelpClose.onclick = ()=>{
   if (coordsHelpDialog && typeof coordsHelpDialog.close === 'function') coordsHelpDialog.close();
@@ -3656,6 +3799,35 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
     else if (creatorProfileDialog) creatorProfileDialog.removeAttribute('open');
   }catch(err){
     if (creatorProfileStatus) creatorProfileStatus.textContent = t('creatorProfileFail') + (err && err.message ? '：' + err.message : '');
+  }
+};
+if (creatorTermsAgree) creatorTermsAgree.onclick = async ()=>{
+  if (!checkLoginOrRedirect(t('loginReq'))) return;
+  if (!isCreator) return;
+  if (creatorTermsStatus) creatorTermsStatus.textContent = '';
+  creatorTermsAgree.disabled = true;
+  try{
+    const res = await fetch('/api/creator/terms', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify({ accept:true })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data || data.ok === false){
+      throw new Error((data && data.error) || ('HTTP '+res.status));
+    }
+    creatorTermsAccepted = true;
+    updateCreatorTermsUi();
+    showToast(t('creatorTermsAcceptedToast'));
+    if (creatorTermsDialog && typeof creatorTermsDialog.close === 'function') creatorTermsDialog.close();
+    else if (creatorTermsDialog) creatorTermsDialog.removeAttribute('open');
+  }catch(err){
+    const msg = t('creatorTermsFail') + (err && err.message ? err.message : '');
+    if (creatorTermsStatus) creatorTermsStatus.textContent = msg;
+    else alert(msg);
+  }finally{
+    creatorTermsAgree.disabled = false;
   }
 };
 if (creatorProfileAvatarFile){
