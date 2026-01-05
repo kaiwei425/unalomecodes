@@ -3501,6 +3501,8 @@ if (creatorProfileAvatarFile){
     const file = creatorProfileAvatarFile.files && creatorProfileAvatarFile.files[0];
     if (!file) return;
     setImagePreviewFromFile(creatorProfileAvatarPreview, creatorProfileAvatarSize, file);
+    if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorProfileAvatarPreview?.dataset?.blobUrl || '';
+    updateCreatorProfilePreview();
     if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = t('uploading');
     try{
       const url = await uploadCoverFile(file);
@@ -3518,6 +3520,8 @@ if (creatorProfileCoverFile){
     const file = creatorProfileCoverFile.files && creatorProfileCoverFile.files[0];
     if (!file) return;
     setImagePreviewFromFile(creatorProfileCoverPreview, creatorProfileCoverSize, file);
+    if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorProfileCoverPreview?.dataset?.blobUrl || '';
+    updateCreatorProfilePreview();
     if (creatorProfileCoverStatus) creatorProfileCoverStatus.textContent = t('uploading');
     try{
       const url = await uploadCoverFile(file);
