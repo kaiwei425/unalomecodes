@@ -462,6 +462,13 @@ const TRANSLATIONS = {
     igLink: 'IG 連結',
     coordsInput: '座標（緯度, 經度）',
     coordsHelp: '使用說明',
+    coordsHelpTitle: '座標使用說明',
+    coordsHelpDesc: '依照以下步驟取得 Google Maps 座標：',
+    coordsHelpStep1: '打開 Google Maps',
+    coordsHelpStep2: '搜尋店家或長按地圖放置標記',
+    coordsHelpStep3: '點選標記，底部會顯示座標',
+    coordsHelpStep4: '複製成「緯度, 經度」格式，例如 13.7563, 100.5018',
+    coordsHelpImageAlt: '座標查詢示意圖',
     coordsHelpText: '查詢緯度/經度方式：\n1. 打開 Google Maps\n2. 搜尋店家或長按地圖\n3. 點選標記，底部會顯示座標\n4. 複製成「緯度, 經度」格式，例如 13.7563, 100.5018',
     coordsInvalid: '座標格式錯誤，請輸入「緯度, 經度」',
     mapServiceWait: '地圖服務尚未載入，請稍候',
@@ -708,6 +715,13 @@ const TRANSLATIONS = {
     igLink: 'Instagram link',
     coordsInput: 'Coordinates (lat, lng)',
     coordsHelp: 'How to',
+    coordsHelpTitle: 'Coordinates Help',
+    coordsHelpDesc: 'Follow these steps to get coordinates from Google Maps:',
+    coordsHelpStep1: 'Open Google Maps',
+    coordsHelpStep2: 'Search the place or long-press on the map',
+    coordsHelpStep3: 'Tap the pin to reveal coordinates',
+    coordsHelpStep4: 'Copy as \"lat, lng\" e.g. 13.7563, 100.5018',
+    coordsHelpImageAlt: 'Coordinate lookup diagram',
     coordsHelpText: 'How to get coordinates:\n1. Open Google Maps\n2. Search the place or long-press on the map\n3. Tap the pin to reveal coordinates\n4. Copy as \"lat, lng\" e.g. 13.7563, 100.5018',
     coordsInvalid: 'Invalid coordinates. Use "lat, lng".',
     mapServiceWait: 'Map service is still loading. Please try again.',
@@ -840,6 +854,12 @@ const creatorProfileStatus = document.getElementById('creatorProfileStatus');
 const creatorProfilePreview = document.getElementById('creatorProfilePreview');
 const creatorProfileClose = document.getElementById('creatorProfileClose');
 const creatorProfileSave = document.getElementById('creatorProfileSave');
+const coordsHelpDialog = document.getElementById('coordsHelpDialog');
+const coordsHelpTitle = document.getElementById('coordsHelpTitle');
+const coordsHelpDesc = document.getElementById('coordsHelpDesc');
+const coordsHelpImage = document.getElementById('coordsHelpImage');
+const coordsHelpSteps = document.getElementById('coordsHelpSteps');
+const coordsHelpClose = document.getElementById('coordsHelpClose');
 // ---------------------------
 
 function escapeHtml(s){
@@ -869,6 +889,11 @@ function normalizeIgUrl(input){
   const trimmed = raw.replace(/^@/, '');
   if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
   return safeUrl(`https://instagram.com/${trimmed.replace(/^\//,'')}`);
+}
+function renderCoordsHelpSteps(){
+  if (!coordsHelpSteps) return;
+  const keys = ['coordsHelpStep1', 'coordsHelpStep2', 'coordsHelpStep3', 'coordsHelpStep4'];
+  coordsHelpSteps.innerHTML = keys.map(key => `<li>${escapeHtml(t(key))}</li>`).join('');
 }
 function setImagePreviewFromUrl(previewEl, sizeEl, url, emptyText){
   if (!previewEl) return;
@@ -2082,6 +2107,11 @@ function setLanguage(lang) {
   if (creatorAvatarSpecInline) creatorAvatarSpecInline.textContent = t('creatorAvatarSpec');
   if (creatorCoverSpecInline) creatorCoverSpecInline.textContent = t('creatorCoverSpec');
   if (creatorCoverHint) creatorCoverHint.textContent = t('creatorCoverDragHint');
+  if (coordsHelpTitle) coordsHelpTitle.textContent = t('coordsHelpTitle');
+  if (coordsHelpDesc) coordsHelpDesc.textContent = t('coordsHelpDesc');
+  if (coordsHelpImage) coordsHelpImage.alt = t('coordsHelpImageAlt');
+  if (coordsHelpClose) coordsHelpClose.textContent = t('close');
+  renderCoordsHelpSteps();
   const backToTop = document.getElementById('btnBackToTop');
   if (backToTop) backToTop.title = t('backToTop');
 
@@ -3010,10 +3040,18 @@ function render(){
       });
     };
   });
+  const openCoordsHelp = () => {
+    if (!coordsHelpDialog) {
+      alert(t('coordsHelpText'));
+      return;
+    }
+    if (typeof coordsHelpDialog.showModal === 'function') coordsHelpDialog.showModal();
+    else coordsHelpDialog.setAttribute('open', '');
+  };
   cardsEl.querySelectorAll('[data-coords-help]').forEach(btn=>{
     btn.onclick = (e)=>{
       e.preventDefault();
-      alert(t('coordsHelpText'));
+      openCoordsHelp();
     };
   });
   if (isAdmin || isCreator){
@@ -3554,6 +3592,10 @@ if (creatorProfileClose) creatorProfileClose.onclick = ()=>{
   else if (creatorProfileDialog) creatorProfileDialog.removeAttribute('open');
   clearImagePreviewBlob(creatorProfileAvatarPreview);
   clearImagePreviewBlob(creatorProfileCoverPreview);
+};
+if (coordsHelpClose) coordsHelpClose.onclick = ()=>{
+  if (coordsHelpDialog && typeof coordsHelpDialog.close === 'function') coordsHelpDialog.close();
+  else if (coordsHelpDialog) coordsHelpDialog.removeAttribute('open');
 };
 if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
   if (!isCreator) return;

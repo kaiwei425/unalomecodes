@@ -253,6 +253,24 @@
       <button type="button" class="btn primary" id="creatorProfileSave">儲存</button>
     </footer>
   </dialog>
+  <dialog id="coordsHelpDialog" class="policy-dialog coords-help-dialog">
+    <header id="coordsHelpTitle">座標使用說明</header>
+    <div class="body">
+      <p class="coords-help-desc" id="coordsHelpDesc">依照以下步驟取得 Google Maps 座標：</p>
+      <div class="coords-help-media">
+        <img id="coordsHelpImage" src="/img/coords-help.svg" alt="座標查詢示意圖" loading="lazy" decoding="async">
+      </div>
+      <ol class="coords-help-steps" id="coordsHelpSteps">
+        <li>打開 Google Maps</li>
+        <li>搜尋店家或長按地圖放置標記</li>
+        <li>點選標記，底部會顯示座標</li>
+        <li>複製成「緯度, 經度」格式，例如 13.7563, 100.5018</li>
+      </ol>
+    </div>
+    <footer>
+      <button type="button" class="btn" id="coordsHelpClose">關閉</button>
+    </footer>
+  </dialog>
   <button id="btnBackToTop" title="回到頂部">↑</button>
   <script>
     window.LIFF_ID = "2008307812-jqNZZAhs";

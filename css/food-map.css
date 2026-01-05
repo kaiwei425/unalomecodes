@@ -444,6 +444,11 @@
       font-family:inherit;
       resize:vertical;
     }
+    .coords-help-dialog{max-width:520px;}
+    .coords-help-dialog .body{display:grid;gap:12px;}
+    .coords-help-desc{margin:0;color:#475569;font-size:13px;}
+    .coords-help-media img{width:100%;height:auto;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;display:block;}
+    .coords-help-steps{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13px;color:#334155;}
     .creator-upload{
       display:grid;
       gap:8px;
