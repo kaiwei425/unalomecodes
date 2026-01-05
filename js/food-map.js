@@ -323,13 +323,18 @@ const TRANSLATIONS = {
     viewIg: '在 IG 上查看',
     desc: '店家介紹',
     creatorPick: '精選',
-    creatorShare: '複製專區連結',
-    creatorNameLabel: '創作者名稱',
-    creatorNamePlaceholder: '輸入創作者名稱',
-    creatorNameSave: '儲存名稱',
-    creatorNameSaved: '已更新創作者名稱',
-    creatorNameFail: '更新失敗',
-    creatorNameEmpty: '請輸入創作者名稱',
+    creatorProfile: '創作者資料',
+    creatorProfileTitle: '創作者資料',
+    creatorProfileName: '創作者名稱',
+    creatorProfileIg: '創作者 IG',
+    creatorProfileIntro: '創作者簡介',
+    creatorProfileSave: '儲存',
+    creatorProfileSaved: '已更新創作者資料',
+    creatorProfileFail: '更新失敗',
+    creatorProfileNameEmpty: '請輸入創作者名稱',
+    creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
+    creatorProfileIntroPlaceholder: '請輸入創作者簡介',
+    creatorShare: '分享連結',
     allCreators: '全部創作者',
     creatorInvite: '輸入邀請碼',
     creatorInvitePrompt: '請輸入邀請碼',
@@ -554,13 +559,18 @@ const TRANSLATIONS = {
     viewIg: 'View on IG',
     desc: 'Description',
     creatorPick: ' Picks',
-    creatorShare: 'Copy creator link',
-    creatorNameLabel: 'Creator Name',
-    creatorNamePlaceholder: 'Enter creator name',
-    creatorNameSave: 'Save Name',
-    creatorNameSaved: 'Creator name updated',
-    creatorNameFail: 'Update failed',
-    creatorNameEmpty: 'Please enter a creator name',
+    creatorProfile: 'Creator Profile',
+    creatorProfileTitle: 'Creator Profile',
+    creatorProfileName: 'Creator Name',
+    creatorProfileIg: 'Creator IG',
+    creatorProfileIntro: 'Creator Intro',
+    creatorProfileSave: 'Save',
+    creatorProfileSaved: 'Creator profile updated',
+    creatorProfileFail: 'Update failed',
+    creatorProfileNameEmpty: 'Please enter a creator name',
+    creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
+    creatorProfileIntroPlaceholder: 'Enter creator bio',
+    creatorShare: 'Share link',
     allCreators: 'All Creators',
     creatorInvite: 'Enter Invite Code',
     creatorInvitePrompt: 'Enter invite code',
@@ -786,10 +796,15 @@ const creatorToolsToggle = document.getElementById('creatorToolsToggle');
 const creatorToolsPanel = document.getElementById('creatorToolsPanel');
 const btnCreatorAdd = document.getElementById('btnCreatorAdd');
 const btnCreatorInvite = document.getElementById('btnCreatorInvite');
-const creatorNameField = document.getElementById('creatorNameField');
-const creatorNameInput = document.getElementById('creatorNameInput');
-const btnCreatorNameSave = document.getElementById('btnCreatorNameSave');
+const btnCreatorProfile = document.getElementById('btnCreatorProfile');
 const btnCreatorShare = document.getElementById('btnCreatorShare');
+const creatorProfileDialog = document.getElementById('creatorProfileDialog');
+const creatorProfileName = document.getElementById('creatorProfileName');
+const creatorProfileIg = document.getElementById('creatorProfileIg');
+const creatorProfileIntro = document.getElementById('creatorProfileIntro');
+const creatorProfileStatus = document.getElementById('creatorProfileStatus');
+const creatorProfileClose = document.getElementById('creatorProfileClose');
+const creatorProfileSave = document.getElementById('creatorProfileSave');
 // ---------------------------
 
 function escapeHtml(s){
@@ -1551,6 +1566,8 @@ let creatorShareApplied = false;
 let suppressCreatorShareClear = false;
 let creatorId = '';
 let creatorName = '';
+let creatorIg = '';
+let creatorIntro = '';
 let currentZone = 'all';
 let editingId = '';
 let newItem = null;
@@ -1809,16 +1826,8 @@ function setLanguage(lang) {
   if (btnCreatorCode) btnCreatorCode.textContent = t('creatorInviteCreate');
   if (btnCreatorAdd) btnCreatorAdd.textContent = t('add');
   if (btnCreatorInvite) btnCreatorInvite.textContent = t('creatorInvite');
-  if (btnCreatorShare){
-    btnCreatorShare.title = t('creatorShare');
-    btnCreatorShare.setAttribute('aria-label', t('creatorShare'));
-  }
-  if (creatorNameField){
-    const label = creatorNameField.querySelector('label');
-    if (label) label.textContent = t('creatorNameLabel');
-  }
-  if (creatorNameInput) creatorNameInput.placeholder = t('creatorNamePlaceholder');
-  if (btnCreatorNameSave) btnCreatorNameSave.textContent = t('creatorNameSave');
+  if (btnCreatorProfile) btnCreatorProfile.textContent = t('creatorProfile');
+  if (btnCreatorShare) btnCreatorShare.textContent = t('creatorShare');
   const mapSwitchLink = document.querySelector('a[href="/templemap"]');
   if (mapSwitchLink) mapSwitchLink.textContent = t('mapSwitchTemple');
   const editSubtitleBtn = document.getElementById('btnEditSubtitle');
@@ -1843,6 +1852,18 @@ function setLanguage(lang) {
     if (profileCloseBtn) profileCloseBtn.textContent = t('cancelBtn');
     const profileSaveBtn = document.getElementById('profileSave');
     if (profileSaveBtn) profileSaveBtn.textContent = t('saveBtn');
+  }
+  if (creatorProfileDialog){
+    const header = creatorProfileDialog.querySelector('header');
+    if (header) header.textContent = t('creatorProfileTitle');
+    const labels = creatorProfileDialog.querySelectorAll('.body label');
+    if (labels[0]) labels[0].textContent = t('creatorProfileName');
+    if (labels[1]) labels[1].textContent = t('creatorProfileIg');
+    if (labels[2]) labels[2].textContent = t('creatorProfileIntro');
+    if (creatorProfileIg) creatorProfileIg.placeholder = t('creatorProfileIgPlaceholder');
+    if (creatorProfileIntro) creatorProfileIntro.placeholder = t('creatorProfileIntroPlaceholder');
+    if (creatorProfileClose) creatorProfileClose.textContent = t('cancelBtn');
+    if (creatorProfileSave) creatorProfileSave.textContent = t('creatorProfileSave');
   }
   const backToTop = document.getElementById('btnBackToTop');
   if (backToTop) backToTop.title = t('backToTop');
@@ -1933,17 +1954,25 @@ async function checkCreator(){
     creatorInviteAllowed = !!(data && data.inviteAllowed);
     creatorId = data && data.id ? String(data.id) : '';
     creatorName = data && data.name ? String(data.name) : '';
+    creatorIg = data && data.ig ? String(data.ig) : '';
+    creatorIntro = data && data.intro ? String(data.intro) : '';
   }catch(_){
     isCreator = false;
     creatorInviteAllowed = false;
     creatorId = '';
     creatorName = '';
+    creatorIg = '';
+    creatorIntro = '';
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
+  if (btnCreatorProfile) btnCreatorProfile.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorShare) btnCreatorShare.style.display = isCreator ? 'inline-flex' : 'none';
-  if (creatorNameField) creatorNameField.style.display = isCreator ? 'grid' : 'none';
-  if (creatorNameInput) creatorNameInput.value = creatorName || '';
+  if (isCreator){
+    if (creatorProfileName) creatorProfileName.value = creatorName || '';
+    if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
+    if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
+  }
   if (creatorToolsToggle){
     creatorToolsToggle.style.display = (isCreator || creatorInviteAllowed) ? 'block' : 'none';
     const panelOpen = creatorToolsPanel && creatorToolsPanel.style.display === 'grid';
@@ -3217,26 +3246,46 @@ if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
     alert(t('creatorInviteFail'));
   }
 };
-if (btnCreatorNameSave) btnCreatorNameSave.onclick = async ()=>{
+if (btnCreatorProfile) btnCreatorProfile.onclick = ()=>{
   if (!isCreator) return;
-  const nextName = creatorNameInput ? creatorNameInput.value.trim() : '';
+  if (creatorProfileName) creatorProfileName.value = creatorName || '';
+  if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
+  if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
+  if (creatorProfileStatus) creatorProfileStatus.textContent = '';
+  if (creatorProfileDialog && typeof creatorProfileDialog.showModal === 'function') creatorProfileDialog.showModal();
+  else if (creatorProfileDialog) creatorProfileDialog.setAttribute('open', '');
+};
+if (creatorProfileClose) creatorProfileClose.onclick = ()=>{
+  if (creatorProfileDialog && typeof creatorProfileDialog.close === 'function') creatorProfileDialog.close();
+  else if (creatorProfileDialog) creatorProfileDialog.removeAttribute('open');
+};
+if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
+  if (!isCreator) return;
+  const nextName = creatorProfileName ? creatorProfileName.value.trim() : '';
+  const nextIg = creatorProfileIg ? creatorProfileIg.value.trim() : '';
+  const nextIntro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   if (!nextName){
-    alert(t('creatorNameEmpty'));
+    if (creatorProfileStatus) creatorProfileStatus.textContent = t('creatorProfileNameEmpty');
     return;
   }
+  if (creatorProfileStatus) creatorProfileStatus.textContent = '';
   try{
     const res = await fetch('/api/creator/profile', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       credentials:'include',
-      body: JSON.stringify({ creatorName: nextName })
+      body: JSON.stringify({ creatorName: nextName, creatorIg: nextIg, creatorIntro: nextIntro })
     });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       throw new Error((data && data.error) || 'failed');
     }
     creatorName = data.name ? String(data.name) : nextName;
-    if (creatorNameInput) creatorNameInput.value = creatorName;
+    creatorIg = data.ig ? String(data.ig) : nextIg;
+    creatorIntro = data.intro ? String(data.intro) : nextIntro;
+    if (creatorProfileName) creatorProfileName.value = creatorName;
+    if (creatorProfileIg) creatorProfileIg.value = creatorIg;
+    if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro;
     if (creatorId && Array.isArray(DATA)){
       DATA.forEach(item=>{
         if (String(item.ownerId || '') === String(creatorId)){
@@ -3246,9 +3295,11 @@ if (btnCreatorNameSave) btnCreatorNameSave.onclick = async ()=>{
     }
     initFilters();
     safeRender();
-    showToast(t('creatorNameSaved'));
+    showToast(t('creatorProfileSaved'));
+    if (creatorProfileDialog && typeof creatorProfileDialog.close === 'function') creatorProfileDialog.close();
+    else if (creatorProfileDialog) creatorProfileDialog.removeAttribute('open');
   }catch(err){
-    alert(`${t('creatorNameFail')}${err && err.message ? '：' + err.message : ''}`);
+    if (creatorProfileStatus) creatorProfileStatus.textContent = t('creatorProfileFail') + (err && err.message ? '：' + err.message : '');
   }
 };
 if (btnCreatorShare) btnCreatorShare.onclick = async ()=>{

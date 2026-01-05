@@ -994,7 +994,7 @@ function normalizeFoodPayload(payload, fallbackId){
   str('name'); str('category'); str('area'); str('price');
   str('address'); str('hours'); str('maps'); str('ig');
   str('youtube'); str('igComment'); str('cover');
-  str('ownerId'); str('ownerName'); str('creatorLabel');
+  str('ownerId'); str('ownerName');
   
   if (body.coverPos !== undefined || body.cover_pos !== undefined) {
     out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
@@ -1038,7 +1038,6 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('intro', incoming.intro);
   assignIf('ownerId', incoming.ownerId);
   assignIf('ownerName', incoming.ownerName);
-  assignIf('creatorLabel', incoming.creatorLabel);
   assignIf('highlights', incoming.highlights);
   assignIf('dishes', incoming.dishes);
   assignIf('featured', incoming.featured);
@@ -4129,7 +4128,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!record){
       return json({ ok:true, creator:false, inviteAllowed:false }, 200);
     }
-    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), inviteAllowed: !!record.creatorInviteAllowed }, 200);
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', inviteAllowed: !!record.creatorInviteAllowed }, 200);
   }
 
   if (pathname === '/api/creator/profile' && request.method === 'POST'){
@@ -4141,6 +4140,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const name = String(body.creatorName || body.name || '').trim().slice(0, 60);
     if (!name) return json({ ok:false, error:'missing_name' }, 400);
     record.creatorName = name;
+    const hasIg = Object.prototype.hasOwnProperty.call(body, 'creatorIg') || Object.prototype.hasOwnProperty.call(body, 'ig');
+    const hasIntro = Object.prototype.hasOwnProperty.call(body, 'creatorIntro') || Object.prototype.hasOwnProperty.call(body, 'intro') || Object.prototype.hasOwnProperty.call(body, 'bio');
+    if (hasIg){
+      record.creatorIg = String(body.creatorIg ?? body.ig ?? '').trim().slice(0, 200);
+    }
+    if (hasIntro){
+      record.creatorIntro = String(body.creatorIntro ?? body.intro ?? body.bio ?? '').trim().slice(0, 500);
+    }
     await saveUserRecord(env, record);
     let updated = 0;
     if (env.FOODS && env.FOODS.list){
@@ -4161,7 +4168,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
       }catch(_){}
     }
-    return json({ ok:true, name, updated });
+    return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', updated });
   }
 
   if (pathname === '/api/creator/claim' && request.method === 'POST'){
