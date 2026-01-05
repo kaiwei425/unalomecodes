@@ -321,7 +321,7 @@
     if (loginDialog) return loginDialog;
     const style = document.createElement('style');
     style.textContent = `
-      .auth-login-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;}
+      .auth-login-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:200000;}
       .auth-login-backdrop{position:absolute;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(2px);}
       .auth-login-panel{position:relative;background:linear-gradient(180deg,#ffffff,#f8fafc);color:#0f172a;border-radius:20px;padding:20px 18px;min-width:260px;width:min(360px,92%);box-shadow:0 30px 70px rgba(0,0,0,.35);border:1px solid rgba(148,163,184,.25);}
       .auth-login-title{font-size:18px;font-weight:800;margin-bottom:6px;letter-spacing:.3px;}
