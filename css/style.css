@@ -853,6 +853,7 @@ html,body{
   content:"";
   width:18px;
   height:18px;
+  display:inline-block;
   background:url("/img/brand/logo-line.png") center/contain no-repeat;
 }
 .line-support-btn:hover{
