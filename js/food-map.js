@@ -326,12 +326,16 @@ const TRANSLATIONS = {
     creatorProfile: '創作者資料',
     creatorProfileTitle: '創作者資料',
     creatorProfileName: '創作者名稱',
+    creatorProfileAvatar: '創作者頭像',
+    creatorProfileCover: '創作者封面',
     creatorProfileIg: '創作者 IG',
     creatorProfileIntro: '創作者簡介',
     creatorProfileSave: '儲存',
     creatorProfileSaved: '已更新創作者資料',
     creatorProfileFail: '更新失敗',
     creatorProfileNameEmpty: '請輸入創作者名稱',
+    creatorProfileAvatarPlaceholder: 'https://...',
+    creatorProfileCoverPlaceholder: 'https://...',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: '請輸入創作者簡介',
     creatorShare: '分享連結',
@@ -562,12 +566,16 @@ const TRANSLATIONS = {
     creatorProfile: 'Creator Profile',
     creatorProfileTitle: 'Creator Profile',
     creatorProfileName: 'Creator Name',
+    creatorProfileAvatar: 'Creator Avatar',
+    creatorProfileCover: 'Creator Cover',
     creatorProfileIg: 'Creator IG',
     creatorProfileIntro: 'Creator Intro',
     creatorProfileSave: 'Save',
     creatorProfileSaved: 'Creator profile updated',
     creatorProfileFail: 'Update failed',
     creatorProfileNameEmpty: 'Please enter a creator name',
+    creatorProfileAvatarPlaceholder: 'https://...',
+    creatorProfileCoverPlaceholder: 'https://...',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
     creatorProfileIntroPlaceholder: 'Enter creator bio',
     creatorShare: 'Share link',
@@ -800,6 +808,8 @@ const btnCreatorProfile = document.getElementById('btnCreatorProfile');
 const btnCreatorShare = document.getElementById('btnCreatorShare');
 const creatorProfileDialog = document.getElementById('creatorProfileDialog');
 const creatorProfileName = document.getElementById('creatorProfileName');
+const creatorProfileAvatar = document.getElementById('creatorProfileAvatar');
+const creatorProfileCover = document.getElementById('creatorProfileCover');
 const creatorProfileIg = document.getElementById('creatorProfileIg');
 const creatorProfileIntro = document.getElementById('creatorProfileIntro');
 const creatorProfileStatus = document.getElementById('creatorProfileStatus');
@@ -820,6 +830,13 @@ function safeUrl(input){
     if (u.protocol === 'http:' || u.protocol === 'https:') return u.href;
   }catch(_){}
   return '';
+}
+function normalizeIgUrl(input){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const trimmed = raw.replace(/^@/, '');
+  if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
+  return safeUrl(`https://instagram.com/${trimmed.replace(/^\//,'')}`);
 }
 const COVER_THUMB_QUALITY = 58;
 function getCoverThumbWidth(){
@@ -995,6 +1012,40 @@ function buildCreatorShareUrl(){
   if (creatorId) url.searchParams.set('creatorId', creatorId);
   if (creatorName) url.searchParams.set('creator', creatorName);
   return url.toString();
+}
+
+function buildCreatorProfileCard(profile){
+  if (!profile || !profile.name) return '';
+  const name = escapeHtml(profile.name);
+  const intro = escapeHtml(profile.intro || '');
+  const igUrl = normalizeIgUrl(profile.ig || '');
+  const avatarUrl = safeUrl(profile.avatar || '');
+  const coverUrl = safeUrl(profile.cover || '');
+  const initial = name ? name.trim().slice(0, 1) : 'C';
+  const igButton = igUrl
+    ? `<a class="creator-ig" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="5"></rect>
+          <circle cx="12" cy="12" r="4"></circle>
+          <circle cx="17" cy="7" r="1.2"></circle>
+        </svg>
+      </a>`
+    : '';
+  return `
+    <div class="creator-card">
+      ${coverUrl ? `<div class="creator-cover"><img src="${escapeHtml(coverUrl)}" alt="${name}"></div>` : '<div class="creator-cover"></div>'}
+      <div class="creator-card-body">
+        <div class="creator-avatar">
+          ${avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="${name}">` : `<span>${escapeHtml(initial)}</span>`}
+        </div>
+        <div class="creator-info">
+          <div class="creator-name">${name}</div>
+          ${intro ? `<div class="creator-intro">${intro}</div>` : ''}
+        </div>
+        ${igButton}
+      </div>
+    </div>
+  `;
 }
 
 async function copyText(text){
@@ -1568,6 +1619,8 @@ let creatorId = '';
 let creatorName = '';
 let creatorIg = '';
 let creatorIntro = '';
+let creatorAvatar = '';
+let creatorCover = '';
 let currentZone = 'all';
 let editingId = '';
 let newItem = null;
@@ -1858,8 +1911,12 @@ function setLanguage(lang) {
     if (header) header.textContent = t('creatorProfileTitle');
     const labels = creatorProfileDialog.querySelectorAll('.body label');
     if (labels[0]) labels[0].textContent = t('creatorProfileName');
-    if (labels[1]) labels[1].textContent = t('creatorProfileIg');
-    if (labels[2]) labels[2].textContent = t('creatorProfileIntro');
+    if (labels[1]) labels[1].textContent = t('creatorProfileAvatar');
+    if (labels[2]) labels[2].textContent = t('creatorProfileCover');
+    if (labels[3]) labels[3].textContent = t('creatorProfileIg');
+    if (labels[4]) labels[4].textContent = t('creatorProfileIntro');
+    if (creatorProfileAvatar) creatorProfileAvatar.placeholder = t('creatorProfileAvatarPlaceholder');
+    if (creatorProfileCover) creatorProfileCover.placeholder = t('creatorProfileCoverPlaceholder');
     if (creatorProfileIg) creatorProfileIg.placeholder = t('creatorProfileIgPlaceholder');
     if (creatorProfileIntro) creatorProfileIntro.placeholder = t('creatorProfileIntroPlaceholder');
     if (creatorProfileClose) creatorProfileClose.textContent = t('cancelBtn');
@@ -1956,6 +2013,8 @@ async function checkCreator(){
     creatorName = data && data.name ? String(data.name) : '';
     creatorIg = data && data.ig ? String(data.ig) : '';
     creatorIntro = data && data.intro ? String(data.intro) : '';
+    creatorAvatar = data && data.avatar ? String(data.avatar) : '';
+    creatorCover = data && data.cover ? String(data.cover) : '';
   }catch(_){
     isCreator = false;
     creatorInviteAllowed = false;
@@ -1963,6 +2022,8 @@ async function checkCreator(){
     creatorName = '';
     creatorIg = '';
     creatorIntro = '';
+    creatorAvatar = '';
+    creatorCover = '';
   }
   if (btnCreatorAdd) btnCreatorAdd.style.display = isCreator ? 'inline-flex' : 'none';
   if (btnCreatorInvite) btnCreatorInvite.style.display = (!isCreator && creatorInviteAllowed) ? 'inline-flex' : 'none';
@@ -1970,6 +2031,8 @@ async function checkCreator(){
   if (btnCreatorShare) btnCreatorShare.style.display = isCreator ? 'inline-flex' : 'none';
   if (isCreator){
     if (creatorProfileName) creatorProfileName.value = creatorName || '';
+    if (creatorProfileAvatar) creatorProfileAvatar.value = creatorAvatar || '';
+    if (creatorProfileCover) creatorProfileCover.value = creatorCover || '';
     if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
   }
@@ -2481,8 +2544,47 @@ function render(){
   const renderList = (canAdd && newItem) ? [newItem, ...list] : list;
   const totalLen = renderList.length;
   const displayList = renderList.slice(0, currentLimit);
+  const shouldShowCreatorCard = zone === 'creator' && (creatorFilter || creatorShareId || creatorShareName);
+  let creatorCardHtml = '';
+  if (shouldShowCreatorCard){
+    let profileName = creatorFilter || creatorShareName || '';
+    let profileSource = null;
+    if (creatorShareId){
+      profileSource = source.find(item => String(item.ownerId || '') === String(creatorShareId)) || null;
+    }
+    if (!profileSource && creatorFilter){
+      profileSource = source.find(item => getOwnerName(item) === creatorFilter) || null;
+    }
+    if (!profileSource && creatorShareName){
+      profileSource = source.find(item => getOwnerName(item) === creatorShareName) || null;
+    }
+    if (!profileSource && list.length){
+      profileSource = list[0];
+    }
+    if (profileSource){
+      if (!profileName) profileName = getOwnerName(profileSource);
+      const profile = {
+        name: profileName || getOwnerName(profileSource) || '',
+        ig: profileSource.creatorIg || '',
+        intro: profileSource.creatorIntro || '',
+        avatar: profileSource.creatorAvatar || '',
+        cover: profileSource.creatorCover || ''
+      };
+      if (isCreator && creatorId && String(profileSource.ownerId || '') === String(creatorId)){
+        profile.name = profile.name || creatorName || '';
+        profile.ig = profile.ig || creatorIg || '';
+        profile.intro = profile.intro || creatorIntro || '';
+        profile.avatar = profile.avatar || creatorAvatar || '';
+        profile.cover = profile.cover || creatorCover || '';
+      }
+      creatorCardHtml = buildCreatorProfileCard(profile);
+    }else if (profileName){
+      creatorCardHtml = buildCreatorProfileCard({ name: profileName });
+    }
+  }
   if (!displayList.length){
     cardsEl.innerHTML = `
+      ${creatorCardHtml}
       <div class="empty-state">
         <h3>${t('emptyList')}</h3>
         <button class="btn ghost pill" type="button" id="clearFiltersBtn">${t('clearFilter')}</button>
@@ -2494,7 +2596,7 @@ function render(){
     }
     return;
   }
-  cardsEl.innerHTML = displayList.map((item, idx)=>{
+  cardsEl.innerHTML = creatorCardHtml + displayList.map((item, idx)=>{
     let displayCat = mapCategory(item.category) || item.category;
     if (currentLang === 'en') displayCat = CATEGORY_MAP_EN[displayCat] || displayCat;
     const ratingTag = item.rating ? `<span class="tag" style="background:#fffbeb;color:#b45309;border-color:#fcd34d">★ ${escapeHtml(item.rating)}</span>` : '';
@@ -3249,6 +3351,8 @@ if (btnCreatorInvite) btnCreatorInvite.onclick = async ()=>{
 if (btnCreatorProfile) btnCreatorProfile.onclick = ()=>{
   if (!isCreator) return;
   if (creatorProfileName) creatorProfileName.value = creatorName || '';
+  if (creatorProfileAvatar) creatorProfileAvatar.value = creatorAvatar || '';
+  if (creatorProfileCover) creatorProfileCover.value = creatorCover || '';
   if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
   if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
   if (creatorProfileStatus) creatorProfileStatus.textContent = '';
@@ -3262,6 +3366,8 @@ if (creatorProfileClose) creatorProfileClose.onclick = ()=>{
 if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
   if (!isCreator) return;
   const nextName = creatorProfileName ? creatorProfileName.value.trim() : '';
+  const nextAvatar = creatorProfileAvatar ? creatorProfileAvatar.value.trim() : '';
+  const nextCover = creatorProfileCover ? creatorProfileCover.value.trim() : '';
   const nextIg = creatorProfileIg ? creatorProfileIg.value.trim() : '';
   const nextIntro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   if (!nextName){
@@ -3274,22 +3380,30 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       credentials:'include',
-      body: JSON.stringify({ creatorName: nextName, creatorIg: nextIg, creatorIntro: nextIntro })
+      body: JSON.stringify({ creatorName: nextName, creatorAvatar: nextAvatar, creatorCover: nextCover, creatorIg: nextIg, creatorIntro: nextIntro })
     });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       throw new Error((data && data.error) || 'failed');
     }
     creatorName = data.name ? String(data.name) : nextName;
+    creatorAvatar = data.avatar ? String(data.avatar) : nextAvatar;
+    creatorCover = data.cover ? String(data.cover) : nextCover;
     creatorIg = data.ig ? String(data.ig) : nextIg;
     creatorIntro = data.intro ? String(data.intro) : nextIntro;
     if (creatorProfileName) creatorProfileName.value = creatorName;
+    if (creatorProfileAvatar) creatorProfileAvatar.value = creatorAvatar;
+    if (creatorProfileCover) creatorProfileCover.value = creatorCover;
     if (creatorProfileIg) creatorProfileIg.value = creatorIg;
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro;
     if (creatorId && Array.isArray(DATA)){
       DATA.forEach(item=>{
         if (String(item.ownerId || '') === String(creatorId)){
           item.ownerName = creatorName;
+          item.creatorIg = creatorIg;
+          item.creatorIntro = creatorIntro;
+          item.creatorAvatar = creatorAvatar;
+          item.creatorCover = creatorCover;
         }
       });
     }

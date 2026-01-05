@@ -4128,7 +4128,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!record){
       return json({ ok:true, creator:false, inviteAllowed:false }, 200);
     }
-    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', inviteAllowed: !!record.creatorInviteAllowed }, 200);
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', inviteAllowed: !!record.creatorInviteAllowed }, 200);
   }
 
   if (pathname === '/api/creator/profile' && request.method === 'POST'){
@@ -4142,11 +4142,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     record.creatorName = name;
     const hasIg = Object.prototype.hasOwnProperty.call(body, 'creatorIg') || Object.prototype.hasOwnProperty.call(body, 'ig');
     const hasIntro = Object.prototype.hasOwnProperty.call(body, 'creatorIntro') || Object.prototype.hasOwnProperty.call(body, 'intro') || Object.prototype.hasOwnProperty.call(body, 'bio');
+    const hasAvatar = Object.prototype.hasOwnProperty.call(body, 'creatorAvatar') || Object.prototype.hasOwnProperty.call(body, 'avatar');
+    const hasCover = Object.prototype.hasOwnProperty.call(body, 'creatorCover') || Object.prototype.hasOwnProperty.call(body, 'cover');
     if (hasIg){
       record.creatorIg = String(body.creatorIg ?? body.ig ?? '').trim().slice(0, 200);
     }
     if (hasIntro){
       record.creatorIntro = String(body.creatorIntro ?? body.intro ?? body.bio ?? '').trim().slice(0, 500);
+    }
+    if (hasAvatar){
+      record.creatorAvatar = String(body.creatorAvatar ?? body.avatar ?? '').trim().slice(0, 300);
+    }
+    if (hasCover){
+      record.creatorCover = String(body.creatorCover ?? body.cover ?? '').trim().slice(0, 300);
     }
     await saveUserRecord(env, record);
     let updated = 0;
@@ -4156,8 +4164,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const now = new Date().toISOString();
         for (const item of items){
           if (!item || String(item.ownerId || '') !== String(record.id)) continue;
-          if (String(item.ownerName || '') === name) continue;
+          if (String(item.ownerName || '') === name && item.creatorIg === record.creatorIg && item.creatorIntro === record.creatorIntro && item.creatorAvatar === record.creatorAvatar && item.creatorCover === record.creatorCover) continue;
           item.ownerName = name;
+          item.creatorIg = record.creatorIg || '';
+          item.creatorIntro = record.creatorIntro || '';
+          item.creatorAvatar = record.creatorAvatar || '';
+          item.creatorCover = record.creatorCover || '';
           item.updatedAt = now;
           await saveFood(env, item);
           updated += 1;
@@ -4168,7 +4180,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
       }catch(_){}
     }
-    return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', updated });
+    return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', updated });
   }
 
   if (pathname === '/api/creator/claim' && request.method === 'POST'){
@@ -4551,6 +4563,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (!isAdminUser && creatorRecord){
           obj.ownerId = creatorRecord.id;
           if (!obj.ownerName) obj.ownerName = resolveCreatorName(creatorRecord);
+          obj.creatorIg = creatorRecord.creatorIg || '';
+          obj.creatorIntro = creatorRecord.creatorIntro || '';
+          obj.creatorAvatar = creatorRecord.creatorAvatar || '';
+          obj.creatorCover = creatorRecord.creatorCover || '';
         }
         obj.updatedAt = now;
         if (!parseLatLngPair(obj.lat, obj.lng)){
