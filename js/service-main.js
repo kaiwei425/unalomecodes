@@ -1086,7 +1086,12 @@
       localStorage.setItem('__svcPendingAddToCart__', JSON.stringify(item));
       localStorage.setItem('__addSvcPendingAfterLogin','1');
       localStorage.setItem('__openSvcCartAfterLogin','1');
+      if (item.serviceId) localStorage.setItem('__svcBackToDetailId__', String(item.serviceId));
     }catch(_){}
+  }
+
+  function clearCartBackId(){
+    try{ localStorage.removeItem('__svcBackToDetailId__'); }catch(_){}
   }
 
   function addPendingServiceToCart(){
@@ -1370,13 +1375,27 @@
     });
   }
   if (cartPanelClose){
-    cartPanelClose.addEventListener('click', ()=> closeDialog(cartPanel));
+    cartPanelClose.addEventListener('click', ()=>{
+      closeDialog(cartPanel);
+      clearCartBackId();
+    });
   }
   if (cartPanelBack){
     cartPanelBack.addEventListener('click', ()=>{
       closeDialog(cartPanel);
       if (lastDetailService){
         openServiceDetail(lastDetailService);
+        clearCartBackId();
+        return;
+      }
+      let backId = '';
+      try{ backId = localStorage.getItem('__svcBackToDetailId__') || ''; }catch(_){}
+      if (backId){
+        const target = serviceItems.find(it => String(resolveServiceId(it)) === String(backId));
+        clearCartBackId();
+        if (target){
+          openServiceDetail(target);
+        }
       }
     });
   }
@@ -1392,6 +1411,7 @@
   if (cartCheckoutBtn){
     cartCheckoutBtn.addEventListener('click', ()=>{
       closeDialog(cartPanel);
+      clearCartBackId();
       openCheckoutDialog();
     });
   }
