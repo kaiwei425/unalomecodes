@@ -3194,12 +3194,14 @@ async function updateDashboardStats(env) {
       ids = idxRaw ? JSON.parse(idxRaw) : [];
       if (!Array.isArray(ids)) ids = [];
     }catch(_){ ids = []; }
-    stats.orders.total = ids.length;
-    const slice = ids.slice(0, scanLimit);
-    if (ids.length > slice.length) stats.orders.approx = true;
-    for (const oid of slice){
+    const scanAll = ids.length <= scanLimit;
+    const scanIds = scanAll ? ids : ids.slice(0, scanLimit);
+    if (!scanAll && ids.length > scanIds.length) stats.orders.approx = true;
+    const aliveIds = [];
+    for (const oid of scanIds){
       const raw = await env.ORDERS.get(oid);
       if (!raw) continue;
+      if (scanAll) aliveIds.push(oid);
       try{
         const o = JSON.parse(raw);
         const isDone = statusIsCompleted(o.status);
@@ -3241,6 +3243,14 @@ async function updateDashboardStats(env) {
           }
         }
       }catch(_){}
+    }
+    if (scanAll){
+      stats.orders.total = aliveIds.length;
+      if (aliveIds.length !== ids.length){
+        try{ await env.ORDERS.put(ORDER_INDEX_KEY, JSON.stringify(aliveIds)); }catch(_){}
+      }
+    }else{
+      stats.orders.total = ids.length;
     }
   }
 
