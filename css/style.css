@@ -569,6 +569,38 @@ html,body{
   line-height: 1.4 !important;
 }
 
+/* 付款按鈕質感升級（信用卡／貨到付款） */
+#cartPayCC, #payCC, .pay-cc {
+  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 60%, #0ea5e9 100%);
+  border-color: #1d4ed8;
+  color: #fff;
+  box-shadow: 0 12px 22px rgba(30, 64, 175, 0.25);
+}
+#cartPayCC:hover, #payCC:hover, .pay-cc:hover {
+  filter: brightness(1.03);
+}
+
+#cartGo711, #pay711, .pay-711 {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 55%);
+  border-color: #f97316;
+  color: #111827;
+  box-shadow: 0 10px 18px rgba(249, 115, 22, 0.18);
+  gap: 8px;
+  padding-right: 12px;
+}
+#cartGo711:hover, #pay711:hover, .pay-711:hover {
+  filter: brightness(1.02);
+}
+
+#cartGo711::after, #pay711::after, .pay-711::after {
+  content: "";
+  width: 26px;
+  height: 26px;
+  background: url("/img/brand/logo-711.svg") no-repeat center / contain;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
   /* --- Stage 1 additions (safe & minimal) --- */
   .badge{background:#111827;color:#eab308;border:1px solid #2b2f3a;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}
   @media(max-width:640px){ .badge{font-size:11px} }
