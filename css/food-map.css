@@ -239,14 +239,10 @@
       text-decoration:none;
       flex-shrink:0;
     }
-    .creator-ig svg{
+    .creator-ig img{
       width:20px;
       height:20px;
-      stroke:currentColor;
-      fill:none;
-      stroke-width:2;
-      stroke-linecap:round;
-      stroke-linejoin:round;
+      display:block;
     }
     .btn{flex:1 1 140px;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer;text-decoration:none;color:var(--text);font-family:inherit;font-size:13px;letter-spacing:.2px;transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;}
     .btn:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(15,23,42,.12);border-color:#cbd5e1;}

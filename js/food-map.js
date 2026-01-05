@@ -1158,11 +1158,7 @@ function buildCreatorProfileCard(profile, opts){
   const initial = name ? name.trim().slice(0, 1) : 'C';
   const igButton = igUrl
     ? `<a class="creator-ig" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="3" width="18" height="18" rx="5"></rect>
-          <circle cx="12" cy="12" r="4"></circle>
-          <circle cx="17" cy="7" r="1.2"></circle>
-        </svg>
+        <img src="/img/brand/logo-instagram.png" alt="Instagram">
       </a>`
     : '';
   return `
