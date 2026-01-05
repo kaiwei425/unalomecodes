@@ -2752,7 +2752,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         var it = items[i] || {};
         var itemDeity = itemDeityOf(it);
 
-        if (deity && itemDeity && itemDeity !== deity) continue; // deity 券需守護神符合
+        if (deity && itemDeity !== deity) continue; // deity 券需守護神符合
 
         var base = baseAmountOfItem(it);
         if (base <= 0) continue;
@@ -3272,6 +3272,30 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           alert(msg);
         }
         return;
+      }
+
+      // 多商品時補強：若為神祇券但購物車不含該守護神，直接提示不適用
+      var resType = String(res.type || '').toUpperCase();
+      var resDeity = String(res.deity || '').toUpperCase();
+      if (resType !== 'ALL' && resType !== 'SHIP' && resDeity){
+        var cartDeities = deities && deities.length ? deities : computeCartDeitySet(items);
+        if (cartDeities.length && cartDeities.indexOf(resDeity) === -1){
+          var h2b = document.getElementById('cartCouponHint');
+          var msgb = '優惠碼無效、已使用，或不適用此守護神商品';
+          if (h2b){
+            h2b.style.display = '';
+            h2b.textContent = msgb;
+            h2b.style.color = '#ffffff';
+            h2b.style.background = '#ef4444';
+            h2b.style.padding = '6px 10px';
+            h2b.style.borderRadius = '6px';
+            h2b.style.marginTop = '6px';
+            h2b.setAttribute('data-state', 'error');
+          }else{
+            alert(msgb);
+          }
+          return;
+        }
       }
 
       var newCoupon = {
