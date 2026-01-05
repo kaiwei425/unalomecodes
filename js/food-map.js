@@ -384,7 +384,7 @@ const TRANSLATIONS = {
     delete: '刪除',
     edit: '編輯',
     syncG: '同步G',
-    syncGHint: '請先於上方輸入 Google Map 連結後按儲存，再按同步G按鈕會自動同步 Google 評分',
+    syncGHint: '請先於左方輸入 Google Map 連結後先按儲存，再按同步G按鈕會自動同步 Google 評分',
     featured: '精選',
     recommend: '推薦',
     newPlace: '（新餐廳）',

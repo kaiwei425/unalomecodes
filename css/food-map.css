@@ -397,6 +397,12 @@
       border:none;
       cursor:pointer;
     }
+    .member-menu-panel #creatorToolsToggle{
+      color:#2563eb;
+    }
+    .member-menu-panel #creatorToolsToggle:hover{
+      color:#1d4ed8;
+    }
     .member-menu-panel a.qna-link{
       display:flex;
       align-items:center;
