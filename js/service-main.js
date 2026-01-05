@@ -307,6 +307,13 @@
     return service && service.qtyEnabled === true;
   }
 
+  function isDonationService(service){
+    if (!service) return false;
+    const name = String(service.serviceName || service.name || '').trim();
+    const option = String(service.optionName || service.option || '').trim();
+    return /捐棺|代捐棺/.test(name) || /捐棺|代捐棺/.test(option);
+  }
+
   function isRitualPhotoRequired(service){
     if (!service) return true;
     if (Object.prototype.hasOwnProperty.call(service, 'ritualPhotoRequired')) return !!service.ritualPhotoRequired;
@@ -555,7 +562,14 @@
             ${sanitizeImageUrl(item.image) ? `<img src="${escapeHtml(sanitizeImageUrl(item.image))}" alt="">` : ''}
             <div>
               <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
-              <div class="meta">${escapeHtml(item.optionName||'標準服務')}${getItemQty(item) > 1 ? ` × ${getItemQty(item)}` : ''}</div>
+              <div class="meta">${escapeHtml(item.optionName||'標準服務')}${(!isDonationService(item) && !item.qtyEnabled && getItemQty(item) > 1) ? ` × ${getItemQty(item)}` : ''}</div>
+              ${(item.qtyEnabled || isDonationService(item)) ? `
+                <div class="svc-cart-qty">
+                  <button type="button" class="svc-cart-qty-btn" data-qty="dec" data-uid="${escapeHtml(item.uid||'')}">-</button>
+                  <input type="number" min="1" value="${getItemQty(item)}" data-qty-input="1" data-uid="${escapeHtml(item.uid||'')}">
+                  <button type="button" class="svc-cart-qty-btn" data-qty="inc" data-uid="${escapeHtml(item.uid||'')}">+</button>
+                </div>
+              ` : ''}
             </div>
           </div>
           <div class="price">${formatTWD((Number(item.basePrice||0)+Number(item.optionPrice||0)) * getItemQty(item))}</div>
@@ -1383,11 +1397,37 @@
   }
   if (cartListEl){
     cartListEl.addEventListener('click', e=>{
+      const qtyBtn = e.target.closest && e.target.closest('[data-qty]');
+      if (qtyBtn){
+        const uid = qtyBtn.getAttribute('data-uid');
+        const op = qtyBtn.getAttribute('data-qty');
+        let cart = loadCart();
+        const idx = cart.findIndex(item => item.uid === uid);
+        if (idx < 0) return;
+        const cur = getItemQty(cart[idx]);
+        const next = op === 'inc' ? cur + 1 : Math.max(1, cur - 1);
+        cart[idx].qty = next;
+        saveCart(cart);
+        renderCartPanel();
+        return;
+      }
       const btn = e.target.closest('button[data-remove]');
       if (!btn) return;
       const uid = btn.getAttribute('data-remove');
       let cart = loadCart();
       cart = cart.filter(item => item.uid !== uid);
+      saveCart(cart);
+      renderCartPanel();
+    });
+    cartListEl.addEventListener('change', e=>{
+      const input = e.target.closest && e.target.closest('[data-qty-input]');
+      if (!input) return;
+      const uid = input.getAttribute('data-uid');
+      let cart = loadCart();
+      const idx = cart.findIndex(item => item.uid === uid);
+      if (idx < 0) return;
+      const val = Math.max(1, Number(input.value||1) || 1);
+      cart[idx].qty = val;
       saveCart(cart);
       renderCartPanel();
     });
