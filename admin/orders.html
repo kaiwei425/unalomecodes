@@ -234,6 +234,29 @@ function orderItemsSummary711(o){
   return summary;
 }
 
+function orderTotalAmount(o){
+  if (o && o.amount != null){
+    const n = Number(String(o.amount).replace(/[^\d.]/g,'')) || 0;
+    return Math.max(0, n);
+  }
+  return Math.max(0, Number(amountNumber(o) || 0));
+}
+
+function orderShippingFee711(o){
+  const raw = (o && (o.shippingFee ?? o.shipping ?? o.shipping_fee ?? o.shipFee ?? o.shipmentFee)) ?? '';
+  if (raw !== '' && raw != null){
+    const n = Number(String(raw).replace(/[^\d.]/g,'')) || 0;
+    return Math.max(0, n);
+  }
+  const shipDisc = Number(o && o.coupon && o.coupon.shippingDiscount || 0) || 0;
+  if (shipDisc > 0) return Math.max(0, 38 - shipDisc);
+  if (Array.isArray(o && o.couponAssignment)){
+    const hasShip = o.couponAssignment.some(line => /ship/i.test(String(line && (line.deity || line.type || line.code || ''))));
+    if (hasShip) return 0;
+  }
+  return 38;
+}
+
 function build711Rows(orders){
   const rows = [];
   const warnings = [];
@@ -246,11 +269,12 @@ function build711Rows(orders){
     const storeDigits = normalizeDigits(storeRaw);
     const store = storeDigits.length >= 6 ? storeDigits.slice(0, 6) : String(storeRaw || '');
     const product = orderItemsSummary711(o);
-    const amount = Math.max(0, Number(amountNumber(o) || 0));
-    const shipping = 38;
-    const total = amount + shipping;
+    const totalAmount = orderTotalAmount(o);
+    const shipping = orderShippingFee711(o);
+    const productAmount = Math.max(0, totalAmount - shipping);
+    const total = productAmount + shipping;
     const cols = ['A','B','C','D','E','F','G','H','I','J','K'];
-    const values = [name, phone, store, '常溫', product, String(amount), String(shipping), '', '', '', ''];
+    const values = [name, phone, store, '常溫', product, String(productAmount), String(shipping), '', '', '', ''];
 
     if (!name) warnings.push(`${o.id || '未知訂單'}：缺少取件人姓名`);
     if (!phone || phone.length !== 10) warnings.push(`${o.id || '未知訂單'}：取件人手機格式可能不正確`);
