@@ -278,6 +278,64 @@
     adminListeners.forEach(fn=>{ try{ fn(state.admin); }catch(_){ } });
   }
 
+  function addPendingDetailToCart(){
+    let pending = null;
+    try{
+      const raw = sessionStorage.getItem('__pendingDetail__');
+      if (raw) pending = JSON.parse(raw);
+    }catch(_){}
+    try{ sessionStorage.removeItem('__pendingDetail__'); }catch(_){}
+    if (!pending) return false;
+
+    const item = {
+      id: pending.id || pending.productId || '',
+      productId: pending.productId || pending.id || '',
+      name: pending.name || pending.productName || '商品',
+      productName: pending.productName || pending.name || '商品',
+      deity: pending.deity || '',
+      deityCode: pending.deityCode || '',
+      variantName: pending.variantName || '',
+      qty: Math.max(1, Number(pending.qty || pending.quantity || 1) || 1),
+      price: Number(pending.price || pending.unit || 0) || 0,
+      image: pending.image || '',
+      category: pending.category || ''
+    };
+    if (!item.deity && typeof window.toDeityCode === 'function'){
+      try{
+        const code = window.toDeityCode(item.name || item.productName || '');
+        if (code) item.deity = code;
+        if (!item.deityCode) item.deityCode = code;
+      }catch(_){}
+    }
+
+    const isCandle = (obj)=>{
+      try{
+        const text = String(obj && obj.category || '') + ' ' + String((obj && (obj.name || obj.productName || obj.title || obj.deity)) || '');
+        return /蠟燭/.test(text);
+      }catch(_){ return false; }
+    };
+
+    let cart = [];
+    try{ cart = JSON.parse(localStorage.getItem('cart')||'[]'); }catch(_){ cart = []; }
+    if (!Array.isArray(cart)) cart = [];
+    const incomingIsCandle = isCandle(item);
+    const cartHasCandle = cart.some(isCandle);
+    const cartHasNormal = cart.some(it=> !isCandle(it));
+    if (incomingIsCandle && cartHasNormal){
+      alert('蠟燭祈福商品需單獨結帳，請先清空購物車或完成當前訂單。');
+      return false;
+    }
+    if (!incomingIsCandle && cartHasCandle){
+      alert('購物車目前是蠟燭祈福商品，需單獨結帳，請先完成或清空後再加入其他商品。');
+      return false;
+    }
+    cart.push(item);
+    try{ localStorage.setItem('cart', JSON.stringify(cart)); }catch(_){}
+    try{ window.dispatchEvent(new StorageEvent('storage', { key:'cart', newValue: JSON.stringify(cart) })); }catch(_){}
+    try{ if (typeof window.updateCartBadge === 'function') window.updateCartBadge(); }catch(_){}
+    return true;
+  }
+
   async function refreshUser(){
     state.loading = true;
     updateWidgets();
@@ -305,7 +363,13 @@
     maybeNotifyWelcomeCoupon();
     if (state.user){
       try{
-        if (sessionStorage.getItem('__openCartAfterLogin') === '1'){
+        const shouldAdd = sessionStorage.getItem('__addPendingAfterLogin') === '1';
+        const shouldOpen = sessionStorage.getItem('__openCartAfterLogin') === '1';
+        if (shouldAdd){
+          sessionStorage.removeItem('__addPendingAfterLogin');
+          try{ addPendingDetailToCart(); }catch(_){}
+        }
+        if (shouldOpen){
           sessionStorage.removeItem('__openCartAfterLogin');
           if (typeof window.openCart === 'function') window.openCart();
         }
