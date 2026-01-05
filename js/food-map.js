@@ -329,6 +329,9 @@ const TRANSLATIONS = {
     creatorProfileAvatar: '創作者頭像',
     creatorProfileCover: '創作者封面',
     creatorProfileIg: '創作者 IG',
+    creatorProfileYoutube: 'YouTube 頻道',
+    creatorProfileFacebook: 'Facebook',
+    creatorProfileTiktok: 'TikTok',
     creatorProfileIntro: '創作者簡介',
     creatorProfileSave: '儲存',
     creatorProfileSaved: '已更新創作者資料',
@@ -340,6 +343,9 @@ const TRANSLATIONS = {
     creatorCoverSpec: '建議尺寸 1200 x 400',
     creatorCoverDragHint: '可拖曳小卡封面調整位置',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
+    creatorProfileYoutubePlaceholder: 'https://www.youtube.com/@xxx',
+    creatorProfileFacebookPlaceholder: 'https://www.facebook.com/xxx',
+    creatorProfileTiktokPlaceholder: 'https://www.tiktok.com/@xxx',
     creatorProfileIntroPlaceholder: '請輸入創作者簡介',
     creatorShare: '分享連結',
     creatorTerms: '創作者條款',
@@ -624,6 +630,9 @@ const TRANSLATIONS = {
     creatorProfileAvatar: 'Creator Avatar',
     creatorProfileCover: 'Creator Cover',
     creatorProfileIg: 'Creator IG',
+    creatorProfileYoutube: 'YouTube Channel',
+    creatorProfileFacebook: 'Facebook',
+    creatorProfileTiktok: 'TikTok',
     creatorProfileIntro: 'Creator Intro',
     creatorProfileSave: 'Save',
     creatorProfileSaved: 'Creator profile updated',
@@ -635,6 +644,9 @@ const TRANSLATIONS = {
     creatorCoverSpec: 'Suggested 1200 x 400',
     creatorCoverDragHint: 'Drag cover to reposition',
     creatorProfileIgPlaceholder: 'https://instagram.com/xxx',
+    creatorProfileYoutubePlaceholder: 'https://www.youtube.com/@xxx',
+    creatorProfileFacebookPlaceholder: 'https://www.facebook.com/xxx',
+    creatorProfileTiktokPlaceholder: 'https://www.tiktok.com/@xxx',
     creatorProfileIntroPlaceholder: 'Enter creator bio',
     creatorShare: 'Share link',
     creatorTerms: 'Creator Terms',
@@ -917,6 +929,14 @@ const btnCreatorInvite = document.getElementById('btnCreatorInvite');
 const btnCreatorProfile = document.getElementById('btnCreatorProfile');
 const btnCreatorShare = document.getElementById('btnCreatorShare');
 const creatorProfileDialog = document.getElementById('creatorProfileDialog');
+const creatorProfileNameLabel = document.getElementById('creatorProfileNameLabel');
+const creatorProfileAvatarLabel = document.getElementById('creatorProfileAvatarLabel');
+const creatorProfileCoverLabel = document.getElementById('creatorProfileCoverLabel');
+const creatorProfileIgLabel = document.getElementById('creatorProfileIgLabel');
+const creatorProfileYoutubeLabel = document.getElementById('creatorProfileYoutubeLabel');
+const creatorProfileFacebookLabel = document.getElementById('creatorProfileFacebookLabel');
+const creatorProfileTiktokLabel = document.getElementById('creatorProfileTiktokLabel');
+const creatorProfileIntroLabel = document.getElementById('creatorProfileIntroLabel');
 const creatorProfileName = document.getElementById('creatorProfileName');
 const creatorProfileAvatarFile = document.getElementById('creatorProfileAvatarFile');
 const creatorProfileAvatarUrl = document.getElementById('creatorProfileAvatarUrl');
@@ -933,6 +953,9 @@ const creatorProfileCoverStatus = document.getElementById('creatorCoverStatus');
 const creatorCoverSpecInline = document.getElementById('creatorCoverSpecInline');
 const creatorCoverHint = document.getElementById('creatorCoverHint');
 const creatorProfileIg = document.getElementById('creatorProfileIg');
+const creatorProfileYoutube = document.getElementById('creatorProfileYoutube');
+const creatorProfileFacebook = document.getElementById('creatorProfileFacebook');
+const creatorProfileTiktok = document.getElementById('creatorProfileTiktok');
 const creatorProfileIntro = document.getElementById('creatorProfileIntro');
 const creatorProfileStatus = document.getElementById('creatorProfileStatus');
 const creatorProfilePreview = document.getElementById('creatorProfilePreview');
@@ -982,6 +1005,32 @@ function normalizeIgUrl(input){
   const trimmed = raw.replace(/^@/, '');
   if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
   return safeUrl(`https://instagram.com/${trimmed.replace(/^\//,'')}`);
+}
+function normalizeYouTubeUrl(input){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const trimmed = raw.replace(/^@/, '');
+  if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
+  if (/(youtube\.com|youtu\.be)/i.test(trimmed)) return safeUrl(`https://${trimmed}`);
+  const clean = trimmed.replace(/^\//, '');
+  if (/^UC[0-9A-Za-z_-]{5,}$/.test(clean)) return safeUrl(`https://www.youtube.com/channel/${clean}`);
+  return safeUrl(`https://www.youtube.com/@${clean}`);
+}
+function normalizeFacebookUrl(input){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const trimmed = raw.replace(/^@/, '');
+  if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
+  if (/(facebook\.com|fb\.com)/i.test(trimmed)) return safeUrl(`https://${trimmed}`);
+  return safeUrl(`https://www.facebook.com/${trimmed.replace(/^\//,'')}`);
+}
+function normalizeTiktokUrl(input){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const trimmed = raw.replace(/^@/, '');
+  if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
+  if (/tiktok\.com/i.test(trimmed)) return safeUrl(`https://${trimmed}`);
+  return safeUrl(`https://www.tiktok.com/@${trimmed.replace(/^\//,'')}`);
 }
 function renderCoordsHelpSteps(){
   if (!coordsHelpSteps) return;
@@ -1307,15 +1356,21 @@ function buildCreatorProfileCard(profile, opts){
   const name = escapeHtml(profile.name);
   const intro = escapeHtml(profile.intro || '');
   const igUrl = normalizeIgUrl(profile.ig || '');
+  const ytUrl = normalizeYouTubeUrl(profile.youtube || '');
+  const fbUrl = normalizeFacebookUrl(profile.facebook || '');
+  const ttUrl = normalizeTiktokUrl(profile.tiktok || '');
   const avatarUrl = safeImageUrl(profile.avatar || '', { allowBlob });
   const coverUrl = safeImageUrl(profile.cover || '', { allowBlob });
   const coverPos = safeObjectPosition(profile.coverPos || '50% 50%');
   const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
   const initial = name ? name.trim().slice(0, 1) : 'C';
-  const igButton = igUrl
-    ? `<a class="creator-ig" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
-        <img src="/img/brand/logo-instagram.png" alt="Instagram">
-      </a>`
+  const socials = [];
+  if (igUrl) socials.push({ url: igUrl, icon: '/img/brand/logo-instagram.png', label: 'Instagram' });
+  if (ytUrl) socials.push({ url: ytUrl, icon: '/img/brand/logo-youtube.svg', label: 'YouTube' });
+  if (fbUrl) socials.push({ url: fbUrl, icon: '/img/brand/logo-facebook.svg', label: 'Facebook' });
+  if (ttUrl) socials.push({ url: ttUrl, icon: '/img/brand/logo-tiktok.svg', label: 'TikTok' });
+  const socialsHtml = socials.length
+    ? `<div class="creator-socials">${socials.map(s => `<a class="creator-social" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" title="${escapeHtml(s.label)}" aria-label="${escapeHtml(s.label)}"><img src="${escapeHtml(s.icon)}" alt="${escapeHtml(s.label)}"></a>`).join('')}</div>`
     : '';
   return `
     <div class="creator-card">
@@ -1328,7 +1383,7 @@ function buildCreatorProfileCard(profile, opts){
           <div class="creator-name">${name}</div>
           ${intro ? `<div class="creator-intro">${intro}</div>` : ''}
         </div>
-        ${igButton}
+        ${socialsHtml}
       </div>
     </div>
   `;
@@ -1338,6 +1393,9 @@ function updateCreatorProfilePreview(){
   if (!creatorProfilePreview) return;
   const name = creatorProfileName ? creatorProfileName.value.trim() : '';
   const ig = creatorProfileIg ? creatorProfileIg.value.trim() : '';
+  const youtube = creatorProfileYoutube ? creatorProfileYoutube.value.trim() : '';
+  const facebook = creatorProfileFacebook ? creatorProfileFacebook.value.trim() : '';
+  const tiktok = creatorProfileTiktok ? creatorProfileTiktok.value.trim() : '';
   const intro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   const avatar = creatorProfileAvatarUrl ? creatorProfileAvatarUrl.value.trim() : '';
   const cover = creatorProfileCoverUrl ? creatorProfileCoverUrl.value.trim() : '';
@@ -1345,6 +1403,9 @@ function updateCreatorProfilePreview(){
   creatorProfilePreview.innerHTML = buildCreatorProfileCard({
     name: name || creatorName || '',
     ig,
+    youtube,
+    facebook,
+    tiktok,
     intro,
     avatar,
     cover,
@@ -1924,6 +1985,9 @@ let suppressCreatorShareClear = false;
 let creatorId = '';
 let creatorName = '';
 let creatorIg = '';
+let creatorYoutube = '';
+let creatorFacebook = '';
+let creatorTiktok = '';
 let creatorIntro = '';
 let creatorAvatar = '';
 let creatorCover = '';
@@ -2219,13 +2283,18 @@ function setLanguage(lang) {
   if (creatorProfileDialog){
     const header = creatorProfileDialog.querySelector('header');
     if (header) header.textContent = t('creatorProfileTitle');
-    const labels = creatorProfileDialog.querySelectorAll('.body label');
-    if (labels[0]) labels[0].textContent = t('creatorProfileName');
-    if (labels[1]) labels[1].textContent = t('creatorProfileAvatar');
-    if (labels[2]) labels[2].textContent = t('creatorProfileCover');
-    if (labels[3]) labels[3].textContent = t('creatorProfileIg');
-    if (labels[4]) labels[4].textContent = t('creatorProfileIntro');
+    if (creatorProfileNameLabel) creatorProfileNameLabel.textContent = t('creatorProfileName');
+    if (creatorProfileAvatarLabel) creatorProfileAvatarLabel.textContent = t('creatorProfileAvatar');
+    if (creatorProfileCoverLabel) creatorProfileCoverLabel.textContent = t('creatorProfileCover');
+    if (creatorProfileIgLabel) creatorProfileIgLabel.textContent = t('creatorProfileIg');
+    if (creatorProfileYoutubeLabel) creatorProfileYoutubeLabel.textContent = t('creatorProfileYoutube');
+    if (creatorProfileFacebookLabel) creatorProfileFacebookLabel.textContent = t('creatorProfileFacebook');
+    if (creatorProfileTiktokLabel) creatorProfileTiktokLabel.textContent = t('creatorProfileTiktok');
+    if (creatorProfileIntroLabel) creatorProfileIntroLabel.textContent = t('creatorProfileIntro');
     if (creatorProfileIg) creatorProfileIg.placeholder = t('creatorProfileIgPlaceholder');
+    if (creatorProfileYoutube) creatorProfileYoutube.placeholder = t('creatorProfileYoutubePlaceholder');
+    if (creatorProfileFacebook) creatorProfileFacebook.placeholder = t('creatorProfileFacebookPlaceholder');
+    if (creatorProfileTiktok) creatorProfileTiktok.placeholder = t('creatorProfileTiktokPlaceholder');
     if (creatorProfileIntro) creatorProfileIntro.placeholder = t('creatorProfileIntroPlaceholder');
     if (creatorProfileClose) creatorProfileClose.textContent = t('cancelBtn');
     if (creatorProfileSave) creatorProfileSave.textContent = t('creatorProfileSave');
@@ -2342,6 +2411,9 @@ async function checkCreator(){
     creatorId = data && data.id ? String(data.id) : '';
     creatorName = data && data.name ? String(data.name) : '';
     creatorIg = data && data.ig ? String(data.ig) : '';
+    creatorYoutube = data && data.youtube ? String(data.youtube) : '';
+    creatorFacebook = data && data.facebook ? String(data.facebook) : '';
+    creatorTiktok = data && data.tiktok ? String(data.tiktok) : '';
     creatorIntro = data && data.intro ? String(data.intro) : '';
     creatorAvatar = data && data.avatar ? String(data.avatar) : '';
     creatorCover = data && data.cover ? String(data.cover) : '';
@@ -2354,6 +2426,9 @@ async function checkCreator(){
     creatorId = '';
     creatorName = '';
     creatorIg = '';
+    creatorYoutube = '';
+    creatorFacebook = '';
+    creatorTiktok = '';
     creatorIntro = '';
     creatorAvatar = '';
     creatorCover = '';
@@ -2371,6 +2446,9 @@ async function checkCreator(){
     if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover || '';
     if (creatorProfileCoverPos) creatorProfileCoverPos.value = creatorCoverPos || '50% 50%';
     if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
+    if (creatorProfileYoutube) creatorProfileYoutube.value = creatorYoutube || '';
+    if (creatorProfileFacebook) creatorProfileFacebook.value = creatorFacebook || '';
+    if (creatorProfileTiktok) creatorProfileTiktok.value = creatorTiktok || '';
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
     setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
     setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
@@ -2909,6 +2987,9 @@ function render(){
       const profile = {
         name: profileName || getOwnerName(profileSource) || '',
         ig: profileSource.creatorIg || '',
+        youtube: profileSource.creatorYoutube || '',
+        facebook: profileSource.creatorFacebook || '',
+        tiktok: profileSource.creatorTiktok || '',
         intro: profileSource.creatorIntro || '',
         avatar: profileSource.creatorAvatar || '',
         cover: profileSource.creatorCover || '',
@@ -2917,6 +2998,9 @@ function render(){
       if (isCreator && creatorId && String(profileSource.ownerId || '') === String(creatorId)){
         profile.name = profile.name || creatorName || '';
         profile.ig = profile.ig || creatorIg || '';
+        profile.youtube = profile.youtube || creatorYoutube || '';
+        profile.facebook = profile.facebook || creatorFacebook || '';
+        profile.tiktok = profile.tiktok || creatorTiktok || '';
         profile.intro = profile.intro || creatorIntro || '';
         profile.avatar = profile.avatar || creatorAvatar || '';
         profile.cover = profile.cover || creatorCover || '';
@@ -3749,6 +3833,9 @@ if (btnCreatorProfile) btnCreatorProfile.onclick = ()=>{
   setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
   applyCreatorCoverPos(creatorCoverPos || '50% 50%');
   if (creatorProfileIg) creatorProfileIg.value = creatorIg || '';
+  if (creatorProfileYoutube) creatorProfileYoutube.value = creatorYoutube || '';
+  if (creatorProfileFacebook) creatorProfileFacebook.value = creatorFacebook || '';
+  if (creatorProfileTiktok) creatorProfileTiktok.value = creatorTiktok || '';
   if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro || '';
   if (creatorProfileStatus) creatorProfileStatus.textContent = '';
   if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = '';
@@ -3778,6 +3865,9 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
   const nextCover = creatorProfileCoverUrl ? creatorProfileCoverUrl.value.trim() : '';
   const nextCoverPos = creatorProfileCoverPos ? creatorProfileCoverPos.value.trim() : creatorCoverPos;
   const nextIg = creatorProfileIg ? creatorProfileIg.value.trim() : '';
+  const nextYoutube = creatorProfileYoutube ? creatorProfileYoutube.value.trim() : '';
+  const nextFacebook = creatorProfileFacebook ? creatorProfileFacebook.value.trim() : '';
+  const nextTiktok = creatorProfileTiktok ? creatorProfileTiktok.value.trim() : '';
   const nextIntro = creatorProfileIntro ? creatorProfileIntro.value.trim() : '';
   if (!nextName){
     if (creatorProfileStatus) creatorProfileStatus.textContent = t('creatorProfileNameEmpty');
@@ -3789,7 +3879,7 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       credentials:'include',
-      body: JSON.stringify({ creatorName: nextName, creatorAvatar: nextAvatar, creatorCover: nextCover, creatorCoverPos: nextCoverPos, creatorIg: nextIg, creatorIntro: nextIntro })
+      body: JSON.stringify({ creatorName: nextName, creatorAvatar: nextAvatar, creatorCover: nextCover, creatorCoverPos: nextCoverPos, creatorIg: nextIg, creatorYoutube: nextYoutube, creatorFacebook: nextFacebook, creatorTiktok: nextTiktok, creatorIntro: nextIntro })
     });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
@@ -3800,12 +3890,18 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
     creatorCover = data.cover ? String(data.cover) : nextCover;
     creatorCoverPos = data.coverPos ? String(data.coverPos) : (nextCoverPos || creatorCoverPos);
     creatorIg = data.ig ? String(data.ig) : nextIg;
+    creatorYoutube = data.youtube ? String(data.youtube) : nextYoutube;
+    creatorFacebook = data.facebook ? String(data.facebook) : nextFacebook;
+    creatorTiktok = data.tiktok ? String(data.tiktok) : nextTiktok;
     creatorIntro = data.intro ? String(data.intro) : nextIntro;
     if (creatorProfileName) creatorProfileName.value = creatorName;
     if (creatorProfileAvatarUrl) creatorProfileAvatarUrl.value = creatorAvatar;
     if (creatorProfileCoverUrl) creatorProfileCoverUrl.value = creatorCover;
     if (creatorProfileCoverPos) creatorProfileCoverPos.value = creatorCoverPos || '50% 50%';
     if (creatorProfileIg) creatorProfileIg.value = creatorIg;
+    if (creatorProfileYoutube) creatorProfileYoutube.value = creatorYoutube;
+    if (creatorProfileFacebook) creatorProfileFacebook.value = creatorFacebook;
+    if (creatorProfileTiktok) creatorProfileTiktok.value = creatorTiktok;
     if (creatorProfileIntro) creatorProfileIntro.value = creatorIntro;
     setImagePreviewFromUrl(creatorProfileAvatarPreview, creatorProfileAvatarSize, creatorAvatar, t('creatorProfileAvatarHint'));
     setImagePreviewFromUrl(creatorProfileCoverPreview, creatorProfileCoverSize, creatorCover, t('creatorProfileAvatarHint'));
@@ -3816,6 +3912,9 @@ if (creatorProfileSave) creatorProfileSave.onclick = async ()=>{
         if (String(item.ownerId || '') === String(creatorId)){
           item.ownerName = creatorName;
           item.creatorIg = creatorIg;
+          item.creatorYoutube = creatorYoutube;
+          item.creatorFacebook = creatorFacebook;
+          item.creatorTiktok = creatorTiktok;
           item.creatorIntro = creatorIntro;
           item.creatorAvatar = creatorAvatar;
           item.creatorCover = creatorCover;
@@ -3906,6 +4005,9 @@ if (creatorProfileCoverFile){
 }
 if (creatorProfileName) creatorProfileName.addEventListener('input', updateCreatorProfilePreview);
 if (creatorProfileIg) creatorProfileIg.addEventListener('input', updateCreatorProfilePreview);
+if (creatorProfileYoutube) creatorProfileYoutube.addEventListener('input', updateCreatorProfilePreview);
+if (creatorProfileFacebook) creatorProfileFacebook.addEventListener('input', updateCreatorProfilePreview);
+if (creatorProfileTiktok) creatorProfileTiktok.addEventListener('input', updateCreatorProfilePreview);
 if (creatorProfileIntro) creatorProfileIntro.addEventListener('input', updateCreatorProfilePreview);
 if (btnCreatorShare) btnCreatorShare.onclick = async ()=>{
   if (!isCreator) return;

@@ -4131,7 +4131,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!record){
       return json({ ok:true, creator:false, inviteAllowed:false }, 200);
     }
-    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', inviteAllowed: !!record.creatorInviteAllowed, termsAccepted: hasCreatorTermsAccepted(record), termsAcceptedAt: record.creatorTermsAcceptedAt || '' }, 200);
+    return json({ ok:true, creator: !!record.creatorFoods, id: record.id, name: resolveCreatorName(record), ig: record.creatorIg || '', youtube: record.creatorYoutube || '', facebook: record.creatorFacebook || '', tiktok: record.creatorTiktok || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', inviteAllowed: !!record.creatorInviteAllowed, termsAccepted: hasCreatorTermsAccepted(record), termsAcceptedAt: record.creatorTermsAcceptedAt || '' }, 200);
   }
 
   if (pathname === '/api/creator/profile' && request.method === 'POST'){
@@ -4145,6 +4145,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     record.creatorName = name;
     const hasIg = Object.prototype.hasOwnProperty.call(body, 'creatorIg') || Object.prototype.hasOwnProperty.call(body, 'ig');
     const hasIntro = Object.prototype.hasOwnProperty.call(body, 'creatorIntro') || Object.prototype.hasOwnProperty.call(body, 'intro') || Object.prototype.hasOwnProperty.call(body, 'bio');
+    const hasYoutube = Object.prototype.hasOwnProperty.call(body, 'creatorYoutube') || Object.prototype.hasOwnProperty.call(body, 'youtube');
+    const hasFacebook = Object.prototype.hasOwnProperty.call(body, 'creatorFacebook') || Object.prototype.hasOwnProperty.call(body, 'facebook');
+    const hasTiktok = Object.prototype.hasOwnProperty.call(body, 'creatorTiktok') || Object.prototype.hasOwnProperty.call(body, 'tiktok');
     const hasAvatar = Object.prototype.hasOwnProperty.call(body, 'creatorAvatar') || Object.prototype.hasOwnProperty.call(body, 'avatar');
     const hasCover = Object.prototype.hasOwnProperty.call(body, 'creatorCover') || Object.prototype.hasOwnProperty.call(body, 'cover');
     const hasCoverPos = Object.prototype.hasOwnProperty.call(body, 'creatorCoverPos') || Object.prototype.hasOwnProperty.call(body, 'coverPos');
@@ -4153,6 +4156,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     if (hasIntro){
       record.creatorIntro = String(body.creatorIntro ?? body.intro ?? body.bio ?? '').trim().slice(0, 500);
+    }
+    if (hasYoutube){
+      record.creatorYoutube = String(body.creatorYoutube ?? body.youtube ?? '').trim().slice(0, 200);
+    }
+    if (hasFacebook){
+      record.creatorFacebook = String(body.creatorFacebook ?? body.facebook ?? '').trim().slice(0, 200);
+    }
+    if (hasTiktok){
+      record.creatorTiktok = String(body.creatorTiktok ?? body.tiktok ?? '').trim().slice(0, 200);
     }
     if (hasAvatar){
       record.creatorAvatar = String(body.creatorAvatar ?? body.avatar ?? '').trim().slice(0, 300);
@@ -4171,9 +4183,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const now = new Date().toISOString();
         for (const item of items){
           if (!item || String(item.ownerId || '') !== String(record.id)) continue;
-          if (String(item.ownerName || '') === name && item.creatorIg === record.creatorIg && item.creatorIntro === record.creatorIntro && item.creatorAvatar === record.creatorAvatar && item.creatorCover === record.creatorCover && item.creatorCoverPos === record.creatorCoverPos) continue;
+          if (String(item.ownerName || '') === name && item.creatorIg === record.creatorIg && item.creatorYoutube === record.creatorYoutube && item.creatorFacebook === record.creatorFacebook && item.creatorTiktok === record.creatorTiktok && item.creatorIntro === record.creatorIntro && item.creatorAvatar === record.creatorAvatar && item.creatorCover === record.creatorCover && item.creatorCoverPos === record.creatorCoverPos) continue;
           item.ownerName = name;
           item.creatorIg = record.creatorIg || '';
+          item.creatorYoutube = record.creatorYoutube || '';
+          item.creatorFacebook = record.creatorFacebook || '';
+          item.creatorTiktok = record.creatorTiktok || '';
           item.creatorIntro = record.creatorIntro || '';
           item.creatorAvatar = record.creatorAvatar || '';
           item.creatorCover = record.creatorCover || '';
@@ -4188,7 +4203,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
       }catch(_){}
     }
-    return json({ ok:true, name, ig: record.creatorIg || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', updated });
+    return json({ ok:true, name, ig: record.creatorIg || '', youtube: record.creatorYoutube || '', facebook: record.creatorFacebook || '', tiktok: record.creatorTiktok || '', intro: record.creatorIntro || '', avatar: record.creatorAvatar || '', cover: record.creatorCover || '', coverPos: record.creatorCoverPos || '50% 50%', updated });
   }
 
   if (pathname === '/api/creator/terms' && request.method === 'POST'){
@@ -4584,6 +4599,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           obj.ownerId = creatorRecord.id;
           if (!obj.ownerName) obj.ownerName = resolveCreatorName(creatorRecord);
           obj.creatorIg = creatorRecord.creatorIg || '';
+          obj.creatorYoutube = creatorRecord.creatorYoutube || '';
+          obj.creatorFacebook = creatorRecord.creatorFacebook || '';
+          obj.creatorTiktok = creatorRecord.creatorTiktok || '';
           obj.creatorIntro = creatorRecord.creatorIntro || '';
           obj.creatorAvatar = creatorRecord.creatorAvatar || '';
           obj.creatorCover = creatorRecord.creatorCover || '';

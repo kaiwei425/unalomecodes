@@ -226,6 +226,13 @@
       -webkit-box-orient:vertical;
       overflow:hidden;
     }
+    .creator-socials{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-shrink:0;
+    }
+    .creator-social,
     .creator-ig{
       display:inline-flex;
       align-items:center;
@@ -239,6 +246,7 @@
       text-decoration:none;
       flex-shrink:0;
     }
+    .creator-social img,
     .creator-ig img{
       width:20px;
       height:20px;
