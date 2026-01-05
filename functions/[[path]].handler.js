@@ -7393,6 +7393,13 @@ function composeOrderEmail(order, opts = {}) {
   const email = (order?.buyer?.email || '').trim();
   const store = (order?.buyer?.store || order?.store || '').trim();
   const status = order.status || '處理中';
+  const trackingNo = String(
+    order.shippingTracking || order.trackingNo || order.tracking || order.trackingNumber
+    || (order.shipment && (order.shipment.tracking || order.shipment.trackingNo || order.shipment.trackingNumber))
+    || ''
+  ).trim();
+  const trackingUrl = 'https://eservice.7-11.com.tw/E-Tracking/search.aspx';
+  const isShipped = /已寄件|已寄出|已出貨|寄出/.test(status);
   const note = (order.note || '').trim();
   const methodRaw = opts.channelLabel || order.method || '訂單';
   const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || /服務/.test(String(order?.method||''));
@@ -7466,6 +7473,15 @@ function composeOrderEmail(order, opts = {}) {
       ? `請至 <a href="${esc(opts.lookupUrl)}" target="_blank" rel="noopener">查詢祈福進度</a> 輸入手機號碼，並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。`
       : '請至查詢祈福進度輸入手機號碼，並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。';
     customerIntro += `<p>${lookupLine}</p>`;
+  }
+  if (context === 'status_update' && isShipped && trackingNo){
+    const trackingHtml = plainMode
+      ? `<p>該商品已完成寄件，配送單號為：${esc(trackingNo)}。可至 7-11 貨態查詢系統查詢物流狀態：${esc(trackingUrl)}</p>`
+      : `<div style="margin:16px 0;padding:12px;border-radius:10px;background:#ecfeff;color:#0f172a;font-size:14px;">
+          該商品已完成寄件，配送單號為：<strong>${esc(trackingNo)}</strong><br>
+          可至 <a href="${trackingUrl}" target="_blank" rel="noopener">7-11 貨態查詢系統 E-Tracking</a> 查詢物流狀態
+        </div>`;
+    customerIntro += trackingHtml;
   }
   const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
   const contactRows = [
@@ -7549,6 +7565,10 @@ function composeOrderEmail(order, opts = {}) {
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);
+  if (context === 'status_update' && isShipped && trackingNo){
+    textParts.push(`該商品已完成寄件，配送單號為：${trackingNo}`);
+    textParts.push(`7-11 貨態查詢系統：${trackingUrl}`);
+  }
   textParts.push(`付款方式：${method}`);
   textParts.push(`商品金額：${fmt(subtotal)}`);
   if (discountAmount) textParts.push(`優惠折抵：-${fmt(discountAmount)}`);
@@ -8656,6 +8676,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
     const id = String(body.id || '');
     const action = String(body.action || '').toLowerCase();
     const status = String(body.status || '');
+    const trackingNo = String(body.trackingNo || body.tracking || body.trackingNumber || '').trim();
     if (!id) return new Response(JSON.stringify({ ok:false, error:'Missing id' }), { status:400, headers: jsonHeadersFor(request, env) });
 
     if (action === 'delete') {
@@ -8681,6 +8702,14 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       const obj = JSON.parse(raw);
       const prevStatus = obj.status || '';
       let statusChanged = false;
+      const wantsShipped = /已寄件|已寄出|已出貨|寄出/.test(status);
+      const existingTracking = String(obj.shippingTracking || obj.trackingNo || obj.tracking || obj.trackingNumber || '').trim();
+      if (wantsShipped && !trackingNo && !existingTracking){
+        return new Response(JSON.stringify({ ok:false, error:'missing_tracking_no' }), { status:400, headers: jsonHeadersFor(request, env) });
+      }
+      if (wantsShipped && trackingNo){
+        obj.shippingTracking = trackingNo;
+      }
       if (status && status !== prevStatus) {
         obj.status = status;
         statusChanged = true;
