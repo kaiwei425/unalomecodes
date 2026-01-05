@@ -204,6 +204,10 @@
   <dialog id="creatorProfileDialog" class="policy-dialog">
     <header>創作者資料</header>
     <div class="body">
+      <div class="creator-preview-wrap">
+        <div class="creator-preview-title">預覽小卡</div>
+        <div id="creatorProfilePreview"></div>
+      </div>
       <label>創作者名稱</label>
       <input id="creatorProfileName" type="text">
       <label>創作者頭像</label>
@@ -212,11 +216,10 @@
         <div class="creator-upload-meta">
           <div class="creator-upload-row">
             <input id="creatorProfileAvatarFile" type="file" accept="image/*">
-            <span class="creator-upload-spec-inline" id="creatorAvatarSpecInline"></span>
+            <span class="creator-upload-spec-inline" id="creatorAvatarSpecInline">建議尺寸 400 x 400</span>
           </div>
           <input id="creatorProfileAvatarUrl" type="hidden">
           <div class="creator-upload-info">
-            <span id="creatorAvatarSpec"></span>
             <span id="creatorAvatarSize">-</span>
             <span id="creatorAvatarStatus"></span>
           </div>
@@ -228,12 +231,11 @@
         <div class="creator-upload-meta">
           <div class="creator-upload-row">
             <input id="creatorProfileCoverFile" type="file" accept="image/*">
-            <span class="creator-upload-spec-inline" id="creatorCoverSpecInline"></span>
+            <span class="creator-upload-spec-inline" id="creatorCoverSpecInline">建議尺寸 1200 x 400</span>
           </div>
           <input id="creatorProfileCoverUrl" type="hidden">
           <input id="creatorProfileCoverPos" type="hidden">
           <div class="creator-upload-info">
-            <span id="creatorCoverSpec"></span>
             <span id="creatorCoverSize">-</span>
             <span id="creatorCoverStatus"></span>
             <span class="creator-upload-hint" id="creatorCoverHint"></span>
@@ -245,10 +247,6 @@
       <label>創作者簡介</label>
       <textarea id="creatorProfileIntro" rows="4" placeholder="請輸入創作者簡介"></textarea>
       <div id="creatorProfileStatus" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
-      <div class="creator-preview-wrap">
-        <div class="creator-preview-title">預覽小卡</div>
-        <div id="creatorProfilePreview"></div>
-      </div>
     </div>
     <footer>
       <button type="button" class="btn" id="creatorProfileClose">取消</button>
