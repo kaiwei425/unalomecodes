@@ -176,20 +176,20 @@ dialog[data-fallback-open]{display:block;}
 #svcCartForm label{display:grid;gap:4px;font-size:13px;color:#374151;font-weight:700;}
 #svcCartForm input,#svcCartForm textarea,#svcCartForm select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;}
 #svcCartForm textarea{min-height:110px;resize:vertical;}
-#svcCart{max-width:640px;width:95%;max-height:85vh;overflow:hidden;box-sizing:border-box;margin:0 auto;}
-#svcCartForm{flex:1;max-height:calc(85vh - 64px);overflow:hidden;display:flex;flex-direction:column;}
-#svcCart .svc-step-content{max-height:calc(85vh - 160px);overflow:auto;}
+#svcCart{max-width:640px;width:95%;max-height:90vh;overflow:hidden;box-sizing:border-box;margin:0 auto;}
+#svcCartForm{flex:1;max-height:calc(90vh - 64px);overflow:hidden;display:flex;flex-direction:column;}
+#svcCart .svc-step-content{max-height:calc(90vh - 160px);overflow:auto;}
 @media (max-width: 640px){
   #svcCart{
-    max-height:88vh;
+    max-height:92vh;
     position:fixed;
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
     margin:0;
   }
-  #svcCartForm{max-height:calc(88vh - 64px);}
-  #svcCart .svc-step-content{max-height:calc(88vh - 160px);}
+  #svcCartForm{max-height:calc(92vh - 64px);}
+  #svcCart .svc-step-content{max-height:calc(92vh - 160px);}
   #svcLookup input,
   #svcLookup textarea,
   #svcLookup select,
@@ -606,7 +606,7 @@ dialog[data-fallback-open]{display:block;}
           </label>
           <label>
             備註
-            <textarea name="note" placeholder="可輸入備註或特殊需求…"></textarea>
+            <textarea name="note" placeholder="可輸入希望代許的願望，例如：身體健康、事業順利 或回向給眾生等等..."></textarea>
           </label>
           <label id="svcContactPhotoWrap">
             <span id="svcContactPhotoTitle">上傳個人照片（祈福使用，必填）</span>
