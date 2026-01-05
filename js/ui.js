@@ -214,6 +214,18 @@ function openDetail(p){
 
   // 加入購物車：用 localStorage 簡易存放
   btnAdd.onclick = ()=>{
+    try{
+      if (window.authState && typeof window.authState.isLoggedIn === 'function'){
+        if (!window.authState.isLoggedIn()){
+          if (typeof window.authState.login === 'function'){
+            window.authState.login();
+          }else if (typeof window.authState.promptLogin === 'function'){
+            window.authState.promptLogin('請先登入會員才能加入購物車。');
+          }
+          return;
+        }
+      }
+    }catch(_){}
     const limitedTs = parseLimitedUntil(p && p.limitedUntil);
     if (limitedTs && Date.now() >= limitedTs){
       alert('此商品已結束上架');
