@@ -384,6 +384,7 @@ const TRANSLATIONS = {
     delete: '刪除',
     edit: '編輯',
     syncG: '同步G',
+    syncGHint: '請先於上方輸入 Google Map 連結後按儲存，再按同步G按鈕會自動同步 Google 評分',
     featured: '精選',
     recommend: '推薦',
     newPlace: '（新餐廳）',
@@ -454,12 +455,14 @@ const TRANSLATIONS = {
     adminMode: '管理模式：儲存後會直接寫入資料庫。',
     dragHint: '拖曳圖片可調整顯示位置',
     autoUpload: '選擇圖片後會自動上傳',
-    placeIdHint: '指定 Place ID 以修正評論',
+    placeIdHint: '非必填，除非 Google 評論無法抓到正確來源',
     featuredLabel: '置頂推薦 (Featured)',
     igVideo: 'IG 影片',
     ytVideo: 'YouTube 影片',
     igLink: 'IG 連結',
     coordsInput: '座標（緯度, 經度）',
+    coordsHelp: '使用說明',
+    coordsHelpText: '查詢緯度/經度方式：\n1. 打開 Google Maps\n2. 搜尋店家或長按地圖\n3. 點選標記，底部會顯示座標\n4. 複製成「緯度, 經度」格式，例如 13.7563, 100.5018',
     coordsInvalid: '座標格式錯誤，請輸入「緯度, 經度」',
     mapServiceWait: '地圖服務尚未載入，請稍候',
     noCover: '尚未上傳',
@@ -468,7 +471,7 @@ const TRANSLATIONS = {
     removeFail: '移除失敗：',
     startLocFail: '無法取得起點位置',
     personUnit: '人',
-    gMap: 'Google Maps',
+    gMap: 'GOOGLE MAP連結',
     hours: '營業時間',
     lat: '緯度',
     lng: '經度',
@@ -627,6 +630,7 @@ const TRANSLATIONS = {
     delete: 'Delete',
     edit: 'Edit',
     syncG: 'Sync G',
+    syncGHint: 'Enter the Google Maps link above, save first, then click Sync G to pull the rating.',
     featured: 'Featured',
     recommend: 'Recommended',
     newPlace: '(New)',
@@ -697,12 +701,14 @@ const TRANSLATIONS = {
     adminMode: 'Admin Mode: Saves directly to DB.',
     dragHint: 'Drag image to adjust position',
     autoUpload: 'Auto upload on select',
-    placeIdHint: 'Place ID for reviews',
+    placeIdHint: 'Optional unless Google reviews cannot match the correct place.',
     featuredLabel: 'Featured',
     igVideo: 'IG Video',
     ytVideo: 'YouTube Video',
     igLink: 'Instagram link',
     coordsInput: 'Coordinates (lat, lng)',
+    coordsHelp: 'How to',
+    coordsHelpText: 'How to get coordinates:\n1. Open Google Maps\n2. Search the place or long-press on the map\n3. Tap the pin to reveal coordinates\n4. Copy as \"lat, lng\" e.g. 13.7563, 100.5018',
     coordsInvalid: 'Invalid coordinates. Use "lat, lng".',
     mapServiceWait: 'Map service is still loading. Please try again.',
     noCover: 'Not uploaded yet',
@@ -711,7 +717,7 @@ const TRANSLATIONS = {
     removeFail: 'Remove failed: ',
     startLocFail: 'Unable to get the start location',
     personUnit: 'people',
-    gMap: 'Google Maps',
+    gMap: 'Google Maps Link',
     hours: 'Hours',
     lat: 'Lat',
     lng: 'Lng',
@@ -2816,6 +2822,10 @@ function render(){
     const adminPanel = isEditing ? `
       <div class="admin-panel" data-admin-id="${safeId}">
         <div class="admin-grid">
+          <label style="display:flex;align-items:center;gap:6px;grid-column:1/-1;background:#fff7ed;padding:8px;border-radius:8px;border:1px dashed #fdba74;">
+            <input type="checkbox" data-admin-field="featured" ${(item.featured || item.featured_) ? 'checked' : ''}>
+            <span style="font-weight:700;color:#c2410c;font-size:12px;">${escapeHtml(t('featuredLabel'))}</span>
+          </label>
           <label>${escapeHtml(t('nameInput'))}<input class="admin-input" data-admin-field="name" value="${escapeHtml(item.name || '')}"></label>
           <label>${escapeHtml(t('catInput'))}<input class="admin-input" data-admin-field="category" value="${escapeHtml(item.category || '')}"></label>
           <label>${escapeHtml(t('areaInput'))}<input class="admin-input" data-admin-field="area" value="${escapeHtml(item.area || '')}"></label>
@@ -2827,23 +2837,27 @@ function render(){
               <option value="$$$" ${item.price === '$$$' ? 'selected' : ''}>${escapeHtml(t('priceOpt3'))}</option>
             </select>
           </label>
+          <label>${escapeHtml(t('gMap'))}<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>${escapeHtml(t('rating'))}
-            <div style="display:flex;gap:4px">
-              <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+              <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5" style="max-width:120px;flex:1 1 90px;">
               <button class="btn pill" type="button" data-fetch-rating="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">${escapeHtml(t('syncG'))}</button>
+              <span class="admin-hint" style="flex:1 1 180px;min-width:160px;">${escapeHtml(t('syncGHint'))}</span>
             </div>
           </label>
-          <label style="display:flex;align-items:center;gap:6px;grid-column:1/-1;background:#fff7ed;padding:8px;border-radius:8px;border:1px dashed #fdba74;">
-            <input type="checkbox" data-admin-field="featured" ${(item.featured || item.featured_) ? 'checked' : ''}>
-            <span style="font-weight:700;color:#c2410c;font-size:12px;">${escapeHtml(t('featuredLabel'))}</span>
-          </label>
           <label>${escapeHtml(t('addr'))}<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
-          <label>${escapeHtml(t('coordsInput'))}
+          <label>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span>${escapeHtml(t('coordsInput'))}</span>
+              <button class="admin-help-link" type="button" data-coords-help>${escapeHtml(t('coordsHelp'))}</button>
+            </div>
             <input class="admin-input" data-admin-field="coords" value="${escapeHtml(coordValue)}" placeholder="13.7563, 100.5018">
           </label>
           <label>${escapeHtml(t('hours'))}<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
-          <label>${escapeHtml(t('gMap'))}<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
-          <label>Google Place ID<input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}" placeholder="${escapeHtml(t('placeIdHint'))}"></label>
+          <label>Google Place ID
+            <input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}">
+            <span class="admin-hint">${escapeHtml(t('placeIdHint'))}</span>
+          </label>
           <label>${escapeHtml(t('igVideo'))}<input class="admin-input" data-admin-field="ig" value="${escapeHtml(item.ig || '')}"></label>
           <label>${escapeHtml(t('ytVideo'))}<input class="admin-input" data-admin-field="youtube" value="${escapeHtml(item.youtube || '')}"></label>
           <label class="admin-cover">${escapeHtml(t('desc'))}
@@ -2998,6 +3012,12 @@ function render(){
           alert(t('gmapFail'));
         }
       });
+    };
+  });
+  cardsEl.querySelectorAll('[data-coords-help]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.preventDefault();
+      alert(t('coordsHelpText'));
     };
   });
   if (isAdmin || isCreator){
