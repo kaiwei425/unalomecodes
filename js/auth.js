@@ -368,6 +368,8 @@
           || localStorage.getItem('__addPendingAfterLogin') === '1';
         const shouldOpen = sessionStorage.getItem('__openCartAfterLogin') === '1'
           || localStorage.getItem('__openCartAfterLogin') === '1';
+        const shouldAddSvc = localStorage.getItem('__addSvcPendingAfterLogin') === '1';
+        const shouldOpenSvc = localStorage.getItem('__openSvcCartAfterLogin') === '1';
         if (shouldAdd){
           sessionStorage.removeItem('__addPendingAfterLogin');
           try{ localStorage.removeItem('__addPendingAfterLogin'); }catch(_){}
@@ -377,6 +379,16 @@
           sessionStorage.removeItem('__openCartAfterLogin');
           try{ localStorage.removeItem('__openCartAfterLogin'); }catch(_){}
           if (typeof window.openCart === 'function') window.openCart();
+        }
+        if (shouldAddSvc && typeof window.__addPendingServiceToCart === 'function'){
+          const added = window.__addPendingServiceToCart();
+          if (added !== false){
+            try{ localStorage.removeItem('__addSvcPendingAfterLogin'); }catch(_){}
+          }
+        }
+        if (shouldOpenSvc && typeof window.openServiceCartPanel === 'function'){
+          window.openServiceCartPanel();
+          try{ localStorage.removeItem('__openSvcCartAfterLogin'); }catch(_){}
         }
       }catch(_){}
     }

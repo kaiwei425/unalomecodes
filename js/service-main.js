@@ -1034,50 +1034,26 @@
     return [];
   }
 
-  function addCurrentSelection(){
-    if (!detailDataset) return;
-    if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
-      const msg = '請先登入後再加入購物車。';
-      closeDialog(detailDialog);
-      if (cartPanel) closeDialog(cartPanel);
-      if (window.authState && typeof window.authState.promptLogin === 'function'){
-        window.authState.promptLogin(msg);
-      }else{
-        alert(msg);
-      }
-      if (window.authState && typeof window.authState.login === 'function'){
-        window.authState.login();
-      }else{
-        window.location.href = '/api/auth/google/login';
-      }
-      return;
-    }
-    const limitedTs = parseLimitedUntil(detailDataset && detailDataset.limitedUntil);
-    if (limitedTs && Date.now() >= limitedTs){
-      alert('此服務已結束上架');
-      return;
-    }
-    let cart = loadCart();
-    cart = ensureSingleService(cart, resolveServiceId(detailDataset));
-    if (cart === null) return;
-    const options = Array.isArray(detailDataset.options) ? detailDataset.options.filter(opt=>opt && opt.name) : [];
-    const variant = options.length ? getVariantSelection(detailDataset) : null;
+  function buildServiceCartItem(detail){
+    if (!detail) return null;
+    const options = Array.isArray(detail.options) ? detail.options.filter(opt=>opt && opt.name) : [];
+    const variant = options.length ? getVariantSelection(detail) : null;
     if (options.length && !variant){
       alert('請先選擇服務項目');
-      return;
+      return null;
     }
-    const svcId = resolveServiceId(detailDataset);
-    const qtyEnabled = isQtyEnabled(detailDataset);
+    const svcId = resolveServiceId(detail);
+    const qtyEnabled = isQtyEnabled(detail);
     const qty = qtyEnabled && detailQtyInput ? Math.max(1, Number(detailQtyInput.value||1) || 1) : 1;
-    const fee = qtyEnabled ? getServiceFee(detailDataset) : 0;
-    const feeLabel = qtyEnabled ? getServiceFeeLabel(detailDataset) : '';
-    const qtyLabel = qtyEnabled ? getServiceQtyLabel(detailDataset) : '';
-    const photoRequired = isRitualPhotoRequired(detailDataset);
-    const item = {
+    const fee = qtyEnabled ? getServiceFee(detail) : 0;
+    const feeLabel = qtyEnabled ? getServiceFeeLabel(detail) : '';
+    const qtyLabel = qtyEnabled ? getServiceQtyLabel(detail) : '';
+    const photoRequired = isRitualPhotoRequired(detail);
+    return {
       uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
       serviceId: svcId,
-      serviceName: detailDataset.name || '服務',
-      basePrice: Number(detailDataset.price||0),
+      serviceName: detail.name || '服務',
+      basePrice: Number(detail.price||0),
       optionName: variant ? variant.name : '',
       optionPrice: variant ? Number(variant.price||0) : 0,
       qty,
@@ -1086,8 +1062,65 @@
       serviceFee: fee,
       serviceFeeLabel: feeLabel,
       photoRequired,
-      image: (Array.isArray(detailDataset.gallery) && detailDataset.gallery[0]) || detailDataset.cover || ''
+      image: (Array.isArray(detail.gallery) && detail.gallery[0]) || detail.cover || ''
     };
+  }
+
+  function stashPendingService(item){
+    if (!item) return;
+    try{
+      localStorage.setItem('__svcPendingAddToCart__', JSON.stringify(item));
+      localStorage.setItem('__addSvcPendingAfterLogin','1');
+      localStorage.setItem('__openSvcCartAfterLogin','1');
+    }catch(_){}
+  }
+
+  function addPendingServiceToCart(){
+    let pending = null;
+    try{
+      const raw = localStorage.getItem('__svcPendingAddToCart__');
+      if (raw) pending = JSON.parse(raw);
+    }catch(_){}
+    try{ localStorage.removeItem('__svcPendingAddToCart__'); }catch(_){}
+    if (!pending) return false;
+    let cart = loadCart();
+    cart = ensureSingleService(cart, pending.serviceId);
+    if (cart === null) return false;
+    cart.push(pending);
+    saveCart(cart);
+    renderCartPanel();
+    updateCartBadge(cart);
+    return true;
+  }
+
+  function openServiceCartPanel(){
+    renderCartPanel();
+    if (cartPanel) openDialog(cartPanel);
+  }
+
+  function addCurrentSelection(){
+    if (!detailDataset) return;
+    const limitedTs = parseLimitedUntil(detailDataset && detailDataset.limitedUntil);
+    if (limitedTs && Date.now() >= limitedTs){
+      alert('此服務已結束上架');
+      return;
+    }
+    const item = buildServiceCartItem(detailDataset);
+    if (!item) return;
+    if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+      closeDialog(detailDialog);
+      if (cartPanel) closeDialog(cartPanel);
+      stashPendingService(item);
+      if (window.authState && typeof window.authState.login === 'function'){
+        window.authState.login();
+      }else{
+        window.location.href = '/api/auth/google/login';
+      }
+      return;
+    }
+    let cart = loadCart();
+    cart = ensureSingleService(cart, item.serviceId);
+    if (cart === null) return;
     cart.push(item);
     saveCart(cart);
     renderCartPanel();
@@ -1096,7 +1129,7 @@
     renderCartPanel();
     if (cartPanel) openDialog(cartPanel);
     try{
-      if (window.trackEvent) window.trackEvent('service_add_to_cart', { itemId: svcId, qty });
+      if (window.trackEvent) window.trackEvent('service_add_to_cart', { itemId: item.serviceId, qty: item.qty });
     }catch(_){}
   }
 
@@ -1364,6 +1397,21 @@
       resetCheckoutFlow();
     });
   }
+
+  try{
+    window.__addPendingServiceToCart = addPendingServiceToCart;
+    window.openServiceCartPanel = openServiceCartPanel;
+    if (window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()){
+      if (localStorage.getItem('__addSvcPendingAfterLogin') === '1'){
+        const added = addPendingServiceToCart();
+        if (added !== false) localStorage.removeItem('__addSvcPendingAfterLogin');
+      }
+      if (localStorage.getItem('__openSvcCartAfterLogin') === '1'){
+        openServiceCartPanel();
+        localStorage.removeItem('__openSvcCartAfterLogin');
+      }
+    }
+  }catch(_){}
 
   setRequestDateMin();
   if (window.authState){
