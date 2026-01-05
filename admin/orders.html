@@ -223,9 +223,11 @@ function orderItemsSummary711(o){
   }];
   const parts = items.map(it => {
     const title = String(it.productName || it.name || o.productName || it.title || '商品').trim();
+    const spec = String(it.variantName || it.variant || it.spec || '').trim();
+    const fullTitle = spec ? `${title}｜規格：${spec}` : title;
     if (!title) return '';
     const qty = Math.max(1, Number(it.qty || it.quantity || 1));
-    return qty > 1 ? `${title}*${qty}` : title;
+    return qty > 1 ? `${fullTitle}*${qty}` : fullTitle;
   }).filter(Boolean);
   let summary = parts.join('；');
   if (summary.length > 200) summary = summary.slice(0, 200);
