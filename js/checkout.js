@@ -1066,13 +1066,28 @@ function __cartPricing(includePendingDetail, opts){
 /* ==== order-lookup script ==== */
 (function(){
   // ---------- helpers ----------
+  function normalizeDisplayStatus(s){
+    var t = String(s || '').trim();
+    if (!t || t === 'pending' || t === '待付款' || t === 'waiting_verify' || t.indexOf('待處理') !== -1 || t.indexOf('待確認') !== -1){
+      return '訂單待處理';
+    }
+    if (t.indexOf('已付款待出貨') !== -1 || t === '待出貨') return '待出貨';
+    if (t.indexOf('已寄件') !== -1 || t.indexOf('已寄出') !== -1 || t.indexOf('已出貨') !== -1 || t.indexOf('寄出') !== -1) return '已寄件';
+    if (t.indexOf('已取件') !== -1 || t.indexOf('已完成訂單') !== -1 || t.indexOf('完成訂單') !== -1 || t.indexOf('訂單完成') !== -1){
+      return '已取件（訂單完成）';
+    }
+    if (t.indexOf('付款逾期') !== -1 || t.indexOf('付款失敗') !== -1 || t.indexOf('金額不符') !== -1) return '付款逾期';
+    if (t.indexOf('取消') !== -1 || t.indexOf('退款') !== -1 || t.indexOf('作廢') !== -1) return '取消訂單';
+    return t;
+  }
   function statusBadge(s){
-    var t = String(s||'').trim();
+    var t = normalizeDisplayStatus(s);
     var cls = 'ok-badge';
-    if (t === '已完成訂單') cls += ' ok-done';
-    else if (t === '已付款待出貨') cls += ' ok-paid';
-    else if (t === '已寄件') cls += ' ok-ship';
-    return '<span class="'+cls+'">'+ (t||'處理中') +'</span>';
+    if (t.indexOf('已取件') !== -1 || t.indexOf('訂單完成') !== -1) cls += ' ok-done';
+    else if (t.indexOf('待出貨') !== -1) cls += ' ok-paid';
+    else if (t.indexOf('已寄件') !== -1) cls += ' ok-ship';
+    else if (t.indexOf('取消') !== -1 || t.indexOf('逾期') !== -1) cls += ' ok-muted';
+    return '<span class="'+cls+'">'+ (t||'訂單待處理') +'</span>';
   }
   function numTW(v){ try{ return 'NT$ ' + Number(String(v||0).toString().replace(/[^\d.]/g,'')).toLocaleString('zh-TW'); }catch(e){ return String(v||''); } }
   function digitsOnly(s){ return String(s||'').replace(/\D+/g,''); }

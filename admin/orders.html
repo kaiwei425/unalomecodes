@@ -94,25 +94,22 @@
     <h1>訂單管理（批次）</h1>
     <div class="tabs" id="statusTabs">
       <button class="tab-btn active" data-tab="all">全部 <span class="tab-count" data-tab="all">0</span></button>
-      <button class="tab-btn" data-tab="pending">待付款 <span class="tab-count" data-tab="pending">0</span></button>
-      <button class="tab-btn" data-tab="paid">已付款待出貨 <span class="tab-count" data-tab="paid">0</span></button>
+      <button class="tab-btn" data-tab="pending">訂單待處理 <span class="tab-count" data-tab="pending">0</span></button>
+      <button class="tab-btn" data-tab="ready">待出貨 <span class="tab-count" data-tab="ready">0</span></button>
       <button class="tab-btn" data-tab="shipped">已寄件 <span class="tab-count" data-tab="shipped">0</span></button>
-      <button class="tab-btn" data-tab="done">訂單完成 <span class="tab-count" data-tab="done">0</span></button>
+      <button class="tab-btn" data-tab="done">已取件（訂單完成） <span class="tab-count" data-tab="done">0</span></button>
+      <button class="tab-btn" data-tab="cancel">取消訂單 <span class="tab-count" data-tab="cancel">0</span></button>
     </div>
 <div class="bar">
       <input id="q" placeholder="搜尋 訂單編號 / 商品 / email / 門市 ...">
       <select id="statusSel">
         <option value="">全部狀態</option>
-        <option value="pending">pending</option>
-        <option value="待付款">待付款</option>
-        <option value="waiting_verify">waiting_verify</option>
-        <option value="已付款待出貨">已付款待出貨</option>
+        <option value="訂單待處理">訂單待處理</option>
+        <option value="待出貨">待出貨</option>
         <option value="已寄件">已寄件</option>
-        <option value="已完成訂單">已完成訂單</option>
-        <option value="付款失敗">付款失敗</option>
-        <option value="付款金額不符">付款金額不符</option>
         <option value="付款逾期">付款逾期</option>
-        <option value="已取消">已取消</option>
+        <option value="已取件（訂單完成）">已取件（訂單完成）</option>
+        <option value="取消訂單">取消訂單</option>
       </select>
       <select id="sortSel"><option value="time_desc">時間：新 → 舊</option><option value="time_asc">時間：舊 → 新</option><option value="amt_desc">金額：高 → 低</option><option value="amt_asc">金額：低 → 高</option><option value="status">狀態</option></select>
       <button class="btn" id="reload">重新整理</button>
@@ -120,9 +117,9 @@
     </div>
 
     <div class="selbar">
-      <button class="btn gold" id="markPaid">批次標記已付款</button>
-      <button class="btn gold" id="markShipped">批次標記已出貨</button>
-      <button class="btn gold" id="markDone">批次標記已完成訂單</button>
+      <button class="btn gold" id="markPaid">批次標記待出貨</button>
+      <button class="btn gold" id="markShipped">批次標記已寄件</button>
+      <button class="btn gold" id="markDone">批次標記已取件（訂單完成）</button>
       <button class="btn danger" id="batchDelete">批次刪除</button>
       <button class="btn" id="releaseHolds">手動釋放逾期</button>
       <button class="btn" id="exportCsv">匯出選取訂單（CSV）</button>
@@ -202,6 +199,21 @@ function escapeHtml(s){
 
 function escapeXml(s){
   return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function normalizeDisplayStatus(status){
+  const s = String(status || '').trim();
+  if (!s || s === 'pending' || s === '待付款' || s === 'waiting_verify' || s.includes('待處理') || s.includes('待確認')) {
+    return '訂單待處理';
+  }
+  if (s.includes('已付款待出貨') || s === '待出貨') return '待出貨';
+  if (s.includes('已寄件') || s.includes('已寄出') || s.includes('已出貨') || s.includes('寄出')) return '已寄件';
+  if (s.includes('已取件') || s.includes('已完成訂單') || s.includes('完成訂單') || s.includes('訂單完成')) {
+    return '已取件（訂單完成）';
+  }
+  if (s.includes('付款逾期') || s.includes('付款失敗') || s.includes('金額不符')) return '付款逾期';
+  if (s.includes('取消') || s.includes('退款') || s.includes('作廢')) return '取消訂單';
+  return s;
 }
 
 function normalizeDigits(val){
@@ -395,19 +407,19 @@ function matchesQuery(order, q){
 }
 
 function getStatusGroup(status){
-  const s = String(status || '').trim();
-  if (!s || s === 'pending' || s === '待付款' || s === 'waiting_verify') return 'pending';
-  if (s.includes('已付款待出貨')) return 'paid';
-  if (s.includes('已寄件') || s.includes('已出貨')) return 'shipped';
-  if (s.includes('已完成')) return 'done';
-  if (s.includes('付款') && !s.includes('已付款')) return 'pending';
+  const s = normalizeDisplayStatus(status);
+  if (!s || s === '訂單待處理') return 'pending';
+  if (s.includes('待出貨')) return 'ready';
+  if (s.includes('已寄件')) return 'shipped';
+  if (s.includes('已取件') || s.includes('訂單完成')) return 'done';
+  if (s.includes('取消') || s.includes('逾期')) return 'cancel';
   return 'other';
 }
 
 function updateTabCounts(){
   const q = $('#q').value.trim().toLowerCase();
   const items = ORDERS.filter(o => matchesQuery(o, q));
-  const counts = { all: items.length, pending:0, paid:0, shipped:0, done:0 };
+  const counts = { all: items.length, pending:0, ready:0, shipped:0, done:0, cancel:0 };
   items.forEach(o=>{
     const g = getStatusGroup(o.status);
     if (counts[g] != null) counts[g]++;
@@ -465,7 +477,7 @@ function applyFilter(){
   if (activeTab !== 'all'){
     items = items.filter(o => getStatusGroup(o.status) === activeTab);
   }
-  if (st) items = items.filter(o=> String(o.status||'') === st);
+  if (st) items = items.filter(o=> normalizeDisplayStatus(o.status) === st);
   current = items;
   $('#count').textContent = `共 ${items.length} 筆`;
   const sort = $('#sortSel') ? $('#sortSel').value : 'time_desc';
@@ -491,6 +503,7 @@ function render(){
       ''
     ).trim();
     const checked = selected.has(o.id) ? 'checked' : '';
+    const displayStatus = normalizeDisplayStatus(o.status);
 
 
 const items = Array.isArray(o.items) ? o.items : [{
@@ -667,20 +680,16 @@ const items = Array.isArray(o.items) ? o.items : [{
   ${ (buyer.store||o.store) ? `<div class="muted">7-11 門市：${escapeHtml(buyer.store||o.store)}</div>` : "" }
   <div class="muted">備註：${escapeHtml(remarkVal) || '（無）'}</div>
 </td>
-      <td><span class="badge ${statusClass(o.status)}">${escapeHtml(o.status||"pending")}</span></td>
+      <td><span class="badge ${statusClass(displayStatus)}">${escapeHtml(displayStatus || "訂單待處理")}</span></td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
         <select class="opStatus" style="padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#0b1022;color:#e5e7eb" data-id="${o.id}">
           <option value="">選擇狀態</option>
-          <option value="pending" ${String(o.status||"")=== "pending" ? "selected":""}>pending</option>
-          <option value="待付款" ${String(o.status||"")=== "待付款" ? "selected":""}>待付款</option>
-          <option value="waiting_verify" ${String(o.status||"")=== "waiting_verify" ? "selected":""}>waiting_verify</option>
-          <option value="已付款待出貨" ${String(o.status||"")=== "已付款待出貨" ? "selected":""}>已付款待出貨</option>
-          <option value="已寄件" ${String(o.status||"")=== "已寄件" ? "selected":""}>已寄件</option>
-          <option value="已完成訂單" ${String(o.status||"")=== "已完成訂單" ? "selected":""}>已完成訂單</option>
-          <option value="付款失敗" ${String(o.status||"")=== "付款失敗" ? "selected":""}>付款失敗</option>
-          <option value="付款金額不符" ${String(o.status||"")=== "付款金額不符" ? "selected":""}>付款金額不符</option>
-          <option value="付款逾期" ${String(o.status||"")=== "付款逾期" ? "selected":""}>付款逾期</option>
-          <option value="已取消" ${String(o.status||"")=== "已取消" ? "selected":""}>已取消</option>
+          <option value="訂單待處理" ${displayStatus === "訂單待處理" ? "selected":""}>訂單待處理</option>
+          <option value="待出貨" ${displayStatus === "待出貨" ? "selected":""}>待出貨</option>
+          <option value="已寄件" ${displayStatus === "已寄件" ? "selected":""}>已寄件</option>
+          <option value="已取件（訂單完成）" ${displayStatus === "已取件（訂單完成）" ? "selected":""}>已取件（訂單完成）</option>
+          <option value="付款逾期" ${displayStatus === "付款逾期" ? "selected":""}>付款逾期</option>
+          <option value="取消訂單" ${displayStatus === "取消訂單" ? "selected":""}>取消訂單</option>
         </select>
         <button class="btn" data-act="applyStatus" data-id="${o.id}">套用</button>
         <button class="btn" data-act="qna" data-id="${o.id}">問與答</button>
@@ -919,7 +928,7 @@ if (qnaList){
   });
 }
 
-// Batch: mark paid
+// Batch: mark ready to ship
 $('#markPaid').addEventListener('click', async ()=>{
   if (selected.size === 0){ toast('請先選取訂單'); return; }
   let ok = 0;
@@ -929,7 +938,7 @@ $('#markPaid').addEventListener('click', async ()=>{
       const res = await authedFetch('/api/order/status', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ id, action:'set', status:'已付款待出貨' })
+        body: JSON.stringify({ id, action:'set', status:'待出貨' })
       });
       const j = await res.json().catch(()=>({}));
       if (res.ok && j && j.ok){
@@ -938,7 +947,7 @@ $('#markPaid').addEventListener('click', async ()=>{
       }
     }catch(_){}
   }
-  toast('已標記已付款待出貨：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
+  toast('已標記待出貨：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
   await loadOrders();
 });
 
@@ -961,7 +970,7 @@ $('#markShipped').addEventListener('click', async ()=>{
       }
     }catch(_){}
   }
-  toast('已標記已出貨：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
+  toast('已標記已寄件：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
   await loadOrders();
 });
 
@@ -975,7 +984,7 @@ $('#markDone').addEventListener('click', async ()=>{
       const res = await authedFetch('/api/order/status', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ id, action:'set', status:'已完成訂單' })
+        body: JSON.stringify({ id, action:'set', status:'已取件（訂單完成）' })
       });
       const j = await res.json().catch(()=>({}));
       if (res.ok && j && j.ok){
@@ -984,7 +993,7 @@ $('#markDone').addEventListener('click', async ()=>{
       }
     }catch(_){}
   }
-  toast('已標記已完成訂單：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
+  toast('已標記已取件（訂單完成）：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
   await loadOrders();
 });
 
@@ -1136,14 +1145,14 @@ document.addEventListener('click', function(e){
 
 // helpers for badge color + amount sorting
 function statusClass(s){
-  const v = String(s||'').trim();
+  const v = normalizeDisplayStatus(s);
   if (!v) return '';
-  if (v === 'pending' || v === '待付款' || v === 'waiting_verify') return 'status-pending';
-  if (v.includes('付款失敗') || v.includes('金額不符')) return 'status-fail';
+  if (v === '訂單待處理') return 'status-pending';
+  if (v.includes('待出貨')) return 'status-paid';
+  if (v.includes('已寄件')) return 'status-shipped';
+  if (v.includes('已取件') || v.includes('訂單完成')) return 'status-done';
+  if (v.includes('付款逾期')) return 'status-fail';
   if (v.includes('取消') || v.includes('作廢') || v.includes('退款') || v.includes('逾期')) return 'status-cancel';
-  if (v.includes('已付款')) return 'status-paid';
-  if (v.includes('已寄件') || v.includes('已出貨')) return 'status-shipped';
-  if (v.includes('已完成')) return 'status-done';
   return '';
 }
 function amountNumber(o){

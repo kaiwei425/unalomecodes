@@ -671,6 +671,142 @@ function makeCouponCode(deity){
   return `UC-${d}-${rand}`;
 }
 
+// ======== Coupon one-time usage lock (per code) ========
+async function markCouponUsageOnce(env, code, orderId) {
+  const c = (code || "").toUpperCase().trim();
+  if (!c) return { ok: false, reason: "missing_code" };
+  if (!env.ORDERS) return { ok: false, reason: "ORDERS_not_bound" };
+
+  const key = `COUPON_USED:${c}`;
+  const holdKey = `COUPON_HOLD:${c}`;
+  try {
+    const existing = await env.ORDERS.get(key);
+    if (existing) {
+      let parsed = null;
+      try { parsed = JSON.parse(existing); } catch {}
+      return { ok: false, reason: "already_used", existing: parsed || null };
+    }
+    const payload = { code: c, orderId: String(orderId || ""), ts: new Date().toISOString() };
+    await env.ORDERS.put(key, JSON.stringify(payload));
+    try{
+      if (env.COUPONS){
+        const rec = await readCoupon(env, c);
+        if (rec){
+          rec.used = true;
+          rec.usedAt = payload.ts;
+          rec.orderId = payload.orderId;
+          if (rec.reservedBy && rec.reservedBy === payload.orderId) {
+            delete rec.reservedBy;
+            delete rec.reservedAt;
+            delete rec.reservedUntil;
+          }
+          await saveCoupon(env, rec);
+        }
+      }
+    }catch(_){}
+    try{
+      await env.ORDERS.delete(holdKey);
+    }catch(_){}
+    return { ok: true };
+  } catch (e) {
+    console.error("markCouponUsageOnce error", e);
+    return { ok: false, reason: "error" };
+  }
+}
+
+async function reserveCouponUsage(env, code, orderId, ttlSec=900) {
+  const c = (code || "").toUpperCase().trim();
+  if (!c) return { ok:false, reason:'missing_code' };
+  if (!env.ORDERS) return { ok:false, reason:'ORDERS_not_bound' };
+  const usedKey = `COUPON_USED:${c}`;
+  const holdKey = `COUPON_HOLD:${c}`;
+  try{
+    const used = await env.ORDERS.get(usedKey);
+    if (used) return { ok:false, reason:'already_used' };
+    const existing = await env.ORDERS.get(holdKey);
+    if (existing){
+      let parsed = null;
+      try{ parsed = JSON.parse(existing); }catch(_){}
+      if (parsed && parsed.orderId && String(parsed.orderId) === String(orderId)) {
+        return { ok:true, reserved:true };
+      }
+      return { ok:false, reason:'reserved', existing: parsed || null };
+    }
+    const ttl = Math.max(60, Number(ttlSec || 0) || 900);
+    const expTs = Date.now() + ttl * 1000;
+    const payload = { code: c, orderId: String(orderId||''), ts: new Date().toISOString(), exp: expTs };
+    await env.ORDERS.put(holdKey, JSON.stringify(payload), { expirationTtl: ttl });
+    try{
+      if (env.COUPONS){
+        const rec = await readCoupon(env, c);
+        if (rec && !rec.used){
+          rec.reservedBy = payload.orderId;
+          rec.reservedAt = payload.ts;
+          rec.reservedUntil = new Date(expTs).toISOString();
+          await saveCoupon(env, rec);
+        }
+      }
+    }catch(_){}
+    return { ok:true, reserved:true, exp: expTs };
+  }catch(e){
+    console.error('reserveCouponUsage error', e);
+    return { ok:false, reason:'error' };
+  }
+}
+
+async function releaseCouponUsage(env, code, orderId) {
+  const c = (code || "").toUpperCase().trim();
+  if (!c || !env.ORDERS) return { ok:false, reason:'missing_code' };
+  const usedKey = `COUPON_USED:${c}`;
+  const holdKey = `COUPON_HOLD:${c}`;
+  try{
+    const used = await env.ORDERS.get(usedKey);
+    if (used){
+      let parsed = null;
+      try{ parsed = JSON.parse(used); }catch(_){}
+      if (parsed && parsed.orderId && String(parsed.orderId) === String(orderId)){
+        await env.ORDERS.delete(usedKey);
+        if (env.COUPONS){
+          try{
+            const rec = await readCoupon(env, c);
+            if (rec && String(rec.orderId||'') === String(orderId)){
+              rec.used = false;
+              delete rec.usedAt;
+              delete rec.orderId;
+              await saveCoupon(env, rec);
+            }
+          }catch(_){}
+        }
+      }
+    }
+    const hold = await env.ORDERS.get(holdKey);
+    if (hold){
+      let parsed = null;
+      try{ parsed = JSON.parse(hold); }catch(_){}
+      if (!parsed || !parsed.orderId || String(parsed.orderId) === String(orderId)){
+        await env.ORDERS.delete(holdKey);
+      }
+    }
+    if (env.COUPONS){
+      try{
+        const rec = await readCoupon(env, c);
+        if (rec && (!rec.used || String(rec.orderId||'') === String(orderId))){
+          if (!rec.reservedBy || String(rec.reservedBy||'') === String(orderId)){
+            delete rec.reservedBy;
+            delete rec.reservedAt;
+            delete rec.reservedUntil;
+            await saveCoupon(env, rec);
+          }
+        }
+      }catch(_){}
+    }
+    return { ok:true };
+  }catch(e){
+    console.error('releaseCouponUsage error', e);
+    return { ok:false, reason:'error' };
+  }
+}
+
 // Foods helpers (for food map)
 function foodKey(id){ return `FOOD:${id}`; }
 function parseLatLngPair(lat, lng){
@@ -2758,7 +2894,7 @@ function statusIsPaid(s){
   const lower = v.toLowerCase();
   const unpaidHints = ['待付款','未付款','pending','waiting','待處理','待確認'];
   if (unpaidHints.some(k => lower.includes(k))) return false;
-  const paidHints = ['已付款','已寄件','已出貨','已完成','完成訂單','完成','出貨'];
+  const paidHints = ['已付款','待出貨','已寄件','已出貨','已完成','完成訂單','訂單完成','已取件','完成','出貨'];
   if (paidHints.some(k => v.includes(k))) return true;
   return /\bpaid\b/i.test(v);
 }
@@ -2766,7 +2902,7 @@ function statusIsCompleted(s){
   const v = normalizeStatus(s);
   if (!v) return false;
   if (/祈福完成/.test(v) || /成果已通知/.test(v)) return true;
-  if (/已完成訂單/.test(v) || /完成訂單/.test(v) || /訂單完成/.test(v)) return true;
+  if (/已完成訂單/.test(v) || /完成訂單/.test(v) || /訂單完成/.test(v) || /已取件/.test(v)) return true;
   return /\bcompleted\b/i.test(v);
 }
 function statusIsCanceled(s){
@@ -6096,7 +6232,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       amount: Math.max(0, Math.round(amount || 0)),
       shippingFee: shippingFee || 0,
       shipping: shippingFee || 0,
-      status: 'pending',
+      status: '訂單待處理',
       createdAt: now, updatedAt: now,
       ritual_photo_url: ritualPhotoUrl || undefined,
       ritualPhotoUrl: ritualPhotoUrl || undefined,
@@ -6232,7 +6368,7 @@ if (pathname === '/api/order/confirm-transfer' && request.method === 'POST') {
       store: String(body?.buyer?.store || obj?.buyer?.store || ''),
       note:  String(body?.buyer?.note  || obj?.buyer?.note  || '')
     };
-    obj.status = 'waiting_verify';
+    obj.status = '訂單待處理';
     obj.updatedAt = new Date().toISOString();
     await env.ORDERS.put(id, JSON.stringify(obj));
     return new Response(JSON.stringify({ ok:true, order: obj }), { status:200, headers: __headersJSON__() });
@@ -6272,7 +6408,7 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
 
     let draft;
     try{
-      draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'待付款', reserveCoupon:true, reserveTtlSec: Number(env.CC_COUPON_HOLD_TTL_SEC || 900) || 900 });
+      draft = await buildOrderDraft(env, body, origin, { method:'信用卡/綠界', status:'訂單待處理', reserveCoupon:true, reserveTtlSec: Number(env.CC_COUPON_HOLD_TTL_SEC || 900) || 900 });
     }catch(e){
       const reason = e && e.code ? String(e.code) : 'invalid_product';
       const msg = reason === 'product_not_found' ? '找不到商品'
@@ -6422,7 +6558,7 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
     order.payment.paidAt = new Date().toISOString();
     order.payment.amount = paidAmount || Number(order.payment.amount || order.amount || 0);
     if (rtnCode === 1 && orderAmount && Math.round(paidAmount) !== Math.round(orderAmount)) {
-      order.status = '付款金額不符';
+      order.status = '付款逾期';
       order.payment.status = 'AMOUNT_MISMATCH';
       if (order.coupon && !order.coupon.failed) {
         try{
@@ -6449,7 +6585,7 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
       await env.ORDERS.put(orderId, JSON.stringify(order));
       return new Response('0|AMOUNT_MISMATCH', { status:400, headers:{'Content-Type':'text/plain'} });
     }
-    order.status = rtnCode === 1 ? '已付款待出貨' : '付款失敗';
+    order.status = rtnCode === 1 ? '待出貨' : '付款逾期';
     order.updatedAt = new Date().toISOString();
 
     if (rtnCode === 1) {
@@ -7231,7 +7367,7 @@ async function buildOrderDraft(env, body, origin, opts = {}) {
     amount: Math.max(0, Math.round(amount)),
     shippingFee: shippingFee || 0,
     shipping: shippingFee || 0,
-    status: opts.status || '待付款',
+    status: opts.status || '訂單待處理',
     createdAt: now, updatedAt: now,
     ritual_photo_url: ritualPhotoUrl || undefined,
     ritualPhotoUrl: ritualPhotoUrl || undefined,
@@ -7608,18 +7744,7 @@ async function sendEmailMessage(env, message) {
 
 function shouldNotifyStatus(status) {
   const txt = String(status || '').trim();
-  if (!txt) return false;
-  if (txt === '待處理' || txt === '處理中') return false;
-  if (/祈福進行中/.test(txt)) return true;
-  if (/祈福完成/.test(txt)) return true;
-  if (/成果已通知/.test(txt)) return true;
-  if (/已完成訂單/.test(txt)) return true;
-  if (/已付款/.test(txt) && /出貨|寄件|寄貨|出貨/.test(txt)) return true;
-  if (/已寄件/.test(txt) || /已寄出/.test(txt) || /寄出/.test(txt)) return true;
-  if (/已出貨/.test(txt)) return true;
-  return txt === '已付款待出貨'
-    || txt === '已寄件'
-    || txt === '已寄出';
+  return !!txt;
 }
 
 function escapeHtmlEmail(str) {
@@ -8471,7 +8596,7 @@ if (pathname === '/api/order') {
       const order = {
         id, productId, productName, price, qty, method, buyer,
         amount,
-        status:'pending',
+        status:'訂單待處理',
         createdAt:now, updatedAt:now,
         resultToken: makeToken(32),
         results: [],
