@@ -86,6 +86,7 @@
 <script src="/js/admin-guard.js" defer></script>
 <link rel="stylesheet" href="/admin/admin-ui.css">
 <script src="/js/admin-shell.js" defer></script>
+<script src="/js/fflate.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -125,6 +126,7 @@
       <button class="btn danger" id="batchDelete">批次刪除</button>
       <button class="btn" id="releaseHolds">手動釋放逾期</button>
       <button class="btn" id="exportCsv">匯出選取訂單（CSV）</button>
+      <button class="btn" id="export711">匯出選取訂單（7-11 XLSM）</button>
       <span class="muted">已選取 <span class="count" id="selCount">0</span> 筆</span>
     </div>
 
@@ -196,6 +198,71 @@ function toast(msg){
 
 function escapeHtml(s){
   return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function escapeXml(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function normalizeDigits(val){
+  return String(val || '').replace(/\D/g, '');
+}
+
+function pickStoreId(o){
+  const buyer = o && o.buyer ? o.buyer : {};
+  const raw = buyer.store ?? o.store ?? o.storeid ?? o.storeId ?? '';
+  if (raw && typeof raw === 'object'){
+    return String(raw.id || raw.storeid || raw.code || raw.store || '').trim();
+  }
+  return String(raw || '').trim();
+}
+
+function orderItemsSummary711(o){
+  const items = Array.isArray(o.items) ? o.items : [{
+    productName:o.productName, productId:o.productId, price:o.price, qty:o.qty, deity:o.deity
+  }];
+  const parts = items.map(it => {
+    const title = String(it.productName || it.name || o.productName || it.title || '商品').trim();
+    if (!title) return '';
+    const qty = Math.max(1, Number(it.qty || it.quantity || 1));
+    return qty > 1 ? `${title}*${qty}` : title;
+  }).filter(Boolean);
+  let summary = parts.join('；');
+  if (summary.length > 200) summary = summary.slice(0, 200);
+  return summary;
+}
+
+function build711Rows(orders){
+  const rows = [];
+  const warnings = [];
+  let rowIndex = 7;
+  for (const o of orders){
+    const buyer = o && o.buyer ? o.buyer : {};
+    const name = String(buyer.name || o.name || o.buyer_name || '').trim();
+    const phone = normalizeDigits(buyer.phone || o.phone || o.contact || o.buyer_phone || o.bfContact || '');
+    const storeRaw = pickStoreId(o);
+    const storeDigits = normalizeDigits(storeRaw);
+    const store = storeDigits.length >= 6 ? storeDigits.slice(0, 6) : String(storeRaw || '');
+    const product = orderItemsSummary711(o);
+    const amount = Math.max(0, Number(amountNumber(o) || 0));
+    const shipping = 38;
+    const total = amount + shipping;
+    const cols = ['A','B','C','D','E','F','G','H','I','J','K'];
+    const values = [name, phone, store, '常溫', product, String(amount), String(shipping), '', '', '', ''];
+
+    if (!name) warnings.push(`${o.id || '未知訂單'}：缺少取件人姓名`);
+    if (!phone || phone.length !== 10) warnings.push(`${o.id || '未知訂單'}：取件人手機格式可能不正確`);
+    if (!storeDigits || storeDigits.length !== 6) warnings.push(`${o.id || '未知訂單'}：取件門市店號可能不正確`);
+    if (total < 55) warnings.push(`${o.id || '未知訂單'}：訂單金額+運費低於 55`);
+
+    const cells = cols.map((col, idx) => {
+      const val = values[idx] == null ? '' : String(values[idx]);
+      return `<c r="${col}${rowIndex}" t="inlineStr"><is><t>${escapeXml(val)}</t></is></c>`;
+    }).join('');
+    rows.push(`<row r="${rowIndex}">${cells}</row>`);
+    rowIndex++;
+  }
+  return { rows, warnings };
 }
 
 const qnaDialog = document.getElementById('qnaDialog');
@@ -951,6 +1018,58 @@ $('#exportCsv').addEventListener('click', async ()=>{
     URL.revokeObjectURL(href);
   }catch(err){
     toast('匯出失敗：' + (err.message||err));
+  }
+});
+
+// Export selected to 7-11 XLSM (front-end uses template)
+$('#export711').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  if (!window.fflate || !fflate.unzipSync || !fflate.zipSync){
+    toast('匯出失敗：缺少壓縮模組');
+    return;
+  }
+  const orders = Array.from(selected).map(id => ORDERS.find(o => o.id === id)).filter(Boolean);
+  if (!orders.length){
+    toast('查無選取訂單');
+    return;
+  }
+  try{
+    const res = await fetch('/admin/711-template.xlsm', { cache:'no-store' });
+    if (!res.ok) throw new Error('無法讀取模板檔');
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const zipped = fflate.unzipSync(buf);
+    const sheetPath = 'xl/worksheets/sheet1.xml';
+    if (!zipped[sheetPath]) throw new Error('模板缺少 sheet1.xml');
+    const sheetXml = fflate.strFromU8(zipped[sheetPath]);
+    const built = build711Rows(orders);
+    if (!built.rows.length){
+      toast('沒有可匯出的資料');
+      return;
+    }
+    if (!sheetXml.includes('</sheetData>')) throw new Error('模板格式不符');
+    let nextXml = sheetXml.replace('</sheetData>', `${built.rows.join('')}</sheetData>`);
+    const lastRow = 6 + built.rows.length;
+    nextXml = nextXml.replace(/ref="A1:K\\d+"/, `ref="A1:K${lastRow}"`);
+    zipped[sheetPath] = fflate.strToU8(nextXml);
+    const out = fflate.zipSync(zipped, { level: 0 });
+    const blob = new Blob([out], { type: 'application/vnd.ms-excel.sheet.macroEnabled.12' });
+    const stamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `orders-711-${stamp}.xlsm`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+    if (built.warnings.length){
+      console.warn('[711-export warnings]', built.warnings);
+      toast(`已匯出，但有 ${built.warnings.length} 筆資料需要檢查`);
+    }else{
+      toast('已匯出 7-11 XLSM');
+    }
+  }catch(err){
+    toast('匯出失敗：' + (err.message || err));
   }
 });
 
