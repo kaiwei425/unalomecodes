@@ -1103,8 +1103,32 @@ function normalizeFoodPayload(payload, fallbackId){
   const out = { id };
   // 只有當欄位存在於 payload 時才更新，避免 undefined 覆蓋掉舊資料
   const str = (k) => { if (body[k] !== undefined) out[k] = String(body[k]||'').trim(); };
+  const num = (k) => {
+    if (body[k] === undefined) return;
+    const n = Number(body[k]);
+    out[k] = Number.isFinite(n) ? n : body[k];
+  };
+  const list = (k, altKey) => {
+    if (body[k] === undefined && (!altKey || body[altKey] === undefined)) return;
+    const raw = (body[k] !== undefined) ? body[k] : body[altKey];
+    if (Array.isArray(raw)) {
+      out[k] = raw.map(v=>String(v).trim()).filter(Boolean);
+      return;
+    }
+    if (typeof raw === 'string') {
+      out[k] = raw.split(/[,，]/).map(v=>v.trim()).filter(Boolean);
+      return;
+    }
+    out[k] = [];
+  };
   
   str('name'); str('category'); str('area'); str('price');
+  str('type');
+  num('stayMin');
+  num('priceLevel');
+  list('openSlots', 'open_slots');
+  list('tags');
+  list('wishTags', 'wish_tags');
   str('address'); str('hours'); str('maps'); str('ig');
   str('youtube'); str('igComment'); str('cover');
   str('ownerId'); str('ownerName');
@@ -1140,6 +1164,12 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('category', incoming.category);
   assignIf('area', incoming.area);
   assignIf('price', incoming.price);
+  assignIf('type', incoming.type);
+  assignIf('stayMin', incoming.stayMin);
+  assignIf('openSlots', incoming.openSlots);
+  assignIf('priceLevel', incoming.priceLevel);
+  assignIf('tags', incoming.tags);
+  assignIf('wishTags', incoming.wishTags);
   assignIf('address', incoming.address);
   assignIf('hours', incoming.hours);
   assignIf('maps', incoming.maps);
