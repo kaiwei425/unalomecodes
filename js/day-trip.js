@@ -441,6 +441,26 @@
     return { stayMultiplier: 1.0, stopFactor: 90 };
   }
 
+  function getModeLabel(mode){
+    if (mode === 'battle') return '戰鬥模式';
+    if (mode === 'chill') return '散步模式';
+    return '平衡模式';
+  }
+
+  function getRatioLabel(value){
+    if (value === 'food-only') return '只要美食';
+    if (value === 'temple-only') return '只要寺廟';
+    if (value === '2-1') return '美食 2 / 寺廟 1';
+    if (value === '1-2') return '美食 1 / 寺廟 2';
+    return '美食 1 / 寺廟 1';
+  }
+
+  function getTransportLabel(mode){
+    if (mode === 'walking') return '步行';
+    if (mode === 'transit') return '大眾運輸';
+    return '開車/叫車';
+  }
+
   function getTransportSettings(mode){
     if (mode === 'walking') return { speedMinPerKm: 12, travelMode: 'walking' };
     if (mode === 'transit') return { speedMinPerKm: 6, travelMode: 'transit' };
@@ -582,7 +602,28 @@
       if (lastKinds.length > 2) lastKinds.shift();
     }
     const skippedMust = Array.from(mustSet).filter(id => !plan.some(entry => entry.item.id === id));
-    return { plan, skippedMust };
+    return { plan, skippedMust, startMin, endMin };
+  }
+
+  function recomputeTravelStats(plan, origin, transport){
+    let prev = origin;
+    plan.forEach(entry => {
+      const distKm = haversineKm(prev, entry.item.coords);
+      entry.distKm = distKm;
+      entry.travelMin = Math.max(10, Math.round(distKm * transport.speedMinPerKm));
+      prev = entry.item.coords;
+    });
+  }
+
+  function recomputeTimes(plan, startMin){
+    let current = startMin;
+    plan.forEach(entry => {
+      const travelMin = Number(entry.travelMin) || 0;
+      entry.arrive = current + travelMin;
+      entry.depart = entry.arrive + (Number(entry.stayMin) || 0);
+      current = entry.depart;
+    });
+    return current;
   }
 
   function buildMultiStopUrl(origin, plan, travelMode){
@@ -612,6 +653,61 @@
     return `${base}&${params.toString()}`;
   }
 
+  function getRouteKey(planData){
+    const ids = (planData.plan || []).map(entry => entry.item && entry.item.id).join(',');
+    const mode = planData.travelMode || 'driving';
+    return `${mode}:${ids}`;
+  }
+
+  function maybeApplyGoogleTimes(planData){
+    if (!planData || !planData.plan || planData.plan.length < 1) return;
+    if (!state.googleReady || !window.google || !window.google.maps) return;
+    const origin = state.startCoords;
+    if (!origin) return;
+    const routeKey = getRouteKey(planData);
+    if (planData.googleKey === routeKey && (planData.googleApplied || planData.googlePending)) return;
+    planData.googleKey = routeKey;
+    planData.googlePending = true;
+
+    const service = new google.maps.DirectionsService();
+    const waypoints = planData.plan.slice(0, -1).map(entry => {
+      const item = entry.item;
+      if (item.googlePlaceId) return { location: { placeId: item.googlePlaceId }, stopover: true };
+      return { location: { lat: item.coords.lat, lng: item.coords.lng }, stopover: true };
+    });
+    const last = planData.plan[planData.plan.length - 1].item;
+    const destination = last.googlePlaceId
+      ? { placeId: last.googlePlaceId }
+      : { lat: last.coords.lat, lng: last.coords.lng };
+    const travelMode = (planData.travelMode || 'driving').toUpperCase();
+
+    service.route({
+      origin: { lat: origin.lat, lng: origin.lng },
+      destination,
+      waypoints,
+      travelMode: google.maps.TravelMode[travelMode] || google.maps.TravelMode.DRIVING
+    }, (result, status)=>{
+      planData.googlePending = false;
+      if (status !== 'OK' || !result || !result.routes || !result.routes.length) {
+        planData.googleApplied = false;
+        return;
+      }
+      const legs = result.routes[0].legs || [];
+      if (!legs.length) return;
+      planData.plan.forEach((entry, idx)=>{
+        const leg = legs[idx];
+        if (!leg) return;
+        const durationMin = leg.duration ? Math.round(leg.duration.value / 60) : entry.travelMin;
+        const distKm = leg.distance ? leg.distance.value / 1000 : entry.distKm;
+        entry.travelMin = Math.max(1, durationMin || 0);
+        entry.distKm = distKm || entry.distKm;
+      });
+      recomputeTimes(planData.plan, planData.startMin || 0);
+      planData.googleApplied = true;
+      renderPlan(planData, { skipGoogle: true });
+    });
+  }
+
   function buildPlaceLink(item){
     if (item.maps) return item.maps;
     if (item.googlePlaceId) {
@@ -623,18 +719,25 @@
     return '';
   }
 
-  function renderPlan(planData){
+  function renderPlan(planData, opts){
     if (!resultEl) return;
     const plan = planData.plan || [];
     if (!plan.length){
       resultEl.innerHTML = '<div class="result-empty">找不到符合時間的行程，請調整時間或地點再試一次。</div>';
       return;
     }
+    const modeLabel = getModeLabel(planData.mode || (modeSelect ? modeSelect.value : 'balance'));
+    const ratioLabel = getRatioLabel(planData.ratioValue || (ratioSelect ? ratioSelect.value : '1-1'));
+    const transportLabel = getTransportLabel(planData.transportMode || (transportSelect ? transportSelect.value : 'driving'));
+    const startTimeLabel = startTimeInput ? startTimeInput.value : '';
+    const endTimeLabel = endTimeInput ? endTimeInput.value : '';
+    const today = new Date().toLocaleDateString('zh-TW', { month:'2-digit', day:'2-digit', weekday:'short' });
     const foodCount = plan.filter(p => p.item.kind === 'food').length;
     const templeCount = plan.filter(p => p.item.kind === 'temple').length;
     const totalStay = plan.reduce((sum, p)=> sum + p.stayMin, 0);
     const totalTravel = plan.reduce((sum, p)=> sum + p.travelMin, 0);
     const routeUrl = buildMultiStopUrl(state.startCoords, plan, planData.travelMode);
+    const endOverrun = planData.endMin && plan.length ? Math.max(0, plan[plan.length - 1].depart - planData.endMin) : 0;
 
     const listHtml = plan.map((entry, idx)=>{
       const item = entry.item;
@@ -655,11 +758,16 @@
                 ${state.mustIds.has(item.id) ? '<span class="plan-kind" style="background:#f1f5f9;border-color:#cbd5f5;color:#475569;">必去</span>' : ''}
               </div>
               ${meta ? `<div class="plan-meta">${escapeHtml(meta)}</div>` : ''}
-              <div class="plan-meta">移動：${escapeHtml(distanceText)} · 建議停留 ${escapeHtml(String(entry.stayMin))} 分</div>
+              <div class="plan-meta">移動：${escapeHtml(distanceText)} · 停留 ${escapeHtml(String(entry.stayMin))} 分</div>
               <div class="plan-actions">
                 ${mapLink ? `<a class="pill-btn" href="${escapeHtml(mapLink)}" target="_blank" rel="noopener">地圖</a>` : ''}
                 <button class="pill-btn" type="button" data-move="up" data-idx="${idx}">上移</button>
                 <button class="pill-btn" type="button" data-move="down" data-idx="${idx}">下移</button>
+              </div>
+              <div class="plan-edit">
+                <label>停留(分)</label>
+                <input type="number" min="10" step="5" value="${escapeHtml(String(entry.stayMin))}" data-stay-input="${idx}">
+                <button class="pill-btn" type="button" data-stay-update="${idx}">更新</button>
               </div>
             </div>
           </div>
@@ -667,17 +775,55 @@
       `;
     }).join('');
 
-    const warning = planData.skippedMust && planData.skippedMust.length
-      ? `<div class="planner-hint" style="color:#b45309;">有 ${planData.skippedMust.length} 個必去點因時間或營業時段未能排入。</div>`
+    const skippedItems = (planData.skippedMust || [])
+      .map(id => findItemById(id))
+      .filter(Boolean);
+    const warning = skippedItems.length
+      ? `<div class="must-warning">
+          必去點未排入（${skippedItems.length}）：請延長時間或調整條件。
+          <div class="must-warning-list">
+            ${skippedItems.map(item => `<span class="must-warning-chip">${escapeHtml(item.name || '')}</span>`).join('')}
+          </div>
+        </div>`
       : '';
 
+    const timeSourceTag = planData.googleApplied
+      ? '<span class="tag">時間：Google ETA</span>'
+      : '<span class="tag">時間：估算</span>';
+
     resultEl.innerHTML = `
+      <div class="plan-cover">
+        <div>
+          <div class="plan-cover-title">泰國一日行程</div>
+          <div class="plan-cover-sub">${escapeHtml(today)} · ${escapeHtml(startTimeLabel)} - ${escapeHtml(endTimeLabel)}</div>
+        </div>
+        <div class="plan-cover-grid">
+          <div class="plan-cover-badge">
+            <span>起點</span>
+            ${escapeHtml(state.startLabel || '自訂位置')}
+          </div>
+          <div class="plan-cover-badge">
+            <span>模式</span>
+            ${escapeHtml(modeLabel)}
+          </div>
+          <div class="plan-cover-badge">
+            <span>比例</span>
+            ${escapeHtml(ratioLabel)}
+          </div>
+          <div class="plan-cover-badge">
+            <span>交通</span>
+            ${escapeHtml(transportLabel)}
+          </div>
+        </div>
+      </div>
       <div class="plan-summary">
         <span class="tag">起點：${escapeHtml(state.startLabel || '自訂位置')}</span>
         <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}</span>
         <span class="tag">停留 ${totalStay} 分 / 移動 ${totalTravel} 分</span>
+        ${timeSourceTag}
         ${routeUrl ? `<a class="pill-btn" href="${escapeHtml(routeUrl)}" target="_blank" rel="noopener">開啟路線</a>` : ''}
       </div>
+      ${endOverrun ? `<div class="planner-hint" style="color:#b91c1c;">依目前預估會超過結束時間約 ${Math.ceil(endOverrun)} 分鐘。</div>` : ''}
       ${warning}
       ${listHtml}
     `;
@@ -689,10 +835,21 @@
         movePlanItem(idx, dir === 'up' ? -1 : 1);
       });
     });
+    resultEl.querySelectorAll('[data-stay-update]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const idx = Number(btn.getAttribute('data-stay-update'));
+        const input = resultEl.querySelector(`[data-stay-input="${idx}"]`);
+        if (!input) return;
+        const val = parseInt(input.value, 10);
+        if (!Number.isFinite(val) || val <= 0) return;
+        applyStayChange(idx, val);
+      });
+    });
 
     state.currentPlan = plan;
     state.currentSummary = planData;
     updateShareLink(planData);
+    if (!opts || !opts.skipGoogle) maybeApplyGoogleTimes(planData);
   }
 
   function movePlanItem(idx, delta){
@@ -704,7 +861,20 @@
     plan[idx] = plan[nextIdx];
     plan[nextIdx] = temp;
     const planData = Object.assign({}, state.currentSummary || {}, { plan });
+    const transport = planData.transport || getTransportSettings(planData.transportMode || 'driving');
+    recomputeTravelStats(plan, state.startCoords, transport);
+    recomputeTimes(plan, planData.startMin || 0);
     renderPlan(planData);
+  }
+
+  function applyStayChange(idx, newVal){
+    if (!state.currentSummary || !state.currentSummary.plan) return;
+    const plan = state.currentSummary.plan.slice();
+    if (!plan[idx]) return;
+    plan[idx].stayMin = newVal;
+    recomputeTimes(plan, state.currentSummary.startMin || 0);
+    const planData = Object.assign({}, state.currentSummary, { plan });
+    renderPlan(planData, { skipGoogle: true });
   }
 
   async function geocodeQuery(query){
@@ -760,15 +930,22 @@
     const origin = await resolveStartCoords();
     if (!origin) return;
 
-    const modeSettings = applyModeSettings(modeSelect ? modeSelect.value : 'balance');
-    const transport = getTransportSettings(transportSelect ? transportSelect.value : 'driving');
-    const ratio = parseRatio(ratioSelect ? ratioSelect.value : '1-1');
+    const modeValue = modeSelect ? modeSelect.value : 'balance';
+    const transportMode = transportSelect ? transportSelect.value : 'driving';
+    const ratioValue = ratioSelect ? ratioSelect.value : '1-1';
+    const modeSettings = applyModeSettings(modeValue);
+    const transport = getTransportSettings(transportMode);
+    const ratio = parseRatio(ratioValue);
     let items = getActiveItems();
     if (ratio.food === 0) items = items.filter(item => item.kind !== 'food');
     if (ratio.temple === 0) items = items.filter(item => item.kind !== 'temple');
     const settings = { modeSettings, transport, ratio, mustSet: new Set(state.mustIds) };
     const planData = buildPlan(origin, startMin, endMin, items, settings);
     planData.travelMode = transport.travelMode;
+    planData.transport = transport;
+    planData.transportMode = transportMode;
+    planData.mode = modeValue;
+    planData.ratioValue = ratioValue;
     renderPlan(planData);
     if (planData.plan && planData.plan.length){
       setStatus('已產生行程');
@@ -854,13 +1031,29 @@
       }),
       arrive: entry.arrive,
       depart: entry.depart,
-      travelMin: entry.travelMin,
-      distKm: entry.distKm,
+      travelMin: entry.travelMin || 0,
+      distKm: entry.distKm || 0,
       stayMin: entry.stayMin || DEFAULT_STAY[entry.item.kind] || 60
     }));
 
     state.currentPlan = plan;
-    state.currentSummary = { plan, travelMode: payload.transport || 'driving', skippedMust: [] };
+    const transportMode = payload.transport || 'driving';
+    const transport = getTransportSettings(transportMode);
+    const startMin = payload.startTime ? timeInputToMinutes(payload.startTime) : null;
+    const endMin = payload.endTime ? timeInputToMinutes(payload.endTime) : null;
+    if (state.startCoords) recomputeTravelStats(plan, state.startCoords, transport);
+    if (Number.isFinite(startMin)) recomputeTimes(plan, startMin);
+    state.currentSummary = {
+      plan,
+      travelMode: transport.travelMode,
+      transport,
+      transportMode,
+      mode: payload.mode || 'balance',
+      ratioValue: payload.ratio || '1-1',
+      startMin: Number.isFinite(startMin) ? startMin : 0,
+      endMin: Number.isFinite(endMin) ? endMin : 0,
+      skippedMust: []
+    };
     if (payload.startCoords && payload.startLabel) setStatus(`已載入分享行程：${payload.startLabel}`);
     renderPlan(state.currentSummary);
   }
@@ -969,7 +1162,31 @@
     if (modeSelect && plan.mode) modeSelect.value = plan.mode;
     if (ratioSelect && plan.ratio) ratioSelect.value = plan.ratio;
     if (transportSelect && plan.transport) transportSelect.value = plan.transport;
-    state.currentSummary = { plan: plan.plan || [], travelMode: plan.transport || 'driving', skippedMust: [] };
+    const transportMode = plan.transport || 'driving';
+    const transport = getTransportSettings(transportMode);
+    const startMin = plan.startTime ? timeInputToMinutes(plan.startTime) : null;
+    const endMin = plan.endTime ? timeInputToMinutes(plan.endTime) : null;
+    const planItems = (plan.plan || []).map(entry => ({
+      item: entry.item,
+      arrive: entry.arrive,
+      depart: entry.depart,
+      travelMin: entry.travelMin || 0,
+      distKm: entry.distKm || 0,
+      stayMin: entry.stayMin || entry.item.stayMin || DEFAULT_STAY[entry.item.kind] || 60
+    }));
+    if (state.startCoords) recomputeTravelStats(planItems, state.startCoords, transport);
+    if (Number.isFinite(startMin)) recomputeTimes(planItems, startMin);
+    state.currentSummary = {
+      plan: planItems,
+      travelMode: transport.travelMode,
+      transport,
+      transportMode,
+      mode: plan.mode || 'balance',
+      ratioValue: plan.ratio || '1-1',
+      startMin: Number.isFinite(startMin) ? startMin : 0,
+      endMin: Number.isFinite(endMin) ? endMin : 0,
+      skippedMust: []
+    };
     renderPlan(state.currentSummary);
   }
 
@@ -1165,7 +1382,9 @@
   renderSavedPlans();
   loadData().then(()=>{
     renderMustList();
-    ensureGoogleMaps();
+    ensureGoogleMaps().then(()=>{
+      if (state.currentSummary) maybeApplyGoogleTimes(state.currentSummary);
+    });
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get('plan');
     if (encoded){
