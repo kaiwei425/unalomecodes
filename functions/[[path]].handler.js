@@ -6473,7 +6473,7 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       console.error('sendOrderEmails(credit) error', err);
     }
 
-    return new Response(JSON.stringify({
+    return json({
       ok:true,
       orderId: order.id,
       action: gateway,
