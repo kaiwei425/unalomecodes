@@ -26,8 +26,11 @@
     destinationPlace: null,
     mapLines: new Map(),
     stationNodes: new Map(),
-    stationIndex: new Map()
+    stationIndex: new Map(),
+    pendingGeo: new Map()
   };
+
+  const stationLineMap = new Map();
 
   const LINE_DEFS = [
     {
@@ -36,9 +39,17 @@
       color: '#22c55e',
       path: [[120, 80], [760, 430]],
       stations: [
-        'Mo Chit', 'Saphan Khwai', 'Ari', 'Victory Monument', 'Phaya Thai',
-        'Siam', 'Chit Lom', 'Phloen Chit', 'Nana', 'Asok', 'Phrom Phong',
-        'Thong Lo', 'Ekkamai', 'On Nut', 'Bearing'
+        'Khu Khot', 'Yaek Kor Por Aor', 'Royal Thai Air Force Museum', 'Bhumibol Adulyadej Hospital',
+        'Saphan Mai', 'Sai Yud', 'Phahon Yothin 59', 'Wat Phra Sri Mahathat',
+        '11th Infantry Regiment', 'Bang Bua', 'Royal Forest Department', 'Kasetsart University',
+        'Sena Nikhom', 'Ratchayothin', 'Phahon Yothin 24', 'Ha Yaek Lat Phrao',
+        'Mo Chit', 'Saphan Khwai', 'Ari', 'Sanam Pao', 'Victory Monument',
+        'Phaya Thai', 'Ratchathewi', 'Siam', 'Chit Lom', 'Phloen Chit',
+        'Nana', 'Asok', 'Phrom Phong', 'Thong Lo', 'Ekkamai',
+        'Phra Khanong', 'On Nut', 'Bang Chak', 'Punnawithi', 'Udom Suk',
+        'Bang Na', 'Bearing', 'Samrong', 'Pu Chao', 'Chang Erawan',
+        'Royal Thai Naval Academy', 'Pak Nam', 'Srinagarindra', 'Phraek Sa',
+        'Sai Luat', 'Kheha'
       ]
     },
     {
@@ -48,8 +59,8 @@
       path: [[160, 160], [520, 160], [520, 350], [430, 430]],
       stations: [
         'National Stadium', 'Siam', 'Ratchadamri', 'Sala Daeng', 'Chong Nonsi',
-        'Saphan Taksin', 'Krung Thon Buri', 'Wongwian Yai', 'Pho Nimit',
-        'Talat Phlu', 'Wutthakat', 'Bang Wa'
+        'Saint Louis', 'Surasak', 'Saphan Taksin', 'Krung Thon Buri',
+        'Wongwian Yai', 'Pho Nimit', 'Talat Phlu', 'Wutthakat', 'Bang Wa'
       ]
     },
     {
@@ -58,9 +69,15 @@
       color: '#2563eb',
       path: [[240, 420], [240, 260], [360, 180], [540, 180], [660, 260], [660, 420], [540, 480], [360, 480], [240, 420]],
       stations: [
-        'Bang Sue', 'Chatuchak Park', 'Lat Phrao', 'Sutthisan', 'Huai Khwang',
+        'Tha Phra', 'Charan 13', 'Fai Chai', 'Bang Khun Non', 'Bang Yi Khan',
+        'Sirindhorn', 'Bang Phlat', 'Bang O', 'Bang Pho', 'Tao Poon',
+        'Bang Sue', 'Kamphaeng Phet', 'Chatuchak Park', 'Phahon Yothin',
+        'Lat Phrao', 'Ratchadaphisek', 'Sutthisan', 'Huai Khwang',
         'Thailand Cultural Centre', 'Phra Ram 9', 'Phetchaburi', 'Sukhumvit',
-        'Queen Sirikit', 'Khlong Toei', 'Lumphini', 'Si Lom', 'Sam Yan', 'Hua Lamphong'
+        'Queen Sirikit National Convention Centre', 'Khlong Toei', 'Lumphini',
+        'Si Lom', 'Sam Yan', 'Hua Lamphong', 'Wat Mangkon', 'Sam Yot',
+        'Sanam Chai', 'Itsaraphap', 'Tha Phra', 'Bang Phai', 'Bang Wa',
+        'Phetkasem 48', 'Phasi Charoen', 'Bang Khae', 'Lak Song'
       ]
     },
     {
@@ -69,8 +86,8 @@
       color: '#ef4444',
       path: [[300, 60], [300, 500]],
       stations: [
-        'Phaya Thai', 'Ratchaprarop', 'Makkasan', 'Ramkhamhaeng', 'Hua Mak',
-        'Ban Thap Chang', 'Lat Krabang', 'Suvarnabhumi'
+        'Suvarnabhumi', 'Lat Krabang', 'Ban Thap Chang', 'Hua Mak',
+        'Ramkhamhaeng', 'Makkasan', 'Ratchaprarop', 'Phaya Thai'
       ]
     }
   ];
@@ -112,6 +129,7 @@
     'Phetchaburi': { lat:13.7486, lng:100.5630 },
     'Sukhumvit': { lat:13.7383, lng:100.5610 },
     'Queen Sirikit': { lat:13.7236, lng:100.5601 },
+    'Queen Sirikit National Convention Centre': { lat:13.7236, lng:100.5601 },
     'Khlong Toei': { lat:13.7220, lng:100.5540 },
     'Lumphini': { lat:13.7251, lng:100.5446 },
     'Si Lom': { lat:13.7292, lng:100.5370 },
@@ -140,6 +158,8 @@
   function normalizeStationName(name){
     return String(name || '')
       .toLowerCase()
+      .replace(/centre/g, 'center')
+      .replace(/\bst\.?\b/g, 'saint')
       .replace(/station|站|bts|mrt|line|airport\s*rail\s*link|rail\s*link/g, '')
       .replace(/[^a-z0-9\u0E00-\u9FFF]/g, '')
       .trim();
@@ -208,11 +228,73 @@
       const key = normalizeStationName(name);
       state.stationIndex.set(key, { name, coords: STATION_COORDS[name] });
     });
+    buildStationLineMap();
+  }
+
+  function buildStationLineMap(){
+    stationLineMap.clear();
+    LINE_DEFS.forEach(line => {
+      line.stations.forEach(name => {
+        const key = normalizeStationName(name);
+        if (key && !stationLineMap.has(key)) stationLineMap.set(key, line.key);
+      });
+    });
   }
 
   function getStationByName(name){
     const key = normalizeStationName(name);
     return state.stationIndex.get(key) || null;
+  }
+
+  function getStationLineKey(name){
+    const key = normalizeStationName(name);
+    return stationLineMap.get(key) || '';
+  }
+
+  async function geocodeQuery(query){
+    try{
+      const res = await fetch(`/api/geo?q=${encodeURIComponent(query)}`, { credentials:'include' });
+      const data = await res.json().catch(()=>({}));
+      if (res.ok && data && data.ok && Number.isFinite(data.lat) && Number.isFinite(data.lng)){
+        return { lat: Number(data.lat), lng: Number(data.lng) };
+      }
+    }catch(_){ }
+    return null;
+  }
+
+  async function geocodeStation(name){
+    const key = normalizeStationName(name);
+    if (!key) return null;
+    const cached = state.stationIndex.get(key);
+    if (cached && cached.coords) return cached.coords;
+    if (state.pendingGeo.has(key)) return state.pendingGeo.get(key);
+
+    const lineKey = getStationLineKey(name);
+    let query = `${name} station Bangkok`;
+    if (lineKey === 'bts_sukhumvit' || lineKey === 'bts_silom') query = `BTS ${name} station Bangkok`;
+    if (lineKey === 'mrt_blue') query = `MRT ${name} station Bangkok`;
+    if (lineKey === 'arl') query = `Airport Rail Link ${name} station Bangkok`;
+
+    const promise = (async ()=>{
+      let coords = await geocodeQuery(query);
+      if (!coords) coords = await geocodeQuery(`${name} Bangkok`);
+      return coords;
+    })();
+
+    state.pendingGeo.set(key, promise);
+    const coords = await promise;
+    state.pendingGeo.delete(key);
+    if (coords) state.stationIndex.set(key, { name, coords });
+    return coords;
+  }
+
+  async function ensureStationCoords(stopNames){
+    const uniqueStops = dedupeStops(stopNames);
+    for (const name of uniqueStops){
+      const station = getStationByName(name);
+      if (station && station.coords) continue;
+      await geocodeStation(name);
+    }
   }
 
   function distributeAlongPath(points, count){
@@ -347,17 +429,37 @@
     return partialLine ? partialLine.key : '';
   }
 
+  function getStationIndices(line, name){
+    const key = normalizeStationName(name);
+    if (!key) return [];
+    const indices = [];
+    line.stations.forEach((station, idx) => {
+      if (normalizeStationName(station) === key) indices.push(idx);
+    });
+    return indices;
+  }
+
   function expandStops(lineKey, departure, arrival){
     const line = LINE_DEFS.find(l => l.key === lineKey);
     if (!line) return [departure, arrival];
-    const depKey = normalizeStationName(departure);
-    const arrKey = normalizeStationName(arrival);
-    const keys = line.stations.map(normalizeStationName);
-    const depIdx = keys.indexOf(depKey);
-    const arrIdx = keys.indexOf(arrKey);
-    if (depIdx === -1 || arrIdx === -1) return [departure, arrival];
-    if (depIdx <= arrIdx) return line.stations.slice(depIdx, arrIdx + 1);
-    return line.stations.slice(arrIdx, depIdx + 1).reverse();
+    const depIndices = getStationIndices(line, departure);
+    const arrIndices = getStationIndices(line, arrival);
+    if (!depIndices.length || !arrIndices.length) return [departure, arrival];
+
+    let bestSegment = null;
+    let bestLen = Infinity;
+    depIndices.forEach(depIdx => {
+      arrIndices.forEach(arrIdx => {
+        const segment = depIdx <= arrIdx
+          ? line.stations.slice(depIdx, arrIdx + 1)
+          : line.stations.slice(arrIdx, depIdx + 1).reverse();
+        if (segment.length < bestLen){
+          bestLen = segment.length;
+          bestSegment = segment;
+        }
+      });
+    });
+    return bestSegment || [departure, arrival];
   }
 
   function dedupeStops(list){
@@ -497,7 +599,7 @@
     });
 
     highlightRoute(Array.from(lineKeys), stopNames);
-    renderStationRecommendations(stopNames);
+    renderStationRecommendations(stopNames).catch(()=>{});
   }
 
   function getNearbyItems(center, items){
@@ -514,16 +616,30 @@
       .slice(0, MAX_NEARBY);
   }
 
-  function renderStationRecommendations(stopNames){
+  async function renderStationRecommendations(stopNames){
     if (!stationResults) return;
     if (!stopNames.length){
       stationResults.innerHTML = '<div class="planner-hint">目前沒有站點資料。</div>';
       return;
     }
+    stationResults.innerHTML = '<div class="planner-hint">正在定位站點並載入推薦…</div>';
+    await ensureStationCoords(stopNames);
+
     const uniqueStops = dedupeStops(stopNames);
     stationResults.innerHTML = uniqueStops.map(name => {
       const station = getStationByName(name);
-      if (!station) return '';
+      if (!station || !station.coords){
+        return `
+          <div class="station-card">
+            <div class="station-head">
+              <div>
+                <div class="station-title">${escapeHtml(name)}</div>
+                <div class="station-meta">目前無法取得座標，請稍後再試。</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
       const foodHits = getNearbyItems(station.coords, state.foods);
       const templeHits = getNearbyItems(station.coords, state.temples);
       const foodHtml = foodHits.length
