@@ -1995,6 +1995,7 @@ async function recordTempleMapStat(env, dateKey, clientId){
   }catch(_){}
 }
 const CREATOR_INVITE_TTL = 60 * 60 * 24 * 30;
+const CREATOR_INVITE_LINK_TTL = 60 * 60 * 24;
 function creatorInviteKey(code){
   return `CREATOR_INVITE:${code}`;
 }
@@ -4381,12 +4382,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     try{ body = await request.json().catch(()=>({})); }catch(_){}
     const code = normalizeCreatorCode(body.code);
     if (!code) return json({ ok:false, error:'missing code' }, 400);
-    if (record.creatorFoods){
-      return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200);
-    }
-    if (!record.creatorInviteAllowed){
-      return json({ ok:false, error:'invite_not_allowed' }, 403);
-    }
     const key = creatorInviteKey(code);
     let invite = null;
     try{
@@ -4395,18 +4390,25 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }catch(_){}
     if (!invite || !invite.code) return json({ ok:false, error:'invalid code' }, 400);
     if (invite.used) return json({ ok:false, error:'code used' }, 400);
+    const inviteMode = String(invite.mode || '').toLowerCase();
+    const linkMode = inviteMode === 'link';
+    if (!linkMode && !record.creatorInviteAllowed){
+      return json({ ok:false, error:'invite_not_allowed' }, 403);
+    }
     invite.used = true;
     invite.usedBy = record.id;
     invite.usedAt = new Date().toISOString();
     try{
-      await store.put(key, JSON.stringify(invite), { expirationTtl: CREATOR_INVITE_TTL });
+      await store.put(key, JSON.stringify(invite), { expirationTtl: linkMode ? CREATOR_INVITE_LINK_TTL : CREATOR_INVITE_TTL });
     }catch(_){}
-    record.creatorFoods = true;
-    if (!record.creatorName){
-      record.creatorName = String(invite.label || record.name || record.email || '').trim();
+    if (!record.creatorFoods){
+      record.creatorFoods = true;
+      if (!record.creatorName){
+        record.creatorName = String(invite.label || record.name || record.email || '').trim();
+      }
+      record.creatorInviteCode = code;
+      await saveUserRecord(env, record);
     }
-    record.creatorInviteCode = code;
-    await saveUserRecord(env, record);
     return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200);
   }
 
@@ -4420,6 +4422,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     let body = {};
     try{ body = await request.json().catch(()=>({})); }catch(_){}
     const label = String(body.label || '').trim().slice(0, 80);
+    const modeRaw = String(body.mode || '').trim().toLowerCase();
+    const mode = modeRaw === 'link' ? 'link' : 'code';
     let code = '';
     for (let i = 0; i < 5; i++){
       const candidate = generateCreatorInviteCode();
@@ -4430,14 +4434,18 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }
     }
     if (!code) return json({ ok:false, error:'code_generation_failed' }, 500);
+    const ttl = mode === 'link' ? CREATOR_INVITE_LINK_TTL : CREATOR_INVITE_TTL;
     const invite = {
       code,
       label,
       createdAt: new Date().toISOString(),
-      used: false
+      used: false,
+      mode
     };
-    await store.put(creatorInviteKey(code), JSON.stringify(invite), { expirationTtl: CREATOR_INVITE_TTL });
-    return json({ ok:true, code, label });
+    await store.put(creatorInviteKey(code), JSON.stringify(invite), { expirationTtl: ttl });
+    const link = `${origin}/food-map?creator_invite=${encodeURIComponent(code)}`;
+    const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
+    return json({ ok:true, code, label, mode, link, expiresAt });
   }
 
   if (pathname === '/api/fortune' && request.method === 'GET') {

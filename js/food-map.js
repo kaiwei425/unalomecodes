@@ -1529,6 +1529,80 @@ function readCreatorShareParams(){
   }
 }
 
+function readCreatorInviteParam(){
+  try{
+    const params = new URLSearchParams(window.location.search || '');
+    return params.get('creator_invite') || params.get('creatorInvite') || '';
+  }catch(_){
+    return '';
+  }
+}
+
+function clearCreatorInviteParam(){
+  try{
+    const url = new URL(window.location.href);
+    url.searchParams.delete('creator_invite');
+    url.searchParams.delete('creatorInvite');
+    if (history && typeof history.replaceState === 'function'){
+      history.replaceState(null, document.title || '', url.pathname + url.search + url.hash);
+    }else{
+      window.location.search = url.search;
+    }
+  }catch(_){}
+}
+
+async function applyCreatorInviteFromUrl(){
+  if (creatorInviteApplied) return;
+  const raw = readCreatorInviteParam();
+  if (!raw) return;
+  const code = String(raw || '').trim();
+  if (!code) return;
+  creatorInviteApplied = true;
+  const claimInvite = async ()=>{
+    try{
+      const res = await fetch('/api/creator/claim', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'include',
+        body: JSON.stringify({ code })
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        throw new Error((data && data.error) || 'invalid');
+      }
+      showToast(t('creatorInviteSuccess'));
+      await checkCreator();
+    }catch(_){
+      alert(t('creatorInviteFail'));
+    }finally{
+      clearCreatorInviteParam();
+    }
+  };
+  const authed = window.authState && typeof window.authState.isLoggedIn === 'function'
+    ? window.authState.isLoggedIn()
+    : false;
+  if (authed){
+    claimInvite();
+    return;
+  }
+  if (window.authState && typeof window.authState.subscribe === 'function'){
+    let handled = false;
+    window.authState.subscribe(user=>{
+      if (handled) return;
+      handled = true;
+      if (user){
+        claimInvite();
+      }else if (window.authState && typeof window.authState.login === 'function'){
+        window.authState.login();
+      }
+    });
+    return;
+  }
+  if (window.authState && typeof window.authState.login === 'function'){
+    window.authState.login();
+  }
+}
+
 function syncCreatorShareFilter(){
   if (!fCreator) return;
   if (creatorShareName){
@@ -1981,6 +2055,7 @@ let creatorInviteAllowed = false;
 let creatorShareId = '';
 let creatorShareName = '';
 let creatorShareApplied = false;
+let creatorInviteApplied = false;
 let suppressCreatorShareClear = false;
 let creatorId = '';
 let creatorName = '';
@@ -4060,6 +4135,7 @@ function bootFoodMap(){
   setNearbyCollapsed(false);
   checkAdmin().then(()=>{ safeRender(); });
   checkCreator();
+  applyCreatorInviteFromUrl();
   initFilters();
   resetFilters();
   applyCreatorShareFromUrl();
