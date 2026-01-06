@@ -10,6 +10,9 @@
   const routeSteps = document.getElementById('routeSteps');
   const stationResults = document.getElementById('stationResults');
   const transitMapSvg = document.getElementById('transitMapSvg');
+  const mapTabs = document.getElementById('mapTabs');
+  const btsMapImg = document.getElementById('btsMapImg');
+  const mrtMapImg = document.getElementById('mrtMapImg');
 
   const SEARCH_RADIUS_KM = 0.8;
   const MAX_NEARBY = 4;
@@ -842,6 +845,18 @@
 
   if (btnSearchRoute){
     btnSearchRoute.addEventListener('click', searchRoute);
+  }
+
+  if (mapTabs && btsMapImg && mrtMapImg){
+    mapTabs.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-map-tab]');
+      if (!btn) return;
+      const tab = btn.getAttribute('data-map-tab');
+      mapTabs.querySelectorAll('.map-tab').forEach(el => el.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      btsMapImg.classList.toggle('is-active', tab === 'bts');
+      mrtMapImg.classList.toggle('is-active', tab === 'mrt');
+    });
   }
 
   renderTransitMap();
