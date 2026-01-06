@@ -25,6 +25,9 @@
     .planner-row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
     .planner-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
     .planner-hint{font-size:13px;color:var(--muted);}
+    .filter-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+    .inline-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#334155;}
+    .inline-toggle input{width:16px;height:16px;}
     .pill-btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;}
     .pill-btn.primary:hover{filter:brightness(1.04);}
     .filter-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
@@ -222,6 +225,10 @@
             </div>
           </div>
         </details>
+        <div class="filter-actions" style="margin-top:10px;">
+          <button class="pill-btn" type="button" id="btnClearFilters">清除篩選</button>
+          <div class="planner-hint" id="candidateSummary">候選：載入中…</div>
+        </div>
 
         <div class="section-title" style="font-size:14px;">已加入必去清單</div>
         <div id="mustList" class="must-list"></div>
@@ -258,15 +265,21 @@
         </label>
         <details>
           <summary>進階行程設定</summary>
-          <div style="margin-top:10px;" class="planner-row">
-            <label>餐/寺比例
-              <select id="ratioSelect">
-                <option value="2-1">美食 2 / 寺廟 1</option>
-                <option value="1-1" selected>美食 1 / 寺廟 1</option>
-                <option value="1-2">美食 1 / 寺廟 2</option>
-                <option value="food-only">只要美食</option>
-                <option value="temple-only">只要寺廟</option>
-              </select>
+          <div style="margin-top:10px;display:grid;gap:12px;">
+            <div class="planner-row">
+              <label>餐/寺比例
+                <select id="ratioSelect">
+                  <option value="2-1">美食 2 / 寺廟 1</option>
+                  <option value="1-1" selected>美食 1 / 寺廟 1</option>
+                  <option value="1-2">美食 1 / 寺廟 2</option>
+                  <option value="food-only">只要美食</option>
+                  <option value="temple-only">只要寺廟</option>
+                </select>
+              </label>
+            </div>
+            <label class="inline-toggle">
+              <input type="checkbox" id="allowClosedToggle" checked>
+              允許排入非營業時段
             </label>
           </div>
         </details>

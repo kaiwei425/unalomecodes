@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="輸入出發地與目的地，查詢 BTS/MRT/ARL 捷運路線與轉乘資訊，並顯示每站周邊推薦。">
+  <link rel="canonical" href="https://shop.unalomecodes.com/transit-route">
+  <title>捷運路線規劃｜BTS/MRT - unalomecodes</title>
+  <link rel="icon" href="/img/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+  <meta property="og:title" content="捷運路線規劃｜BTS/MRT - unalomecodes">
+  <meta property="og:description" content="輸入出發地與目的地，查詢 BTS/MRT/ARL 捷運路線與轉乘資訊，並顯示每站周邊推薦。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shop.unalomecodes.com/transit-route">
+  <meta property="og:image" content="https://shop.unalomecodes.com/img/favicon.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .planner-hero{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .planner-hero h1{margin:0 0 6px;font-size:24px;font-weight:800;}
+    .planner-hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.7;}
+    .planner-card{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .section-title{font-size:16px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+    .planner-grid{display:grid;gap:12px;}
+    .planner-row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+    .planner-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .pill-btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;}
+    .pill-btn.primary:hover{filter:brightness(1.04);}
+    .planner-hint{font-size:13px;color:#64748b;}
+    .map-wrap{border-radius:16px;border:1px solid var(--line);overflow:hidden;background:#f8fafc;min-height:320px;}
+    .map-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+    .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px;}
+    .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+    .route-summary{display:grid;gap:6px;font-size:13px;color:#334155;}
+    .route-summary strong{font-weight:800;color:#0f172a;}
+    .route-steps{display:grid;gap:10px;margin:0;padding:0;list-style:none;}
+    .route-step{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff;display:grid;gap:6px;}
+    .route-step-title{font-weight:800;font-size:14px;}
+    .route-step-meta{font-size:12px;color:#64748b;}
+    .route-line-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:4px 8px;border-radius:999px;background:#f1f5f9;border:1px solid #e2e8f0;}
+    .route-line-tag span{width:10px;height:10px;border-radius:50%;display:inline-block;}
+    .station-list{display:grid;gap:10px;}
+    .station-card{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;}
+    .station-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .station-title{font-weight:800;font-size:15px;}
+    .station-meta{font-size:12px;color:#64748b;}
+    .nearby-grid{display:grid;gap:8px;margin-top:8px;}
+    .nearby-item{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px dashed var(--line);border-radius:12px;padding:8px;font-size:12px;background:#f8fafc;}
+    .nearby-item strong{font-weight:800;}
+    .nearby-tag{padding:2px 6px;border-radius:999px;background:#ecfeff;border:1px solid #bae6fd;color:#0e7490;font-size:11px;font-weight:800;}
+    .nearby-tag.temple{background:#fef3c7;border-color:#fde68a;color:#b45309;}
+    .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;}
+    .transit-map{width:100%;height:360px;display:block;}
+    .line-path{fill:none;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;opacity:0.25;}
+    .line-path.is-active{opacity:1;filter:drop-shadow(0 4px 12px rgba(15,23,42,0.2));}
+    .station-node{fill:#fff;stroke:#94a3b8;stroke-width:2;}
+    .station-node.is-active{fill:var(--line-color);stroke:#0f172a;}
+    .station-label{font-size:10px;fill:#334155;font-weight:700;}
+    .map-backdrop{fill:url(#mapGlow);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="/img/favicon.png" alt="">
+        <div>
+          <div class="t1">unalomecodes</div>
+          <div class="t2">捷運路線規劃</div>
+        </div>
+      </div>
+      <div class="top-actions-right">
+        <a class="pill-btn" href="/food-map">美食地圖</a>
+        <a class="pill-btn" href="/templemap">寺廟地圖</a>
+        <a class="pill-btn" href="/shop">返回商店</a>
+      </div>
+    </div>
+
+    <section class="planner-hero">
+      <h1>捷運路線規劃</h1>
+      <p>輸入出發地與目的地，查詢 BTS/MRT/ARL 路線與轉乘方式，並顯示每站周邊推薦。</p>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">路線輸入</div>
+      <div class="planner-grid">
+        <div class="planner-row">
+          <label>出發地
+            <input id="originInput" type="text" placeholder="飯店 / 地址 / 地標">
+          </label>
+          <label>目的地
+            <input id="destinationInput" type="text" placeholder="想去的地方">
+          </label>
+        </div>
+        <div class="planner-row">
+          <label>交通偏好
+            <select id="transitPreference">
+              <option value="mix" selected>混合搭配</option>
+              <option value="bts">只搭 BTS</option>
+              <option value="mrt">只搭 MRT</option>
+            </select>
+          </label>
+          <label>出發時間
+            <input id="departTime" type="datetime-local">
+          </label>
+        </div>
+        <div class="planner-actions">
+          <button class="pill-btn" type="button" id="btnUseLocation">使用我的位置</button>
+          <button class="pill-btn primary" type="button" id="btnSearchRoute">搜尋捷運路線</button>
+          <span class="planner-hint" id="routeStatus">資料載入中…</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">捷運路線圖（stylized）</div>
+      <div class="map-wrap">
+        <svg id="transitMapSvg" class="transit-map" viewBox="0 0 900 560" role="img" aria-label="BTS MRT stylized map"></svg>
+      </div>
+      <div class="map-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span>BTS Sukhumvit</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#16a34a;"></span>BTS Silom</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#2563eb;"></span>MRT Blue</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span>Airport Rail Link</div>
+      </div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">搭乘路線</div>
+      <div id="routeSummary" class="route-summary"></div>
+      <ol id="routeSteps" class="route-steps"></ol>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">各站周邊推薦（800m）</div>
+      <div id="stationResults" class="station-list"></div>
+    </section>
+  </div>
+
+  <script src="/js/utils.js"></script>
+  <script src="/js/transit-route.js"></script>
+</body>
+</html>

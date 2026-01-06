@@ -7,6 +7,7 @@
   const modeSelect = document.getElementById('modeSelect');
   const ratioSelect = document.getElementById('ratioSelect');
   const transportSelect = document.getElementById('transportSelect');
+  const allowClosedToggle = document.getElementById('allowClosedToggle');
   const btnLocate = document.getElementById('btnLocate');
   const btnGenerate = document.getElementById('btnGenerate');
   const btnSavePlan = document.getElementById('btnSavePlan');
@@ -29,6 +30,8 @@
   const mustSearchResults = document.getElementById('mustSearchResults');
   const mustList = document.getElementById('mustList');
   const recommendList = document.getElementById('recommendList');
+  const candidateSummary = document.getElementById('candidateSummary');
+  const btnClearFilters = document.getElementById('btnClearFilters');
 
   const foodCatFilter = document.getElementById('foodCatFilter');
   const foodAreaFilter = document.getElementById('foodAreaFilter');
@@ -78,6 +81,7 @@
     mustIds: new Set(),
     currentPlan: [],
     currentSummary: null,
+    planStale: false,
     savedPlans: [],
     selectedMapPlace: null,
     googleReady: false,
@@ -94,7 +98,23 @@
     statusEl.style.color = isError ? '#b91c1c' : '';
   }
 
+  function markPlanStale(message, silent){
+    if (!state.currentSummary || !state.currentSummary.plan || !state.currentSummary.plan.length) return;
+    state.planStale = true;
+    renderPlan(state.currentSummary, { skipGoogle: true });
+    if (silent) return;
+    setStatus(message || '行程設定已變更，請重新產生');
+  }
+
+  function clearPlanStale(){
+    state.planStale = false;
+  }
+
   let currentStep = 1;
+  let maxStep = 1;
+  function updateMaxStep(step){
+    if (Number.isFinite(step)) maxStep = Math.max(maxStep, step);
+  }
   function showStep(step){
     currentStep = step;
     stepSections.forEach(section => {
@@ -167,9 +187,19 @@
 
   function formatMinutes(minutes){
     const m = Math.max(0, Math.round(minutes));
-    const h = Math.floor(m / 60) % 24;
-    const mm = m % 60;
+    if (m === 1440) return '24:00';
+    const wrapped = m % 1440;
+    const h = Math.floor(wrapped / 60);
+    const mm = wrapped % 60;
     return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  }
+
+  function setTimeInput(input, value){
+    if (!input) return;
+    input.value = value || '';
+    if (!input.value && value === '24:00'){
+      input.value = '23:59';
+    }
   }
 
   function haversineKm(a, b){
@@ -395,6 +425,32 @@
     renderTagFilters(templeWishFilters, wishTags, 'data-wish-tag');
   }
 
+  function hasActiveFilters(){
+    const foodCat = foodCatFilter ? foodCatFilter.value : '';
+    const foodArea = foodAreaFilter ? foodAreaFilter.value : '';
+    const foodPrice = foodPriceFilter ? foodPriceFilter.value : '';
+    const foodTags = getCheckedValues(foodTagFilters, 'data-food-tag');
+    const templeArea = templeAreaFilter ? templeAreaFilter.value : '';
+    const templeTags = getCheckedValues(templeTagFilters, 'data-temple-tag');
+    const wishTags = getCheckedValues(templeWishFilters, 'data-wish-tag');
+    return Boolean(foodCat || foodArea || foodPrice || templeArea || foodTags.length || templeTags.length || wishTags.length);
+  }
+
+  function updateCandidateSummary(){
+    if (!candidateSummary) return;
+    if (!state.ready){
+      candidateSummary.textContent = '候選：載入中…';
+      return;
+    }
+    const filtered = applyFilters(state.foods.concat(state.temples));
+    const foodCount = filtered.filter(item => item.kind === 'food').length;
+    const templeCount = filtered.filter(item => item.kind === 'temple').length;
+    const customCount = state.customItems.length;
+    const customText = customCount ? ` / 自訂 ${customCount}` : '';
+    const filterNote = hasActiveFilters() ? '（已套用篩選）' : '';
+    candidateSummary.textContent = `候選：美食 ${foodCount} / 寺廟 ${templeCount}${customText} ${filterNote}`.trim();
+  }
+
   function renderMustList(){
     if (!mustList) return;
     if (!state.mustIds.size){
@@ -478,12 +534,14 @@
         const existing = state.foods.concat(state.temples).find(item => item.name === spot.name);
         if (existing){
           addMustItem(existing);
+          updateCandidateSummary();
           return;
         }
         const custom = buildPresetItem(spot);
         const existsCustom = state.customItems.find(x => x.id === custom.id);
         if (!existsCustom) state.customItems.push(custom);
         addMustItem(custom);
+        updateCandidateSummary();
       });
     });
   }
@@ -498,6 +556,7 @@
     if (!item || !item.id) return;
     state.mustIds.add(item.id);
     renderMustList();
+    markPlanStale(null, true);
   }
 
   function removeMustItem(id){
@@ -505,6 +564,8 @@
     state.mustIds.delete(id);
     state.customItems = state.customItems.filter(item => item.id !== id);
     renderMustList();
+    updateCandidateSummary();
+    markPlanStale(null, true);
   }
 
   function buildCustomItem(place, type){
@@ -662,6 +723,25 @@
     });
   }
 
+  function handleFiltersChange(){
+    updateCandidateSummary();
+    markPlanStale('篩選已變更，請重新產生');
+  }
+
+  function clearFilters(){
+    if (foodCatFilter) foodCatFilter.value = '';
+    if (foodAreaFilter) foodAreaFilter.value = '';
+    if (foodPriceFilter) foodPriceFilter.value = '';
+    if (templeAreaFilter) templeAreaFilter.value = '';
+    [foodTagFilters, templeTagFilters, templeWishFilters].forEach(container => {
+      if (!container) return;
+      container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.checked = false;
+      });
+    });
+    handleFiltersChange();
+  }
+
   function getPreferredKind(minutes, counts, ratio, lastKinds){
     if (ratio.food === 0) return 'temple';
     if (ratio.temple === 0) return 'food';
@@ -715,15 +795,25 @@
     const ratio = settings.ratio;
     const maxStops = Math.min(12, Math.max(3, Math.floor(totalMinutes / modeSettings.stopFactor)));
     const mustSet = settings.mustSet;
+    const allowClosed = settings.allowClosed !== false;
+    let usedClosedFallback = false;
 
     const counts = { food: 0, temple: 0 };
 
     for (let i = 0; i < maxStops; i++){
       const candidates = items.filter(item => {
         if (!item || !item.id || used.has(item.id)) return false;
-        return isOpenAt(item, currentTime);
+        const distKm = haversineKm(currentCoords, item.coords);
+        const travelMin = estimateTravelMinutes(distKm, transport);
+        const arrive = currentTime + travelMin;
+        return isOpenAt(item, arrive);
       });
-      const fallback = candidates.length ? candidates : items.filter(item => item && item.id && !used.has(item.id));
+      let fallback = candidates;
+      if (!fallback.length){
+        if (!allowClosed) break;
+        usedClosedFallback = true;
+        fallback = items.filter(item => item && item.id && !used.has(item.id));
+      }
       if (!fallback.length) break;
       const preferred = getPreferredKind(currentTime, counts, ratio, lastKinds);
       const next = pickNextItem(fallback, currentCoords, preferred, mustSet);
@@ -751,7 +841,7 @@
       if (lastKinds.length > 2) lastKinds.shift();
     }
     const skippedMust = Array.from(mustSet).filter(id => !plan.some(entry => entry.item.id === id));
-    return { plan, skippedMust, startMin, endMin };
+    return { plan, skippedMust, startMin, endMin, usedClosedFallback };
   }
 
   function recomputeTravelStats(plan, origin, transport){
@@ -811,7 +901,7 @@
   function maybeApplyGoogleTimes(planData){
     if (!planData || !planData.plan || planData.plan.length < 1) return;
     if (!state.googleReady || !window.google || !window.google.maps) return;
-    const origin = state.startCoords;
+    const origin = planData.startCoords || state.startCoords;
     if (!origin) return;
     const routeKey = getRouteKey(planData);
     if (planData.googleKey === routeKey && (planData.googleApplied || planData.googlePending)) return;
@@ -878,16 +968,24 @@
     const modeLabel = getModeLabel(planData.mode || (modeSelect ? modeSelect.value : 'balance'));
     const ratioLabel = getRatioLabel(planData.ratioValue || (ratioSelect ? ratioSelect.value : '1-1'));
     const transportLabel = getTransportLabel(planData.transportMode || (transportSelect ? transportSelect.value : 'driving'));
-    const startTimeLabel = startTimeInput ? startTimeInput.value : '';
-    const endTimeLabel = endTimeInput ? endTimeInput.value : '';
+    const startTimeLabel = Number.isFinite(planData.startMin)
+      ? formatMinutes(planData.startMin)
+      : (startTimeInput ? startTimeInput.value : '');
+    const endTimeLabel = Number.isFinite(planData.endMin)
+      ? formatMinutes(planData.endMin)
+      : (endTimeInput ? endTimeInput.value : '');
     const today = new Date().toLocaleDateString('zh-TW', { month:'2-digit', day:'2-digit', weekday:'short' });
     const foodCount = plan.filter(p => p.item.kind === 'food').length;
     const templeCount = plan.filter(p => p.item.kind === 'temple').length;
     const spotCount = plan.filter(p => p.item.kind === 'spot').length;
     const totalStay = plan.reduce((sum, p)=> sum + p.stayMin, 0);
     const totalTravel = plan.reduce((sum, p)=> sum + p.travelMin, 0);
-    const routeUrl = buildMultiStopUrl(state.startCoords, plan, planData.travelMode);
-    const endOverrun = planData.endMin && plan.length ? Math.max(0, plan[plan.length - 1].depart - planData.endMin) : 0;
+    const origin = planData.startCoords || state.startCoords;
+    const startLabel = planData.startLabel || state.startLabel || '自訂位置';
+    const routeUrl = buildMultiStopUrl(origin, plan, planData.travelMode);
+    const endOverrun = Number.isFinite(planData.endMin) && plan.length
+      ? Math.max(0, plan[plan.length - 1].depart - planData.endMin)
+      : 0;
 
     const listHtml = plan.map((entry, idx)=>{
       const item = entry.item;
@@ -940,6 +1038,12 @@
     const timeSourceTag = planData.googleApplied
       ? '<span class="tag">時間：Google ETA</span>'
       : (planData.googlePending ? '<span class="tag">時間：Google ETA 計算中</span>' : '<span class="tag">時間：估算</span>');
+    const closedNote = planData.usedClosedFallback
+      ? '<div class="planner-hint" style="color:#b45309;">部分時段無符合營業時間的候選，已改用全部候選。</div>'
+      : '';
+    const staleNote = state.planStale
+      ? '<div class="planner-hint" style="color:#b45309;">設定已變更，請重新產生以更新行程。</div>'
+      : '';
 
     resultEl.innerHTML = `
       <div class="plan-cover">
@@ -950,7 +1054,7 @@
         <div class="plan-cover-grid">
           <div class="plan-cover-badge">
             <span>起點</span>
-            ${escapeHtml(state.startLabel || '自訂位置')}
+            ${escapeHtml(startLabel)}
           </div>
           <div class="plan-cover-badge">
             <span>模式</span>
@@ -967,12 +1071,14 @@
         </div>
       </div>
       <div class="plan-summary">
-        <span class="tag">起點：${escapeHtml(state.startLabel || '自訂位置')}</span>
+        <span class="tag">起點：${escapeHtml(startLabel)}</span>
         <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}${spotCount ? ` / 景點 ${spotCount}` : ''}</span>
         <span class="tag">停留 ${totalStay} 分 / 移動 ${totalTravel} 分</span>
         ${timeSourceTag}
         ${routeUrl ? `<a class="pill-btn" href="${escapeHtml(routeUrl)}" target="_blank" rel="noopener">開啟路線</a>` : ''}
       </div>
+      ${staleNote}
+      ${closedNote}
       ${endOverrun ? `<div class="planner-hint" style="color:#b91c1c;">依目前預估會超過結束時間約 ${Math.ceil(endOverrun)} 分鐘。</div>` : ''}
       ${warning}
       ${listHtml}
@@ -1083,21 +1189,25 @@
     const modeValue = modeSelect ? modeSelect.value : 'balance';
     const transportMode = transportSelect ? transportSelect.value : 'driving';
     const ratioValue = ratioSelect ? ratioSelect.value : '1-1';
+    const allowClosed = allowClosedToggle ? allowClosedToggle.checked : true;
     const modeSettings = applyModeSettings(modeValue);
     const transport = getTransportSettings(transportMode);
     const ratio = parseRatio(ratioValue);
     let items = getActiveItems();
     if (ratio.food === 0) items = items.filter(item => kindForRatio(item.kind) !== 'food');
     if (ratio.temple === 0) items = items.filter(item => item.kind !== 'temple');
-    const settings = { modeSettings, transport, ratio, mustSet: new Set(state.mustIds) };
+    const settings = { modeSettings, transport, ratio, mustSet: new Set(state.mustIds), allowClosed };
     const planData = buildPlan(origin, startMin, endMin, items, settings);
     planData.travelMode = transport.travelMode;
     planData.transport = transport;
     planData.transportMode = transportMode;
     planData.mode = modeValue;
     planData.ratioValue = ratioValue;
+    planData.startLabel = state.startLabel;
+    planData.startCoords = state.startCoords;
     renderPlan(planData);
     if (planData.plan && planData.plan.length){
+      clearPlanStale();
       setStatus('已產生行程');
     }
     return true;
@@ -1127,14 +1237,25 @@
 
   function buildSharePayload(planData){
     const plan = planData.plan || [];
+    const startTime = Number.isFinite(planData.startMin)
+      ? formatMinutes(planData.startMin)
+      : (startTimeInput ? startTimeInput.value : '');
+    const endTime = Number.isFinite(planData.endMin)
+      ? formatMinutes(planData.endMin)
+      : (endTimeInput ? endTimeInput.value : '');
+    const startLabel = planData.startLabel || state.startLabel;
+    const startCoords = planData.startCoords || state.startCoords;
+    const mode = planData.mode || (modeSelect ? modeSelect.value : 'balance');
+    const ratio = planData.ratioValue || (ratioSelect ? ratioSelect.value : '1-1');
+    const transport = planData.transportMode || (transportSelect ? transportSelect.value : 'driving');
     return {
-      startLabel: state.startLabel,
-      startCoords: state.startCoords,
-      startTime: startTimeInput ? startTimeInput.value : '',
-      endTime: endTimeInput ? endTimeInput.value : '',
-      mode: modeSelect ? modeSelect.value : 'balance',
-      ratio: ratioSelect ? ratioSelect.value : '1-1',
-      transport: transportSelect ? transportSelect.value : 'driving',
+      startLabel,
+      startCoords,
+      startTime,
+      endTime,
+      mode,
+      ratio,
+      transport,
       plan: plan.map(entry => ({
         item: {
           id: entry.item.id,
@@ -1168,8 +1289,8 @@
     state.startCoords = payload.startCoords || null;
     state.startLabel = payload.startLabel || '';
     if (startInput && payload.startLabel) startInput.value = payload.startLabel;
-    if (startTimeInput && payload.startTime) startTimeInput.value = payload.startTime;
-    if (endTimeInput && payload.endTime) endTimeInput.value = payload.endTime;
+    if (payload.startTime) setTimeInput(startTimeInput, payload.startTime);
+    if (payload.endTime) setTimeInput(endTimeInput, payload.endTime);
     if (modeSelect && payload.mode) modeSelect.value = payload.mode;
     if (ratioSelect && payload.ratio) ratioSelect.value = payload.ratio;
     if (transportSelect && payload.transport) transportSelect.value = payload.transport;
@@ -1204,9 +1325,13 @@
       ratioValue: payload.ratio || '1-1',
       startMin: Number.isFinite(startMin) ? startMin : 0,
       endMin: Number.isFinite(endMin) ? endMin : 0,
+      startLabel: payload.startLabel || state.startLabel,
+      startCoords: payload.startCoords || state.startCoords,
       skippedMust: []
     };
     if (payload.startCoords && payload.startLabel) setStatus(`已載入分享行程：${payload.startLabel}`);
+    clearPlanStale();
+    updateMaxStep(4);
     renderPlan(state.currentSummary);
     showStep(4);
   }
@@ -1216,12 +1341,17 @@
       setStatus('請先產生行程', true);
       return;
     }
+    if (state.planStale){
+      const ok = window.confirm('設定已變更，仍要分享目前行程嗎？');
+      if (!ok) return;
+    }
     const foodCount = state.currentSummary.plan.filter(p => p.item.kind === 'food').length;
     const templeCount = state.currentSummary.plan.filter(p => p.item.kind === 'temple').length;
     const spotCount = state.currentSummary.plan.filter(p => p.item.kind === 'spot').length;
+    const startLabel = state.currentSummary.startLabel || state.startLabel || '自訂位置';
     const shareUrl = shareLinkInput ? shareLinkInput.value : location.href;
     const spotText = spotCount ? ` / 景點 ${spotCount}` : '';
-    const text = `泰國一日行程：美食 ${foodCount} / 寺廟 ${templeCount}${spotText}\n起點：${state.startLabel || '自訂位置'}\n${shareUrl}`;
+    const text = `泰國一日行程：美食 ${foodCount} / 寺廟 ${templeCount}${spotText}\n起點：${startLabel}\n${shareUrl}`;
     const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
     window.open(lineUrl, '_blank');
   }
@@ -1231,20 +1361,36 @@
       setStatus('請先產生行程', true);
       return;
     }
+    if (state.planStale){
+      const ok = window.confirm('設定已變更，仍要儲存目前行程嗎？');
+      if (!ok) return;
+    }
     const defaultName = `${new Date().toLocaleDateString('zh-TW')} 行程`;
     const name = prompt('請輸入行程名稱', defaultName) || '';
     if (!name) return;
+    const summary = state.currentSummary || {};
+    const startLabel = summary.startLabel || state.startLabel;
+    const startCoords = summary.startCoords || state.startCoords;
+    const startTime = Number.isFinite(summary.startMin)
+      ? formatMinutes(summary.startMin)
+      : (startTimeInput ? startTimeInput.value : '');
+    const endTime = Number.isFinite(summary.endMin)
+      ? formatMinutes(summary.endMin)
+      : (endTimeInput ? endTimeInput.value : '');
+    const modeValue = summary.mode || (modeSelect ? modeSelect.value : 'balance');
+    const ratioValue = summary.ratioValue || (ratioSelect ? ratioSelect.value : '1-1');
+    const transportValue = summary.transportMode || (transportSelect ? transportSelect.value : 'driving');
     const record = {
       id: `plan_${Date.now()}`,
       name,
       createdAt: new Date().toISOString(),
-      startLabel: state.startLabel,
-      startCoords: state.startCoords,
-      startTime: startTimeInput ? startTimeInput.value : '',
-      endTime: endTimeInput ? endTimeInput.value : '',
-      mode: modeSelect ? modeSelect.value : 'balance',
-      ratio: ratioSelect ? ratioSelect.value : '1-1',
-      transport: transportSelect ? transportSelect.value : 'driving',
+      startLabel,
+      startCoords,
+      startTime,
+      endTime,
+      mode: modeValue,
+      ratio: ratioValue,
+      transport: transportValue,
       plan: state.currentSummary.plan
     };
     state.savedPlans.unshift(record);
@@ -1312,8 +1458,8 @@
     state.startCoords = plan.startCoords || null;
     state.startLabel = plan.startLabel || '';
     if (startInput && plan.startLabel) startInput.value = plan.startLabel;
-    if (startTimeInput && plan.startTime) startTimeInput.value = plan.startTime;
-    if (endTimeInput && plan.endTime) endTimeInput.value = plan.endTime;
+    if (plan.startTime) setTimeInput(startTimeInput, plan.startTime);
+    if (plan.endTime) setTimeInput(endTimeInput, plan.endTime);
     if (modeSelect && plan.mode) modeSelect.value = plan.mode;
     if (ratioSelect && plan.ratio) ratioSelect.value = plan.ratio;
     if (transportSelect && plan.transport) transportSelect.value = plan.transport;
@@ -1341,8 +1487,12 @@
       ratioValue: plan.ratio || '1-1',
       startMin: Number.isFinite(startMin) ? startMin : 0,
       endMin: Number.isFinite(endMin) ? endMin : 0,
+      startLabel: plan.startLabel || state.startLabel,
+      startCoords: plan.startCoords || state.startCoords,
       skippedMust: []
     };
+    clearPlanStale();
+    updateMaxStep(4);
     renderPlan(state.currentSummary);
     showStep(4);
   }
@@ -1369,6 +1519,7 @@
     if (existing){
       addMustItem(existing);
       setStatus(`已加入：${existing.name}`);
+      updateCandidateSummary();
       return;
     }
     const item = buildCustomItem(state.selectedMapPlace, type);
@@ -1378,6 +1529,7 @@
     }
     addMustItem(item);
     setStatus(`已加入：${item.name}`);
+    updateCandidateSummary();
   }
 
   function initGoogleMaps(){
@@ -1482,6 +1634,7 @@
       state.temples = normalizeItems(templesData.items || [], 'temple');
       state.ready = true;
       renderFilterOptions();
+      updateCandidateSummary();
       setStatus(`已載入 ${state.foods.length} 家美食、${state.temples.length} 間寺廟`);
     }catch(err){
       setStatus(`資料載入失敗：${err.message}`, true);
@@ -1494,13 +1647,26 @@
       renderMustSearchResults(e.target.value);
     });
   }
+  [foodCatFilter, foodAreaFilter, foodPriceFilter, templeAreaFilter].forEach(el => {
+    if (!el) return;
+    el.addEventListener('change', handleFiltersChange);
+  });
+  [foodTagFilters, templeTagFilters, templeWishFilters].forEach(container => {
+    if (!container) return;
+    container.addEventListener('change', handleFiltersChange);
+  });
+  if (btnClearFilters){
+    btnClearFilters.addEventListener('click', clearFilters);
+  }
 
   function selectMode(mode){
     if (modeSelect) modeSelect.value = mode;
-    if (!modeCards) return;
-    modeCards.querySelectorAll('.mode-card').forEach(card=>{
-      card.classList.toggle('is-selected', card.getAttribute('data-mode') === mode);
-    });
+    if (modeCards){
+      modeCards.querySelectorAll('.mode-card').forEach(card=>{
+        card.classList.toggle('is-selected', card.getAttribute('data-mode') === mode);
+      });
+    }
+    markPlanStale('行程模式已變更，請重新產生');
   }
 
   if (modeCards){
@@ -1516,7 +1682,12 @@
     stepPills.forEach(pill=>{
       pill.addEventListener('click', ()=>{
         const step = Number(pill.getAttribute('data-step-pill'));
-        if (Number.isFinite(step)) showStep(step);
+        if (!Number.isFinite(step)) return;
+        if (step > maxStep){
+          setStatus('請先完成前一步', true);
+          return;
+        }
+        showStep(step);
       });
     });
   }
@@ -1533,6 +1704,7 @@
         state.startLabel = '我的位置';
         if (startInput) startInput.value = '我的位置';
         setStatus('已取得定位');
+        markPlanStale(null, true);
       }, ()=>{
         setStatus('定位失敗，請允許定位權限', true);
       }, { enableHighAccuracy: true, timeout: 8000 });
@@ -1542,6 +1714,32 @@
     startInput.addEventListener('input', ()=>{
       state.startCoords = null;
       state.startLabel = '';
+      markPlanStale('起點已變更，請重新產生');
+    });
+  }
+  if (startTimeInput){
+    startTimeInput.addEventListener('change', ()=>{
+      markPlanStale('時間已變更，請重新產生');
+    });
+  }
+  if (endTimeInput){
+    endTimeInput.addEventListener('change', ()=>{
+      markPlanStale('時間已變更，請重新產生');
+    });
+  }
+  if (transportSelect){
+    transportSelect.addEventListener('change', ()=>{
+      markPlanStale('交通方式已變更，請重新產生');
+    });
+  }
+  if (ratioSelect){
+    ratioSelect.addEventListener('change', ()=>{
+      markPlanStale('比例已變更，請重新產生');
+    });
+  }
+  if (allowClosedToggle){
+    allowClosedToggle.addEventListener('change', ()=>{
+      markPlanStale('行程設定已變更，請重新產生');
     });
   }
 
@@ -1551,6 +1749,7 @@
   if (btnStep1Next){
     btnStep1Next.addEventListener('click', ()=>{
       if (!validateStep1()) return;
+      updateMaxStep(2);
       showStep(2);
     });
   }
@@ -1558,7 +1757,10 @@
     btnStep2Back.addEventListener('click', ()=>{ showStep(1); });
   }
   if (btnStep2Next){
-    btnStep2Next.addEventListener('click', ()=>{ showStep(3); });
+    btnStep2Next.addEventListener('click', ()=>{
+      updateMaxStep(3);
+      showStep(3);
+    });
   }
   if (btnStep3Back){
     btnStep3Back.addEventListener('click', ()=>{ showStep(2); });
@@ -1567,7 +1769,10 @@
     btnStep3Next.addEventListener('click', async ()=>{
       if (!validateStep1()) return;
       const ok = await generatePlan();
-      if (ok) showStep(4);
+      if (ok){
+        updateMaxStep(4);
+        showStep(4);
+      }
     });
   }
   if (btnStep4Back){
@@ -1605,10 +1810,14 @@
     });
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get('plan');
+    let showInitialStep = true;
     if (encoded){
       const payload = decodePayload(encoded);
-      if (payload) applySharedPlan(payload);
+      if (payload){
+        applySharedPlan(payload);
+        showInitialStep = false;
+      }
     }
-    showStep(1);
+    if (showInitialStep) showStep(1);
   });
 })();
