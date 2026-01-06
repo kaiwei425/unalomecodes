@@ -251,6 +251,18 @@ const TAG_OPTIONS = [
   { value:'easy_access', zh:'交通方便', en:'Easy access' }
 ];
 const TAG_OPTION_VALUES = new Set(TAG_OPTIONS.map(t=>t.value));
+const WISH_TAG_OPTIONS = [
+  { value:'轉運', zh:'轉運', en:'Luck shift' },
+  { value:'財運', zh:'財運', en:'Wealth' },
+  { value:'健康', zh:'健康', en:'Health' },
+  { value:'事業', zh:'事業', en:'Career' },
+  { value:'愛情', zh:'愛情', en:'Love' },
+  { value:'人緣', zh:'人緣', en:'Relationships' },
+  { value:'許願', zh:'許願', en:'Wish' },
+  { value:'算命', zh:'算命', en:'Fortune telling' },
+  { value:'特殊儀式', zh:'特殊儀式', en:'Special ritual' }
+];
+const WISH_TAG_OPTION_VALUES = new Set(WISH_TAG_OPTIONS.map(t=>t.value));
 const TRANSLATIONS = {
   zh: {
     title: '泰國寺廟地圖',
@@ -309,14 +321,15 @@ const TRANSLATIONS = {
     stayMin: '建議停留時間（分鐘）',
     stayMinHint: '例：30 / 45 / 60',
     openSlotsLabel: '可去時段',
-    slotMorning: '早上 07:00-11:00',
-    slotAfternoon: '下午 11:00-16:00',
-    slotEvening: '晚上 16:00-21:00',
-    slotNight: '深夜 21:00-02:00',
+    slotMorning: '上午 06:00-12:00',
+    slotAfternoon: '下午 12:00-18:00',
+    slotEvening: '晚上 18:00-24:00',
+    slotAllDay: '24小時',
     tagsInput: '標籤',
     tagsHint: '可勾選或自行輸入（以逗號分隔）',
     wishTagsInput: '願望標籤',
-    wishTagsHint: '以逗號分隔，例如 財運,桃花,健康',
+    wishTagsHint: '可勾選或自行輸入（以逗號分隔）',
+    wishTagsPlaceholder: '其他（逗號分隔）',
     addr: '地址',
     reviews: 'Google 評分 & 評論',
     tripTitle: '參拜路線',
@@ -525,14 +538,15 @@ const TRANSLATIONS = {
     stayMin: 'Suggested stay (min)',
     stayMinHint: 'e.g. 30 / 45 / 60',
     openSlotsLabel: 'Time slots',
-    slotMorning: 'Morning 07:00-11:00',
-    slotAfternoon: 'Afternoon 11:00-16:00',
-    slotEvening: 'Evening 16:00-21:00',
-    slotNight: 'Night 21:00-02:00',
+    slotMorning: 'Morning 06:00-12:00',
+    slotAfternoon: 'Afternoon 12:00-18:00',
+    slotEvening: 'Evening 18:00-24:00',
+    slotAllDay: '24 hours',
     tagsInput: 'Tags',
     tagsHint: 'Select or enter custom (comma-separated)',
     wishTagsInput: 'Wish tags',
-    wishTagsHint: 'Comma-separated, e.g. wealth,romance,health',
+    wishTagsHint: 'Select or enter custom (comma-separated)',
+    wishTagsPlaceholder: 'Custom (comma-separated)',
     addr: 'Address',
     reviews: 'Google Ratings & Reviews',
     tripTitle: 'Temple Route',
@@ -1756,6 +1770,82 @@ function normalizeListField(value){
   }
   return [];
 }
+function parseTimeMinutes(value){
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const match = raw.match(/^(\d{1,2})(?:\s*[:：.]\s*(\d{2}))?$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 24 || minute < 0 || minute >= 60) return null;
+  if (hour === 24 && minute !== 0) return null;
+  return hour * 60 + minute;
+}
+function inferOpenSlotsFromHours(hoursText){
+  const raw = String(hoursText || '').trim();
+  if (!raw) return [];
+  if (/(24\s*小時|24\s*hr|24\s*h|24\/7|24-7|all\s*day|全天|全日)/i.test(raw)) {
+    return ['all_day'];
+  }
+  if (/(休息|公休|店休|暫停營業|歇業|closed)/i.test(raw)) return [];
+
+  const ranges = [];
+  const rangeRegex = /(\d{1,2})(?:\s*[:：.]\s*(\d{2}))?\s*(?:-|–|—|~|～|〜|到|至|－)\s*(\d{1,2})(?:\s*[:：.]\s*(\d{2}))?/g;
+  let match;
+  while ((match = rangeRegex.exec(raw)) !== null) {
+    const start = parseTimeMinutes(`${match[1]}:${match[2] || '00'}`);
+    const end = parseTimeMinutes(`${match[3]}:${match[4] || '00'}`);
+    if (start === null || end === null) continue;
+    if (start === 0 && end === 1440) return ['all_day'];
+    if (start === end) continue;
+    ranges.push([start, end]);
+  }
+  if (!ranges.length) return [];
+
+  const slotWindows = {
+    morning: [[360, 720]],
+    afternoon: [[720, 1080]],
+    evening: [[1080, 1440]]
+  };
+  const slotOrder = ['morning', 'afternoon', 'evening'];
+  const chosen = new Set();
+  const overlaps = (aStart, aEnd, bStart, bEnd) => Math.max(aStart, bStart) < Math.min(aEnd, bEnd);
+
+  ranges.forEach(([start, end])=>{
+    const segments = end > start ? [[start, end]] : [[start, 1440], [0, end]];
+    segments.forEach(([segStart, segEnd])=>{
+      slotOrder.forEach(slot=>{
+        const windows = slotWindows[slot] || [];
+        windows.forEach(([winStart, winEnd])=>{
+          if (overlaps(segStart, segEnd, winStart, winEnd)) {
+            chosen.add(slot);
+          }
+        });
+      });
+    });
+  });
+  return slotOrder.filter(slot=>chosen.has(slot));
+}
+function normalizeOpenSlots(list, hoursText){
+  const mapped = new Set();
+  list.forEach((slot)=>{
+    if (slot === 'all_day' || slot === '24h' || slot === '24hours') {
+      mapped.add('all_day');
+    } else if (slot === 'morning' || slot === 'afternoon' || slot === 'evening') {
+      mapped.add(slot);
+    } else if (slot === 'night') {
+      mapped.add('evening');
+    }
+  });
+  let result = Array.from(mapped);
+  if (!result.length){
+    const inferred = inferOpenSlotsFromHours(hoursText);
+    if (inferred.length) result = inferred;
+  }
+  if (result.includes('all_day')) return ['all_day'];
+  return result;
+}
 function extractLatLngFromText(text){
   const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
   return m ? parseLatLngPair(m[1], m[2]) : null;
@@ -2115,10 +2205,12 @@ function render(){
     const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
     const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
     const stayMinVal = item.stayMin || item.stay_min || '';
-    const openSlots = normalizeListField(item.openSlots || item.open_slots);
+    const openSlotsRaw = normalizeListField(item.openSlots || item.open_slots);
+    const openSlots = normalizeOpenSlots(openSlotsRaw, item.hours || '');
     const tagsList = normalizeListField(item.tags);
     const tagsCustomText = tagsList.filter(tag=>!TAG_OPTION_VALUES.has(tag)).join(', ');
-    const wishTagsText = normalizeListField(item.wishTags || item.wish_tags).join(', ');
+    const wishTagsList = normalizeListField(item.wishTags || item.wish_tags);
+    const wishTagsCustomText = wishTagsList.filter(tag=>!WISH_TAG_OPTION_VALUES.has(tag)).join(', ');
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -2156,7 +2248,7 @@ function render(){
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="morning" ${openSlots.includes('morning') ? 'checked' : ''}>${escapeHtml(t('slotMorning'))}</label>
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="afternoon" ${openSlots.includes('afternoon') ? 'checked' : ''}>${escapeHtml(t('slotAfternoon'))}</label>
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="evening" ${openSlots.includes('evening') ? 'checked' : ''}>${escapeHtml(t('slotEvening'))}</label>
-              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="night" ${openSlots.includes('night') ? 'checked' : ''}>${escapeHtml(t('slotNight'))}</label>
+              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="all_day" ${openSlots.includes('all_day') ? 'checked' : ''}>${escapeHtml(t('slotAllDay'))}</label>
             </div>
           </div>
           <div class="admin-field admin-cover">
@@ -2173,7 +2265,14 @@ function render(){
           </div>
           <div class="admin-field admin-cover">
             <div>${escapeHtml(t('wishTagsInput'))}</div>
-            <input class="admin-input" data-admin-field="wishTags" value="${escapeHtml(wishTagsText)}" placeholder="財運,桃花,健康">
+            <div class="admin-tag-group">
+              ${WISH_TAG_OPTIONS.map(tag=>{
+                const label = currentLang === 'en' ? tag.en : tag.zh;
+                const checked = wishTagsList.includes(tag.value) ? 'checked' : '';
+                return `<label class="admin-tag-item"><input type="checkbox" data-admin-wish-tag value="${escapeHtml(tag.value)}" ${checked}>${escapeHtml(label)}</label>`;
+              }).join('')}
+            </div>
+            <input class="admin-input" data-admin-field="wishTagsCustom" value="${escapeHtml(wishTagsCustomText)}" placeholder="${escapeHtml(t('wishTagsPlaceholder'))}">
             <div class="admin-hint">${escapeHtml(t('wishTagsHint'))}</div>
           </div>
           <label style="display:flex;align-items:center;gap:6px;grid-column:1/-1;background:#fff7ed;padding:8px;border-radius:8px;border:1px dashed #fdba74;">
@@ -2377,9 +2476,19 @@ function render(){
         const introRaw = getVal('intro') || '';
         const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : [];
         const slotEls = wrap.querySelectorAll('[data-admin-slot]');
-        const openSlots = Array.from(slotEls).filter(el=>el.checked).map(el=>el.value);
+        let openSlots = Array.from(slotEls).filter(el=>el.checked).map(el=>el.value);
+        if (openSlots.includes('all_day')) {
+          openSlots = ['all_day'];
+        }
+        const hoursVal = getVal('hours');
+        if (!openSlots.length){
+          const inferred = inferOpenSlotsFromHours(hoursVal);
+          if (inferred.length) openSlots = inferred;
+        }
         const tagEls = wrap.querySelectorAll('[data-admin-tag]');
         const selectedTags = Array.from(tagEls).filter(el=>el.checked).map(el=>el.value);
+        const wishTagEls = wrap.querySelectorAll('[data-admin-wish-tag]');
+        const selectedWishTags = Array.from(wishTagEls).filter(el=>el.checked).map(el=>el.value);
         const toIntOrEmpty = (val)=>{
           const n = parseInt(val, 10);
           return Number.isFinite(n) ? n : '';
@@ -2387,7 +2496,8 @@ function render(){
         const stayMinVal = toIntOrEmpty(getVal('stayMin'));
         const customTags = normalizeListField(getVal('tagsCustom'));
         const tagsVal = Array.from(new Set(selectedTags.concat(customTags)));
-        const wishTagsVal = normalizeListField(getVal('wishTags'));
+        const customWishTags = normalizeListField(getVal('wishTagsCustom'));
+        const wishTagsVal = Array.from(new Set(selectedWishTags.concat(customWishTags)));
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
@@ -2421,7 +2531,7 @@ function render(){
           maps: getVal('maps'),
           googlePlaceId: getVal('googlePlaceId'),
           google_place_id: getVal('googlePlaceId'),
-          hours: getVal('hours'),
+          hours: hoursVal,
           ig: getVal('ig'),
           youtube: getVal('youtube'),
           ctaText: getVal('ctaText'),
