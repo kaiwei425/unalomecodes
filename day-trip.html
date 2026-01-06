@@ -20,12 +20,28 @@
     .planner-hero h1{margin:0 0 6px;font-size:24px;font-weight:800;}
     .planner-hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.7;}
     .planner-card{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .section-title{font-size:16px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
     .planner-grid{display:grid;gap:12px;}
     .planner-row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
     .planner-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
     .planner-hint{font-size:13px;color:var(--muted);}
     .pill-btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;}
     .pill-btn.primary:hover{filter:brightness(1.04);}
+    .filter-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+    .filter-tags{display:flex;flex-wrap:wrap;gap:8px;}
+    .tag-option{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;font-size:12px;font-weight:700;}
+    .tag-option input{width:14px;height:14px;}
+    .must-list{display:flex;flex-wrap:wrap;gap:8px;}
+    .must-chip{display:flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px;font-weight:700;}
+    .must-chip button{border:none;background:none;color:#ef4444;cursor:pointer;font-size:12px;font-weight:800;}
+    .search-results{display:grid;gap:8px;}
+    .search-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;}
+    .search-item-title{font-weight:800;font-size:14px;}
+    .search-item-meta{font-size:12px;color:#64748b;}
+    .map-wrap{border-radius:16px;border:1px solid var(--line);overflow:hidden;background:#f8fafc;min-height:240px;}
+    .map-info{font-size:13px;color:#334155;}
+    .plan-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    .share-input{flex:1 1 240px;}
     .result-panel{margin-top:16px;display:grid;gap:12px;}
     .result-empty{padding:20px;border:1px dashed var(--line);border-radius:16px;background:#f8fafc;color:#64748b;text-align:center;}
     .plan-summary{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
@@ -39,6 +55,16 @@
     .plan-kind.temple{background:#fef3c7;color:#b45309;border-color:#fde68a;}
     .plan-actions{display:flex;gap:8px;flex-wrap:wrap;}
     .plan-actions a{font-size:12px;}
+    .saved-list{display:grid;gap:8px;}
+    .saved-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;}
+    .saved-title{font-weight:800;font-size:14px;}
+    .saved-meta{font-size:12px;color:#64748b;}
+    @media print{
+      .top,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .search-results,.planner-card .map-wrap,.planner-card .filter-grid,.planner-card .filter-tags,.planner-card .planner-hint,.planner-card .saved-list,.planner-card .planner-row,.planner-card input,.planner-card select,.planner-card button,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .share-input{display:none !important;}
+      body{background:#fff;}
+      .wrap{padding:0;}
+      .planner-card{border:none;box-shadow:none;}
+    }
   </style>
 </head>
 <body>
@@ -64,6 +90,7 @@
     </section>
 
     <section class="planner-card">
+      <div class="section-title">基本設定</div>
       <div class="planner-grid">
         <label>起點位置
           <input id="startLocation" type="text" placeholder="飯店 / 地址 / 地標">
@@ -75,6 +102,29 @@
           <label>結束時間
             <input id="endTime" type="time" value="20:00">
           </label>
+          <label>行程模式
+            <select id="modeSelect">
+              <option value="battle">戰鬥</option>
+              <option value="balance" selected>平衡</option>
+              <option value="chill">散步</option>
+            </select>
+          </label>
+          <label>餐/寺比例
+            <select id="ratioSelect">
+              <option value="2-1">美食 2 / 寺廟 1</option>
+              <option value="1-1" selected>美食 1 / 寺廟 1</option>
+              <option value="1-2">美食 1 / 寺廟 2</option>
+              <option value="food-only">只要美食</option>
+              <option value="temple-only">只要寺廟</option>
+            </select>
+          </label>
+          <label>交通方式
+            <select id="transportSelect">
+              <option value="driving" selected>開車/叫車</option>
+              <option value="transit">大眾運輸</option>
+              <option value="walking">步行</option>
+            </select>
+          </label>
         </div>
         <div class="planner-actions">
           <button class="pill-btn" type="button" id="btnLocate">使用我的位置</button>
@@ -84,8 +134,101 @@
       </div>
     </section>
 
-    <section id="resultPanel" class="result-panel">
-      <div class="result-empty">尚未產生行程</div>
+    <section class="planner-card">
+      <div class="section-title">必去清單</div>
+      <div class="planner-grid">
+        <label>搜尋資料庫
+          <input id="mustSearchInput" type="text" placeholder="輸入店名/寺廟關鍵字">
+        </label>
+        <div id="mustSearchResults" class="search-results"></div>
+        <div class="planner-hint">已加入必去的點會優先排入行程。</div>
+        <div id="mustList" class="must-list"></div>
+      </div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">篩選條件</div>
+      <div class="planner-grid">
+        <div>
+          <div class="section-title" style="font-size:14px;">美食篩選</div>
+          <div class="filter-grid">
+            <label>分類
+              <select id="foodCatFilter">
+                <option value="">全部</option>
+              </select>
+            </label>
+            <label>地區
+              <select id="foodAreaFilter">
+                <option value="">全部</option>
+              </select>
+            </label>
+            <label>價位
+              <select id="foodPriceFilter">
+                <option value="">全部</option>
+                <option value="$">$（≤200）</option>
+                <option value="$$">$$（200-1000）</option>
+                <option value="$$$">$$$（1000+）</option>
+              </select>
+            </label>
+          </div>
+          <div id="foodTagFilters" class="filter-tags"></div>
+        </div>
+        <div>
+          <div class="section-title" style="font-size:14px;">寺廟篩選</div>
+          <div class="filter-grid">
+            <label>地區
+              <select id="templeAreaFilter">
+                <option value="">全部</option>
+              </select>
+            </label>
+          </div>
+          <div id="templeTagFilters" class="filter-tags"></div>
+          <div id="templeWishFilters" class="filter-tags"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">Google 地圖搜尋（可加入行程）</div>
+      <div class="planner-grid">
+        <div class="planner-row">
+          <label>搜尋地點
+            <input id="mapSearchInput" type="text" placeholder="輸入地點名稱">
+          </label>
+          <label>類型
+            <select id="mapPlaceType">
+              <option value="food">美食</option>
+              <option value="temple">寺廟</option>
+              <option value="custom">其他</option>
+            </select>
+          </label>
+          <div class="planner-actions" style="align-self:end;">
+            <button class="pill-btn" type="button" id="btnAddMapPlace" disabled>加入行程</button>
+          </div>
+        </div>
+        <div id="mapPlaceInfo" class="map-info">尚未選擇地點。</div>
+        <div class="map-wrap" id="mapCanvas"></div>
+      </div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">我的行程</div>
+      <div id="savedList" class="saved-list"></div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">行程結果</div>
+      <div class="plan-controls">
+        <button class="pill-btn" type="button" id="btnRebuild">重新產生</button>
+        <button class="pill-btn" type="button" id="btnSavePlan">儲存行程</button>
+        <button class="pill-btn" type="button" id="btnPrint">匯出 PDF</button>
+        <button class="pill-btn" type="button" id="btnShareLine">LINE 分享</button>
+        <input class="share-input" id="shareLinkInput" type="text" placeholder="分享連結" readonly>
+        <button class="pill-btn" type="button" id="btnCopyShare">複製連結</button>
+      </div>
+      <section id="resultPanel" class="result-panel">
+        <div class="result-empty">尚未產生行程</div>
+      </section>
     </section>
   </div>
 
