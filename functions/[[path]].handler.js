@@ -1,27 +1,4 @@
 // functions/[[path]].handler.js
-// 標準化所有樣式來源：於表單頁面載入時呼叫，統一欄位樣式，避免多重 CSS 衝突
-function resetFormStyles() {
-  const style = document.createElement('style');
-  style.textContent = `
-    form * {
-      box-sizing: border-box !important;
-      font-family: inherit !important;
-      font-size: 16px !important;
-      line-height: 1.5 !important;
-      margin: 0 !important;
-      padding: 6px 10px !important;
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-    input, textarea, select {
-      display: block !important;
-      border: 1px solid #ccc !important;
-      border-radius: 6px !important;
-      background: #fff !important;
-    }
-  `;
-  document.head.appendChild(style);
-}
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Access-Control-Allow-Origin': '*',
@@ -4853,68 +4830,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return json({ ok:true, checked, updated, failed, skipped, total: items.length });
   }
 
-  if (pathname === '/api/foods/rebuild-cache' && request.method === 'POST'){
-    {
-      const guard = await requireAdminWrite(request, env);
-      if (guard) return guard;
-    }
-    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
-    resetFoodsListMemoryCache();
-    await deleteFoodsListCache(env);
-    return json({ ok:true });
-  }
 
-  if (pathname === '/api/foods/hours' && request.method === 'POST'){
-    {
-      const guard = await requireAdminWrite(request, env);
-      if (guard) return guard;
-    }
-    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
-    const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
-    if (!key) return json({ ok:false, error:'missing google maps key' }, 500);
-    let body = {};
-    try{ body = await request.json().catch(()=>({})); }catch(_){}
-    const ids = Array.isArray(body.ids) ? body.ids.map(v=>String(v||'').trim()).filter(Boolean) : [];
-    const limit = Math.max(1, Math.min(300, Number(body.limit || url.searchParams.get('limit') || 100) || 100));
-    const force = String(body.force || url.searchParams.get('force') || '').toLowerCase() === 'true';
-    let items = [];
-    if (ids.length){
-      for (const id of ids){
-        const item = await readFood(env, id);
-        if (item) items.push(item);
-      }
-    }else{
-      items = await listFoods(env, limit, { cache: false });
-    }
-    let updated = 0;
-    let checked = 0;
-    let failed = 0;
-    let skipped = 0;
-    for (const item of items){
-      checked += 1;
-      if (!force && hasNormalizedHours(item.hours)){
-        skipped += 1;
-        continue;
-      }
-      let hours = await resolveFoodHours(env, item);
-      if (!hours){
-        hours = normalizeHoursFallback(item.hours);
-      }
-      if (hours && String(hours || '').trim()){
-        item.hours = hours;
-        item.updatedAt = new Date().toISOString();
-        await saveFood(env, item);
-        updated += 1;
-      }else{
-        failed += 1;
-      }
-    }
-    if (updated){
-      resetFoodsListMemoryCache();
-      await deleteFoodsListCache(env);
-    }
-    return json({ ok:true, checked, updated, failed, skipped, total: items.length });
-  }
+
 
   if (pathname === '/api/foods/rebuild-cache' && request.method === 'POST'){
     {
@@ -5314,16 +5231,8 @@ if (pathname === '/api/me/temple-favs') {
     return json({ ok:true, checked, updated, failed, skipped, total: items.length });
   }
 
-  if (pathname === '/api/temples/rebuild-cache' && request.method === 'POST'){
-    {
-      const guard = await requireAdminWrite(request, env);
-      if (guard) return guard;
-    }
-    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
-    resetTemplesListMemoryCache();
-    await deleteTemplesListCache(env);
-    return json({ ok:true });
-  }
+
+
 
   if (pathname === '/api/temples/hours' && request.method === 'POST'){
     {
@@ -5334,7 +5243,7 @@ if (pathname === '/api/me/temple-favs') {
     const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
     if (!key) return json({ ok:false, error:'missing google maps key' }, 500);
     let body = {};
-    try{ body = await request.json().catch(()=>({})); }catch(_){}
+    try{ body = await request.json().catch(()=>({})); }catch(_){ }
     const ids = Array.isArray(body.ids) ? body.ids.map(v=>String(v||'').trim()).filter(Boolean) : [];
     const limit = Math.max(1, Math.min(300, Number(body.limit || url.searchParams.get('limit') || 100) || 100));
     const force = String(body.force || url.searchParams.get('force') || '').toLowerCase() === 'true';
@@ -5978,8 +5887,6 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
         const contentType = mimeOk ? mime : (mimeByExt[ext] || 'application/octet-stream');
         return { ok:true, ext, contentType };
       };
-      // DEBUG holder for receipt upload info
-      let __dbg_proof_info = null;
       // === Save uploaded proof into R2 (preferred) ===
       let __receipt_url_from_file = "";
       try {
@@ -6072,10 +5979,6 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       // Normalize note/remark from form fields
       if (!body.note && body.remark) body.note = String(body.remark);
       if (!body.note && body.buyer_note) body.note = String(body.buyer_note);
-      // DEBUG: final receiptUrl that will be saved on order
-      if (body && body.receiptUrl) {
-        console.log('[RECEIPT_URL]', body.receiptUrl, __dbg_proof_info);
-      }
       // Parse cart JSON if provided
       if (typeof body.cart === 'string') {
         try { body.cart = JSON.parse(body.cart); } catch {}

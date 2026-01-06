@@ -676,7 +676,10 @@ async function ensureMemberLoginForCoupon(){
 }
 async function issueCoupon(deityCode, amount, quizPayload){
   const payload = { deity: String(deityCode||'').toUpperCase(), amount: Number(amount||200), quiz: quizPayload || undefined };
+  const quizKey = readQuizToken();
   const headers = { 'Content-Type':'application/json' };
+  if (quizKey) headers['X-Quiz-Key'] = quizKey;
+  if (quizKey) payload.key = quizKey;
   // 直接呼叫本站新優惠券系統（公共 quiz 發券端點）
   const res = await fetch(`${COUPON_API}/issue-quiz`, {
     method: 'POST',
