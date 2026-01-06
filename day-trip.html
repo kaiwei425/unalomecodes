@@ -118,9 +118,9 @@
       <p>一步一步輸入條件，最後產出行程卡與 Google 路線。</p>
       <div class="stepper" id="stepper">
         <button class="step-pill is-active" type="button" data-step-pill="1"><span>1</span>起點與時間</button>
-        <button class="step-pill" type="button" data-step-pill="2"><span>2</span>想去的點</button>
-        <button class="step-pill" type="button" data-step-pill="3"><span>3</span>行程模式</button>
-        <button class="step-pill" type="button" data-step-pill="4"><span>4</span>產出行程</button>
+        <button class="step-pill" type="button" data-step-pill="2"><span>2</span>行程模式</button>
+        <button class="step-pill" type="button" data-step-pill="3"><span>3</span>自動規劃</button>
+        <button class="step-pill" type="button" data-step-pill="4"><span>4</span>行程結果</button>
       </div>
       <div class="planner-hint" id="statusText" style="margin-top:8px;">資料載入中…</div>
     </section>
@@ -155,8 +155,91 @@
     </section>
 
     <section class="planner-card step-section" data-step-section="2">
-      <div class="section-title">第二步｜加入想去的點</div>
+      <div class="section-title">第二步｜選擇行程模式</div>
       <div class="planner-grid">
+        <div class="mode-grid" id="modeCards">
+          <button class="mode-card" type="button" data-mode="chill">
+            <h3>放鬆 Chill 行程</h3>
+            <p>行程景點較少，以咖啡、拍照與慢節奏為主。</p>
+          </button>
+          <button class="mode-card is-selected" type="button" data-mode="balance">
+            <h3>正常行程</h3>
+            <p>景點與美食均衡安排，節奏舒服。</p>
+          </button>
+          <button class="mode-card" type="button" data-mode="battle">
+            <h3>戰鬥行程</h3>
+            <p>安排越多越好，適合特種兵模式。</p>
+          </button>
+        </div>
+        <label style="display:none;">行程模式
+          <select id="modeSelect">
+            <option value="battle">戰鬥</option>
+            <option value="balance" selected>平衡</option>
+            <option value="chill">散步</option>
+          </select>
+        </label>
+        <div class="step-actions">
+          <button class="pill-btn" type="button" id="btnStep2Back">上一步</button>
+          <button class="pill-btn primary" type="button" id="btnStep2Next">下一步</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="planner-card step-section" data-step-section="3">
+      <div class="section-title">第三步｜自動規劃設定</div>
+      <div class="planner-grid">
+        <div class="planner-hint">依起點與時間，自動結合熱門景點與順路餐廳，產出一日行程。</div>
+        <div class="planner-hint">熱門景點涵蓋：水上市場、海鮮市場、夜市、古城、海邊等。</div>
+        <div class="planner-row">
+          <label class="inline-toggle">
+            <input type="checkbox" id="mealBreakfast" checked>
+            早餐
+          </label>
+          <label class="inline-toggle">
+            <input type="checkbox" id="mealLunch" checked>
+            午餐
+          </label>
+          <label class="inline-toggle">
+            <input type="checkbox" id="mealDinner" checked>
+            晚餐
+          </label>
+        </div>
+        <label class="inline-toggle">
+          <input type="checkbox" id="includeTempleToggle" checked>
+          加入寺廟行程
+        </label>
+        <details>
+          <summary>進階行程設定</summary>
+          <div style="margin-top:10px;display:grid;gap:12px;">
+            <label class="inline-toggle">
+              <input type="checkbox" id="allowClosedToggle" checked>
+              允許排入非營業時段
+            </label>
+          </div>
+        </details>
+        <div class="step-actions">
+          <button class="pill-btn" type="button" id="btnStep3Back">上一步</button>
+          <button class="pill-btn primary" type="button" id="btnStep3Next">產出行程</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="planner-card step-section" data-step-section="4">
+      <div class="section-title">第四步｜行程結果</div>
+      <div class="plan-controls">
+        <button class="pill-btn" type="button" id="btnGenerate">重新產生</button>
+        <button class="pill-btn" type="button" id="btnSavePlan">儲存行程</button>
+        <button class="pill-btn" type="button" id="btnPrint">匯出 PDF</button>
+        <button class="pill-btn" type="button" id="btnShareLine">LINE 分享</button>
+        <input class="share-input" id="shareLinkInput" type="text" placeholder="分享連結" readonly>
+        <button class="pill-btn" type="button" id="btnCopyShare">複製連結</button>
+      </div>
+      <section id="resultPanel" class="result-panel">
+        <div class="result-empty">尚未產生行程</div>
+      </section>
+      <div class="section-title" style="margin-top:16px;">行程調整</div>
+      <div class="planner-hint">加入想去的點後，按上方「重新產生」更新行程。</div>
+      <div class="planner-grid" style="margin-top:10px;">
         <label>搜尋我的資料庫
           <input id="mustSearchInput" type="text" placeholder="輸入店名/寺廟關鍵字">
         </label>
@@ -232,77 +315,7 @@
 
         <div class="section-title" style="font-size:14px;">已加入必去清單</div>
         <div id="mustList" class="must-list"></div>
-        <div class="step-actions">
-          <button class="pill-btn" type="button" id="btnStep2Back">上一步</button>
-          <button class="pill-btn primary" type="button" id="btnStep2Next">下一步（可略過）</button>
-        </div>
       </div>
-    </section>
-
-    <section class="planner-card step-section" data-step-section="3">
-      <div class="section-title">第三步｜選擇旅遊模式</div>
-      <div class="planner-grid">
-        <div class="mode-grid" id="modeCards">
-          <button class="mode-card" type="button" data-mode="chill">
-            <h3>放鬆 Chill 行程</h3>
-            <p>行程景點較少，以咖啡、拍照與慢節奏為主。</p>
-          </button>
-          <button class="mode-card is-selected" type="button" data-mode="balance">
-            <h3>正常行程</h3>
-            <p>景點與美食均衡安排，節奏舒服。</p>
-          </button>
-          <button class="mode-card" type="button" data-mode="battle">
-            <h3>戰鬥行程</h3>
-            <p>安排越多越好，適合特種兵模式。</p>
-          </button>
-        </div>
-        <label style="display:none;">行程模式
-          <select id="modeSelect">
-            <option value="battle">戰鬥</option>
-            <option value="balance" selected>平衡</option>
-            <option value="chill">散步</option>
-          </select>
-        </label>
-        <details>
-          <summary>進階行程設定</summary>
-          <div style="margin-top:10px;display:grid;gap:12px;">
-            <div class="planner-row">
-              <label>餐/寺比例
-                <select id="ratioSelect">
-                  <option value="2-1">美食 2 / 寺廟 1</option>
-                  <option value="1-1" selected>美食 1 / 寺廟 1</option>
-                  <option value="1-2">美食 1 / 寺廟 2</option>
-                  <option value="food-only">只要美食</option>
-                  <option value="temple-only">只要寺廟</option>
-                </select>
-              </label>
-            </div>
-            <label class="inline-toggle">
-              <input type="checkbox" id="allowClosedToggle" checked>
-              允許排入非營業時段
-            </label>
-          </div>
-        </details>
-        <div class="step-actions">
-          <button class="pill-btn" type="button" id="btnStep3Back">上一步</button>
-          <button class="pill-btn primary" type="button" id="btnStep3Next">產出行程</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="planner-card step-section" data-step-section="4">
-      <div class="section-title">第四步｜行程結果</div>
-      <div class="plan-controls">
-        <button class="pill-btn" type="button" id="btnGenerate">重新產生</button>
-        <button class="pill-btn" type="button" id="btnSavePlan">儲存行程</button>
-        <button class="pill-btn" type="button" id="btnPrint">匯出 PDF</button>
-        <button class="pill-btn" type="button" id="btnShareLine">LINE 分享</button>
-        <input class="share-input" id="shareLinkInput" type="text" placeholder="分享連結" readonly>
-        <button class="pill-btn" type="button" id="btnCopyShare">複製連結</button>
-      </div>
-      <section id="resultPanel" class="result-panel">
-        <div class="result-empty">尚未產生行程</div>
-      </section>
       <div class="step-actions" style="margin-top:12px;">
         <button class="pill-btn" type="button" id="btnStep4Back">回到上一頁</button>
       </div>

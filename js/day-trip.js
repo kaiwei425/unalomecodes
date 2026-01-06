@@ -5,8 +5,11 @@
   const startTimeInput = document.getElementById('startTime');
   const endTimeInput = document.getElementById('endTime');
   const modeSelect = document.getElementById('modeSelect');
-  const ratioSelect = document.getElementById('ratioSelect');
   const transportSelect = document.getElementById('transportSelect');
+  const mealBreakfast = document.getElementById('mealBreakfast');
+  const mealLunch = document.getElementById('mealLunch');
+  const mealDinner = document.getElementById('mealDinner');
+  const includeTempleToggle = document.getElementById('includeTempleToggle');
   const allowClosedToggle = document.getElementById('allowClosedToggle');
   const btnLocate = document.getElementById('btnLocate');
   const btnGenerate = document.getElementById('btnGenerate');
@@ -55,25 +58,45 @@
   const DEFAULT_STAY = { food: 60, temple: 45, spot: 50 };
   const FOOD_SLOT_ORDER = ['morning', 'noon', 'afternoon', 'evening', 'night'];
   const TEMPLE_SLOT_ORDER = ['morning', 'afternoon', 'evening'];
+  const MEAL_ORDER = ['breakfast', 'lunch', 'dinner'];
+  const MEAL_LABELS = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' };
+  const MEAL_WINDOWS = {
+    breakfast: [420, 600],
+    lunch: [660, 840],
+    dinner: [1020, 1200]
+  };
   const STORAGE_KEY = 'day_trip_saved_plans_v1';
   const RECOMMENDED_SPOTS = [
-    { name:'大皇宮', kind:'temple', lat:13.7500, lng:100.4913, area:'曼谷', category:'皇宮' },
-    { name:'玉佛寺', kind:'temple', lat:13.7515, lng:100.4927, area:'曼谷', category:'寺廟' },
-    { name:'臥佛寺', kind:'temple', lat:13.7467, lng:100.4930, area:'曼谷', category:'寺廟' },
-    { name:'鄭王廟', kind:'temple', lat:13.7440, lng:100.4889, area:'曼谷', category:'寺廟' },
-    { name:'四面佛', kind:'temple', lat:13.7443, lng:100.5401, area:'曼谷', category:'祈福' },
-    { name:'恰圖恰市集', kind:'spot', lat:13.7994, lng:100.5510, area:'曼谷', category:'市集' },
-    { name:'ICONSIAM', kind:'spot', lat:13.7266, lng:100.5107, area:'曼谷', category:'購物' },
-    { name:'暹羅百麗宮', kind:'spot', lat:13.7466, lng:100.5350, area:'曼谷', category:'購物' },
-    { name:'考山路', kind:'spot', lat:13.7587, lng:100.4971, area:'曼谷', category:'夜生活' },
-    { name:'喬德夜市', kind:'spot', lat:13.7641, lng:100.5699, area:'曼谷', category:'夜市' },
-    { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7047, lng:100.5030, area:'曼谷', category:'夜市' },
-    { name:'Jim Thompson House', kind:'spot', lat:13.7494, lng:100.5280, area:'曼谷', category:'景點' }
+    { name:'恰圖恰市集', kind:'spot', lat:13.8002651, lng:100.5511228, area:'曼谷', category:'市集' },
+    { name:'ICONSIAM', kind:'spot', lat:13.7268226, lng:100.510294, area:'曼谷', category:'購物' },
+    { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7042168, lng:100.5028259, area:'曼谷', category:'夜市' },
+    { name:'喬德夜市（Rama 9）', kind:'spot', lat:13.7581533, lng:100.5670256, area:'曼谷', category:'夜市' },
+    { name:'火車夜市（席娜卡琳）', kind:'spot', lat:13.6946657, lng:100.6510865, area:'曼谷', category:'夜市' },
+    { name:'耀華力路（唐人街）', kind:'spot', lat:13.7400474, lng:100.5104603, area:'曼谷', category:'美食街' },
+    { name:'考山路', kind:'spot', lat:13.7587665, lng:100.4975792, area:'曼谷', category:'夜生活' },
+    { name:'巴空花市', kind:'spot', lat:13.7417086, lng:100.4963295, area:'曼谷', category:'花市' },
+    { name:'Jim Thompson House', kind:'spot', lat:13.7492268, lng:100.5282811, area:'曼谷', category:'博物館' },
+    { name:'倫披尼公園', kind:'spot', lat:13.7306004, lng:100.5415377, area:'曼谷', category:'公園' },
+    { name:'Mahanakhon SkyWalk', kind:'spot', lat:13.7231503, lng:100.5280809, area:'曼谷', category:'觀景' },
+    { name:'曼谷藝術文化中心', kind:'spot', lat:13.746778, lng:100.5302625, area:'曼谷', category:'藝文' },
+    { name:'丹嫩莎朵水上市場', kind:'spot', lat:13.5190148, lng:99.959346, area:'叻丕府', category:'水上市場' },
+    { name:'安帕瓦水上市場', kind:'spot', lat:13.4248722, lng:99.9554592, area:'夜功府', category:'水上市場' },
+    { name:'美功鐵道市場', kind:'spot', lat:13.4077308, lng:100.0009031, area:'夜功府', category:'鐵道市場' },
+    { name:'瑪哈猜海鮮市場', kind:'spot', lat:13.5451019, lng:100.2761542, area:'龍仔厝府', category:'海鮮市場' },
+    { name:'大城古城', kind:'spot', lat:14.3535461, lng:100.5622548, area:'大城', category:'古城' },
+    { name:'邦芭茵皇宮', kind:'spot', lat:14.2326451, lng:100.5794291, area:'大城', category:'皇宮' },
+    { name:'古城（Muang Boran）', kind:'spot', lat:13.5405466, lng:100.6239998, area:'北欖府', category:'歷史園區' },
+    { name:'三頭象神博物館', kind:'spot', lat:13.6299759, lng:100.5891358, area:'北欖府', category:'博物館' },
+    { name:'芭達雅海灘', kind:'spot', lat:12.936583, lng:100.8859605, area:'芭達雅', category:'海灘' },
+    { name:'真理寺', kind:'spot', lat:12.972777, lng:100.8891503, area:'芭達雅', category:'景點' },
+    { name:'東芭樂園（Nong Nooch）', kind:'spot', lat:12.7646849, lng:100.9361187, area:'芭達雅', category:'花園' },
+    { name:'桂河大橋', kind:'spot', lat:14.0404105, lng:99.503463, area:'北碧府', category:'歷史景點' }
   ];
 
   const state = {
     foods: [],
     temples: [],
+    popularItems: [],
     customItems: [],
     ready: false,
     startCoords: null,
@@ -124,7 +147,7 @@
     stepPills.forEach(pill => {
       pill.classList.toggle('is-active', pill.getAttribute('data-step-pill') === String(step));
     });
-    if (step === 2){
+    if (step === 4){
       ensureGoogleMaps().then(()=>{
         if (!state.googleMap || !window.google || !window.google.maps) return;
         window.setTimeout(()=>{
@@ -358,6 +381,22 @@
       .filter(Boolean);
   }
 
+  function dedupeItems(list){
+    const seen = new Set();
+    return (Array.isArray(list) ? list : []).filter(item => {
+      if (!item || !item.id || seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }
+
+  function getPopularItems(){
+    if (!state.popularItems.length){
+      state.popularItems = RECOMMENDED_SPOTS.map(buildPresetItem);
+    }
+    return state.popularItems.slice();
+  }
+
   function uniqueValues(list, selector){
     const set = new Set();
     list.forEach(item => {
@@ -446,10 +485,11 @@
     const filtered = applyFilters(state.foods.concat(state.temples));
     const foodCount = filtered.filter(item => item.kind === 'food').length;
     const templeCount = filtered.filter(item => item.kind === 'temple').length;
+    const popularCount = getPopularItems().length;
     const customCount = state.customItems.length;
     const customText = customCount ? ` / 自訂 ${customCount}` : '';
     const filterNote = hasActiveFilters() ? '（已套用篩選）' : '';
-    candidateSummary.textContent = `候選：美食 ${foodCount} / 寺廟 ${templeCount}${customText} ${filterNote}`.trim();
+    candidateSummary.textContent = `候選：美食 ${foodCount} / 寺廟 ${templeCount} / 熱門 ${popularCount}${customText} ${filterNote}`.trim();
   }
 
   function renderMustList(){
@@ -532,16 +572,9 @@
         const name = btn.getAttribute('data-add-reco') || '';
         const spot = RECOMMENDED_SPOTS.find(item => item.name === name);
         if (!spot) return;
-        const existing = state.foods.concat(state.temples).find(item => item.name === spot.name);
-        if (existing){
-          addMustItem(existing);
-          updateCandidateSummary();
-          return;
-        }
-        const custom = buildPresetItem(spot);
-        const existsCustom = state.customItems.find(x => x.id === custom.id);
-        if (!existsCustom) state.customItems.push(custom);
-        addMustItem(custom);
+        const popular = getPopularItems();
+        const item = popular.find(entry => entry.name === spot.name) || buildPresetItem(spot);
+        addMustItem(item);
         updateCandidateSummary();
       });
     });
@@ -549,7 +582,7 @@
 
   function findItemById(id){
     if (!id) return null;
-    const all = state.foods.concat(state.temples, state.customItems);
+    const all = state.foods.concat(state.temples, getPopularItems(), state.customItems);
     return all.find(item => item.id === id) || null;
   }
 
@@ -635,12 +668,37 @@
     return '平衡模式';
   }
 
-  function getRatioLabel(value){
-    if (value === 'food-only') return '只要美食';
-    if (value === 'temple-only') return '只要寺廟';
-    if (value === '2-1') return '美食 2 / 寺廟 1';
-    if (value === '1-2') return '美食 1 / 寺廟 2';
-    return '美食 1 / 寺廟 1';
+  function getMealSelections(){
+    return {
+      breakfast: mealBreakfast ? mealBreakfast.checked : true,
+      lunch: mealLunch ? mealLunch.checked : true,
+      dinner: mealDinner ? mealDinner.checked : true
+    };
+  }
+
+  function getMealLabel(meals){
+    const labels = [];
+    MEAL_ORDER.forEach(key => {
+      if (meals && meals[key]) labels.push(MEAL_LABELS[key]);
+    });
+    return labels.length ? labels.join('・') : '不含餐';
+  }
+
+  function getMealKeyForTime(minutes, meals, mealStatus){
+    if (!meals) return '';
+    for (const key of MEAL_ORDER){
+      if (!meals[key] || mealStatus[key]) continue;
+      const win = MEAL_WINDOWS[key];
+      if (minutes >= win[0] && minutes < win[1]) return key;
+    }
+    return '';
+  }
+
+  function mealWindowOverlaps(startMin, endMin, window){
+    const start = Number(startMin);
+    const end = Number(endMin);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return true;
+    return Math.max(start, window[0]) < Math.min(end, window[1]);
   }
 
   function getTransportLabel(mode){
@@ -654,10 +712,6 @@
     if (kind === 'temple') return '寺廟';
     if (kind === 'food') return '美食';
     return '景點';
-  }
-
-  function kindForRatio(kind){
-    return kind === 'temple' ? 'temple' : 'food';
   }
 
   function getTransportSettings(mode){
@@ -676,14 +730,6 @@
       return Math.max(10, Math.round(distance * 4));
     }
     return Math.max(10, Math.round(distance * transport.speedMinPerKm));
-  }
-
-  function parseRatio(value){
-    if (value === 'food-only') return { food: 1, temple: 0 };
-    if (value === 'temple-only') return { food: 0, temple: 1 };
-    const match = String(value || '').match(/(\d+)-(\d+)/);
-    if (match) return { food: Number(match[1]), temple: Number(match[2]) };
-    return { food: 1, temple: 1 };
   }
 
   function itemMatchesTags(item, selectedTags){
@@ -743,30 +789,27 @@
     handleFiltersChange();
   }
 
-  function getPreferredKind(minutes, counts, ratio, lastKinds){
-    if (ratio.food === 0) return 'temple';
-    if (ratio.temple === 0) return 'food';
-    const totalTarget = ratio.food + ratio.temple;
-    const targetFoodRatio = ratio.food / totalTarget;
-    const totalCount = counts.food + counts.temple + 1;
-    const currentFoodRatio = counts.food / totalCount;
+  function getPreferredKind(minutes, counts, settings, lastKinds){
+    if (!settings || !settings.includeTemples) return 'spot';
+    const targetTempleRatio = Number.isFinite(settings.templeRatio) ? settings.templeRatio : 0.25;
+    const totalNonFood = counts.spot + counts.temple + 1;
+    const currentTempleRatio = counts.temple / totalNonFood;
     const hour = minutes / 60;
-    let timeBias = 'food';
-    if (hour < 12) timeBias = 'temple';
-    else if (hour < 14) timeBias = 'food';
-    else if (hour < 18) timeBias = lastKinds[lastKinds.length - 1] === 'food' ? 'temple' : 'food';
-
-    if (currentFoodRatio < targetFoodRatio) return 'food';
-    if (currentFoodRatio > targetFoodRatio) return 'temple';
-    return timeBias;
+    const templeWindow = hour >= 9 && hour < 17;
+    if (templeWindow && currentTempleRatio < targetTempleRatio) return 'temple';
+    if (lastKinds && lastKinds[lastKinds.length - 1] === 'temple') return 'spot';
+    return 'spot';
   }
 
-  function pickNextItem(candidates, currentCoords, preferredKind, mustSet){
+  function pickNextItem(candidates, currentCoords, preferredKind, mustSet, preferredIds){
     let pool = candidates;
     const mustCandidates = candidates.filter(item => mustSet.has(item.id));
     if (mustCandidates.length) pool = mustCandidates;
-    else if (preferredKind) {
-      const preferredPool = candidates.filter(item => kindForRatio(item.kind) === preferredKind);
+    else if (preferredIds && preferredIds.size) {
+      const preferredPool = candidates.filter(item => preferredIds.has(item.id));
+      if (preferredPool.length) pool = preferredPool;
+    } else if (preferredKind) {
+      const preferredPool = candidates.filter(item => item.kind === preferredKind);
       if (preferredPool.length) pool = preferredPool;
     }
     let best = null;
@@ -793,21 +836,28 @@
     const totalMinutes = endMin - startMin;
     const modeSettings = settings.modeSettings;
     const transport = settings.transport;
-    const ratio = settings.ratio;
+    const meals = settings.meals || {};
+    const mealStatus = { breakfast: false, lunch: false, dinner: false };
     const maxStops = Math.min(12, Math.max(3, Math.floor(totalMinutes / modeSettings.stopFactor)));
     const mustSet = settings.mustSet;
     const allowClosed = settings.allowClosed !== false;
     let usedClosedFallback = false;
 
-    const counts = { food: 0, temple: 0 };
+    const counts = { food: 0, temple: 0, spot: 0 };
 
     for (let i = 0; i < maxStops; i++){
+      const mealPreferredIds = new Set();
       const candidates = items.filter(item => {
         if (!item || !item.id || used.has(item.id)) return false;
         const distKm = haversineKm(currentCoords, item.coords);
         const travelMin = estimateTravelMinutes(distKm, transport);
         const arrive = currentTime + travelMin;
-        return isOpenAt(item, arrive);
+        if (!isOpenAt(item, arrive)) return false;
+        if (item.kind === 'food'){
+          const mealKey = getMealKeyForTime(arrive, meals, mealStatus);
+          if (mealKey) mealPreferredIds.add(item.id);
+        }
+        return true;
       });
       let fallback = candidates;
       if (!fallback.length){
@@ -816,8 +866,8 @@
         fallback = items.filter(item => item && item.id && !used.has(item.id));
       }
       if (!fallback.length) break;
-      const preferred = getPreferredKind(currentTime, counts, ratio, lastKinds);
-      const next = pickNextItem(fallback, currentCoords, preferred, mustSet);
+      const preferred = mealPreferredIds.size ? 'food' : getPreferredKind(currentTime, counts, settings, lastKinds);
+      const next = pickNextItem(fallback, currentCoords, preferred, mustSet, mealPreferredIds);
       if (!next) break;
       const distKm = haversineKm(currentCoords, next.coords);
       const travelMin = estimateTravelMinutes(distKm, transport);
@@ -836,13 +886,21 @@
       used.add(next.id);
       currentCoords = next.coords;
       currentTime = depart;
-      if (kindForRatio(next.kind) === 'food') counts.food += 1;
-      if (next.kind === 'temple') counts.temple += 1;
+      if (next.kind === 'food') counts.food += 1;
+      else if (next.kind === 'temple') counts.temple += 1;
+      else counts.spot += 1;
+      if (next.kind === 'food'){
+        const mealKey = getMealKeyForTime(arrive, meals, mealStatus);
+        if (mealKey) mealStatus[mealKey] = true;
+      }
       lastKinds.push(next.kind);
       if (lastKinds.length > 2) lastKinds.shift();
     }
     const skippedMust = Array.from(mustSet).filter(id => !plan.some(entry => entry.item.id === id));
-    return { plan, skippedMust, startMin, endMin, usedClosedFallback };
+    const skippedMeals = MEAL_ORDER.filter(key => meals[key] && !mealStatus[key]);
+    const windowSkips = MEAL_ORDER.filter(key => meals[key] && !mealWindowOverlaps(startMin, endMin, MEAL_WINDOWS[key]));
+    const skippedMealsAll = Array.from(new Set(skippedMeals.concat(windowSkips)));
+    return { plan, skippedMust, skippedMeals: skippedMealsAll, startMin, endMin, usedClosedFallback };
   }
 
   function recomputeTravelStats(plan, origin, transport){
@@ -967,7 +1025,8 @@
       return;
     }
     const modeLabel = getModeLabel(planData.mode || (modeSelect ? modeSelect.value : 'balance'));
-    const ratioLabel = getRatioLabel(planData.ratioValue || (ratioSelect ? ratioSelect.value : '1-1'));
+    const mealLabel = getMealLabel(planData.meals || getMealSelections());
+    const templeLabel = (planData.includeTemples ?? (includeTempleToggle ? includeTempleToggle.checked : true)) ? '加入寺廟' : '不含寺廟';
     const transportLabel = getTransportLabel(planData.transportMode || (transportSelect ? transportSelect.value : 'driving'));
     const startTimeLabel = Number.isFinite(planData.startMin)
       ? formatMinutes(planData.startMin)
@@ -1039,6 +1098,10 @@
     const timeSourceTag = planData.googleApplied
       ? '<span class="tag">時間：Google ETA</span>'
       : (planData.googlePending ? '<span class="tag">時間：Google ETA 計算中</span>' : '<span class="tag">時間：估算</span>');
+    const skippedMeals = (planData.skippedMeals || []).map(key => MEAL_LABELS[key]).filter(Boolean);
+    const mealWarning = skippedMeals.length
+      ? `<div class="planner-hint" style="color:#b45309;">未排入：${escapeHtml(skippedMeals.join('、'))}，可調整時間或放寬條件。</div>`
+      : '';
     const closedNote = planData.usedClosedFallback
       ? '<div class="planner-hint" style="color:#b45309;">部分時段無符合營業時間的候選，已改用全部候選。</div>'
       : '';
@@ -1062,8 +1125,12 @@
             ${escapeHtml(modeLabel)}
           </div>
           <div class="plan-cover-badge">
-            <span>比例</span>
-            ${escapeHtml(ratioLabel)}
+            <span>餐別</span>
+            ${escapeHtml(mealLabel)}
+          </div>
+          <div class="plan-cover-badge">
+            <span>寺廟</span>
+            ${escapeHtml(templeLabel)}
           </div>
           <div class="plan-cover-badge">
             <span>交通</span>
@@ -1074,6 +1141,8 @@
       <div class="plan-summary">
         <span class="tag">起點：${escapeHtml(startLabel)}</span>
         <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}${spotCount ? ` / 景點 ${spotCount}` : ''}</span>
+        <span class="tag">餐別：${escapeHtml(mealLabel)}</span>
+        <span class="tag">寺廟：${escapeHtml(templeLabel)}</span>
         <span class="tag">停留 ${totalStay} 分 / 移動 ${totalTravel} 分</span>
         ${timeSourceTag}
         ${routeUrl ? `<a class="pill-btn" href="${escapeHtml(routeUrl)}" target="_blank" rel="noopener">開啟路線</a>` : ''}
@@ -1081,6 +1150,7 @@
       ${staleNote}
       ${closedNote}
       ${endOverrun ? `<div class="planner-hint" style="color:#b91c1c;">依目前預估會超過結束時間約 ${Math.ceil(endOverrun)} 分鐘。</div>` : ''}
+      ${mealWarning}
       ${warning}
       ${listHtml}
     `;
@@ -1119,7 +1189,7 @@
     plan[nextIdx] = temp;
     const planData = Object.assign({}, state.currentSummary || {}, { plan });
     const transport = planData.transport || getTransportSettings(planData.transportMode || 'driving');
-    recomputeTravelStats(plan, state.startCoords, transport);
+    recomputeTravelStats(plan, planData.startCoords || state.startCoords, transport);
     recomputeTimes(plan, planData.startMin || 0);
     renderPlan(planData);
   }
@@ -1166,7 +1236,8 @@
   function getActiveItems(){
     const base = applyFilters(state.foods.concat(state.temples));
     const custom = state.customItems || [];
-    return base.concat(custom);
+    const popular = getPopularItems();
+    return dedupeItems(base.concat(popular, custom));
   }
 
   async function generatePlan(){
@@ -1189,21 +1260,30 @@
 
     const modeValue = modeSelect ? modeSelect.value : 'balance';
     const transportMode = transportSelect ? transportSelect.value : 'driving';
-    const ratioValue = ratioSelect ? ratioSelect.value : '1-1';
     const allowClosed = allowClosedToggle ? allowClosedToggle.checked : true;
+    const meals = getMealSelections();
+    const includeTemples = includeTempleToggle ? includeTempleToggle.checked : true;
     const modeSettings = applyModeSettings(modeValue);
     const transport = getTransportSettings(transportMode);
-    const ratio = parseRatio(ratioValue);
     let items = getActiveItems();
-    if (ratio.food === 0) items = items.filter(item => kindForRatio(item.kind) !== 'food');
-    if (ratio.temple === 0) items = items.filter(item => item.kind !== 'temple');
-    const settings = { modeSettings, transport, ratio, mustSet: new Set(state.mustIds), allowClosed };
+    if (!includeTemples) items = items.filter(item => item.kind !== 'temple');
+    const settings = {
+      modeSettings,
+      transport,
+      mustSet: new Set(state.mustIds),
+      allowClosed,
+      meals,
+      includeTemples,
+      templeRatio: includeTemples ? 0.25 : 0
+    };
     const planData = buildPlan(origin, startMin, endMin, items, settings);
     planData.travelMode = transport.travelMode;
     planData.transport = transport;
     planData.transportMode = transportMode;
     planData.mode = modeValue;
-    planData.ratioValue = ratioValue;
+    planData.meals = meals;
+    planData.includeTemples = includeTemples;
+    planData.allowClosed = allowClosed;
     planData.startLabel = state.startLabel;
     planData.startCoords = state.startCoords;
     renderPlan(planData);
@@ -1247,7 +1327,9 @@
     const startLabel = planData.startLabel || state.startLabel;
     const startCoords = planData.startCoords || state.startCoords;
     const mode = planData.mode || (modeSelect ? modeSelect.value : 'balance');
-    const ratio = planData.ratioValue || (ratioSelect ? ratioSelect.value : '1-1');
+    const meals = planData.meals || getMealSelections();
+    const includeTemples = planData.includeTemples ?? (includeTempleToggle ? includeTempleToggle.checked : true);
+    const allowClosed = planData.allowClosed ?? (allowClosedToggle ? allowClosedToggle.checked : true);
     const transport = planData.transportMode || (transportSelect ? transportSelect.value : 'driving');
     return {
       startLabel,
@@ -1255,7 +1337,9 @@
       startTime,
       endTime,
       mode,
-      ratio,
+      meals,
+      includeTemples,
+      allowClosed,
       transport,
       plan: plan.map(entry => ({
         item: {
@@ -1293,9 +1377,15 @@
     if (payload.startTime) setTimeInput(startTimeInput, payload.startTime);
     if (payload.endTime) setTimeInput(endTimeInput, payload.endTime);
     if (modeSelect && payload.mode) modeSelect.value = payload.mode;
-    if (ratioSelect && payload.ratio) ratioSelect.value = payload.ratio;
     if (transportSelect && payload.transport) transportSelect.value = payload.transport;
-    if (payload.mode) selectMode(payload.mode);
+    if (payload.meals){
+      if (mealBreakfast) mealBreakfast.checked = !!payload.meals.breakfast;
+      if (mealLunch) mealLunch.checked = !!payload.meals.lunch;
+      if (mealDinner) mealDinner.checked = !!payload.meals.dinner;
+    }
+    if (includeTempleToggle) includeTempleToggle.checked = payload.includeTemples !== false;
+    if (allowClosedToggle) allowClosedToggle.checked = payload.allowClosed !== false;
+    if (payload.mode) selectMode(payload.mode, true);
 
     const plan = (payload.plan || []).map(entry => ({
       item: Object.assign({}, entry.item, {
@@ -1323,12 +1413,15 @@
       transport,
       transportMode,
       mode: payload.mode || 'balance',
-      ratioValue: payload.ratio || '1-1',
+      meals: payload.meals || getMealSelections(),
+      includeTemples: payload.includeTemples !== false,
+      allowClosed: payload.allowClosed !== false,
       startMin: Number.isFinite(startMin) ? startMin : 0,
       endMin: Number.isFinite(endMin) ? endMin : 0,
       startLabel: payload.startLabel || state.startLabel,
       startCoords: payload.startCoords || state.startCoords,
-      skippedMust: []
+      skippedMust: [],
+      skippedMeals: []
     };
     if (payload.startCoords && payload.startLabel) setStatus(`已載入分享行程：${payload.startLabel}`);
     clearPlanStale();
@@ -1379,7 +1472,9 @@
       ? formatMinutes(summary.endMin)
       : (endTimeInput ? endTimeInput.value : '');
     const modeValue = summary.mode || (modeSelect ? modeSelect.value : 'balance');
-    const ratioValue = summary.ratioValue || (ratioSelect ? ratioSelect.value : '1-1');
+    const mealsValue = summary.meals || getMealSelections();
+    const includeTemplesValue = summary.includeTemples ?? (includeTempleToggle ? includeTempleToggle.checked : true);
+    const allowClosedValue = summary.allowClosed ?? (allowClosedToggle ? allowClosedToggle.checked : true);
     const transportValue = summary.transportMode || (transportSelect ? transportSelect.value : 'driving');
     const record = {
       id: `plan_${Date.now()}`,
@@ -1390,7 +1485,9 @@
       startTime,
       endTime,
       mode: modeValue,
-      ratio: ratioValue,
+      meals: mealsValue,
+      includeTemples: includeTemplesValue,
+      allowClosed: allowClosedValue,
       transport: transportValue,
       plan: state.currentSummary.plan
     };
@@ -1462,9 +1559,15 @@
     if (plan.startTime) setTimeInput(startTimeInput, plan.startTime);
     if (plan.endTime) setTimeInput(endTimeInput, plan.endTime);
     if (modeSelect && plan.mode) modeSelect.value = plan.mode;
-    if (ratioSelect && plan.ratio) ratioSelect.value = plan.ratio;
     if (transportSelect && plan.transport) transportSelect.value = plan.transport;
-    if (plan.mode) selectMode(plan.mode);
+    if (plan.meals){
+      if (mealBreakfast) mealBreakfast.checked = !!plan.meals.breakfast;
+      if (mealLunch) mealLunch.checked = !!plan.meals.lunch;
+      if (mealDinner) mealDinner.checked = !!plan.meals.dinner;
+    }
+    if (includeTempleToggle) includeTempleToggle.checked = plan.includeTemples !== false;
+    if (allowClosedToggle) allowClosedToggle.checked = plan.allowClosed !== false;
+    if (plan.mode) selectMode(plan.mode, true);
     const transportMode = plan.transport || 'driving';
     const transport = getTransportSettings(transportMode);
     const startMin = plan.startTime ? timeInputToMinutes(plan.startTime) : null;
@@ -1485,12 +1588,15 @@
       transport,
       transportMode,
       mode: plan.mode || 'balance',
-      ratioValue: plan.ratio || '1-1',
+      meals: plan.meals || getMealSelections(),
+      includeTemples: plan.includeTemples !== false,
+      allowClosed: plan.allowClosed !== false,
       startMin: Number.isFinite(startMin) ? startMin : 0,
       endMin: Number.isFinite(endMin) ? endMin : 0,
       startLabel: plan.startLabel || state.startLabel,
       startCoords: plan.startCoords || state.startCoords,
-      skippedMust: []
+      skippedMust: [],
+      skippedMeals: []
     };
     clearPlanStale();
     updateMaxStep(4);
@@ -1678,14 +1784,14 @@
     btnClearFilters.addEventListener('click', clearFilters);
   }
 
-  function selectMode(mode){
+  function selectMode(mode, silent){
     if (modeSelect) modeSelect.value = mode;
     if (modeCards){
       modeCards.querySelectorAll('.mode-card').forEach(card=>{
         card.classList.toggle('is-selected', card.getAttribute('data-mode') === mode);
       });
     }
-    markPlanStale('行程模式已變更，請重新產生');
+    if (!silent) markPlanStale('行程模式已變更，請重新產生');
   }
 
   if (modeCards){
@@ -1751,9 +1857,15 @@
       markPlanStale('交通方式已變更，請重新產生');
     });
   }
-  if (ratioSelect){
-    ratioSelect.addEventListener('change', ()=>{
-      markPlanStale('比例已變更，請重新產生');
+  [mealBreakfast, mealLunch, mealDinner].forEach(el => {
+    if (!el) return;
+    el.addEventListener('change', ()=>{
+      markPlanStale('餐別已變更，請重新產生');
+    });
+  });
+  if (includeTempleToggle){
+    includeTempleToggle.addEventListener('change', ()=>{
+      markPlanStale('寺廟設定已變更，請重新產生');
     });
   }
   if (allowClosedToggle){
@@ -1823,7 +1935,7 @@
   loadData().then(()=>{
     renderMustList();
     renderRecommendedList();
-    selectMode(modeSelect ? modeSelect.value : 'balance');
+    selectMode(modeSelect ? modeSelect.value : 'balance', true);
     ensureGoogleMaps().then(()=>{
       if (state.currentSummary) maybeApplyGoogleTimes(state.currentSummary);
     });
