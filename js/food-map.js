@@ -419,8 +419,6 @@ const TRANSLATIONS = {
     priceOpt1: '$（≤200）',
     priceOpt2: '$$（200-1000）',
     priceOpt3: '$$$（1000+）',
-    typeInput: '類型',
-    typeHint: 'food / temple / cafe / bar / market / view',
     stayMin: '建議停留時間（分鐘）',
     stayMinHint: '例：45 / 60 / 90',
     openSlotsLabel: '可去時段',
@@ -428,14 +426,8 @@ const TRANSLATIONS = {
     slotAfternoon: '下午',
     slotEvening: '晚上',
     slotNight: '深夜',
-    priceLevelLabel: '價格等級',
-    priceLevelOpt1: '1（$）',
-    priceLevelOpt2: '2（$$）',
-    priceLevelOpt3: '3（$$$）',
     tagsInput: '標籤',
     tagsHint: '以逗號分隔，例如 aircon,photo,must_try',
-    wishTagsInput: '寺廟願望標籤',
-    wishTagsHint: '以逗號分隔，例如 財運,桃花,健康',
     openLabel: '營業',
     igComment: 'IG 留言',
     close: '關閉',
@@ -737,8 +729,6 @@ const TRANSLATIONS = {
     priceOpt1: '$ (<=200)',
     priceOpt2: '$$ (200-1000)',
     priceOpt3: '$$$ (1000+)',
-    typeInput: 'Type',
-    typeHint: 'food / temple / cafe / bar / market / view',
     stayMin: 'Suggested stay (min)',
     stayMinHint: 'e.g. 45 / 60 / 90',
     openSlotsLabel: 'Time slots',
@@ -746,14 +736,8 @@ const TRANSLATIONS = {
     slotAfternoon: 'Afternoon',
     slotEvening: 'Evening',
     slotNight: 'Night',
-    priceLevelLabel: 'Price level',
-    priceLevelOpt1: '1 ($)',
-    priceLevelOpt2: '2 ($$)',
-    priceLevelOpt3: '3 ($$$)',
     tagsInput: 'Tags',
     tagsHint: 'Comma-separated, e.g. aircon,photo,must_try',
-    wishTagsInput: 'Temple wish tags',
-    wishTagsHint: 'Comma-separated, e.g. wealth,romance,health',
     openLabel: 'Open',
     igComment: 'IG Comment',
     close: 'Close',
@@ -3167,11 +3151,8 @@ function render(){
     const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
     const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
     const stayMinVal = item.stayMin || item.stay_min || '';
-    const priceLevelVal = item.priceLevel || item.price_level || '';
-    const typeVal = item.type || '';
     const openSlots = normalizeListField(item.openSlots || item.open_slots);
     const tagsText = normalizeListField(item.tags).join(', ');
-    const wishTagsText = normalizeListField(item.wishTags || item.wish_tags).join(', ');
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -3217,21 +3198,9 @@ function render(){
               <option value="$$$" ${item.price === '$$$' ? 'selected' : ''}>${escapeHtml(t('priceOpt3'))}</option>
             </select>
           </label>
-          <label>${escapeHtml(t('typeInput'))}
-            <input class="admin-input" data-admin-field="type" value="${escapeHtml(typeVal)}">
-            <span class="admin-hint">${escapeHtml(t('typeHint'))}</span>
-          </label>
           <label>${escapeHtml(t('stayMin'))}
             <input class="admin-input" data-admin-field="stayMin" type="number" min="15" step="5" value="${escapeHtml(String(stayMinVal || ''))}">
             <span class="admin-hint">${escapeHtml(t('stayMinHint'))}</span>
-          </label>
-          <label>${escapeHtml(t('priceLevelLabel'))}
-            <select class="admin-input" data-admin-field="priceLevel">
-              <option value="">-</option>
-              <option value="1" ${String(priceLevelVal) === '1' ? 'selected' : ''}>${escapeHtml(t('priceLevelOpt1'))}</option>
-              <option value="2" ${String(priceLevelVal) === '2' ? 'selected' : ''}>${escapeHtml(t('priceLevelOpt2'))}</option>
-              <option value="3" ${String(priceLevelVal) === '3' ? 'selected' : ''}>${escapeHtml(t('priceLevelOpt3'))}</option>
-            </select>
           </label>
           <div class="admin-field admin-cover">
             <div>${escapeHtml(t('openSlotsLabel'))}</div>
@@ -3246,11 +3215,6 @@ function render(){
             <div>${escapeHtml(t('tagsInput'))}</div>
             <input class="admin-input" data-admin-field="tags" value="${escapeHtml(tagsText)}" placeholder="aircon,photo,must_try">
             <div class="admin-hint">${escapeHtml(t('tagsHint'))}</div>
-          </div>
-          <div class="admin-field admin-cover">
-            <div>${escapeHtml(t('wishTagsInput'))}</div>
-            <input class="admin-input" data-admin-field="wishTags" value="${escapeHtml(wishTagsText)}" placeholder="財運,桃花,健康">
-            <div class="admin-hint">${escapeHtml(t('wishTagsHint'))}</div>
           </div>
           <label>${escapeHtml(t('gMap'))}<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
           <label>${escapeHtml(t('rating'))}
@@ -3483,9 +3447,7 @@ function render(){
           return Number.isFinite(n) ? n : '';
         };
         const stayMinVal = toIntOrEmpty(getVal('stayMin'));
-        const priceLevelVal = toIntOrEmpty(getVal('priceLevel'));
         const tagsVal = normalizeListField(getVal('tags'));
-        const wishTagsVal = normalizeListField(getVal('wishTags'));
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
@@ -3507,12 +3469,9 @@ function render(){
           category: getVal('category'),
           area: getVal('area'),
           price: getVal('price'),
-          type: getVal('type'),
           stayMin: stayMinVal,
           openSlots,
-          priceLevel: priceLevelVal,
           tags: tagsVal,
-          wishTags: wishTagsVal,
           featured: read('featured') ?? original.featured,
           featured_: read('featured') ?? original.featured_,
           rating: getVal('rating'),
@@ -3929,12 +3888,9 @@ function openNewItem(){
       category: '',
       area: '',
       price: '',
-      type: '',
       stayMin: '',
       openSlots: [],
-      priceLevel: '',
       tags: [],
-      wishTags: [],
       featured_: false,
       featured: false,
       rating: '',
