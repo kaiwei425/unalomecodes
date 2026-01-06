@@ -88,6 +88,7 @@
     googleMap: null,
     googleMarker: null,
     googleAutocomplete: null,
+    googleStartAutocomplete: null,
     googleMapsKey: '',
     googleLoadingPromise: null
   };
@@ -1568,6 +1569,24 @@
         };
         if (btnAddMapPlace) btnAddMapPlace.disabled = false;
         updateMapPlaceInfo(state.selectedMapPlace);
+      });
+    }
+    if (startInput){
+      state.googleStartAutocomplete = new google.maps.places.Autocomplete(startInput, {
+        types: ['geocode', 'establishment'],
+        componentRestrictions: { country: 'th' }
+      });
+      state.googleStartAutocomplete.addListener('place_changed', ()=>{
+        const place = state.googleStartAutocomplete.getPlace();
+        const loc = place && place.geometry && place.geometry.location;
+        if (!loc) return;
+        const coords = { lat: loc.lat(), lng: loc.lng() };
+        const label = place.formatted_address || place.name || startInput.value.trim();
+        state.startCoords = coords;
+        state.startLabel = label;
+        startInput.value = label || startInput.value;
+        setStatus(`已選擇起點：${label}`);
+        markPlanStale(null, true);
       });
     }
   }
