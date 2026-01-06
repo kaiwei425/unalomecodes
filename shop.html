@@ -132,7 +132,7 @@
       <img src="https://i.ibb.co/7mtppQQ/logo.jpg" alt="">
       <div>
         <div class="t1">Unalomecodes 懂玩泰國</div>
-        <div class="t2">unalome象徵人生修行並通往覺悟的道路</div>
+        <div class="t2"><span id="pageSubtitle">unalome象徵人生修行並通往覺悟的道路</span><button type="button" id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯副標題">✏️</button></div>
       </div>
     </div>
     <div class="top-actions-right">
@@ -5784,6 +5784,50 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/auth.js?v=20240930"></script>
 <script src="/js/wishlist.js"></script>
 <script src="/js/main.js"></script>
+<script>
+(function(){
+  const subEl = document.getElementById('pageSubtitle');
+  const btn = document.getElementById('btnEditSubtitle');
+  if (!subEl || !btn) return;
+  function applyAdminState(isAdmin){
+    btn.style.display = isAdmin ? 'inline-block' : 'none';
+  }
+  if (window.authState && typeof window.authState.onAdmin === 'function'){
+    window.authState.onAdmin(applyAdminState);
+  } else {
+    applyAdminState(false);
+  }
+  btn.addEventListener('click', async () => {
+    const oldVal = subEl.textContent;
+    const newVal = prompt('編輯副標題', oldVal);
+    if (!newVal || newVal === oldVal) return;
+    try{
+      const res = await fetch('/api/shop/meta', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'include',
+        body: JSON.stringify({ subtitle: newVal })
+      });
+      const data = await res.json().catch(()=>({}));
+      if (data.ok){
+        subEl.textContent = newVal;
+      } else {
+        alert('儲存失敗：' + (data.error || '未知錯誤'));
+      }
+    }catch(err){
+      alert('儲存失敗：' + err.message);
+    }
+  });
+  fetch('/api/shop/meta', { credentials: 'include' })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.ok && data.meta && data.meta.subtitle){
+        subEl.textContent = data.meta.subtitle;
+      }
+    })
+    .catch(()=>{});
+})();
+</script>
 <script src="/js/checkout.js"></script>
 <!-- Fallback binder for信用卡按鈕：若主程式未綁定，確保至少能呼叫 openCreditDialog 或提示重整 -->
 <script>

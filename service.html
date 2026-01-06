@@ -288,7 +288,7 @@ dialog[data-fallback-open]{display:block;}
         <img src="https://i.ibb.co/7mtppQQ/logo.jpg" alt="">
         <div>
         <div class="t1">Unalomecodes 懂玩泰國</div>
-        <div class="t2">服務型商品專區 / 提供蠟燭祈福・法會・義德善堂捐棺助人服務等。</div>
+        <div class="t2"><span id="pageSubtitle">服務型商品專區 / 提供蠟燭祈福・法會・義德善堂捐棺助人服務等。</span><button type="button" id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯副標題">✏️</button></div>
         </div>
       </div>
       <div class="top-actions-right">
@@ -739,6 +739,50 @@ dialog[data-fallback-open]{display:block;}
   <script src="/js/auth.js?v=20240930"></script>
   <script src="/js/track.js"></script>
   <script src="/js/service-main.js"></script>
+  <script>
+    (function(){
+      const subEl = document.getElementById('pageSubtitle');
+      const btn = document.getElementById('btnEditSubtitle');
+      if (!subEl || !btn) return;
+      function applyAdminState(isAdmin){
+        btn.style.display = isAdmin ? 'inline-block' : 'none';
+      }
+      if (window.authState && typeof window.authState.onAdmin === 'function'){
+        window.authState.onAdmin(applyAdminState);
+      } else {
+        applyAdminState(false);
+      }
+      btn.addEventListener('click', async () => {
+        const oldVal = subEl.textContent;
+        const newVal = prompt('編輯副標題', oldVal);
+        if (!newVal || newVal === oldVal) return;
+        try{
+          const res = await fetch('/api/service/meta', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ subtitle: newVal })
+          });
+          const data = await res.json().catch(()=>({}));
+          if (data.ok){
+            subEl.textContent = newVal;
+          } else {
+            alert('儲存失敗：' + (data.error || '未知錯誤'));
+          }
+        }catch(err){
+          alert('儲存失敗：' + err.message);
+        }
+      });
+      fetch('/api/service/meta', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.ok && data.meta && data.meta.subtitle){
+            subEl.textContent = data.meta.subtitle;
+          }
+        })
+        .catch(()=>{});
+    })();
+  </script>
   <script>
     (function(){
       const badge = document.getElementById('guardianBadgeSvc');

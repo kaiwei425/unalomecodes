@@ -5160,6 +5160,48 @@ if (pathname === '/api/me/temple-favs') {
     return json({ ok:false, error:'method not allowed' }, 405);
   }
 
+  if (pathname === '/api/shop/meta') {
+    if (request.method === 'GET'){
+      if (!env.PRODUCTS) return json({ ok:false, error:'PRODUCTS KV not bound' }, 500);
+      const raw = await env.PRODUCTS.get('SHOP_PAGE_META');
+      const meta = raw ? JSON.parse(raw) : {};
+      return json({ ok:true, meta });
+    }
+    if (request.method === 'POST'){
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+      if (!env.PRODUCTS) return json({ ok:false, error:'PRODUCTS KV not bound' }, 500);
+      const body = await request.json().catch(()=>({}));
+      const prev = await env.PRODUCTS.get('SHOP_PAGE_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
+      const next = Object.assign({}, prev, body);
+      await env.PRODUCTS.put('SHOP_PAGE_META', JSON.stringify(next));
+      return json({ ok:true, meta: next });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
+  if (pathname === '/api/service/meta') {
+    if (request.method === 'GET'){
+      const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+      if (!store) return json({ ok:false, error:'SERVICE_PRODUCTS/PRODUCTS KV not bound' }, 500);
+      const raw = await store.get('SERVICE_PAGE_META');
+      const meta = raw ? JSON.parse(raw) : {};
+      return json({ ok:true, meta });
+    }
+    if (request.method === 'POST'){
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+      const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+      if (!store) return json({ ok:false, error:'SERVICE_PRODUCTS/PRODUCTS KV not bound' }, 500);
+      const body = await request.json().catch(()=>({}));
+      const prev = await store.get('SERVICE_PAGE_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
+      const next = Object.assign({}, prev, body);
+      await store.put('SERVICE_PAGE_META', JSON.stringify(next));
+      return json({ ok:true, meta: next });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
   // Temple map data (list / admin upsert)
   if (pathname === '/api/temples') {
     if (request.method === 'GET'){
