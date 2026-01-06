@@ -27,11 +27,17 @@
     .pill-btn.primary{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;}
     .pill-btn.primary:hover{filter:brightness(1.04);}
     .planner-hint{font-size:13px;color:#64748b;}
-    .map-wrap{border-radius:16px;border:1px solid var(--line);overflow:hidden;background:#f8fafc;min-height:320px;}
-    .map-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+    .map-layout{display:grid;gap:16px;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);align-items:start;}
+    .map-panel{display:grid;gap:10px;}
+    .map-wrap{border-radius:18px;border:1px solid #e2e8f0;overflow:hidden;background:radial-gradient(circle at top,#ffffff 0%,#f1f5f9 70%);padding:10px;box-shadow:0 18px 36px rgba(15,23,42,0.12);}
+    .map-tabs{display:flex;gap:8px;flex-wrap:wrap;}
     .map-tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;color:#475569;cursor:pointer;}
     .map-tab.is-active{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;box-shadow:0 10px 18px rgba(16,149,214,.25);}
-    .map-img{display:none;width:100%;height:auto;background:#fff;}
+    .map-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .map-zoom{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;color:#0f172a;cursor:pointer;}
+    .map-scale{font-size:12px;font-weight:800;color:#475569;}
+    .map-frame{border-radius:14px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 12px 24px rgba(15,23,42,0.08);overflow:auto;max-height:520px;padding:12px;}
+    .map-img{display:none;background:#fff;max-width:none;}
     .map-img.is-active{display:block;}
     .map-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
     .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px;}
@@ -56,6 +62,19 @@
     .nearby-tag.temple{background:#fef3c7;border-color:#fde68a;color:#b45309;}
     .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;}
     .map-note{font-size:12px;color:#64748b;margin-top:6px;}
+    .station-highlight-list{display:grid;gap:8px;max-height:520px;overflow:auto;padding-right:4px;}
+    .station-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;font-size:12px;font-weight:700;color:#0f172a;}
+    .station-chip.is-start{border-color:#38bdf8;background:#e0f2fe;color:#0e7490;}
+    .station-chip.is-end{border-color:#10b981;background:#ecfdf5;color:#047857;}
+    .station-chip.is-transfer{border-color:#fb923c;background:#fff7ed;color:#9a3412;}
+    .station-index{min-width:24px;height:24px;border-radius:999px;background:#f1f5f9;color:#64748b;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+    .station-badges{display:flex;gap:6px;flex-wrap:wrap;}
+    .station-badge{padding:2px 6px;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:11px;font-weight:800;}
+    @media (max-width: 980px){
+      .map-layout{grid-template-columns:1fr;}
+      .station-highlight-list{max-height:none;}
+      .map-frame{max-height:440px;}
+    }
   </style>
 </head>
 <body>
@@ -113,15 +132,32 @@
 
     <section class="planner-card">
       <div class="section-title">捷運路線圖（官方版）</div>
-      <div class="map-tabs" id="mapTabs">
-        <button class="map-tab is-active" type="button" data-map-tab="bts">BTS 路線圖</button>
-        <button class="map-tab" type="button" data-map-tab="mrt">MRT 路線圖</button>
+      <div class="map-layout">
+        <div class="map-panel">
+          <div class="map-tabs" id="mapTabs">
+            <button class="map-tab is-active" type="button" data-map-tab="bts">BTS 路線圖</button>
+            <button class="map-tab" type="button" data-map-tab="mrt">MRT 路線圖</button>
+          </div>
+          <div class="map-tools" id="mapTools">
+            <button class="map-zoom" type="button" data-map-zoom="out">-</button>
+            <button class="map-zoom" type="button" data-map-zoom="reset">適合</button>
+            <button class="map-zoom" type="button" data-map-zoom="in">+</button>
+            <span class="map-scale" id="mapScaleLabel">100%</span>
+          </div>
+          <div class="map-wrap" id="routeMapWrap">
+            <div class="map-frame" id="routeMapFrame">
+              <img id="btsMapImg" class="map-img is-active" src="/img/transit/bts-map.jpg" alt="BTS 官方路線圖">
+              <img id="mrtMapImg" class="map-img" src="/img/transit/mrt-map.jpg" alt="MRT 官方路線圖">
+            </div>
+          </div>
+          <div class="map-note">圖片來源：官方 BTS / MRTA 公布之路線圖（原圖保留）。</div>
+        </div>
+        <div class="map-panel">
+          <div class="section-title" style="margin-bottom:2px;">路線站名</div>
+          <div id="routeStationList" class="station-highlight-list"></div>
+          <div class="planner-hint" id="routeStationHint">查詢後會顯示本站路線站名清單。</div>
+        </div>
       </div>
-      <div class="map-wrap">
-        <img id="btsMapImg" class="map-img is-active" src="/img/transit/bts-map.jpg" alt="BTS 官方路線圖">
-        <img id="mrtMapImg" class="map-img" src="/img/transit/mrt-map.jpg" alt="MRT 官方路線圖">
-      </div>
-      <div class="map-note">圖片來源：官方 BTS / MRTA 公布之路線圖（原圖保留）。</div>
     </section>
 
     <section class="planner-card">

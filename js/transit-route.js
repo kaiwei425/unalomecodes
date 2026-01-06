@@ -11,8 +11,13 @@
   const stationResults = document.getElementById('stationResults');
   const transitMapSvg = document.getElementById('transitMapSvg');
   const mapTabs = document.getElementById('mapTabs');
+  const mapTools = document.getElementById('mapTools');
   const btsMapImg = document.getElementById('btsMapImg');
   const mrtMapImg = document.getElementById('mrtMapImg');
+  const mapScaleLabel = document.getElementById('mapScaleLabel');
+  const routeMapFrame = document.getElementById('routeMapFrame');
+  const routeStationList = document.getElementById('routeStationList');
+  const routeStationHint = document.getElementById('routeStationHint');
 
   const SEARCH_RADIUS_KM = 0.8;
   const MAX_NEARBY = 4;
@@ -34,6 +39,7 @@
   };
 
   const stationLineMap = new Map();
+  const mapView = { scale: 1, baseWidth: 0 };
 
   const LINE_DEFS = [
     {
@@ -183,6 +189,78 @@
     if (!Number.isFinite(km)) return '';
     if (km < 1) return `${Math.round(km * 1000)}m`;
     return `${km.toFixed(1)}km`;
+  }
+
+  function getActiveMapImage(){
+    if (btsMapImg && btsMapImg.classList.contains('is-active')) return btsMapImg;
+    if (mrtMapImg && mrtMapImg.classList.contains('is-active')) return mrtMapImg;
+    return btsMapImg || mrtMapImg || null;
+  }
+
+  function updateMapScaleLabel(){
+    if (mapScaleLabel) mapScaleLabel.textContent = `${Math.round(mapView.scale * 100)}%`;
+  }
+
+  function fitMapToFrame(){
+    if (!routeMapFrame) return;
+    const img = getActiveMapImage();
+    if (!img) return;
+    const frameWidth = Math.max(200, routeMapFrame.clientWidth - 24);
+    const natural = img.naturalWidth || frameWidth;
+    mapView.baseWidth = Math.min(natural, frameWidth);
+    mapView.scale = 1;
+    img.style.width = `${Math.round(mapView.baseWidth)}px`;
+    img.style.height = 'auto';
+    updateMapScaleLabel();
+  }
+
+  function applyMapScale(){
+    const img = getActiveMapImage();
+    if (!img) return;
+    if (!mapView.baseWidth) fitMapToFrame();
+    const width = Math.max(200, Math.round(mapView.baseWidth * mapView.scale));
+    img.style.width = `${width}px`;
+    img.style.height = 'auto';
+    updateMapScaleLabel();
+  }
+
+  function renderStationHighlightList(stopNames, transferNames){
+    if (!routeStationList || !routeStationHint){
+      return;
+    }
+    if (!stopNames || !stopNames.length){
+      routeStationList.innerHTML = '';
+      routeStationHint.textContent = '查詢後會顯示本站路線站名清單。';
+      return;
+    }
+    const transferSet = new Set((transferNames || []).map(normalizeStationName));
+    const startKey = normalizeStationName(stopNames[0]);
+    const endKey = normalizeStationName(stopNames[stopNames.length - 1]);
+    routeStationList.innerHTML = stopNames.map((name, idx) => {
+      const key = normalizeStationName(name);
+      const badges = [];
+      let extraClass = '';
+      if (key === startKey){
+        badges.push('起點');
+        extraClass = 'is-start';
+      } else if (key === endKey){
+        badges.push('終點');
+        extraClass = 'is-end';
+      } else if (transferSet.has(key)){
+        badges.push('轉乘');
+        extraClass = 'is-transfer';
+      }
+      return `
+        <div class="station-chip ${extraClass}">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="station-index">${idx + 1}</span>
+            <span>${escapeHtml(name)}</span>
+          </div>
+          <div class="station-badges">${badges.map(label => `<span class="station-badge">${label}</span>`).join('')}</div>
+        </div>
+      `;
+    }).join('');
+    routeStationHint.textContent = `共 ${stopNames.length} 站。`;
   }
 
   function normalizeItems(list, kind){
@@ -520,6 +598,7 @@
 
     if (!route || !route.legs || !route.legs.length){
       routeSummary.innerHTML = '<span class="status-pill">找不到捷運路線，請換個起點/目的地。</span>';
+      renderStationHighlightList([]);
       return;
     }
     const leg = route.legs[0];
@@ -549,6 +628,9 @@
     const transferCount = Math.max(0, transitSteps.length - 1);
     const walkMinutes = walkingSteps.reduce((sum, step) => sum + (step.duration ? step.duration.value : 0), 0);
     const walkText = walkMinutes ? `${Math.round(walkMinutes / 60)} 分` : '0 分';
+    const transferNames = transitSteps.slice(0, -1)
+      .map(step => step.transit_details && step.transit_details.arrival_stop ? step.transit_details.arrival_stop.name : '')
+      .filter(Boolean);
 
     const preferenceWarning = (()=>{
       if (preference === 'mix') return '';
@@ -601,6 +683,7 @@
       routeSteps.appendChild(stepEl);
     });
 
+    renderStationHighlightList(stopNames, transferNames);
     highlightRoute(Array.from(lineKeys), stopNames);
     renderStationRecommendations(stopNames).catch(()=>{});
   }
@@ -856,9 +939,38 @@
       btn.classList.add('is-active');
       btsMapImg.classList.toggle('is-active', tab === 'bts');
       mrtMapImg.classList.toggle('is-active', tab === 'mrt');
+      fitMapToFrame();
     });
   }
 
+  if (mapTools){
+    mapTools.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-map-zoom]');
+      if (!btn) return;
+      const mode = btn.getAttribute('data-map-zoom');
+      if (mode === 'reset'){
+        fitMapToFrame();
+        return;
+      }
+      if (mode === 'in') mapView.scale = Math.min(2.5, mapView.scale + 0.1);
+      if (mode === 'out') mapView.scale = Math.max(0.6, mapView.scale - 0.1);
+      applyMapScale();
+    });
+  }
+
+  if (btsMapImg){
+    btsMapImg.addEventListener('load', fitMapToFrame, { once:true });
+  }
+  if (mrtMapImg){
+    mrtMapImg.addEventListener('load', fitMapToFrame, { once:true });
+  }
+  if (window){
+    window.addEventListener('resize', ()=>{
+      fitMapToFrame();
+    });
+  }
+
+  fitMapToFrame();
   renderTransitMap();
   loadData();
   ensureGoogleMaps();
