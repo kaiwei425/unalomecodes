@@ -1,13 +1,39 @@
 // ===== Cart helpers & preview =====
-function cartLoad(){ try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch{return []} }
-function cartSave(a){
-  localStorage.setItem('cart', JSON.stringify(a));
-  if (!a || !a.length){
-    try{
-      if (typeof resetStoreSelection === 'function'){
-        resetStoreSelection();
-      }
-    }catch(_){}
+// 使用优化的存储工具（如果可用）
+let useOptimizedStorage = false;
+try {
+  if (typeof window !== 'undefined' && window.__storageManager) {
+    useOptimizedStorage = true;
+  }
+} catch(_){}
+
+function cartLoad(){ 
+  try{
+    if (useOptimizedStorage && window.__storageManager) {
+      return window.__storageManager.getItem('cart', []);
+    }
+    return JSON.parse(localStorage.getItem('cart')||'[]');
+  }catch{
+    return [];
+  }
+}
+
+function cartSave(a, immediate = false){
+  try{
+    if (useOptimizedStorage && window.__storageManager) {
+      window.__storageManager.setItem('cart', a, immediate);
+    } else {
+      localStorage.setItem('cart', JSON.stringify(a));
+    }
+    if (!a || !a.length){
+      try{
+        if (typeof resetStoreSelection === 'function'){
+          resetStoreSelection();
+        }
+      }catch(_){}
+    }
+  }catch(err){
+    console.error('[Cart] Failed to save cart:', err);
   }
 }
 function cartCount(){ return cartLoad().reduce((n,it)=> n + Math.max(1, Number(it.qty||1)), 0); }

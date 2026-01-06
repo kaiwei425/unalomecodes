@@ -1,7 +1,12 @@
+// 使用常量定义（如果 constants.js 已加载则使用，否则使用默认值）
 const SHIP_LINK = "https://myship.7-11.com.tw/general/detail/GM2509114839878";
-const SHIPPING_FEE = (typeof window !== 'undefined' && Number(window.__shippingFee)) ? Number(window.__shippingFee) : 60;
+const SHIPPING_FEE = (typeof window !== 'undefined' && window.__CONSTANTS && window.__CONSTANTS.SHIPPING?.STANDARD_FEE) 
+  ? window.__CONSTANTS.SHIPPING.STANDARD_FEE 
+  : ((typeof window !== 'undefined' && Number(window.__shippingFee)) ? Number(window.__shippingFee) : 60);
 try{ if (typeof window !== 'undefined') window.__shippingFee = SHIPPING_FEE; }catch(_){}
-const COD_SHIPPING_FEE = (typeof window !== 'undefined' && Number(window.__codShippingFee)) ? Number(window.__codShippingFee) : 38;
+const COD_SHIPPING_FEE = (typeof window !== 'undefined' && window.__CONSTANTS && window.__CONSTANTS.SHIPPING?.COD_FEE)
+  ? window.__CONSTANTS.SHIPPING.COD_FEE
+  : ((typeof window !== 'undefined' && Number(window.__codShippingFee)) ? Number(window.__codShippingFee) : 38);
 try{ if (typeof window !== 'undefined') window.__codShippingFee = COD_SHIPPING_FEE; }catch(_){}
 const PROFILE_URL = (function(){
   try{ return (window.__SHOP_ORIGIN || window.location.origin || '') + '/api/me/profile'; }

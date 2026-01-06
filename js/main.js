@@ -147,33 +147,80 @@ function buildProductCard(p, opts = {}){
   const card = document.createElement('div');
   card.className = 'card' + (opts.hot ? ' hot-card' : '');
   card.setAttribute('data-id', String(p.id || ''));
-  // 确保所有用户输入都经过 escapeHtml
-  card.innerHTML = `
-    <div class="pic">${img?`<img src="${escapeHtml(img)}" alt="" loading="lazy" decoding="async">`:''}</div>
-    <div class="body">
-      <div class="name">${escapeHtml(p.name)}</div>
-      ${limitedRow}
-      ${deityBadge ? `<div class="meta meta-top">${deityBadge}</div>` : ''}
-      <div class="meta meta-bottom">
-        <span class="badge badge-sold">已售出：${escapeHtml(String(Number(p.sold||0)))}</span>
-        ${stockBadge}
-      </div>
-      <div class="price">NT$ ${escapeHtml(formatPrice(price))}</div>
-      <div class="cta">
-        <button class="btn primary" data-open-detail="1">查看商品</button>
-      </div>
-    </div>
-  `;
-  const btn = card.querySelector('.btn.primary');
-  if (btn){
-    btn.addEventListener('click',()=>openDetail(p));
+  
+  // 使用更安全的方式构建 DOM，减少 innerHTML 使用
+  const picDiv = document.createElement('div');
+  picDiv.className = 'pic';
+  if (img) {
+    const imgEl = document.createElement('img');
+    // 使用懒加载
+    if (typeof setLazyImage === 'function') {
+      setLazyImage(imgEl, img);
+    } else {
+      imgEl.src = img;
+      imgEl.loading = 'lazy';
+    }
+    imgEl.alt = '';
+    imgEl.decoding = 'async';
+    picDiv.appendChild(imgEl);
   }
+  
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'body';
+  
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'name';
+  nameDiv.textContent = p.name || '';
+  bodyDiv.appendChild(nameDiv);
+  
+  if (limitedRow) {
+    const limitedDiv = document.createElement('div');
+    limitedDiv.innerHTML = limitedRow;
+    bodyDiv.appendChild(limitedDiv);
+  }
+  
+  if (deityBadge) {
+    const metaTop = document.createElement('div');
+    metaTop.className = 'meta meta-top';
+    metaTop.innerHTML = deityBadge;
+    bodyDiv.appendChild(metaTop);
+  }
+  
+  const metaBottom = document.createElement('div');
+  metaBottom.className = 'meta meta-bottom';
+  metaBottom.innerHTML = `
+    <span class="badge badge-sold">已售出：${escapeHtml(String(Number(p.sold||0)))}</span>
+    ${stockBadge}
+  `;
+  bodyDiv.appendChild(metaBottom);
+  
+  const priceDiv = document.createElement('div');
+  priceDiv.className = 'price';
+  priceDiv.textContent = `NT$ ${formatPrice(price)}`;
+  bodyDiv.appendChild(priceDiv);
+  
+  const ctaDiv = document.createElement('div');
+  ctaDiv.className = 'cta';
+  const btn = document.createElement('button');
+  btn.className = 'btn primary';
+  btn.setAttribute('data-open-detail', '1');
+  btn.textContent = '查看商品';
+  btn.addEventListener('click', () => openDetail(p));
+  ctaDiv.appendChild(btn);
+  bodyDiv.appendChild(ctaDiv);
+  
+  card.appendChild(picDiv);
+  card.appendChild(bodyDiv);
+  
   return card;
 }
 
+// 使用常量定义更新间隔
+const LIMITED_UPDATE_INTERVAL = 60000; // 1分钟
+
 function scheduleLimitedTimer(){
   if (limitedTimer) return;
-  limitedTimer = setInterval(()=> updateLimitedCountdowns(document), 60000);
+  limitedTimer = setInterval(()=> updateLimitedCountdowns(document), LIMITED_UPDATE_INTERVAL);
 }
 
 function getHotItems(items){
@@ -295,7 +342,12 @@ function renderList(items){
   if (!items.length){
     const isHot = window.__currentCategoryFilter === '__hot__';
     const msg = isHot ? '目前沒有熱賣中商品' : '沒有符合條件的商品';
-    listEl.innerHTML = `<div class="empty" style="grid-column:1/-1">${msg}</div>`; const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty';
+    emptyDiv.style.cssText = 'grid-column:1/-1';
+    emptyDiv.textContent = msg;
+    listEl.appendChild(emptyDiv);
+    const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none';
     return;
   }
 
@@ -307,6 +359,13 @@ function renderList(items){
   refreshWishlistButtons();
   updateLimitedCountdowns(listEl);
   scheduleLimitedTimer();
+  
+  // 初始化图片懒加载
+  try{
+    if (typeof initLazyLoad === 'function') {
+      initLazyLoad('img[data-src]');
+    }
+  }catch(_){}
 }
 
 document.getElementById('fDeity').addEventListener('change', applyFilter);

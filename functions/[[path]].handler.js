@@ -6655,7 +6655,7 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
 
     const rec = await readCoupon(env, code);
     if (!rec){
-      return new Response(JSON.stringify({ ok:false, code, reason:'not_found' }), { status:200, headers: jsonHeaders });
+      return json({ ok:false, code, reason:'not_found' }, 200, request, env);
     }
     if (rec.used){
       return json({ ok:false, code, reason:'already_used', orderId: rec.orderId||'' }, 200, request, env);
@@ -6664,38 +6664,32 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
     if (rec.reservedUntil){
       const reservedUntil = Date.parse(rec.reservedUntil);
       if (!Number.isNaN(reservedUntil) && reservedUntil > nowTs){
-        return new Response(JSON.stringify({ ok:false, code, reason:'reserved' }), { status:200, headers: jsonHeaders });
+        return json({ ok:false, code, reason:'reserved' }, 200, request, env);
       }
     }
     if (rec.startAt && nowTs < Date.parse(rec.startAt)){
-      return new Response(JSON.stringify({ ok:false, code, reason:'not_started', startAt: rec.startAt }), { status:200, headers: jsonHeaders });
+      return json({ ok:false, code, reason:'not_started', startAt: rec.startAt }, 200, request, env);
     }
     if (rec.expireAt && nowTs > Date.parse(rec.expireAt)){
-      return new Response(JSON.stringify({ ok:false, code, reason:'expired', expireAt: rec.expireAt }), { status:200, headers: jsonHeaders });
+      return json({ ok:false, code, reason:'expired', expireAt: rec.expireAt }, 200, request, env);
     }
     const targetDeity = String(rec.deity||'').toUpperCase();
     if (rec.type !== 'SHIP' && rec.type !== 'ALL' && targetDeity && deity && targetDeity !== deity){
-      return new Response(JSON.stringify({ ok:false, code, reason:'deity_not_match', deity: targetDeity }), { status:200, headers: jsonHeaders });
+      return json({ ok:false, code, reason:'deity_not_match', deity: targetDeity }, 200, request, env);
     }
     const amount = Math.max(0, Number(rec.amount||200) || 200);
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        valid: true,
-        code,
-        deity: targetDeity || deity,
-        amount,
-        type: rec.type || 'DEITY',
-        startAt: rec.startAt || null,
-        expireAt: rec.expireAt || null
-      }),
-      { status: 200, headers: jsonHeaders }
-    );
+    return json({
+      ok: true,
+      valid: true,
+      code,
+      deity: targetDeity || deity,
+      amount,
+      type: rec.type || 'DEITY',
+      startAt: rec.startAt || null,
+      expireAt: rec.expireAt || null
+    }, 200, request, env);
   } catch (e) {
-    return new Response(
-      JSON.stringify({ ok: false, error: String(e) }),
-      { status: 500, headers: jsonHeaders }
-    );
+    return json({ ok: false, error: String(e) }, 500, request, env);
   }
 }
 
@@ -6707,7 +6701,7 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
     if (guard) return guard;
   }
   if (!env.COUPONS){
-    return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:'COUPONS KV not bound' }, 500, request, env);
   }
   try {
     const body = await request.json().catch(() => ({}));
@@ -6719,7 +6713,7 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
     const startDt = body.startAt ? new Date(body.startAt) : null;
     const expireDt = body.expireAt ? new Date(body.expireAt) : null;
     if (!deity) {
-      return new Response(JSON.stringify({ ok:false, error:'Missing deity' }), { status:400, headers: jsonHeaders });
+      return json({ ok:false, error:'Missing deity' }, 400, request, env);
     }
     let code = '';
     for (let i=0;i<5;i++){
@@ -6748,29 +6742,29 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
       amount,
       startAt: rec.startAt || null,
       expireAt: rec.expireAt || null
-    }), { status:200, headers: jsonHeaders });
+    }, 200, request, env);
   } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:String(e) }, 500, request, env);
   }
 }
 
 // Public issuance for quiz flow (no admin key, but deity/amount limited)
 if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
   if (!env.COUPONS){
-    return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:'COUPONS KV not bound' }, 500, request, env);
   }
   try{
     const body = await request.json().catch(()=>({}));
     const record = await getSessionUserRecord(request, env);
     if (!record){
-      return new Response(JSON.stringify({ ok:false, error:'login_required' }), { status:401, headers: jsonHeaders });
+      return json({ ok:false, error:'login_required' }, 401, request, env);
     }
     const todayKey = taipeiDateKey();
     const lastTs = Date.parse(record.quizCouponIssuedAt || record.quizCoupon?.ts || '');
     if (!Number.isNaN(lastTs)){
       const lastKey = taipeiDateKey(lastTs);
       if (lastKey === todayKey){
-        return new Response(JSON.stringify({ ok:false, error:'daily_limit', dateKey: todayKey }), { status:429, headers: jsonHeaders });
+        return json({ ok:false, error:'daily_limit', dateKey: todayKey }, 429, request, env);
       }
     }
     const ip = getClientIp(request) || 'unknown';
@@ -6779,7 +6773,7 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
     const rlKey = `rl:quiz_coupon:${record.id || ip}`;
     const ok = await checkRateLimit(env, rlKey, rateLimit, windowSec);
     if (!ok){
-      return new Response(JSON.stringify({ ok:false, error:'Too many requests' }), { status:429, headers: jsonHeaders });
+      return json({ ok:false, error:'Too many requests' }, 429, request, env);
     }
     const secret = String(env.QUIZ_COUPON_SECRET || env.QUIZ_COUPON_KEY || '').trim();
     if (secret){
@@ -6787,12 +6781,12 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
       const queryKey = (url.searchParams.get('key') || '').trim();
       const bodyKey = String(body.key || body.secret || body.quizKey || body.token || '').trim();
       if (headerKey !== secret && queryKey !== secret && bodyKey !== secret){
-        return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+        return json({ ok:false, error:'Unauthorized' }, 401, request, env);
       }
     }
     const deityRaw = String(body.deity || body.code || '').trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(deityRaw)){
-      return new Response(JSON.stringify({ ok:false, error:'Missing or invalid deity' }), { status:400, headers: jsonHeaders });
+      return json({ ok:false, error:'Missing or invalid deity' }, 400, request, env);
     }
     const amount = Math.min(500, Math.max(1, Number(body.amount || 200) || 200)); // 上限 500，避免濫用
     let code = '';
@@ -6824,19 +6818,19 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
       record.quizCouponIssuedDeity = deityRaw;
       await saveUserRecord(env, record);
     }catch(_){}
-    return new Response(JSON.stringify({ ok:true, code, deity: deityRaw, amount }), { status:200, headers: jsonHeaders });
+    return json({ ok:true, code, deity: deityRaw, amount }, 200, request, env);
   }catch(e){
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:String(e) }, 500, request, env);
   }
 }
 
 // List coupons (admin)
 if (pathname === '/api/coupons/list' && request.method === 'GET') {
   if (!(await isAdmin(request, env))){
-    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+    return json({ ok:false, error:'Unauthorized' }, 401, request, env);
   }
   if (!env.COUPONS){
-    return new Response(JSON.stringify({ ok:false, error:'COUPONS KV not bound' }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:'COUPONS KV not bound' }, 500, request, env);
   }
   try{
     const q = (url.searchParams.get('q') || '').trim().toUpperCase();
