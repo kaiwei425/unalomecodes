@@ -11,6 +11,10 @@
   const mealDinner = document.getElementById('mealDinner');
   const includeTempleToggle = document.getElementById('includeTempleToggle');
   const allowClosedToggle = document.getElementById('allowClosedToggle');
+  const adjustDialog = document.getElementById('adjustDialog');
+  const btnAdjustPlan = document.getElementById('btnAdjustPlan');
+  const btnAdjustClose = document.getElementById('btnAdjustClose');
+  const btnAdjustApply = document.getElementById('btnAdjustApply');
   const btnLocate = document.getElementById('btnLocate');
   const btnGenerate = document.getElementById('btnGenerate');
   const btnSavePlan = document.getElementById('btnSavePlan');
@@ -33,6 +37,8 @@
   const mustSearchResults = document.getElementById('mustSearchResults');
   const mustList = document.getElementById('mustList');
   const recommendList = document.getElementById('recommendList');
+  const favFoodList = document.getElementById('favFoodList');
+  const favTempleList = document.getElementById('favTempleList');
   const candidateSummary = document.getElementById('candidateSummary');
   const btnClearFilters = document.getElementById('btnClearFilters');
 
@@ -67,30 +73,30 @@
   };
   const STORAGE_KEY = 'day_trip_saved_plans_v1';
   const RECOMMENDED_SPOTS = [
-    { name:'恰圖恰市集', kind:'spot', lat:13.8002651, lng:100.5511228, area:'曼谷', category:'市集' },
-    { name:'ICONSIAM', kind:'spot', lat:13.7268226, lng:100.510294, area:'曼谷', category:'購物' },
-    { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7042168, lng:100.5028259, area:'曼谷', category:'夜市' },
-    { name:'喬德夜市（Rama 9）', kind:'spot', lat:13.7581533, lng:100.5670256, area:'曼谷', category:'夜市' },
-    { name:'火車夜市（席娜卡琳）', kind:'spot', lat:13.6946657, lng:100.6510865, area:'曼谷', category:'夜市' },
-    { name:'耀華力路（唐人街）', kind:'spot', lat:13.7400474, lng:100.5104603, area:'曼谷', category:'美食街' },
-    { name:'考山路', kind:'spot', lat:13.7587665, lng:100.4975792, area:'曼谷', category:'夜生活' },
-    { name:'巴空花市', kind:'spot', lat:13.7417086, lng:100.4963295, area:'曼谷', category:'花市' },
-    { name:'Jim Thompson House', kind:'spot', lat:13.7492268, lng:100.5282811, area:'曼谷', category:'博物館' },
-    { name:'倫披尼公園', kind:'spot', lat:13.7306004, lng:100.5415377, area:'曼谷', category:'公園' },
-    { name:'Mahanakhon SkyWalk', kind:'spot', lat:13.7231503, lng:100.5280809, area:'曼谷', category:'觀景' },
-    { name:'曼谷藝術文化中心', kind:'spot', lat:13.746778, lng:100.5302625, area:'曼谷', category:'藝文' },
-    { name:'丹嫩莎朵水上市場', kind:'spot', lat:13.5190148, lng:99.959346, area:'叻丕府', category:'水上市場' },
-    { name:'安帕瓦水上市場', kind:'spot', lat:13.4248722, lng:99.9554592, area:'夜功府', category:'水上市場' },
-    { name:'美功鐵道市場', kind:'spot', lat:13.4077308, lng:100.0009031, area:'夜功府', category:'鐵道市場' },
-    { name:'瑪哈猜海鮮市場', kind:'spot', lat:13.5451019, lng:100.2761542, area:'龍仔厝府', category:'海鮮市場' },
-    { name:'大城古城', kind:'spot', lat:14.3535461, lng:100.5622548, area:'大城', category:'古城' },
-    { name:'邦芭茵皇宮', kind:'spot', lat:14.2326451, lng:100.5794291, area:'大城', category:'皇宮' },
-    { name:'古城（Muang Boran）', kind:'spot', lat:13.5405466, lng:100.6239998, area:'北欖府', category:'歷史園區' },
-    { name:'三頭象神博物館', kind:'spot', lat:13.6299759, lng:100.5891358, area:'北欖府', category:'博物館' },
-    { name:'芭達雅海灘', kind:'spot', lat:12.936583, lng:100.8859605, area:'芭達雅', category:'海灘' },
-    { name:'真理寺', kind:'spot', lat:12.972777, lng:100.8891503, area:'芭達雅', category:'景點' },
-    { name:'東芭樂園（Nong Nooch）', kind:'spot', lat:12.7646849, lng:100.9361187, area:'芭達雅', category:'花園' },
-    { name:'桂河大橋', kind:'spot', lat:14.0404105, lng:99.503463, area:'北碧府', category:'歷史景點' }
+    { name:'恰圖恰市集', kind:'spot', lat:13.8002651, lng:100.5511228, area:'曼谷', category:'市集', group:'夜市/市集' },
+    { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7042168, lng:100.5028259, area:'曼谷', category:'夜市', group:'夜市/市集' },
+    { name:'喬德夜市（Rama 9）', kind:'spot', lat:13.7581533, lng:100.5670256, area:'曼谷', category:'夜市', group:'夜市/市集' },
+    { name:'火車夜市（席娜卡琳）', kind:'spot', lat:13.6946657, lng:100.6510865, area:'曼谷', category:'夜市', group:'夜市/市集' },
+    { name:'耀華力路（唐人街）', kind:'spot', lat:13.7400474, lng:100.5104603, area:'曼谷', category:'美食街', group:'夜市/市集' },
+    { name:'巴空花市', kind:'spot', lat:13.7417086, lng:100.4963295, area:'曼谷', category:'花市', group:'夜市/市集' },
+    { name:'ICONSIAM', kind:'spot', lat:13.7268226, lng:100.510294, area:'曼谷', category:'購物', group:'曼谷市區' },
+    { name:'考山路', kind:'spot', lat:13.7587665, lng:100.4975792, area:'曼谷', category:'夜生活', group:'曼谷市區' },
+    { name:'倫披尼公園', kind:'spot', lat:13.7306004, lng:100.5415377, area:'曼谷', category:'公園', group:'曼谷市區' },
+    { name:'Mahanakhon SkyWalk', kind:'spot', lat:13.7231503, lng:100.5280809, area:'曼谷', category:'觀景', group:'曼谷市區' },
+    { name:'Jim Thompson House', kind:'spot', lat:13.7492268, lng:100.5282811, area:'曼谷', category:'博物館', group:'歷史文化' },
+    { name:'曼谷藝術文化中心', kind:'spot', lat:13.746778, lng:100.5302625, area:'曼谷', category:'藝文', group:'歷史文化' },
+    { name:'丹嫩莎朵水上市場', kind:'spot', lat:13.5190148, lng:99.959346, area:'叻丕府', category:'水上市場', group:'水上市場' },
+    { name:'安帕瓦水上市場', kind:'spot', lat:13.4248722, lng:99.9554592, area:'夜功府', category:'水上市場', group:'水上市場' },
+    { name:'美功鐵道市場', kind:'spot', lat:13.4077308, lng:100.0009031, area:'夜功府', category:'鐵道市場', group:'近郊一日' },
+    { name:'瑪哈猜海鮮市場', kind:'spot', lat:13.5451019, lng:100.2761542, area:'龍仔厝府', category:'海鮮市場', group:'近郊一日' },
+    { name:'大城古城', kind:'spot', lat:14.3535461, lng:100.5622548, area:'大城', category:'古城', group:'近郊一日' },
+    { name:'邦芭茵皇宮', kind:'spot', lat:14.2326451, lng:100.5794291, area:'大城', category:'皇宮', group:'近郊一日' },
+    { name:'古城（Muang Boran）', kind:'spot', lat:13.5405466, lng:100.6239998, area:'北欖府', category:'歷史園區', group:'近郊一日' },
+    { name:'三頭象神博物館', kind:'spot', lat:13.6299759, lng:100.5891358, area:'北欖府', category:'博物館', group:'近郊一日' },
+    { name:'芭達雅海灘', kind:'spot', lat:12.936583, lng:100.8859605, area:'芭達雅', category:'海灘', group:'海邊' },
+    { name:'真理寺', kind:'spot', lat:12.972777, lng:100.8891503, area:'芭達雅', category:'景點', group:'海邊' },
+    { name:'東芭樂園（Nong Nooch）', kind:'spot', lat:12.7646849, lng:100.9361187, area:'芭達雅', category:'花園', group:'海邊' },
+    { name:'桂河大橋', kind:'spot', lat:14.0404105, lng:99.503463, area:'北碧府', category:'歷史景點', group:'近郊一日' }
   ];
 
   const state = {
@@ -98,6 +104,10 @@
     temples: [],
     popularItems: [],
     customItems: [],
+    favoriteFoodIds: [],
+    favoriteTempleIds: [],
+    favoritesLoaded: false,
+    favoritesLoading: false,
     ready: false,
     startCoords: null,
     startLabel: '',
@@ -147,17 +157,6 @@
     stepPills.forEach(pill => {
       pill.classList.toggle('is-active', pill.getAttribute('data-step-pill') === String(step));
     });
-    if (step === 4){
-      ensureGoogleMaps().then(()=>{
-        if (!state.googleMap || !window.google || !window.google.maps) return;
-        window.setTimeout(()=>{
-          try{
-            google.maps.event.trigger(state.googleMap, 'resize');
-            if (state.googleMap.getCenter) state.googleMap.setCenter(state.googleMap.getCenter());
-          }catch(_){}
-        }, 200);
-      });
-    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -554,16 +553,31 @@
 
   function renderRecommendedList(){
     if (!recommendList) return;
-    recommendList.innerHTML = RECOMMENDED_SPOTS.map(spot => {
-      const meta = [getKindLabel(spot.kind), spot.area, spot.category].filter(Boolean).join(' · ');
-      return `
-        <div class="search-item">
-          <div>
-            <div class="search-item-title">${escapeHtml(spot.name)}</div>
-            <div class="search-item-meta">${escapeHtml(meta)}</div>
+    const groups = {};
+    RECOMMENDED_SPOTS.forEach(spot => {
+      const group = spot.group || '熱門景點';
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(spot);
+    });
+    recommendList.innerHTML = Object.keys(groups).map((group, idx) => {
+      const items = groups[group] || [];
+      const listHtml = items.map(spot => {
+        const meta = [getKindLabel(spot.kind), spot.area, spot.category].filter(Boolean).join(' · ');
+        return `
+          <div class="search-item">
+            <div>
+              <div class="search-item-title">${escapeHtml(spot.name)}</div>
+              <div class="search-item-meta">${escapeHtml(meta)}</div>
+            </div>
+            <button class="pill-btn" type="button" data-add-reco="${escapeHtml(spot.name)}">加入</button>
           </div>
-          <button class="pill-btn" type="button" data-add-reco="${escapeHtml(spot.name)}">加入</button>
-        </div>
+        `;
+      }).join('');
+      return `
+        <details ${idx === 0 ? 'open' : ''}>
+          <summary style="font-weight:800;cursor:pointer;">${escapeHtml(group)}</summary>
+          <div class="search-results" style="margin-top:8px;">${listHtml}</div>
+        </details>
       `;
     }).join('');
 
@@ -578,6 +592,69 @@
         updateCandidateSummary();
       });
     });
+  }
+
+  function renderFavoritesList(list, container, emptyText){
+    if (!container) return;
+    if (!list || !list.length){
+      container.innerHTML = `<div class="planner-hint">${escapeHtml(emptyText || '目前沒有收藏。')}</div>`;
+      return;
+    }
+    container.innerHTML = list.map(item => {
+      const meta = [getKindLabel(item.kind), item.area, item.category].filter(Boolean).join(' · ');
+      return `
+        <div class="search-item">
+          <div>
+            <div class="search-item-title">${escapeHtml(item.name || '')}</div>
+            <div class="search-item-meta">${escapeHtml(meta)}</div>
+          </div>
+          <button class="pill-btn" type="button" data-add-fav="${escapeHtml(item.id)}">加入</button>
+        </div>
+      `;
+    }).join('');
+    container.querySelectorAll('[data-add-fav]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.getAttribute('data-add-fav') || '';
+        const item = findItemById(id);
+        if (item) addMustItem(item);
+      });
+    });
+  }
+
+  async function loadFavorites(){
+    if (state.favoritesLoading) return;
+    state.favoritesLoading = true;
+    if (favFoodList) favFoodList.innerHTML = '<div class="planner-hint">載入中…</div>';
+    if (favTempleList) favTempleList.innerHTML = '<div class="planner-hint">載入中…</div>';
+    try{
+      const [foodRes, templeRes] = await Promise.all([
+        fetch('/api/me/food-favs', { credentials:'include', cache:'no-store' }),
+        fetch('/api/me/temple-favs', { credentials:'include', cache:'no-store' })
+      ]);
+      if (foodRes.status === 401 || templeRes.status === 401){
+        const msg = '請先登入會員以查看收藏清單。';
+        renderFavoritesList([], favFoodList, msg);
+        renderFavoritesList([], favTempleList, msg);
+        state.favoritesLoading = false;
+        return;
+      }
+      const foodData = await foodRes.json().catch(()=>({}));
+      const templeData = await templeRes.json().catch(()=>({}));
+      state.favoriteFoodIds = Array.isArray(foodData.favorites) ? foodData.favorites.map(id => String(id)) : [];
+      state.favoriteTempleIds = Array.isArray(templeData.favorites) ? templeData.favorites.map(id => String(id)) : [];
+      const foodMap = new Map(state.foods.map(item => [String(item.id), item]));
+      const templeMap = new Map(state.temples.map(item => [String(item.id), item]));
+      const foodItems = state.favoriteFoodIds.map(id => foodMap.get(id)).filter(Boolean);
+      const templeItems = state.favoriteTempleIds.map(id => templeMap.get(id)).filter(Boolean);
+      renderFavoritesList(foodItems, favFoodList, '目前沒有收藏美食。');
+      renderFavoritesList(templeItems, favTempleList, '目前沒有收藏寺廟。');
+      state.favoritesLoaded = true;
+    }catch(_){
+      renderFavoritesList([], favFoodList, '載入失敗，請稍後再試。');
+      renderFavoritesList([], favTempleList, '載入失敗，請稍後再試。');
+    }finally{
+      state.favoritesLoading = false;
+    }
   }
 
   function findItemById(id){
@@ -787,6 +864,41 @@
       });
     });
     handleFiltersChange();
+  }
+
+  function openAdjustDialog(){
+    if (!adjustDialog) return;
+    if (typeof adjustDialog.showModal === 'function') adjustDialog.showModal();
+    else adjustDialog.setAttribute('open', '');
+    if (mustSearchInput) {
+      mustSearchInput.value = '';
+      renderMustSearchResults('');
+    }
+    if (mapSearchInput) {
+      mapSearchInput.value = '';
+    }
+    state.selectedMapPlace = null;
+    if (btnAddMapPlace) btnAddMapPlace.disabled = true;
+    updateMapPlaceInfo(null);
+    renderMustList();
+    renderRecommendedList();
+    updateCandidateSummary();
+    loadFavorites();
+    ensureGoogleMaps().then(()=>{
+      if (!state.googleMap || !window.google || !window.google.maps) return;
+      window.setTimeout(()=>{
+        try{
+          google.maps.event.trigger(state.googleMap, 'resize');
+          if (state.googleMap.getCenter) state.googleMap.setCenter(state.googleMap.getCenter());
+        }catch(_){}
+      }, 200);
+    });
+  }
+
+  function closeAdjustDialog(){
+    if (!adjustDialog) return;
+    if (typeof adjustDialog.close === 'function') adjustDialog.close();
+    else adjustDialog.removeAttribute('open');
   }
 
   function getPreferredKind(minutes, counts, settings, lastKinds){
@@ -1928,6 +2040,31 @@
   }
   if (btnAddMapPlace){
     btnAddMapPlace.addEventListener('click', addCustomPlace);
+  }
+  if (btnAdjustPlan){
+    btnAdjustPlan.addEventListener('click', openAdjustDialog);
+  }
+  if (btnAdjustClose){
+    btnAdjustClose.addEventListener('click', closeAdjustDialog);
+  }
+  if (btnAdjustApply){
+    btnAdjustApply.addEventListener('click', async ()=>{
+      if (!validateStep1()) return;
+      const ok = await generatePlan();
+      if (ok){
+        closeAdjustDialog();
+        showStep(4);
+      }
+    });
+  }
+  if (adjustDialog){
+    adjustDialog.addEventListener('click', (event)=>{
+      if (event.target === adjustDialog) closeAdjustDialog();
+    });
+    adjustDialog.addEventListener('cancel', (event)=>{
+      event.preventDefault();
+      closeAdjustDialog();
+    });
   }
 
   loadSavedPlans();

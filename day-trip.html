@@ -87,6 +87,13 @@
     .mode-card h3{margin:0;font-size:16px;font-weight:800;}
     .mode-card p{margin:0;font-size:12px;color:#64748b;line-height:1.6;}
     .mode-card.is-selected{border-color:#38bdf8;box-shadow:0 10px 22px rgba(56,189,248,.2);}
+    .planner-dialog{border:none;padding:0;background:transparent;}
+    .planner-dialog::backdrop{background:rgba(15,23,42,.55);}
+    .dialog-panel{background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(15,23,42,.25);width:min(960px,92vw);max-height:84vh;display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;}
+    .dialog-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);background:#f8fafc;}
+    .dialog-title{font-size:18px;font-weight:800;color:#0f172a;}
+    .dialog-body{padding:16px 18px;overflow:auto;display:grid;gap:14px;}
+    .dialog-actions{padding:14px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;background:#f8fafc;}
     @media print{
       .top,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .search-results,.planner-card .map-wrap,.planner-card .filter-grid,.planner-card .filter-tags,.planner-card .planner-hint,.planner-card .saved-list,.planner-card .planner-row,.planner-card input,.planner-card select,.planner-card button,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .share-input,.stepper,.step-actions{display:none !important;}
       body{background:#fff;}
@@ -227,28 +234,46 @@
     <section class="planner-card step-section" data-step-section="4">
       <div class="section-title">第四步｜行程結果</div>
       <div class="plan-controls">
-        <button class="pill-btn" type="button" id="btnGenerate">重新產生</button>
-        <button class="pill-btn" type="button" id="btnSavePlan">儲存行程</button>
-        <button class="pill-btn" type="button" id="btnPrint">匯出 PDF</button>
-        <button class="pill-btn" type="button" id="btnShareLine">LINE 分享</button>
-        <input class="share-input" id="shareLinkInput" type="text" placeholder="分享連結" readonly>
-        <button class="pill-btn" type="button" id="btnCopyShare">複製連結</button>
+        <button class="pill-btn primary" type="button" id="btnAdjustPlan">行程調整</button>
       </div>
       <section id="resultPanel" class="result-panel">
         <div class="result-empty">尚未產生行程</div>
       </section>
-      <div class="section-title" style="margin-top:16px;">行程調整</div>
-      <div class="planner-hint">加入想去的點後，按上方「重新產生」更新行程。</div>
-      <div class="planner-grid" style="margin-top:10px;">
-        <label>搜尋我的資料庫
-          <input id="mustSearchInput" type="text" placeholder="輸入店名/寺廟關鍵字">
-        </label>
-        <div id="mustSearchResults" class="search-results"></div>
+      <div class="step-actions" style="margin-top:12px;">
+        <button class="pill-btn" type="button" id="btnStep4Back">回到上一頁</button>
+      </div>
+    </section>
 
-        <div class="section-title" style="font-size:14px;">旅遊網站熱門推薦（可選）</div>
+    <section class="planner-card">
+      <div class="section-title">我的行程</div>
+      <div id="savedList" class="saved-list"></div>
+    </section>
+  </div>
+
+  <dialog class="planner-dialog" id="adjustDialog">
+    <div class="dialog-panel">
+      <div class="dialog-header">
+        <div class="dialog-title">行程調整</div>
+        <button class="pill-btn" type="button" id="btnAdjustClose">關閉</button>
+      </div>
+      <div class="dialog-body">
+        <div class="section-title">加入已收藏清單</div>
+        <div class="planner-hint">同步美食地圖與寺廟地圖的收藏內容。</div>
+        <div class="planner-row">
+          <div>
+            <div class="section-title" style="font-size:14px;">美食收藏</div>
+            <div id="favFoodList" class="search-results"></div>
+          </div>
+          <div>
+            <div class="section-title" style="font-size:14px;">寺廟收藏</div>
+            <div id="favTempleList" class="search-results"></div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:16px;">選擇熱門景點</div>
         <div id="recommendList" class="search-results"></div>
 
-        <div class="section-title" style="font-size:14px;">Google 地圖搜尋（可加入）</div>
+        <div class="section-title" style="margin-top:16px;">手動新增想去的點</div>
         <div class="planner-row">
           <label>搜尋地點
             <input id="mapSearchInput" type="text" placeholder="輸入地點名稱">
@@ -267,7 +292,7 @@
         <div id="mapPlaceInfo" class="map-info">尚未選擇地點。</div>
         <div class="map-wrap" id="mapCanvas"></div>
 
-        <details>
+        <details style="margin-top:12px;">
           <summary>進階篩選（可略過）</summary>
           <div style="margin-top:10px;display:grid;gap:16px;">
             <div>
@@ -316,16 +341,11 @@
         <div class="section-title" style="font-size:14px;">已加入必去清單</div>
         <div id="mustList" class="must-list"></div>
       </div>
-      <div class="step-actions" style="margin-top:12px;">
-        <button class="pill-btn" type="button" id="btnStep4Back">回到上一頁</button>
+      <div class="dialog-actions">
+        <button class="pill-btn primary" type="button" id="btnAdjustApply">套用並重新產生</button>
       </div>
-    </section>
-
-    <section class="planner-card">
-      <div class="section-title">我的行程</div>
-      <div id="savedList" class="saved-list"></div>
-    </section>
-  </div>
+    </div>
+  </dialog>
 
   <script src="/js/utils.js"></script>
   <script src="/js/day-trip.js"></script>
