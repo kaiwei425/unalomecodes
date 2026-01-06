@@ -269,6 +269,9 @@
     .admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
     .admin-field{display:grid;gap:6px;font-size:12px;color:var(--muted);}
     .admin-grid label{display:grid;gap:6px;font-size:12px;color:var(--muted);min-width:0;}
+    .admin-tag-group{display:flex;flex-wrap:wrap;gap:8px;}
+    .admin-tag-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);}
+    .admin-tag-item input{margin:0;}
     .admin-slot-group{display:flex;flex-wrap:wrap;gap:8px;}
     .admin-slot-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);}
     .admin-slot-item input{margin:0;}

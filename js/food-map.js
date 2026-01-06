@@ -265,6 +265,20 @@ let mainMarkers = [];
 let mainInfoWindow = null;
 const tripResultModal = document.getElementById('tripResultModal');
 let currentLang = 'zh';
+const TAG_OPTIONS = [
+  { value:'aircon', zh:'有冷氣', en:'Air-con' },
+  { value:'photo', zh:'拍照點', en:'Photo spot' },
+  { value:'family', zh:'親子友善', en:'Family' },
+  { value:'must_try', zh:'必吃', en:'Must try' },
+  { value:'spicy_ok', zh:'可吃辣', en:'Spicy OK' },
+  { value:'late_night', zh:'深夜', en:'Late night' },
+  { value:'breakfast', zh:'早餐', en:'Breakfast' },
+  { value:'dessert', zh:'甜點', en:'Dessert' },
+  { value:'night_market', zh:'夜市', en:'Night market' },
+  { value:'michelin', zh:'米其林', en:'Michelin' },
+  { value:'vegetarian_ok', zh:'素食友善', en:'Vegetarian' }
+];
+const TAG_OPTION_VALUES = new Set(TAG_OPTIONS.map(t=>t.value));
 const TRANSLATIONS = {
   zh: {
     title: '泰國美食地圖',
@@ -427,7 +441,7 @@ const TRANSLATIONS = {
     slotEvening: '晚上',
     slotNight: '深夜',
     tagsInput: '標籤',
-    tagsHint: '以逗號分隔，例如 aircon,photo,must_try',
+    tagsHint: '可勾選或自行輸入（以逗號分隔）',
     openLabel: '營業',
     igComment: 'IG 留言',
     close: '關閉',
@@ -737,7 +751,7 @@ const TRANSLATIONS = {
     slotEvening: 'Evening',
     slotNight: 'Night',
     tagsInput: 'Tags',
-    tagsHint: 'Comma-separated, e.g. aircon,photo,must_try',
+    tagsHint: 'Select or enter custom (comma-separated)',
     openLabel: 'Open',
     igComment: 'IG Comment',
     close: 'Close',
@@ -3152,7 +3166,8 @@ function render(){
     const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
     const stayMinVal = item.stayMin || item.stay_min || '';
     const openSlots = normalizeListField(item.openSlots || item.open_slots);
-    const tagsText = normalizeListField(item.tags).join(', ');
+    const tagsList = normalizeListField(item.tags);
+    const tagsCustomText = tagsList.filter(tag=>!TAG_OPTION_VALUES.has(tag)).join(', ');
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -3213,7 +3228,14 @@ function render(){
           </div>
           <div class="admin-field admin-cover">
             <div>${escapeHtml(t('tagsInput'))}</div>
-            <input class="admin-input" data-admin-field="tags" value="${escapeHtml(tagsText)}" placeholder="aircon,photo,must_try">
+            <div class="admin-tag-group">
+              ${TAG_OPTIONS.map(tag=>{
+                const label = currentLang === 'en' ? tag.en : tag.zh;
+                const checked = tagsList.includes(tag.value) ? 'checked' : '';
+                return `<label class="admin-tag-item"><input type="checkbox" data-admin-tag value="${escapeHtml(tag.value)}" ${checked}>${escapeHtml(label)}</label>`;
+              }).join('')}
+            </div>
+            <input class="admin-input" data-admin-field="tagsCustom" value="${escapeHtml(tagsCustomText)}" placeholder="aircon,photo,must_try">
             <div class="admin-hint">${escapeHtml(t('tagsHint'))}</div>
           </div>
           <label>${escapeHtml(t('gMap'))}<input class="admin-input" data-admin-field="maps" value="${escapeHtml(item.maps || '')}"></label>
@@ -3442,12 +3464,15 @@ function render(){
         const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : (original.highlights || []);
         const slotEls = wrap.querySelectorAll('[data-admin-slot]');
         const openSlots = Array.from(slotEls).filter(el=>el.checked).map(el=>el.value);
+        const tagEls = wrap.querySelectorAll('[data-admin-tag]');
+        const selectedTags = Array.from(tagEls).filter(el=>el.checked).map(el=>el.value);
         const toIntOrEmpty = (val)=>{
           const n = parseInt(val, 10);
           return Number.isFinite(n) ? n : '';
         };
         const stayMinVal = toIntOrEmpty(getVal('stayMin'));
-        const tagsVal = normalizeListField(getVal('tags'));
+        const customTags = normalizeListField(getVal('tagsCustom'));
+        const tagsVal = Array.from(new Set(selectedTags.concat(customTags)));
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
