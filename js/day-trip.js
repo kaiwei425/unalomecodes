@@ -9,16 +9,26 @@
   const transportSelect = document.getElementById('transportSelect');
   const btnLocate = document.getElementById('btnLocate');
   const btnGenerate = document.getElementById('btnGenerate');
-  const btnRebuild = document.getElementById('btnRebuild');
   const btnSavePlan = document.getElementById('btnSavePlan');
   const btnPrint = document.getElementById('btnPrint');
   const btnShareLine = document.getElementById('btnShareLine');
   const shareLinkInput = document.getElementById('shareLinkInput');
   const btnCopyShare = document.getElementById('btnCopyShare');
 
+  const stepper = document.getElementById('stepper');
+  const stepPills = Array.from(document.querySelectorAll('[data-step-pill]'));
+  const stepSections = Array.from(document.querySelectorAll('[data-step-section]'));
+  const btnStep1Next = document.getElementById('btnStep1Next');
+  const btnStep2Back = document.getElementById('btnStep2Back');
+  const btnStep2Next = document.getElementById('btnStep2Next');
+  const btnStep3Back = document.getElementById('btnStep3Back');
+  const btnStep3Next = document.getElementById('btnStep3Next');
+  const btnStep4Back = document.getElementById('btnStep4Back');
+
   const mustSearchInput = document.getElementById('mustSearchInput');
   const mustSearchResults = document.getElementById('mustSearchResults');
   const mustList = document.getElementById('mustList');
+  const recommendList = document.getElementById('recommendList');
 
   const foodCatFilter = document.getElementById('foodCatFilter');
   const foodAreaFilter = document.getElementById('foodAreaFilter');
@@ -35,12 +45,28 @@
   const mapPlaceInfo = document.getElementById('mapPlaceInfo');
   const mapCanvas = document.getElementById('mapCanvas');
 
+  const modeCards = document.getElementById('modeCards');
+
   const savedList = document.getElementById('savedList');
 
-  const DEFAULT_STAY = { food: 60, temple: 45, custom: 60 };
+  const DEFAULT_STAY = { food: 60, temple: 45, spot: 50 };
   const FOOD_SLOT_ORDER = ['morning', 'noon', 'afternoon', 'evening', 'night'];
   const TEMPLE_SLOT_ORDER = ['morning', 'afternoon', 'evening'];
   const STORAGE_KEY = 'day_trip_saved_plans_v1';
+  const RECOMMENDED_SPOTS = [
+    { name:'大皇宮', kind:'temple', lat:13.7500, lng:100.4913, area:'曼谷', category:'皇宮' },
+    { name:'玉佛寺', kind:'temple', lat:13.7515, lng:100.4927, area:'曼谷', category:'寺廟' },
+    { name:'臥佛寺', kind:'temple', lat:13.7467, lng:100.4930, area:'曼谷', category:'寺廟' },
+    { name:'鄭王廟', kind:'temple', lat:13.7440, lng:100.4889, area:'曼谷', category:'寺廟' },
+    { name:'四面佛', kind:'temple', lat:13.7443, lng:100.5401, area:'曼谷', category:'祈福' },
+    { name:'恰圖恰市集', kind:'spot', lat:13.7994, lng:100.5510, area:'曼谷', category:'市集' },
+    { name:'ICONSIAM', kind:'spot', lat:13.7266, lng:100.5107, area:'曼谷', category:'購物' },
+    { name:'暹羅百麗宮', kind:'spot', lat:13.7466, lng:100.5350, area:'曼谷', category:'購物' },
+    { name:'考山路', kind:'spot', lat:13.7587, lng:100.4971, area:'曼谷', category:'夜生活' },
+    { name:'喬德夜市', kind:'spot', lat:13.7641, lng:100.5699, area:'曼谷', category:'夜市' },
+    { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7047, lng:100.5030, area:'曼谷', category:'夜市' },
+    { name:'Jim Thompson House', kind:'spot', lat:13.7494, lng:100.5280, area:'曼谷', category:'景點' }
+  ];
 
   const state = {
     foods: [],
@@ -66,6 +92,48 @@
     if (!statusEl) return;
     statusEl.textContent = text || '';
     statusEl.style.color = isError ? '#b91c1c' : '';
+  }
+
+  let currentStep = 1;
+  function showStep(step){
+    currentStep = step;
+    stepSections.forEach(section => {
+      section.classList.toggle('is-active', section.getAttribute('data-step-section') === String(step));
+    });
+    stepPills.forEach(pill => {
+      pill.classList.toggle('is-active', pill.getAttribute('data-step-pill') === String(step));
+    });
+    if (step === 2){
+      ensureGoogleMaps().then(()=>{
+        if (!state.googleMap || !window.google || !window.google.maps) return;
+        window.setTimeout(()=>{
+          try{
+            google.maps.event.trigger(state.googleMap, 'resize');
+            if (state.googleMap.getCenter) state.googleMap.setCenter(state.googleMap.getCenter());
+          }catch(_){}
+        }, 200);
+      });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function validateStep1(){
+    const startVal = (startInput && startInput.value || '').trim();
+    if (!startVal){
+      setStatus('請先輸入起點位置', true);
+      return false;
+    }
+    const startMin = timeInputToMinutes(startTimeInput && startTimeInput.value);
+    const endMin = timeInputToMinutes(endTimeInput && endTimeInput.value);
+    if (startMin === null || endMin === null){
+      setStatus('請填寫出發與回程時間', true);
+      return false;
+    }
+    if (endMin <= startMin){
+      setStatus('回程時間需晚於出發時間', true);
+      return false;
+    }
+    return true;
   }
 
   function normalizeListField(value){
@@ -335,7 +403,7 @@
     }
     const items = Array.from(state.mustIds).map(id => findItemById(id)).filter(Boolean);
     mustList.innerHTML = items.map(item => {
-      const meta = [item.kind === 'temple' ? '寺廟' : (item.kind === 'food' ? '美食' : '其他'), item.area].filter(Boolean).join(' · ');
+      const meta = [getKindLabel(item.kind), item.area].filter(Boolean).join(' · ');
       return `
         <div class="must-chip">
           <span>${escapeHtml(item.name || '')}</span>
@@ -367,7 +435,7 @@
       return;
     }
     mustSearchResults.innerHTML = items.map(item => {
-      const meta = [item.kind === 'temple' ? '寺廟' : '美食', item.area, item.category].filter(Boolean).join(' · ');
+      const meta = [getKindLabel(item.kind), item.area, item.category].filter(Boolean).join(' · ');
       return `
         <div class="search-item">
           <div>
@@ -383,6 +451,39 @@
         const id = btn.getAttribute('data-add-must') || '';
         const item = findItemById(id);
         if (item) addMustItem(item);
+      });
+    });
+  }
+
+  function renderRecommendedList(){
+    if (!recommendList) return;
+    recommendList.innerHTML = RECOMMENDED_SPOTS.map(spot => {
+      const meta = [getKindLabel(spot.kind), spot.area, spot.category].filter(Boolean).join(' · ');
+      return `
+        <div class="search-item">
+          <div>
+            <div class="search-item-title">${escapeHtml(spot.name)}</div>
+            <div class="search-item-meta">${escapeHtml(meta)}</div>
+          </div>
+          <button class="pill-btn" type="button" data-add-reco="${escapeHtml(spot.name)}">加入</button>
+        </div>
+      `;
+    }).join('');
+
+    recommendList.querySelectorAll('[data-add-reco]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const name = btn.getAttribute('data-add-reco') || '';
+        const spot = RECOMMENDED_SPOTS.find(item => item.name === name);
+        if (!spot) return;
+        const existing = state.foods.concat(state.temples).find(item => item.name === spot.name);
+        if (existing){
+          addMustItem(existing);
+          return;
+        }
+        const custom = buildPresetItem(spot);
+        const existsCustom = state.customItems.find(x => x.id === custom.id);
+        if (!existsCustom) state.customItems.push(custom);
+        addMustItem(custom);
       });
     });
   }
@@ -407,7 +508,7 @@
   }
 
   function buildCustomItem(place, type){
-    const kind = type === 'temple' ? 'temple' : (type === 'food' ? 'food' : 'custom');
+    const kind = type === 'temple' ? 'temple' : (type === 'food' ? 'food' : 'spot');
     const coords = { lat: place.lat, lng: place.lng };
     const name = place.name || '自訂地點';
     const area = place.address || '';
@@ -418,7 +519,7 @@
     return {
       id,
       name,
-      category: kind === 'custom' ? '自訂' : (kind === 'food' ? '自訂美食' : '自訂寺廟'),
+      category: kind === 'spot' ? '自訂景點' : (kind === 'food' ? '自訂美食' : '自訂寺廟'),
       area,
       price: '',
       rating: place.rating || '',
@@ -430,6 +531,31 @@
       kind,
       coords,
       stayMin: DEFAULT_STAY[kind] || 60,
+      openSlotsResolved: [],
+      isCustom: true
+    };
+  }
+
+  function buildPresetItem(spot){
+    const kind = spot.kind === 'temple' ? 'temple' : 'spot';
+    const coords = { lat: spot.lat, lng: spot.lng };
+    const id = `preset:${spot.name}`;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name)}`;
+    return {
+      id,
+      name: spot.name,
+      category: spot.category || (kind === 'temple' ? '寺廟' : '景點'),
+      area: spot.area || '',
+      price: '',
+      rating: '',
+      maps: mapsUrl,
+      googlePlaceId: '',
+      hours: '',
+      tags: [],
+      wishTags: [],
+      kind,
+      coords,
+      stayMin: DEFAULT_STAY[kind] || 50,
       openSlotsResolved: [],
       isCustom: true
     };
@@ -458,13 +584,36 @@
   function getTransportLabel(mode){
     if (mode === 'walking') return '步行';
     if (mode === 'transit') return '大眾運輸';
+    if (mode === 'mixed') return '混合搭配';
     return '開車/叫車';
   }
 
+  function getKindLabel(kind){
+    if (kind === 'temple') return '寺廟';
+    if (kind === 'food') return '美食';
+    return '景點';
+  }
+
+  function kindForRatio(kind){
+    return kind === 'temple' ? 'temple' : 'food';
+  }
+
   function getTransportSettings(mode){
-    if (mode === 'walking') return { speedMinPerKm: 12, travelMode: 'walking' };
-    if (mode === 'transit') return { speedMinPerKm: 6, travelMode: 'transit' };
-    return { speedMinPerKm: 4, travelMode: 'driving' };
+    if (mode === 'walking') return { mode, speedMinPerKm: 12, travelMode: 'walking' };
+    if (mode === 'transit') return { mode, speedMinPerKm: 6, travelMode: 'transit' };
+    if (mode === 'mixed') return { mode, speedMinPerKm: 6, travelMode: 'driving' };
+    return { mode: 'driving', speedMinPerKm: 4, travelMode: 'driving' };
+  }
+
+  function estimateTravelMinutes(distKm, transport){
+    const distance = Number(distKm) || 0;
+    if (!transport || !transport.mode) return Math.max(10, Math.round(distance * 4));
+    if (transport.mode === 'mixed') {
+      if (distance <= 1.2) return Math.max(10, Math.round(distance * 12));
+      if (distance <= 4) return Math.max(10, Math.round(distance * 6));
+      return Math.max(10, Math.round(distance * 4));
+    }
+    return Math.max(10, Math.round(distance * transport.speedMinPerKm));
   }
 
   function parseRatio(value){
@@ -536,7 +685,7 @@
     const mustCandidates = candidates.filter(item => mustSet.has(item.id));
     if (mustCandidates.length) pool = mustCandidates;
     else if (preferredKind) {
-      const preferredPool = candidates.filter(item => item.kind === preferredKind);
+      const preferredPool = candidates.filter(item => kindForRatio(item.kind) === preferredKind);
       if (preferredPool.length) pool = preferredPool;
     }
     let best = null;
@@ -580,7 +729,7 @@
       const next = pickNextItem(fallback, currentCoords, preferred, mustSet);
       if (!next) break;
       const distKm = haversineKm(currentCoords, next.coords);
-      const travelMin = Math.max(10, Math.round(distKm * transport.speedMinPerKm));
+      const travelMin = estimateTravelMinutes(distKm, transport);
       const stayMin = Math.max(20, Math.round(next.stayMin * modeSettings.stayMultiplier));
       const arrive = currentTime + travelMin;
       const depart = arrive + stayMin;
@@ -596,7 +745,7 @@
       used.add(next.id);
       currentCoords = next.coords;
       currentTime = depart;
-      if (next.kind === 'food') counts.food += 1;
+      if (kindForRatio(next.kind) === 'food') counts.food += 1;
       if (next.kind === 'temple') counts.temple += 1;
       lastKinds.push(next.kind);
       if (lastKinds.length > 2) lastKinds.shift();
@@ -610,7 +759,7 @@
     plan.forEach(entry => {
       const distKm = haversineKm(prev, entry.item.coords);
       entry.distKm = distKm;
-      entry.travelMin = Math.max(10, Math.round(distKm * transport.speedMinPerKm));
+      entry.travelMin = estimateTravelMinutes(distKm, transport);
       prev = entry.item.coords;
     });
   }
@@ -734,6 +883,7 @@
     const today = new Date().toLocaleDateString('zh-TW', { month:'2-digit', day:'2-digit', weekday:'short' });
     const foodCount = plan.filter(p => p.item.kind === 'food').length;
     const templeCount = plan.filter(p => p.item.kind === 'temple').length;
+    const spotCount = plan.filter(p => p.item.kind === 'spot').length;
     const totalStay = plan.reduce((sum, p)=> sum + p.stayMin, 0);
     const totalTravel = plan.reduce((sum, p)=> sum + p.travelMin, 0);
     const routeUrl = buildMultiStopUrl(state.startCoords, plan, planData.travelMode);
@@ -741,7 +891,7 @@
 
     const listHtml = plan.map((entry, idx)=>{
       const item = entry.item;
-      const kindLabel = item.kind === 'temple' ? '寺廟' : (item.kind === 'food' ? '美食' : '其他');
+      const kindLabel = getKindLabel(item.kind);
       const kindClass = item.kind === 'temple' ? 'plan-kind temple' : 'plan-kind';
       const timeText = `${formatMinutes(entry.arrive)} - ${formatMinutes(entry.depart)}`;
       const meta = [item.area, item.category].filter(Boolean).join(' · ');
@@ -789,7 +939,7 @@
 
     const timeSourceTag = planData.googleApplied
       ? '<span class="tag">時間：Google ETA</span>'
-      : '<span class="tag">時間：估算</span>';
+      : (planData.googlePending ? '<span class="tag">時間：Google ETA 計算中</span>' : '<span class="tag">時間：估算</span>');
 
     resultEl.innerHTML = `
       <div class="plan-cover">
@@ -818,7 +968,7 @@
       </div>
       <div class="plan-summary">
         <span class="tag">起點：${escapeHtml(state.startLabel || '自訂位置')}</span>
-        <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}</span>
+        <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}${spotCount ? ` / 景點 ${spotCount}` : ''}</span>
         <span class="tag">停留 ${totalStay} 分 / 移動 ${totalTravel} 分</span>
         ${timeSourceTag}
         ${routeUrl ? `<a class="pill-btn" href="${escapeHtml(routeUrl)}" target="_blank" rel="noopener">開啟路線</a>` : ''}
@@ -915,20 +1065,20 @@
   async function generatePlan(){
     if (!state.ready){
       setStatus('資料尚未載入完成，請稍後再試', true);
-      return;
+      return false;
     }
     const startMin = timeInputToMinutes(startTimeInput && startTimeInput.value);
     const endMin = timeInputToMinutes(endTimeInput && endTimeInput.value);
     if (startMin === null || endMin === null){
       setStatus('請填寫開始與結束時間', true);
-      return;
+      return false;
     }
     if (endMin <= startMin){
       setStatus('結束時間需大於開始時間', true);
-      return;
+      return false;
     }
     const origin = await resolveStartCoords();
-    if (!origin) return;
+    if (!origin) return false;
 
     const modeValue = modeSelect ? modeSelect.value : 'balance';
     const transportMode = transportSelect ? transportSelect.value : 'driving';
@@ -937,7 +1087,7 @@
     const transport = getTransportSettings(transportMode);
     const ratio = parseRatio(ratioValue);
     let items = getActiveItems();
-    if (ratio.food === 0) items = items.filter(item => item.kind !== 'food');
+    if (ratio.food === 0) items = items.filter(item => kindForRatio(item.kind) !== 'food');
     if (ratio.temple === 0) items = items.filter(item => item.kind !== 'temple');
     const settings = { modeSettings, transport, ratio, mustSet: new Set(state.mustIds) };
     const planData = buildPlan(origin, startMin, endMin, items, settings);
@@ -950,6 +1100,7 @@
     if (planData.plan && planData.plan.length){
       setStatus('已產生行程');
     }
+    return true;
   }
 
   function encodePayload(payload){
@@ -1022,6 +1173,7 @@
     if (modeSelect && payload.mode) modeSelect.value = payload.mode;
     if (ratioSelect && payload.ratio) ratioSelect.value = payload.ratio;
     if (transportSelect && payload.transport) transportSelect.value = payload.transport;
+    if (payload.mode) selectMode(payload.mode);
 
     const plan = (payload.plan || []).map(entry => ({
       item: Object.assign({}, entry.item, {
@@ -1056,6 +1208,7 @@
     };
     if (payload.startCoords && payload.startLabel) setStatus(`已載入分享行程：${payload.startLabel}`);
     renderPlan(state.currentSummary);
+    showStep(4);
   }
 
   function shareToLine(){
@@ -1065,8 +1218,10 @@
     }
     const foodCount = state.currentSummary.plan.filter(p => p.item.kind === 'food').length;
     const templeCount = state.currentSummary.plan.filter(p => p.item.kind === 'temple').length;
+    const spotCount = state.currentSummary.plan.filter(p => p.item.kind === 'spot').length;
     const shareUrl = shareLinkInput ? shareLinkInput.value : location.href;
-    const text = `泰國一日行程：美食 ${foodCount} / 寺廟 ${templeCount}\n起點：${state.startLabel || '自訂位置'}\n${shareUrl}`;
+    const spotText = spotCount ? ` / 景點 ${spotCount}` : '';
+    const text = `泰國一日行程：美食 ${foodCount} / 寺廟 ${templeCount}${spotText}\n起點：${state.startLabel || '自訂位置'}\n${shareUrl}`;
     const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
     window.open(lineUrl, '_blank');
   }
@@ -1162,6 +1317,7 @@
     if (modeSelect && plan.mode) modeSelect.value = plan.mode;
     if (ratioSelect && plan.ratio) ratioSelect.value = plan.ratio;
     if (transportSelect && plan.transport) transportSelect.value = plan.transport;
+    if (plan.mode) selectMode(plan.mode);
     const transportMode = plan.transport || 'driving';
     const transport = getTransportSettings(transportMode);
     const startMin = plan.startTime ? timeInputToMinutes(plan.startTime) : null;
@@ -1188,6 +1344,7 @@
       skippedMust: []
     };
     renderPlan(state.currentSummary);
+    showStep(4);
   }
 
   function updateMapPlaceInfo(place){
@@ -1202,7 +1359,18 @@
 
   function addCustomPlace(){
     if (!state.selectedMapPlace) return;
-    const type = mapPlaceType ? mapPlaceType.value : 'custom';
+    const type = mapPlaceType ? mapPlaceType.value : 'spot';
+    const existing = state.foods.concat(state.temples).find(item => {
+      if (state.selectedMapPlace.placeId && item.googlePlaceId) {
+        return item.googlePlaceId === state.selectedMapPlace.placeId;
+      }
+      return item.name === state.selectedMapPlace.name;
+    });
+    if (existing){
+      addMustItem(existing);
+      setStatus(`已加入：${existing.name}`);
+      return;
+    }
     const item = buildCustomItem(state.selectedMapPlace, type);
     const exists = state.customItems.find(x => x.id === item.id);
     if (!exists){
@@ -1327,6 +1495,32 @@
     });
   }
 
+  function selectMode(mode){
+    if (modeSelect) modeSelect.value = mode;
+    if (!modeCards) return;
+    modeCards.querySelectorAll('.mode-card').forEach(card=>{
+      card.classList.toggle('is-selected', card.getAttribute('data-mode') === mode);
+    });
+  }
+
+  if (modeCards){
+    modeCards.querySelectorAll('.mode-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        const mode = card.getAttribute('data-mode') || 'balance';
+        selectMode(mode);
+      });
+    });
+  }
+
+  if (stepper){
+    stepPills.forEach(pill=>{
+      pill.addEventListener('click', ()=>{
+        const step = Number(pill.getAttribute('data-step-pill'));
+        if (Number.isFinite(step)) showStep(step);
+      });
+    });
+  }
+
   if (btnLocate){
     btnLocate.addEventListener('click', () => {
       if (!navigator.geolocation){
@@ -1354,8 +1548,30 @@
   if (btnGenerate){
     btnGenerate.addEventListener('click', ()=>{ generatePlan(); });
   }
-  if (btnRebuild){
-    btnRebuild.addEventListener('click', ()=>{ generatePlan(); });
+  if (btnStep1Next){
+    btnStep1Next.addEventListener('click', ()=>{
+      if (!validateStep1()) return;
+      showStep(2);
+    });
+  }
+  if (btnStep2Back){
+    btnStep2Back.addEventListener('click', ()=>{ showStep(1); });
+  }
+  if (btnStep2Next){
+    btnStep2Next.addEventListener('click', ()=>{ showStep(3); });
+  }
+  if (btnStep3Back){
+    btnStep3Back.addEventListener('click', ()=>{ showStep(2); });
+  }
+  if (btnStep3Next){
+    btnStep3Next.addEventListener('click', async ()=>{
+      if (!validateStep1()) return;
+      const ok = await generatePlan();
+      if (ok) showStep(4);
+    });
+  }
+  if (btnStep4Back){
+    btnStep4Back.addEventListener('click', ()=>{ showStep(3); });
   }
   if (btnSavePlan){
     btnSavePlan.addEventListener('click', saveCurrentPlan);
@@ -1382,6 +1598,8 @@
   renderSavedPlans();
   loadData().then(()=>{
     renderMustList();
+    renderRecommendedList();
+    selectMode(modeSelect ? modeSelect.value : 'balance');
     ensureGoogleMaps().then(()=>{
       if (state.currentSummary) maybeApplyGoogleTimes(state.currentSummary);
     });
@@ -1391,5 +1609,6 @@
       const payload = decodePayload(encoded);
       if (payload) applySharedPlan(payload);
     }
+    showStep(1);
   });
 })();

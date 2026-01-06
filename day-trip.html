@@ -71,11 +71,25 @@
     .saved-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;}
     .saved-title{font-weight:800;font-size:14px;}
     .saved-meta{font-size:12px;color:#64748b;}
+    .stepper{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+    .step-pill{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font-weight:800;font-size:13px;color:#475569;display:flex;align-items:center;gap:6px;}
+    .step-pill.is-active{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;box-shadow:0 10px 20px rgba(16,149,214,.25);}
+    .step-pill span{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#e2e8f0;color:#475569;font-size:12px;font-weight:800;}
+    .step-pill.is-active span{background:rgba(255,255,255,.2);color:#fff;}
+    .step-section{display:none;}
+    .step-section.is-active{display:block;}
+    .step-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+    .mode-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+    .mode-card{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;cursor:pointer;display:grid;gap:6px;}
+    .mode-card h3{margin:0;font-size:16px;font-weight:800;}
+    .mode-card p{margin:0;font-size:12px;color:#64748b;line-height:1.6;}
+    .mode-card.is-selected{border-color:#38bdf8;box-shadow:0 10px 22px rgba(56,189,248,.2);}
     @media print{
-      .top,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .search-results,.planner-card .map-wrap,.planner-card .filter-grid,.planner-card .filter-tags,.planner-card .planner-hint,.planner-card .saved-list,.planner-card .planner-row,.planner-card input,.planner-card select,.planner-card button,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .share-input{display:none !important;}
+      .top,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .search-results,.planner-card .map-wrap,.planner-card .filter-grid,.planner-card .filter-tags,.planner-card .planner-hint,.planner-card .saved-list,.planner-card .planner-row,.planner-card input,.planner-card select,.planner-card button,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .share-input,.stepper,.step-actions{display:none !important;}
       body{background:#fff;}
       .wrap{padding:0;}
       .planner-card{border:none;box-shadow:none;}
+      .step-section{display:block !important;}
     }
   </style>
 </head>
@@ -98,120 +112,66 @@
 
     <section class="planner-hero">
       <h1>一日行程產生器</h1>
-      <p>輸入飯店與時間，系統會混合寺廟與美食，依距離排序產生順路的一日行程。</p>
+      <p>一步一步輸入條件，最後產出行程卡與 Google 路線。</p>
+      <div class="stepper" id="stepper">
+        <button class="step-pill is-active" type="button" data-step-pill="1"><span>1</span>起點與時間</button>
+        <button class="step-pill" type="button" data-step-pill="2"><span>2</span>想去的點</button>
+        <button class="step-pill" type="button" data-step-pill="3"><span>3</span>行程模式</button>
+        <button class="step-pill" type="button" data-step-pill="4"><span>4</span>產出行程</button>
+      </div>
+      <div class="planner-hint" id="statusText" style="margin-top:8px;">資料載入中…</div>
     </section>
 
-    <section class="planner-card">
-      <div class="section-title">基本設定</div>
+    <section class="planner-card step-section is-active" data-step-section="1">
+      <div class="section-title">第一步｜起點與時間</div>
       <div class="planner-grid">
         <label>起點位置
           <input id="startLocation" type="text" placeholder="飯店 / 地址 / 地標">
         </label>
         <div class="planner-row">
-          <label>開始時間
+          <label>出發時間
             <input id="startTime" type="time" value="09:00">
           </label>
-          <label>結束時間
+          <label>回程時間
             <input id="endTime" type="time" value="20:00">
-          </label>
-          <label>行程模式
-            <select id="modeSelect">
-              <option value="battle">戰鬥</option>
-              <option value="balance" selected>平衡</option>
-              <option value="chill">散步</option>
-            </select>
-          </label>
-          <label>餐/寺比例
-            <select id="ratioSelect">
-              <option value="2-1">美食 2 / 寺廟 1</option>
-              <option value="1-1" selected>美食 1 / 寺廟 1</option>
-              <option value="1-2">美食 1 / 寺廟 2</option>
-              <option value="food-only">只要美食</option>
-              <option value="temple-only">只要寺廟</option>
-            </select>
           </label>
           <label>交通方式
             <select id="transportSelect">
               <option value="driving" selected>開車/叫車</option>
               <option value="transit">大眾運輸</option>
               <option value="walking">步行</option>
+              <option value="mixed">混合搭配</option>
             </select>
           </label>
         </div>
-        <div class="planner-actions">
+        <div class="step-actions">
           <button class="pill-btn" type="button" id="btnLocate">使用我的位置</button>
-          <button class="pill-btn primary" type="button" id="btnGenerate">產生行程</button>
+          <button class="pill-btn primary" type="button" id="btnStep1Next">下一步</button>
         </div>
-        <div class="planner-hint" id="statusText">資料載入中…</div>
       </div>
     </section>
 
-    <section class="planner-card">
-      <div class="section-title">必去清單</div>
+    <section class="planner-card step-section" data-step-section="2">
+      <div class="section-title">第二步｜加入想去的點</div>
       <div class="planner-grid">
-        <label>搜尋資料庫
+        <label>搜尋我的資料庫
           <input id="mustSearchInput" type="text" placeholder="輸入店名/寺廟關鍵字">
         </label>
         <div id="mustSearchResults" class="search-results"></div>
-        <div class="planner-hint">已加入必去的點會優先排入行程。</div>
-        <div id="mustList" class="must-list"></div>
-      </div>
-    </section>
 
-    <section class="planner-card">
-      <div class="section-title">篩選條件</div>
-      <div class="planner-grid">
-        <div>
-          <div class="section-title" style="font-size:14px;">美食篩選</div>
-          <div class="filter-grid">
-            <label>分類
-              <select id="foodCatFilter">
-                <option value="">全部</option>
-              </select>
-            </label>
-            <label>地區
-              <select id="foodAreaFilter">
-                <option value="">全部</option>
-              </select>
-            </label>
-            <label>價位
-              <select id="foodPriceFilter">
-                <option value="">全部</option>
-                <option value="$">$（≤200）</option>
-                <option value="$$">$$（200-1000）</option>
-                <option value="$$$">$$$（1000+）</option>
-              </select>
-            </label>
-          </div>
-          <div id="foodTagFilters" class="filter-tags"></div>
-        </div>
-        <div>
-          <div class="section-title" style="font-size:14px;">寺廟篩選</div>
-          <div class="filter-grid">
-            <label>地區
-              <select id="templeAreaFilter">
-                <option value="">全部</option>
-              </select>
-            </label>
-          </div>
-          <div id="templeTagFilters" class="filter-tags"></div>
-          <div id="templeWishFilters" class="filter-tags"></div>
-        </div>
-      </div>
-    </section>
+        <div class="section-title" style="font-size:14px;">旅遊網站熱門推薦（可選）</div>
+        <div id="recommendList" class="search-results"></div>
 
-    <section class="planner-card">
-      <div class="section-title">Google 地圖搜尋（可加入行程）</div>
-      <div class="planner-grid">
+        <div class="section-title" style="font-size:14px;">Google 地圖搜尋（可加入）</div>
         <div class="planner-row">
           <label>搜尋地點
             <input id="mapSearchInput" type="text" placeholder="輸入地點名稱">
           </label>
           <label>類型
             <select id="mapPlaceType">
+              <option value="spot">景點</option>
               <option value="food">美食</option>
               <option value="temple">寺廟</option>
-              <option value="custom">其他</option>
             </select>
           </label>
           <div class="planner-actions" style="align-self:end;">
@@ -220,18 +180,107 @@
         </div>
         <div id="mapPlaceInfo" class="map-info">尚未選擇地點。</div>
         <div class="map-wrap" id="mapCanvas"></div>
+
+        <details>
+          <summary>進階篩選（可略過）</summary>
+          <div style="margin-top:10px;display:grid;gap:16px;">
+            <div>
+              <div class="section-title" style="font-size:14px;">美食篩選</div>
+              <div class="filter-grid">
+                <label>分類
+                  <select id="foodCatFilter">
+                    <option value="">全部</option>
+                  </select>
+                </label>
+                <label>地區
+                  <select id="foodAreaFilter">
+                    <option value="">全部</option>
+                  </select>
+                </label>
+                <label>價位
+                  <select id="foodPriceFilter">
+                    <option value="">全部</option>
+                    <option value="$">$（≤200）</option>
+                    <option value="$$">$$（200-1000）</option>
+                    <option value="$$$">$$$（1000+）</option>
+                  </select>
+                </label>
+              </div>
+              <div id="foodTagFilters" class="filter-tags"></div>
+            </div>
+            <div>
+              <div class="section-title" style="font-size:14px;">寺廟篩選</div>
+              <div class="filter-grid">
+                <label>地區
+                  <select id="templeAreaFilter">
+                    <option value="">全部</option>
+                  </select>
+                </label>
+              </div>
+              <div id="templeTagFilters" class="filter-tags"></div>
+              <div id="templeWishFilters" class="filter-tags"></div>
+            </div>
+          </div>
+        </details>
+
+        <div class="section-title" style="font-size:14px;">已加入必去清單</div>
+        <div id="mustList" class="must-list"></div>
+        <div class="step-actions">
+          <button class="pill-btn" type="button" id="btnStep2Back">上一步</button>
+          <button class="pill-btn primary" type="button" id="btnStep2Next">下一步（可略過）</button>
+        </div>
       </div>
     </section>
 
-    <section class="planner-card">
-      <div class="section-title">我的行程</div>
-      <div id="savedList" class="saved-list"></div>
+    <section class="planner-card step-section" data-step-section="3">
+      <div class="section-title">第三步｜選擇旅遊模式</div>
+      <div class="planner-grid">
+        <div class="mode-grid" id="modeCards">
+          <button class="mode-card" type="button" data-mode="chill">
+            <h3>放鬆 Chill 行程</h3>
+            <p>行程景點較少，以咖啡、拍照與慢節奏為主。</p>
+          </button>
+          <button class="mode-card is-selected" type="button" data-mode="balance">
+            <h3>正常行程</h3>
+            <p>景點與美食均衡安排，節奏舒服。</p>
+          </button>
+          <button class="mode-card" type="button" data-mode="battle">
+            <h3>戰鬥行程</h3>
+            <p>安排越多越好，適合特種兵模式。</p>
+          </button>
+        </div>
+        <label style="display:none;">行程模式
+          <select id="modeSelect">
+            <option value="battle">戰鬥</option>
+            <option value="balance" selected>平衡</option>
+            <option value="chill">散步</option>
+          </select>
+        </label>
+        <details>
+          <summary>進階行程設定</summary>
+          <div style="margin-top:10px;" class="planner-row">
+            <label>餐/寺比例
+              <select id="ratioSelect">
+                <option value="2-1">美食 2 / 寺廟 1</option>
+                <option value="1-1" selected>美食 1 / 寺廟 1</option>
+                <option value="1-2">美食 1 / 寺廟 2</option>
+                <option value="food-only">只要美食</option>
+                <option value="temple-only">只要寺廟</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <div class="step-actions">
+          <button class="pill-btn" type="button" id="btnStep3Back">上一步</button>
+          <button class="pill-btn primary" type="button" id="btnStep3Next">產出行程</button>
+        </div>
+      </div>
     </section>
 
-    <section class="planner-card">
-      <div class="section-title">行程結果</div>
+    <section class="planner-card step-section" data-step-section="4">
+      <div class="section-title">第四步｜行程結果</div>
       <div class="plan-controls">
-        <button class="pill-btn" type="button" id="btnRebuild">重新產生</button>
+        <button class="pill-btn" type="button" id="btnGenerate">重新產生</button>
         <button class="pill-btn" type="button" id="btnSavePlan">儲存行程</button>
         <button class="pill-btn" type="button" id="btnPrint">匯出 PDF</button>
         <button class="pill-btn" type="button" id="btnShareLine">LINE 分享</button>
@@ -241,6 +290,14 @@
       <section id="resultPanel" class="result-panel">
         <div class="result-empty">尚未產生行程</div>
       </section>
+      <div class="step-actions" style="margin-top:12px;">
+        <button class="pill-btn" type="button" id="btnStep4Back">回到上一頁</button>
+      </div>
+    </section>
+
+    <section class="planner-card">
+      <div class="section-title">我的行程</div>
+      <div id="savedList" class="saved-list"></div>
     </section>
   </div>
 
