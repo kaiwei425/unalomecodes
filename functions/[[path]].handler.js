@@ -5187,6 +5187,29 @@ if (pathname === '/api/me/temple-favs') {
     return json({ ok:false, error:'method not allowed' }, 405);
   }
 
+  if (pathname === '/api/service-guide/content') {
+    if (request.method === 'GET'){
+      const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+      if (!store) return json({ ok:false, error:'SERVICE_PRODUCTS/PRODUCTS KV not bound' }, 500);
+      const raw = await store.get('SERVICE_GUIDE_CONTENT');
+      const content = raw ? JSON.parse(raw) : {};
+      return json({ ok:true, html: content.html || '' });
+    }
+    if (request.method === 'POST'){
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+      const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+      if (!store) return json({ ok:false, error:'SERVICE_PRODUCTS/PRODUCTS KV not bound' }, 500);
+      const body = await request.json().catch(()=>({}));
+      const html = typeof body.html === 'string' ? body.html.trim() : '';
+      if (!html) return json({ ok:false, error:'missing html' }, 400);
+      const payload = { html, updatedAt: new Date().toISOString() };
+      await store.put('SERVICE_GUIDE_CONTENT', JSON.stringify(payload));
+      return json({ ok:true, html });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
   // Temple map data (list / admin upsert)
   if (pathname === '/api/temples') {
     if (request.method === 'GET'){

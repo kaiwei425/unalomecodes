@@ -435,11 +435,12 @@ const TRANSLATIONS = {
     priceOpt3: '$$$（1000+）',
     stayMin: '建議停留時間（分鐘）',
     stayMinHint: '例：45 / 60 / 90',
-    openSlotsLabel: '可去時段',
-    slotMorning: '早上 07:00-11:00',
-    slotAfternoon: '下午 11:00-16:00',
-    slotEvening: '晚上 16:00-21:00',
-    slotNight: '深夜 21:00-02:00',
+    openSlotsLabel: '可去時段（參考）',
+    slotMorning: '早上 06:00-10:00',
+    slotNoon: '中午 10:00-14:00',
+    slotAfternoon: '下午 14:00-18:00',
+    slotEvening: '晚上 18:00-22:00',
+    slotNight: '深夜 22:00-03:00',
     tagsInput: '標籤',
     tagsHint: '可勾選或自行輸入（以逗號分隔）',
     openLabel: '營業',
@@ -745,11 +746,12 @@ const TRANSLATIONS = {
     priceOpt3: '$$$ (1000+)',
     stayMin: 'Suggested stay (min)',
     stayMinHint: 'e.g. 45 / 60 / 90',
-    openSlotsLabel: 'Time slots',
-    slotMorning: 'Morning 07:00-11:00',
-    slotAfternoon: 'Afternoon 11:00-16:00',
-    slotEvening: 'Evening 16:00-21:00',
-    slotNight: 'Night 21:00-02:00',
+    openSlotsLabel: 'Time slots (optional)',
+    slotMorning: 'Morning 06:00-10:00',
+    slotNoon: 'Midday 10:00-14:00',
+    slotAfternoon: 'Afternoon 14:00-18:00',
+    slotEvening: 'Evening 18:00-22:00',
+    slotNight: 'Night 22:00-03:00',
     tagsInput: 'Tags',
     tagsHint: 'Select or enter custom (comma-separated)',
     openLabel: 'Open',
@@ -2731,6 +2733,64 @@ function normalizeListField(value){
   }
   return [];
 }
+function parseTimeMinutes(value){
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const match = raw.match(/^(\d{1,2})(?:\s*[:：.]\s*(\d{2}))?$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 24 || minute < 0 || minute >= 60) return null;
+  if (hour === 24 && minute !== 0) return null;
+  return hour * 60 + minute;
+}
+function inferOpenSlotsFromHours(hoursText){
+  const raw = String(hoursText || '').trim();
+  if (!raw) return [];
+  if (/(24\s*小時|24\s*hr|24\s*h|24\/7|24-7|all\s*day|全天|全日)/i.test(raw)) {
+    return ['morning', 'noon', 'afternoon', 'evening', 'night'];
+  }
+  if (/(休息|公休|店休|暫停營業|歇業|closed)/i.test(raw)) return [];
+
+  const ranges = [];
+  const rangeRegex = /(\d{1,2})(?:\s*[:：.]\s*(\d{2}))?\s*(?:-|–|—|~|～|〜|到|至|－)\s*(\d{1,2})(?:\s*[:：.]\s*(\d{2}))?/g;
+  let match;
+  while ((match = rangeRegex.exec(raw)) !== null) {
+    const start = parseTimeMinutes(`${match[1]}:${match[2] || '00'}`);
+    const end = parseTimeMinutes(`${match[3]}:${match[4] || '00'}`);
+    if (start === null || end === null) continue;
+    if (start === end) continue;
+    ranges.push([start, end]);
+  }
+  if (!ranges.length) return [];
+
+  const slotWindows = {
+    morning: [[360, 600]],
+    noon: [[600, 840]],
+    afternoon: [[840, 1080]],
+    evening: [[1080, 1320]],
+    night: [[1320, 1440], [0, 180]]
+  };
+  const slotOrder = ['morning', 'noon', 'afternoon', 'evening', 'night'];
+  const chosen = new Set();
+  const overlaps = (aStart, aEnd, bStart, bEnd) => Math.max(aStart, bStart) < Math.min(aEnd, bEnd);
+
+  ranges.forEach(([start, end])=>{
+    const segments = end > start ? [[start, end]] : [[start, 1440], [0, end]];
+    segments.forEach(([segStart, segEnd])=>{
+      slotOrder.forEach(slot=>{
+        const windows = slotWindows[slot] || [];
+        windows.forEach(([winStart, winEnd])=>{
+          if (overlaps(segStart, segEnd, winStart, winEnd)) {
+            chosen.add(slot);
+          }
+        });
+      });
+    });
+  });
+  return slotOrder.filter(slot=>chosen.has(slot));
+}
 function extractLatLngFromText(text){
   const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
   return m ? parseLatLngPair(m[1], m[2]) : null;
@@ -3165,7 +3225,9 @@ function render(){
     const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
     const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
     const stayMinVal = item.stayMin || item.stay_min || '';
-    const openSlots = normalizeListField(item.openSlots || item.open_slots);
+    const openSlotsRaw = normalizeListField(item.openSlots || item.open_slots);
+    const inferredSlots = !openSlotsRaw.length ? inferOpenSlotsFromHours(item.hours || '') : [];
+    const openSlots = inferredSlots.length ? inferredSlots : openSlotsRaw;
     const tagsList = normalizeListField(item.tags);
     const tagsCustomText = tagsList.filter(tag=>!TAG_OPTION_VALUES.has(tag)).join(', ');
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
@@ -3221,6 +3283,7 @@ function render(){
             <div>${escapeHtml(t('openSlotsLabel'))}</div>
             <div class="admin-slot-group">
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="morning" ${openSlots.includes('morning') ? 'checked' : ''}>${escapeHtml(t('slotMorning'))}</label>
+              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="noon" ${openSlots.includes('noon') ? 'checked' : ''}>${escapeHtml(t('slotNoon'))}</label>
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="afternoon" ${openSlots.includes('afternoon') ? 'checked' : ''}>${escapeHtml(t('slotAfternoon'))}</label>
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="evening" ${openSlots.includes('evening') ? 'checked' : ''}>${escapeHtml(t('slotEvening'))}</label>
               <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="night" ${openSlots.includes('night') ? 'checked' : ''}>${escapeHtml(t('slotNight'))}</label>
@@ -3463,7 +3526,12 @@ function render(){
         const introRaw = getVal('intro') || '';
         const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : (original.highlights || []);
         const slotEls = wrap.querySelectorAll('[data-admin-slot]');
-        const openSlots = Array.from(slotEls).filter(el=>el.checked).map(el=>el.value);
+        let openSlots = Array.from(slotEls).filter(el=>el.checked).map(el=>el.value);
+        const hoursVal = getVal('hours');
+        if (!openSlots.length){
+          const inferred = inferOpenSlotsFromHours(hoursVal);
+          if (inferred.length) openSlots = inferred;
+        }
         const tagEls = wrap.querySelectorAll('[data-admin-tag]');
         const selectedTags = Array.from(tagEls).filter(el=>el.checked).map(el=>el.value);
         const toIntOrEmpty = (val)=>{
@@ -3506,7 +3574,7 @@ function render(){
           maps: getVal('maps'),
           googlePlaceId: getVal('googlePlaceId'),
           google_place_id: getVal('googlePlaceId'),
-          hours: getVal('hours'),
+          hours: hoursVal,
           ig: getVal('ig'),
           youtube: getVal('youtube'),
           igComment: getVal('igComment'),
