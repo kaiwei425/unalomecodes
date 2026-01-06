@@ -6734,7 +6734,7 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
       used: false
     };
     await saveCoupon(env, rec);
-    return new Response(JSON.stringify({
+    return json({
       ok:true,
       code,
       deity,
