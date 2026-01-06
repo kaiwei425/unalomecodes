@@ -140,13 +140,14 @@ function buildProductCard(p, opts = {}){
   const stockTotal = resolveTotalStock(p);
   const stockBadge = stockTotal === null
     ? ''
-    : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">庫存：${stockTotal}</span>`;
+    : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">庫存：${escapeHtml(String(stockTotal))}</span>`;
   const deityBadge = p.deity ? `<span class="badge badge-deity">${escapeHtml(p.deity)}</span>` : '';
-  const limitedRow = buildLimitedRow(p, '限時商品');
+  const limitedRow = buildLimitedRow(p, '限時商品'); // buildLimitedRow 内部已使用 escapeHtml
 
   const card = document.createElement('div');
   card.className = 'card' + (opts.hot ? ' hot-card' : '');
   card.setAttribute('data-id', String(p.id || ''));
+  // 确保所有用户输入都经过 escapeHtml
   card.innerHTML = `
     <div class="pic">${img?`<img src="${escapeHtml(img)}" alt="" loading="lazy" decoding="async">`:''}</div>
     <div class="body">
@@ -154,10 +155,10 @@ function buildProductCard(p, opts = {}){
       ${limitedRow}
       ${deityBadge ? `<div class="meta meta-top">${deityBadge}</div>` : ''}
       <div class="meta meta-bottom">
-        <span class="badge badge-sold">已售出：${Number(p.sold||0)}</span>
+        <span class="badge badge-sold">已售出：${escapeHtml(String(Number(p.sold||0)))}</span>
         ${stockBadge}
       </div>
-      <div class="price">NT$ ${formatPrice(price)}</div>
+      <div class="price">NT$ ${escapeHtml(formatPrice(price))}</div>
       <div class="cta">
         <button class="btn primary" data-open-detail="1">查看商品</button>
       </div>

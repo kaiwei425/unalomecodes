@@ -5810,21 +5810,12 @@ if (pathname === '/api/order/store-select' && request.method === 'POST') {
     const body = await request.json();
     const store = String(body.store || body.storeid || body.storeId || '').trim();
     if (!store) {
-      return new Response(
-        JSON.stringify({ ok:false, error:'Missing store' }),
-        { status:400, headers: jsonHeaders }
-      );
+      return json({ ok:false, error:'Missing store' }, 400, request, env);
     }
     // 目前僅回傳門市資訊；未來若要綁暫存訂單，可在此處擴充
-    return new Response(
-      JSON.stringify({ ok:true, store }),
-      { status:200, headers: jsonHeaders }
-    );
+    return json({ ok:true, store }, 200, request, env);
   } catch (e) {
-    return new Response(
-      JSON.stringify({ ok:false, error:String(e) }),
-      { status:500, headers: jsonHeaders }
-    );
+    return json({ ok:false, error:String(e) }, 500, request, env);
   }
 }
 
@@ -5834,11 +5825,11 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
   
   
   if (!env.ORDERS) {
-    return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:'ORDERS KV not bound' }, 500, request, env);
   }
   const bankUser = await getSessionUser(request, env);
   if (!bankUser) {
-    return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+    return json({ ok:false, error:'請先登入後再送出訂單' }, 401, request, env);
   }
   const bankUserRecord = await ensureUserRecord(env, bankUser);
   try {
@@ -5894,7 +5885,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
         if (f && typeof f !== 'string' && (f.stream || f.arrayBuffer)) {
           const check = validateUploadFile(f);
           if (!check.ok) {
-            return new Response(JSON.stringify({ ok:false, error: check.error }), { status:400, headers: jsonHeaders });
+            return json({ ok:false, error: check.error }, 400, request, env);
           }
           const day = new Date();
           const y = day.getFullYear();
@@ -5913,10 +5904,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
             const buf = await f.arrayBuffer();
             const size = buf ? buf.byteLength : 0;
             if (!size) {
-              return new Response(
-                JSON.stringify({ ok:false, error:'Empty file uploaded，請改傳 JPG/PNG 或重新選擇檔案' }),
-                { status:400, headers: jsonHeaders }
-              );
+              return json({ ok:false, error:'Empty file uploaded，請改傳 JPG/PNG 或重新選擇檔案' }, 400, request, env);
             }
             await env.R2_BUCKET.put(key, buf, {
               httpMetadata: { contentType: check.contentType, contentDisposition: 'inline' }
@@ -5936,7 +5924,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
         if (rf && typeof rf !== 'string' && (rf.stream || rf.arrayBuffer)) {
           const check = validateUploadFile(rf);
           if (!check.ok) {
-            return new Response(JSON.stringify({ ok:false, error: check.error }), { status:400, headers: jsonHeaders });
+            return json({ ok:false, error: check.error }, 400, request, env);
           }
           const day2 = new Date();
           const y2 = day2.getFullYear();
@@ -6009,7 +5997,7 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
         : reason === 'invalid_variant' ? '商品規格無效'
         : reason === 'out_of_stock' ? '庫存不足'
         : '缺少商品資訊';
-      return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: jsonHeaders });
+      return json({ ok:false, error: msg }, 400, request, env);
     }
     const useCartOnly = selection.useCartOnly;
     const items = selection.items;
@@ -6063,10 +6051,10 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     ).trim();
     if (!isCod711) {
       if (!receiptUrl) {
-        return new Response(JSON.stringify({ ok:false, error:'缺少匯款憑證' }), { status:400, headers: jsonHeaders });
+        return json({ ok:false, error:'缺少匯款憑證' }, 400, request, env);
       }
       if (!/^\d{5}$/.test(transferLast5)) {
-        return new Response(JSON.stringify({ ok:false, error:'請輸入匯款末五碼' }), { status:400, headers: jsonHeaders });
+        return json({ ok:false, error:'請輸入匯款末五碼' }, 400, request, env);
       }
     }
     let amount = items.reduce((s, it) => {
@@ -6271,9 +6259,9 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
       });
     }catch(_){}
 
-    return new Response(JSON.stringify({ ok:true, id: order.id, order }), { status:200, headers: jsonHeaders });
+    return json({ ok:true, id: order.id, order }, 200, request, env);
   } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:String(e) }, 500, request, env);
   }
 
 }
@@ -6383,14 +6371,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/ecpay/create' ||
 if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
   try {
     if (!env.ORDERS) {
-      return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
+      return json({ ok:false, error:'ORDERS KV not bound' }, 500, request, env);
     }
     const orderUser = await getSessionUser(request, env);
     if (!orderUser) {
-      return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+      return json({ ok:false, error:'請先登入後再送出訂單' }, 401, request, env);
     }
     if (!env.ECPAY_MERCHANT_ID || !env.ECPAY_HASH_KEY || !env.ECPAY_HASH_IV) {
-      return new Response(JSON.stringify({ ok:false, error:'Missing ECPay config' }), { status:500, headers: jsonHeaders });
+      return json({ ok:false, error:'Missing ECPay config' }, 500, request, env);
     }
     const ct = (request.headers.get('content-type') || '').toLowerCase();
     const body = ct.includes('application/json') ? (await request.json()) : {};
@@ -6405,7 +6393,7 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
         : reason === 'invalid_variant' ? '商品規格無效'
         : reason === 'out_of_stock' ? '庫存不足'
         : '缺少商品資訊';
-      return new Response(JSON.stringify({ ok:false, error: msg }), { status:400, headers: jsonHeaders });
+      return json({ ok:false, error: msg }, 400, request, env);
     }
     const order = draft.order;
     try{
@@ -6491,9 +6479,9 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       action: gateway,
       params,
       stage: String(env.ECPAY_STAGE || env.ECPAY_MODE || '').toLowerCase()
-    }), { status:200, headers: jsonHeaders });
+    }, 200, request, env);
   } catch (e) {
-    return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
+    return json({ ok:false, error:String(e) }, 500, request, env);
   }
 }
 
@@ -6670,7 +6658,7 @@ if (pathname === '/api/coupons/check' && request.method === 'POST') {
       return new Response(JSON.stringify({ ok:false, code, reason:'not_found' }), { status:200, headers: jsonHeaders });
     }
     if (rec.used){
-      return new Response(JSON.stringify({ ok:false, code, reason:'already_used', orderId: rec.orderId||'' }), { status:200, headers: jsonHeaders });
+      return json({ ok:false, code, reason:'already_used', orderId: rec.orderId||'' }, 200, request, env);
     }
     const nowTs = Date.now();
     if (rec.reservedUntil){
@@ -9937,17 +9925,20 @@ function pick(obj, keys) {
   return out;
 }
 
-function json(data, status = 200) {
+// 统一的 JSON 响应函数（自动应用 CORS）
+function json(data, status = 200, request = null, env = null) {
+  const headers = (request && env) ? jsonHeadersFor(request, env) : jsonHeaders;
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8" }
+    headers
   });
 }
 
-function jsonWithHeaders(data, status = 200, headers = {}) {
+function jsonWithHeaders(data, status = 200, headers = {}, request = null, env = null) {
+  const baseHeaders = (request && env) ? jsonHeadersFor(request, env) : jsonHeaders;
   return new Response(JSON.stringify(data), {
     status,
-    headers: Object.assign({ "Content-Type": "application/json; charset=utf-8" }, headers)
+    headers: Object.assign({}, baseHeaders, headers)
   });
 }
 

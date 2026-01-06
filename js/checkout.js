@@ -893,7 +893,19 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         if (willShowDialog){
           try{ window.__orderSuccessWillOpen = true; }catch(_){}
         }
-        alert(success ? '✅ 已送出訂單，我們將盡快安排出貨！' : '✅ 已送出，感謝！');
+        if (success) {
+          if (typeof showToast === 'function') {
+            showToast('✅ 已送出訂單，我們將盡快安排出貨！');
+          } else {
+            alert('✅ 已送出訂單，我們將盡快安排出貨！');
+          }
+        } else {
+          if (typeof showToast === 'function') {
+            showToast('✅ 已送出，感謝！');
+          } else {
+            alert('✅ 已送出，感謝！');
+          }
+        }
         if (success){
           try{
             if (window.trackEvent) window.trackEvent('order_submit', { method:'cod-711', value: (data && data.order && data.order.amount) || null });
@@ -954,17 +966,27 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           }
         }catch(_){}
       }catch(err){
-        console.error(err);
+        console.error('[Checkout] Bank payment error:', err);
+        // 记录错误但不暴露给用户
         try{
           const stash = JSON.parse(localStorage.getItem('bankSubmits')||'[]');
           const obj = {}; fd.forEach((v,k)=>{ if(k==='receipt'){ obj[k] = (v && v.name) || 'file'; } else obj[k]=v; });
           obj.ts = Date.now();
+          obj.error = err.message || String(err);
           stash.push(obj);
           localStorage.setItem('bankSubmits', JSON.stringify(stash));
         }catch{}
         try{ sessionStorage.removeItem('__pendingDetail__'); }catch(e){}
-        alert('已送出訂單，我們將盡快安排出貨。');
+        
+        // 用户友好的错误提示
+        const errorMsg = err.message || '訂單提交失敗，請稍後再試';
+        if (typeof showToast === 'function') {
+          showToast(`❌ ${errorMsg}`);
+        } else {
+          alert(`❌ ${errorMsg}\n\n如果問題持續，請聯繫客服。`);
+        }
         if (dlg) dlg.close();
+        return; // 不要继续执行
       }finally{
         if (pendingOverlay) {
           pendingOverlay.style.display = 'none';
@@ -1902,8 +1924,13 @@ function __cartPricing(includePendingDetail, opts){
         var proceedPayment = function(){ submitECPayForm(data.action, data.params); };
         proceedPayment();
       }catch(err){
-        console.error(err);
-        alert('刷卡請求失敗，請稍後再試。\n' + (err && err.message ? err.message : err));
+        console.error('[Payment] Credit card error:', err);
+        const errorMsg = err.message || '付款處理失敗，請稍後再試';
+        if (typeof showToast === 'function') {
+          showToast(`❌ ${errorMsg}`);
+        } else {
+          alert(`❌ ${errorMsg}\n\n請檢查網路連線或稍後再試。\n如問題持續，請聯繫客服。`);
+        }
       }finally{
         if (btn) btn.disabled = false;
         if (btn && btn.getAttribute('data-label')){
