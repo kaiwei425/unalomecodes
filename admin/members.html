@@ -49,6 +49,7 @@
     <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
     <h1>會員管理</h1>
     <div class="bar">
+      <button id="btnCreatorLink" class="backBtn" type="button" style="border-radius:10px;">產生創作者連結</button>
       <input id="q" placeholder="搜尋 姓名 / Email / 手機">
       <select id="sortSel">
         <option value="lastLogin">最近登入</option>
@@ -110,7 +111,6 @@
       const guardianName = (u.guardian && (u.guardian.name || u.guardian.code)) ? (u.guardian.name || u.guardian.code) : '';
       const creatorBadge = u.creatorFoods ? '<span class="badge green">創作者</span>' : (u.creatorInviteAllowed ? '<span class="badge blue">可輸入邀請碼</span>' : '<span class="muted">未開放</span>');
       const creatorAction = u.creatorFoods ? '<span class="muted">已是創作者</span>' : `<button class="action-btn" data-creator-id="${escapeHtml(u.id||'')}" data-creator-name="${escapeHtml(u.name||u.email||'')}" data-creator-allow="${u.creatorInviteAllowed ? '0' : '1'}">${u.creatorInviteAllowed ? '取消邀請權限' : '開放邀請權限'}</button>`;
-      const creatorLinkBtn = u.creatorFoods ? '' : `<button class="action-btn" data-creator-link="1" data-creator-label="${escapeHtml(u.name||u.email||'')}">產生創作者連結</button>`;
       return `<tr>
         <td>
           <div style="font-weight:700">${escapeHtml(u.name||'（未填寫）')}</div>
@@ -126,7 +126,6 @@
         <td>${creatorBadge}</td>
         <td>
           ${creatorAction}
-          ${creatorLinkBtn}
           <button class="action-btn" data-reset-id="${escapeHtml(u.id||'')}" data-reset-name="${escapeHtml(u.name||u.email||'')}">重置守護神</button>
           <button class="action-btn danger" data-del-id="${escapeHtml(u.id||'')}" data-del-name="${escapeHtml(u.name||u.email||'')}">刪除會員</button>
         </td>
@@ -160,16 +159,15 @@
   document.getElementById('reload').addEventListener('click', load);
   q.addEventListener('input', ()=>{ clearTimeout(q._t); q._t=setTimeout(render,200); });
   sortSel.addEventListener('change', render);
-  tbody.addEventListener('click', async e=>{
-    const linkBtn = e.target.closest('[data-creator-link]');
-    if (linkBtn){
-      const label = linkBtn.getAttribute('data-creator-label') || '';
+  const creatorLinkBtn = document.getElementById('btnCreatorLink');
+  if (creatorLinkBtn){
+    creatorLinkBtn.addEventListener('click', async ()=>{
       try{
         const res = await fetch(API_CREATOR_LINK, {
           method:'POST',
           credentials:'include',
           headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ label, mode:'link' })
+          body: JSON.stringify({ mode:'link' })
         });
         const data = await res.json().catch(()=>({}));
         if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
@@ -189,8 +187,10 @@
       }catch(err){
         alert('產生連結失敗：' + (err.message || err));
       }
-      return;
-    }
+    });
+  }
+
+  tbody.addEventListener('click', async e=>{
     const creatorBtn = e.target.closest('[data-creator-id]');
     if (creatorBtn){
       const id = creatorBtn.getAttribute('data-creator-id');
