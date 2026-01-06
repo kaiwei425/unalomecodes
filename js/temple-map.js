@@ -292,6 +292,23 @@ const TRANSLATIONS = {
     ctaTextLabel: 'CTA 按鈕文字',
     ctaUrlLabel: 'CTA 連結',
     ctaDefault: '前往連結',
+    typeInput: '類型',
+    typeHint: 'temple / shrine / view',
+    stayMin: '建議停留時間（分鐘）',
+    stayMinHint: '例：30 / 45 / 60',
+    openSlotsLabel: '可去時段',
+    slotMorning: '早上',
+    slotAfternoon: '下午',
+    slotEvening: '晚上',
+    slotNight: '深夜',
+    priceLevelLabel: '價格等級',
+    priceLevelOpt1: '1（$）',
+    priceLevelOpt2: '2（$$）',
+    priceLevelOpt3: '3（$$$）',
+    tagsInput: '標籤',
+    tagsHint: '以逗號分隔，例如 aircon,photo,must_try',
+    wishTagsInput: '願望標籤',
+    wishTagsHint: '以逗號分隔，例如 財運,桃花,健康',
     addr: '地址',
     reviews: 'Google 評分 & 評論',
     tripTitle: '參拜路線',
@@ -497,6 +514,23 @@ const TRANSLATIONS = {
     ctaTextLabel: 'CTA Button Text',
     ctaUrlLabel: 'CTA Link',
     ctaDefault: 'Open Link',
+    typeInput: 'Type',
+    typeHint: 'temple / shrine / view',
+    stayMin: 'Suggested stay (min)',
+    stayMinHint: 'e.g. 30 / 45 / 60',
+    openSlotsLabel: 'Time slots',
+    slotMorning: 'Morning',
+    slotAfternoon: 'Afternoon',
+    slotEvening: 'Evening',
+    slotNight: 'Night',
+    priceLevelLabel: 'Price level',
+    priceLevelOpt1: '1 ($)',
+    priceLevelOpt2: '2 ($$)',
+    priceLevelOpt3: '3 ($$$)',
+    tagsInput: 'Tags',
+    tagsHint: 'Comma-separated, e.g. aircon,photo,must_try',
+    wishTagsInput: 'Wish tags',
+    wishTagsHint: 'Comma-separated, e.g. wealth,romance,health',
     addr: 'Address',
     reviews: 'Google Ratings & Reviews',
     tripTitle: 'Temple Route',
@@ -1711,6 +1745,15 @@ function parseLatLngInput(input){
   if (parts.length < 2) return null;
   return parseLatLngPair(parts[0], parts[1]);
 }
+function normalizeListField(value){
+  if (Array.isArray(value)) {
+    return value.map(v=>String(v).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value.split(/[,，]/).map(v=>v.trim()).filter(Boolean);
+  }
+  return [];
+}
 function extractLatLngFromText(text){
   const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
   return m ? parseLatLngPair(m[1], m[2]) : null;
@@ -2069,6 +2112,12 @@ function render(){
     const hasLat = item.lat !== undefined && item.lat !== null && String(item.lat).trim() !== '';
     const hasLng = item.lng !== undefined && item.lng !== null && String(item.lng).trim() !== '';
     const coordValue = (hasLat && hasLng) ? `${item.lat}, ${item.lng}` : '';
+    const stayMinVal = item.stayMin || item.stay_min || '';
+    const priceLevelVal = item.priceLevel || item.price_level || '';
+    const typeVal = item.type || '';
+    const openSlots = normalizeListField(item.openSlots || item.open_slots);
+    const tagsText = normalizeListField(item.tags).join(', ');
+    const wishTagsText = normalizeListField(item.wishTags || item.wish_tags).join(', ');
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -2096,6 +2145,41 @@ function render(){
               <button class="btn pill" type="button" data-fetch-rating="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">${escapeHtml(t('syncG'))}</button>
             </div>
           </label>
+          <label>${escapeHtml(t('typeInput'))}
+            <input class="admin-input" data-admin-field="type" value="${escapeHtml(typeVal)}">
+            <span class="admin-hint">${escapeHtml(t('typeHint'))}</span>
+          </label>
+          <label>${escapeHtml(t('stayMin'))}
+            <input class="admin-input" data-admin-field="stayMin" type="number" min="10" step="5" value="${escapeHtml(String(stayMinVal || ''))}">
+            <span class="admin-hint">${escapeHtml(t('stayMinHint'))}</span>
+          </label>
+          <label>${escapeHtml(t('priceLevelLabel'))}
+            <select class="admin-input" data-admin-field="priceLevel">
+              <option value="">-</option>
+              <option value="1" ${String(priceLevelVal) === '1' ? 'selected' : ''}>${escapeHtml(t('priceLevelOpt1'))}</option>
+              <option value="2" ${String(priceLevelVal) === '2' ? 'selected' : ''}>${escapeHtml(t('priceLevelOpt2'))}</option>
+              <option value="3" ${String(priceLevelVal) === '3' ? 'selected' : ''}>${escapeHtml(t('priceLevelOpt3'))}</option>
+            </select>
+          </label>
+          <div class="admin-field admin-cover">
+            <div>${escapeHtml(t('openSlotsLabel'))}</div>
+            <div class="admin-slot-group">
+              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="morning" ${openSlots.includes('morning') ? 'checked' : ''}>${escapeHtml(t('slotMorning'))}</label>
+              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="afternoon" ${openSlots.includes('afternoon') ? 'checked' : ''}>${escapeHtml(t('slotAfternoon'))}</label>
+              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="evening" ${openSlots.includes('evening') ? 'checked' : ''}>${escapeHtml(t('slotEvening'))}</label>
+              <label class="admin-slot-item"><input type="checkbox" data-admin-slot value="night" ${openSlots.includes('night') ? 'checked' : ''}>${escapeHtml(t('slotNight'))}</label>
+            </div>
+          </div>
+          <div class="admin-field admin-cover">
+            <div>${escapeHtml(t('tagsInput'))}</div>
+            <input class="admin-input" data-admin-field="tags" value="${escapeHtml(tagsText)}" placeholder="aircon,photo,must_try">
+            <div class="admin-hint">${escapeHtml(t('tagsHint'))}</div>
+          </div>
+          <div class="admin-field admin-cover">
+            <div>${escapeHtml(t('wishTagsInput'))}</div>
+            <input class="admin-input" data-admin-field="wishTags" value="${escapeHtml(wishTagsText)}" placeholder="財運,桃花,健康">
+            <div class="admin-hint">${escapeHtml(t('wishTagsHint'))}</div>
+          </div>
           <label style="display:flex;align-items:center;gap:6px;grid-column:1/-1;background:#fff7ed;padding:8px;border-radius:8px;border:1px dashed #fdba74;">
             <input type="checkbox" data-admin-field="featured" ${(item.featured || item.featured_) ? 'checked' : ''}>
             <span style="font-weight:700;color:#c2410c;font-size:12px;">${escapeHtml(t('featuredLabel'))}</span>
@@ -2296,6 +2380,16 @@ function render(){
         
         const introRaw = getVal('intro') || '';
         const introLines = introRaw ? introRaw.split(/\n+/).filter(Boolean) : [];
+        const slotEls = wrap.querySelectorAll('[data-admin-slot]');
+        const openSlots = Array.from(slotEls).filter(el=>el.checked).map(el=>el.value);
+        const toIntOrEmpty = (val)=>{
+          const n = parseInt(val, 10);
+          return Number.isFinite(n) ? n : '';
+        };
+        const stayMinVal = toIntOrEmpty(getVal('stayMin'));
+        const priceLevelVal = toIntOrEmpty(getVal('priceLevel'));
+        const tagsVal = normalizeListField(getVal('tags'));
+        const wishTagsVal = normalizeListField(getVal('wishTags'));
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
@@ -2316,6 +2410,12 @@ function render(){
           name: getVal('name'),
           category: getVal('category'),
           area: getVal('area'),
+          type: getVal('type'),
+          stayMin: stayMinVal,
+          openSlots,
+          priceLevel: priceLevelVal,
+          tags: tagsVal,
+          wishTags: wishTagsVal,
           featured: read('featured') ?? original.featured,
           featured_: read('featured') ?? original.featured_,
           rating: getVal('rating'),
@@ -2720,6 +2820,12 @@ if (btnAdd) btnAdd.onclick = ()=>{
           name: '',
           category: '',
           area: '',
+          type: '',
+          stayMin: '',
+          openSlots: [],
+          priceLevel: '',
+          tags: [],
+          wishTags: [],
           featured_: false,
           featured: false,
           rating: '',
