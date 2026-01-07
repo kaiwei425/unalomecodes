@@ -64,13 +64,21 @@
     .plan-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
     .plan-thumb.is-placeholder{background:linear-gradient(135deg,#e2e8f0,#f8fafc);color:#64748b;}
     .plan-thumb span{padding:6px;text-align:center;line-height:1.2;}
+    .plan-time-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
     .plan-time{font-weight:800;font-size:14px;min-width:96px;color:#0f172a;}
+    .plan-meal{padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,#ffedd5,#fed7aa);border:1px solid #fdba74;color:#c2410c;font-size:12px;font-weight:800;}
     .plan-title{font-weight:800;font-size:16px;margin:0;}
     .plan-meta{font-size:12px;color:#64748b;}
     .plan-kind{font-size:12px;font-weight:800;padding:4px 8px;border-radius:999px;background:#ecfeff;color:#0e7490;border:1px solid #bae6fd;}
     .plan-kind.temple{background:#fef3c7;color:#b45309;border-color:#fde68a;}
-    .plan-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .plan-actions{display:grid;gap:6px;}
+    .plan-actions-main{display:flex;gap:8px;flex-wrap:wrap;}
+    .plan-actions-sub{display:flex;gap:6px;flex-wrap:wrap;}
     .plan-actions a{font-size:12px;}
+    .pill-btn.action-detail{background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;border:none;box-shadow:0 8px 16px rgba(16,149,214,.25);}
+    .pill-btn.action-detail:hover{filter:brightness(1.04);}
+    .pill-btn.action-map{background:#e0f2fe;border:1px solid #7dd3fc;color:#0369a1;font-weight:800;}
+    .pill-btn.action-ghost{background:#fff;border:1px solid var(--line);color:#475569;}
     .plan-edit{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;}
     .plan-edit input{width:90px;padding:6px 8px;border-radius:10px;border:1px solid var(--line);font-weight:700;}
     .plan-edit label{font-size:12px;color:#64748b;font-weight:700;}
@@ -105,6 +113,7 @@
     .plan-board .plan-card{border-radius:14px;padding:12px;box-shadow:0 10px 20px rgba(15,23,42,.08);}
     .plan-board .plan-row{flex-direction:column;align-items:flex-start;gap:6px;}
     .plan-board .plan-time{min-width:auto;padding:4px 10px;border-radius:999px;background:#0f172a;color:#fff;font-size:12px;letter-spacing:.2px;}
+    .plan-board .plan-meal{padding:4px 10px;font-size:11px;}
     .plan-board .plan-actions{gap:6px;}
     .plan-board .plan-actions .pill-btn{padding:6px 10px;font-size:12px;}
     .plan-board .plan-edit{margin-top:4px;}
@@ -131,8 +140,10 @@
       .top,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .search-results,.planner-card .map-wrap,.planner-card .filter-grid,.planner-card .filter-tags,.planner-card .planner-hint,.planner-card .saved-list,.planner-card .planner-row,.planner-card input,.planner-card select,.planner-card button,.planner-card .planner-actions,.planner-card .plan-controls,.planner-card .share-input,.stepper,.step-actions{display:none !important;}
       body{background:#fff;}
       .wrap{padding:0;}
-      .planner-card{border:none;box-shadow:none;}
-      .step-section{display:block !important;}
+      .planner-card{display:none !important;border:none;box-shadow:none;}
+      .planner-card[data-step-section="4"]{display:block !important;}
+      .step-section{display:none !important;}
+      .step-section[data-step-section="4"]{display:block !important;}
       .plan-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));overflow:visible;}
     }
   </style>

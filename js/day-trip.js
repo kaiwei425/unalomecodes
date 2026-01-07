@@ -624,10 +624,22 @@
     document.body.classList.add('is-exporting');
     try{
       const html2canvas = await loadHtml2Canvas();
-      const canvas = await html2canvas(resultEl, {
+      const rect = resultEl.getBoundingClientRect();
+      const padding = 12;
+      const startX = Math.max(0, rect.left + window.scrollX - padding);
+      const startY = Math.max(0, rect.top + window.scrollY - padding);
+      const canvas = await html2canvas(document.body, {
         backgroundColor: '#ffffff',
         scale: 2,
-        useCORS: true
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: document.documentElement.scrollWidth || window.innerWidth,
+        windowHeight: document.documentElement.scrollHeight || window.innerHeight,
+        x: startX,
+        y: startY,
+        width: rect.width + padding * 2,
+        height: rect.height + padding * 2
       });
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       const name = `day-trip-${new Date().toISOString().slice(0,10)}.jpg`;
@@ -1649,9 +1661,9 @@
     let optionalTempleInserted = false;
     const skippedRoute = [];
 
-    const scheduleItem = (item, arrive, stayMin, travelMin, distKm, wasClosed)=>{
+    const scheduleItem = (item, arrive, stayMin, travelMin, distKm, wasClosed, mealKey)=>{
       const depart = arrive + stayMin;
-      plan.push({ item, arrive, depart, travelMin, distKm, stayMin });
+      plan.push({ item, arrive, depart, travelMin, distKm, stayMin, mealKey: mealKey || '' });
       used.add(item.id);
       currentCoords = item.coords;
       currentTime = depart;
@@ -1720,7 +1732,7 @@
         const filter = isMainMeal ? (item)=> !isDessertLike(item) : null;
         const pick = pickCandidate(foodPool, nextRoute.coords, filter ? { filter } : null);
         if (pick){
-          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
+          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed, dueMeal.key);
           mealStatus[dueMeal.key] = true;
           continue;
         }
@@ -1776,7 +1788,7 @@
         const filter = isMainMeal ? (item)=> !isDessertLike(item) : null;
         const pick = pickCandidate(foodPool, null, filter ? { filter } : null);
         if (pick){
-          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
+          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed, dueMeal.key);
         } else {
           mealStatus[dueMeal.key] = true;
           skippedMeals.add(dueMeal.key);
@@ -1986,16 +1998,22 @@
         ? `<div class="plan-thumb"${coverKeyAttr}><img src="${escapeHtml(coverInfo.url)}" alt="${escapeHtml(item.name || '')}"${coverPosStyle} loading="lazy" decoding="async"></div>`
         : `<div class="plan-thumb is-placeholder"${coverKeyAttr}><span>${escapeHtml(coverText || '行程')}</span></div>`;
       const detailUrl = buildDetailUrl(item);
-      const detailLink = detailUrl ? `<a class="pill-btn" href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener">詳細介紹</a>` : '';
+      const detailLink = detailUrl ? `<a class="pill-btn action-detail" href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener">詳細介紹</a>` : '';
       const coverSourceAttr = coverInfo.domKey ? ` data-cover-source="${escapeHtml(coverInfo.domKey)}"` : '';
       const coverSourceLink = coverInfo.sourceUrl
-        ? `<a class="pill-btn" href="${escapeHtml(coverInfo.sourceUrl)}" target="_blank" rel="noopener"${coverSourceAttr}>圖源</a>`
-        : (coverInfo.domKey ? `<a class="pill-btn" href="#" style="display:none;"${coverSourceAttr}>圖源</a>` : '');
+        ? `<a class="pill-btn action-ghost" href="${escapeHtml(coverInfo.sourceUrl)}" target="_blank" rel="noopener"${coverSourceAttr}>圖源</a>`
+        : (coverInfo.domKey ? `<a class="pill-btn action-ghost" href="#" style="display:none;"${coverSourceAttr}>圖源</a>` : '');
+      const mealBadge = entry.mealKey && MEAL_LABELS[entry.mealKey]
+        ? `<span class="plan-meal">${escapeHtml(MEAL_LABELS[entry.mealKey])}</span>`
+        : '';
       const cardHtml = `
         <div class="plan-card" data-kind="${escapeHtml(item.kind || '')}">
           <div class="plan-row">
             ${coverHtml}
-            <div class="plan-time">${escapeHtml(timeText)}</div>
+            <div class="plan-time-row">
+              ${mealBadge}
+              <div class="plan-time">${escapeHtml(timeText)}</div>
+            </div>
             <div>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 <h3 class="plan-title">${escapeHtml(item.name || '')}</h3>
@@ -2007,16 +2025,20 @@
               ${meta ? `<div class="plan-meta">${escapeHtml(meta)}</div>` : ''}
               <div class="plan-meta">移動：${escapeHtml(distanceText)} · 停留 ${escapeHtml(String(entry.stayMin))} 分</div>
               <div class="plan-actions">
-                ${detailLink}
-                ${mapLink ? `<a class="pill-btn" href="${escapeHtml(mapLink)}" target="_blank" rel="noopener">地圖</a>` : ''}
-                ${coverSourceLink}
-                <button class="pill-btn" type="button" data-move="up" data-idx="${idx}">上移</button>
-                <button class="pill-btn" type="button" data-move="down" data-idx="${idx}">下移</button>
+                <div class="plan-actions-main">
+                  ${detailLink}
+                  ${mapLink ? `<a class="pill-btn action-map" href="${escapeHtml(mapLink)}" target="_blank" rel="noopener">地圖</a>` : ''}
+                  ${coverSourceLink}
+                </div>
+                <div class="plan-actions-sub">
+                  <button class="pill-btn action-ghost" type="button" data-move="up" data-idx="${idx}">上移</button>
+                  <button class="pill-btn action-ghost" type="button" data-move="down" data-idx="${idx}">下移</button>
+                </div>
               </div>
               <div class="plan-edit">
                 <label>停留(分)</label>
                 <input type="number" min="10" step="5" value="${escapeHtml(String(entry.stayMin))}" data-stay-input="${idx}">
-                <button class="pill-btn" type="button" data-stay-update="${idx}">更新</button>
+                <button class="pill-btn action-ghost" type="button" data-stay-update="${idx}">更新</button>
               </div>
             </div>
           </div>
