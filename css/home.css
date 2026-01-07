@@ -392,6 +392,24 @@ body.nav-open .nav-drawer__panel{
   width:100%;
 }
 .primary-btn:active{transform:scale(0.98);}
+.pill-btn{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  border-radius:999px;
+  padding:10px 18px;
+  font-size:var(--fs-small);
+  font-weight:600;
+  cursor:pointer;
+  min-height:44px;
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.pill-btn:hover{
+  border-color:rgba(197,157,91,0.3);
+  box-shadow:var(--shadow-md);
+}
+.pill-btn:active{transform:scale(0.98);}
 .helper-text{
   font-size:var(--fs-small);
   color:var(--text-muted);
