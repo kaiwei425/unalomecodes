@@ -1129,6 +1129,7 @@ function normalizeFoodPayload(payload, fallbackId){
   list('openSlots', 'open_slots');
   list('tags');
   list('wishTags', 'wish_tags');
+  list('images', 'gallery');
   str('address'); str('hours'); str('maps'); str('ig');
   str('youtube'); str('igComment'); str('cover');
   str('ownerId'); str('ownerName');
@@ -1200,6 +1201,7 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('priceLevel', incoming.priceLevel);
   assignIf('tags', incoming.tags);
   assignIf('wishTags', incoming.wishTags);
+  assignIf('images', incoming.images);
   assignIf('address', incoming.address);
   assignIf('hours', incoming.hours);
   assignIf('maps', incoming.maps);

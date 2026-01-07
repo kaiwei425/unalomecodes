@@ -67,6 +67,10 @@
   const DEFAULT_STAY = { food: 60, temple: 45, spot: 50 };
   const POPULAR_STAY_BONUS = { food: 10, temple: 15, spot: 20 };
   const DISPLAY_TIME_ROUND_STEP = 10;
+  const COVER_THUMB_WIDTH = 140;
+  const COMMONS_THUMB_WIDTH = 240;
+  const COMMONS_SEARCH_LIMIT = 4;
+  const COMMONS_LICENSE_ALLOW = ['Public domain', 'CC0', 'CC BY', 'CC BY-SA', 'PD'];
   const MODE_DEFAULT_STAY = {
     battle: { food: 45, temple: 35, spot: 40 },
     balance: { food: 60, temple: 45, spot: 50 },
@@ -301,6 +305,8 @@
     savedPlans: [],
     selectedRouteId: 'auto',
     selectedMapPlace: null,
+    popularCoverCache: new Map(),
+    popularCoverPending: new Set(),
     googleReady: false,
     googleMap: null,
     googleMarker: null,
@@ -407,6 +413,35 @@
     return formatMinutes(rounded);
   }
 
+  function safeObjectPosition(input){
+    const raw = String(input || '').trim();
+    if (!raw) return '';
+    if (/^[\d.%+-]+\s+[\d.%+-]+$/.test(raw)) return raw;
+    return '';
+  }
+
+  function buildThumbUrl(raw, width){
+    const safe = sanitizeImageUrl(raw);
+    if (!safe) return '';
+    const w = Math.max(80, Math.min(320, Number(width) || COVER_THUMB_WIDTH));
+    if (safe.startsWith('data:image/')) return safe;
+    return `/api/img?u=${encodeURIComponent(safe)}&w=${w}&q=58&fmt=webp`;
+  }
+
+  function getCoverKey(item){
+    if (!item) return '';
+    return String(item.googlePlaceId || item.id || item.name || '').trim();
+  }
+
+  function buildDetailUrl(item){
+    if (!item || item.isCustom || item.isPopular) return '';
+    const id = String(item.id || '').trim();
+    if (!id) return '';
+    if (item.kind === 'food') return `/food-map?id=${encodeURIComponent(id)}`;
+    if (item.kind === 'temple') return `/templemap?id=${encodeURIComponent(id)}`;
+    return '';
+  }
+
   function setTimeInput(input, value){
     if (!input) return;
     input.value = value || '';
@@ -421,6 +456,103 @@
     const first = raw.split(',')[0].trim();
     if (first && !/^[\d\s-]+$/.test(first)) return first;
     return raw;
+  }
+
+  function pickCommonsLicense(meta){
+    const name = meta && meta.LicenseShortName && meta.LicenseShortName.value
+      ? String(meta.LicenseShortName.value).replace(/<[^>]*>/g, '').trim()
+      : '';
+    if (!name) return '';
+    return COMMONS_LICENSE_ALLOW.find(allow => name.includes(allow)) ? name : '';
+  }
+
+  async function fetchCommonsCover(query){
+    const q = String(query || '').trim();
+    if (!q) return null;
+    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srnamespace=6&srlimit=${COMMONS_SEARCH_LIMIT}&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return null;
+    const searchData = await searchRes.json().catch(()=>null);
+    const hits = searchData && searchData.query && Array.isArray(searchData.query.search)
+      ? searchData.query.search
+      : [];
+    const titles = hits.map(hit => hit.title).filter(Boolean);
+    if (!titles.length) return null;
+    const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=${COMMONS_THUMB_WIDTH}&titles=${encodeURIComponent(titles.join('|'))}&format=json&origin=*`;
+    const infoRes = await fetch(infoUrl);
+    if (!infoRes.ok) return null;
+    const infoData = await infoRes.json().catch(()=>null);
+    const pages = infoData && infoData.query && infoData.query.pages ? infoData.query.pages : {};
+    const pageList = Object.values(pages);
+    for (const page of pageList){
+      const info = page && page.imageinfo && page.imageinfo[0] ? page.imageinfo[0] : null;
+      if (!info) continue;
+      const license = pickCommonsLicense(info.extmetadata || {});
+      if (!license) continue;
+      const url = sanitizeImageUrl(info.thumburl || info.url || '');
+      if (!url) continue;
+      const sourceUrl = sanitizeImageUrl(info.descriptionurl || '');
+      return { url, sourceUrl, license };
+    }
+    return null;
+  }
+
+  function getCoverInfo(item){
+    const coverRaw = item && (item.cover || item.coverUrl || item.cover_url || '');
+    const coverPos = item && safeObjectPosition(item.coverPos || item.cover_pos);
+    const coverUrl = coverRaw ? buildThumbUrl(coverRaw, COVER_THUMB_WIDTH) : '';
+    if (coverUrl) {
+      return { url: coverUrl, pos: coverPos, sourceUrl: '', key: '', domKey: '' };
+    }
+    if (!item || !item.isPopular) return { url: '', pos: '', sourceUrl: '', key: '', domKey: '' };
+    const key = getCoverKey(item);
+    if (!key) return { url: '', pos: '', sourceUrl: '', key: '', domKey: '' };
+    const cached = state.popularCoverCache.get(key);
+    if (cached && cached.url) {
+      return { url: cached.url, pos: '', sourceUrl: cached.sourceUrl || '', key, domKey: encodeURIComponent(key) };
+    }
+    if (!state.popularCoverPending.has(key)) {
+      state.popularCoverPending.add(key);
+      const baseName = String(item.name || '').trim();
+      const query = `${baseName} Thailand`.trim();
+      fetchCommonsCover(query)
+        .then((cover)=>{
+          if (!cover && baseName) return fetchCommonsCover(baseName);
+          return cover;
+        })
+        .then((cover)=>{
+          state.popularCoverPending.delete(key);
+          state.popularCoverCache.set(key, cover || null);
+          if (cover && cover.url) applyCoverToDom(key, cover);
+        })
+        .catch(()=>{
+          state.popularCoverPending.delete(key);
+          state.popularCoverCache.set(key, null);
+        });
+    }
+    return { url: '', pos: '', sourceUrl: '', key, domKey: encodeURIComponent(key) };
+  }
+
+  function applyCoverToDom(key, cover){
+    if (!resultEl || !key || !cover || !cover.url) return;
+    const domKey = encodeURIComponent(key);
+    const nodes = resultEl.querySelectorAll(`[data-cover-key="${domKey}"]`);
+    nodes.forEach(node=>{
+      const img = node.querySelector('img');
+      if (img){
+        img.src = cover.url;
+        node.classList.remove('is-placeholder');
+        return;
+      }
+      node.innerHTML = `<img src="${escapeHtml(cover.url)}" alt="" loading="lazy" decoding="async">`;
+      node.classList.remove('is-placeholder');
+    });
+    if (cover.sourceUrl){
+      resultEl.querySelectorAll(`[data-cover-source="${domKey}"]`).forEach(link=>{
+        link.setAttribute('href', cover.sourceUrl);
+        link.style.display = '';
+      });
+    }
   }
 
   function isClosedText(raw){
@@ -603,6 +735,12 @@
           wishTags: normalizeListField(item.wishTags || item.wish_tags),
           kind,
           coords,
+          cover: item.cover || item.coverUrl || item.cover_url || '',
+          coverPos: item.coverPos || item.cover_pos || '',
+          intro: item.intro || '',
+          detail: item.detail || '',
+          ctaText: item.ctaText || item.cta_text || '',
+          ctaUrl: item.ctaUrl || item.cta_url || '',
           stayMin,
           stayMinIsDefault,
           openSlotsResolved,
@@ -1065,6 +1203,8 @@
       wishTags: [],
       kind,
       coords,
+      cover: spot.cover || '',
+      coverPos: spot.coverPos || '',
       stayMin: DEFAULT_STAY[kind] || 50,
       stayMinIsDefault: true,
       openSlotsResolved: [],
@@ -1746,9 +1886,23 @@
       const meta = [item.area, item.category].filter(Boolean).join(' · ');
       const mapLink = buildPlaceLink(item);
       const distanceText = `${entry.distKm.toFixed(1)} km / 約 ${entry.travelMin} 分`;
+      const coverInfo = getCoverInfo(item);
+      const coverKeyAttr = coverInfo.domKey ? ` data-cover-key="${escapeHtml(coverInfo.domKey)}"` : '';
+      const coverText = (item.name || kindLabel || '').slice(0, 2);
+      const coverPosStyle = coverInfo.pos ? ` style="object-position:${escapeHtml(coverInfo.pos)};"` : '';
+      const coverHtml = coverInfo.url
+        ? `<div class="plan-thumb"${coverKeyAttr}><img src="${escapeHtml(coverInfo.url)}" alt="${escapeHtml(item.name || '')}"${coverPosStyle} loading="lazy" decoding="async"></div>`
+        : `<div class="plan-thumb is-placeholder"${coverKeyAttr}><span>${escapeHtml(coverText || '行程')}</span></div>`;
+      const detailUrl = buildDetailUrl(item);
+      const detailLink = detailUrl ? `<a class="pill-btn" href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener">詳細介紹</a>` : '';
+      const coverSourceAttr = coverInfo.domKey ? ` data-cover-source="${escapeHtml(coverInfo.domKey)}"` : '';
+      const coverSourceLink = coverInfo.sourceUrl
+        ? `<a class="pill-btn" href="${escapeHtml(coverInfo.sourceUrl)}" target="_blank" rel="noopener"${coverSourceAttr}>圖源</a>`
+        : (coverInfo.domKey ? `<a class="pill-btn" href="#" style="display:none;"${coverSourceAttr}>圖源</a>` : '');
       const cardHtml = `
         <div class="plan-card" data-kind="${escapeHtml(item.kind || '')}">
           <div class="plan-row">
+            ${coverHtml}
             <div class="plan-time">${escapeHtml(timeText)}</div>
             <div>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1761,7 +1915,9 @@
               ${meta ? `<div class="plan-meta">${escapeHtml(meta)}</div>` : ''}
               <div class="plan-meta">移動：${escapeHtml(distanceText)} · 停留 ${escapeHtml(String(entry.stayMin))} 分</div>
               <div class="plan-actions">
+                ${detailLink}
                 ${mapLink ? `<a class="pill-btn" href="${escapeHtml(mapLink)}" target="_blank" rel="noopener">地圖</a>` : ''}
+                ${coverSourceLink}
                 <button class="pill-btn" type="button" data-move="up" data-idx="${idx}">上移</button>
                 <button class="pill-btn" type="button" data-move="down" data-idx="${idx}">下移</button>
               </div>

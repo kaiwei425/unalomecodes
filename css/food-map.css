@@ -290,6 +290,14 @@
     .admin-preview-empty{font-size:12px;color:#94a3b8;}
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
+    .admin-gallery-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;color:#0f172a;font-size:12px;}
+    .admin-gallery{display:grid;gap:8px;}
+    .admin-gallery-list{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));}
+    .admin-gallery-item{position:relative;border-radius:10px;border:1px solid var(--line);overflow:hidden;background:#fff;}
+    .admin-gallery-item img{width:100%;height:72px;object-fit:cover;display:block;}
+    .admin-gallery-remove{position:absolute;top:4px;right:4px;border:none;background:rgba(15,23,42,0.7);color:#fff;border-radius:999px;font-size:10px;padding:2px 6px;cursor:pointer;}
+    .admin-gallery-empty{font-size:12px;color:#94a3b8;}
+    .admin-gallery-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
     .admin-cover{grid-column:1 / -1;}
     .admin-grid label.admin-daytrip-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#0f172a;}
     .admin-grid label.admin-daytrip-toggle input{margin:0;}
@@ -323,6 +331,23 @@
     .modal-section strong{color:#0f172a;}
     .modal-actions{display:flex;gap:10px;flex-wrap:wrap;}
     .modal-actions .btn{flex:1;min-width:150px;font-size:13px;}
+    .modal-daytrip-list{display:grid;gap:8px;}
+    .modal-daytrip-item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;}
+    .modal-daytrip-index{width:26px;height:26px;border-radius:999px;background:#0f172a;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .modal-daytrip-name{font-size:13px;font-weight:700;color:#0f172a;}
+    .modal-daytrip-note{font-size:12px;color:#64748b;}
+    .modal-daytrip-link{padding:6px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;color:#0f172a;text-decoration:none;white-space:nowrap;}
+    .modal-gallery{display:grid;gap:8px;}
+    .modal-gallery-title{font-size:12px;font-weight:700;color:#0f172a;}
+    .modal-gallery-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));}
+    .modal-gallery-thumb{border:none;background:none;padding:0;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;cursor:pointer;}
+    .modal-gallery-thumb img{width:100%;height:72px;object-fit:cover;display:block;transition:transform 0.2s;}
+    .modal-gallery-thumb:hover img{transform:scale(1.05);}
+    .lightbox-dialog{border:none;border-radius:16px;padding:0;width:min(90vw,720px);background:#0f172a;box-shadow:0 20px 40px rgba(15,23,42,0.35);}
+    .lightbox-body{display:grid;gap:10px;padding:12px;background:#0f172a;}
+    .lightbox-img{width:100%;height:auto;max-height:80vh;object-fit:contain;border-radius:12px;background:#0f172a;}
+    .lightbox-close{justify-self:end;border:none;border-radius:999px;background:rgba(255,255,255,0.12);color:#fff;font-size:12px;padding:6px 10px;cursor:pointer;}
+    #imageLightbox::backdrop{background:rgba(15,23,42,0.6);}
     .empty-state{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:24px;text-align:center;color:var(--muted);box-shadow:var(--shadow);}
     .empty-state h3{margin:0 0 6px;font-size:18px;color:var(--text);}
     .empty-state p{margin:0 0 14px;font-size:13px;}

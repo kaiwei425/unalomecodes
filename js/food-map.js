@@ -430,6 +430,8 @@ const TRANSLATIONS = {
     dayTripNote: '備註',
     dayTripRemove: '刪除',
     dayTripDrag: '拖曳排序',
+    dayTripListTitle: '一日遊行程點位',
+    dayTripStopFallback: '未命名地點',
     distFromHere: '距離目前位置',
     distFromPrev: '距離上一站',
     openNav: '在 Google Maps 開啟導航',
@@ -474,6 +476,9 @@ const TRANSLATIONS = {
     syncGFail: '無法取得 Google 詳細資訊',
     coordsShort: '座標',
     placeIdLabel: 'Google Place ID',
+    galleryLabel: '圖片集',
+    galleryHint: '可上傳多張，會顯示在詳細資訊影片下方',
+    galleryEmpty: '尚未上傳圖片',
     featured: '精選',
     recommend: '推薦',
     newPlace: '（新餐廳）',
@@ -790,6 +795,9 @@ const TRANSLATIONS = {
     syncGFail: 'Unable to fetch Google details.',
     coordsShort: 'Coordinates',
     placeIdLabel: 'Google Place ID',
+    galleryLabel: 'Gallery',
+    galleryHint: 'Upload multiple images to show under the video.',
+    galleryEmpty: 'No images yet.',
     featured: 'Featured',
     recommend: 'Recommended',
     newPlace: '(New)',
@@ -869,6 +877,8 @@ const TRANSLATIONS = {
     dayTripNote: 'Note',
     dayTripRemove: 'Remove',
     dayTripDrag: 'Drag to reorder',
+    dayTripListTitle: 'Day trip stops',
+    dayTripStopFallback: 'Untitled stop',
     dragHint: 'Drag image to adjust position',
     autoUpload: 'Auto upload on select',
     placeIdHint: 'Optional unless Google reviews cannot match the correct place.',
@@ -1043,6 +1053,9 @@ const coordsHelpDesc = document.getElementById('coordsHelpDesc');
 const coordsHelpImage = document.getElementById('coordsHelpImage');
 const coordsHelpSteps = document.getElementById('coordsHelpSteps');
 const coordsHelpClose = document.getElementById('coordsHelpClose');
+const imageLightbox = document.getElementById('imageLightbox');
+const imageLightboxImg = document.getElementById('imageLightboxImg');
+const imageLightboxClose = document.getElementById('imageLightboxClose');
 // ---------------------------
 
 function escapeHtml(s){
@@ -1072,6 +1085,32 @@ function normalizeIgUrl(input){
   const trimmed = raw.replace(/^@/, '');
   if (/^https?:\/\//i.test(trimmed)) return safeUrl(trimmed);
   return safeUrl(`https://instagram.com/${trimmed.replace(/^\//,'')}`);
+}
+function openImageLightbox(src, altText){
+  const url = safeUrl(src);
+  if (!url) return;
+  if (!imageLightbox || !imageLightboxImg){
+    window.open(url, '_blank');
+    return;
+  }
+  imageLightboxImg.src = url;
+  imageLightboxImg.alt = altText || '';
+  if (typeof imageLightbox.showModal === 'function') imageLightbox.showModal();
+  else imageLightbox.setAttribute('open', '');
+}
+if (imageLightboxClose && imageLightbox){
+  imageLightboxClose.onclick = () => {
+    if (typeof imageLightbox.close === 'function') imageLightbox.close();
+    else imageLightbox.removeAttribute('open');
+  };
+}
+if (imageLightbox){
+  imageLightbox.addEventListener('click', (e)=>{
+    if (e.target === imageLightbox){
+      if (typeof imageLightbox.close === 'function') imageLightbox.close();
+      else imageLightbox.removeAttribute('open');
+    }
+  });
 }
 function normalizeYouTubeUrl(input){
   const raw = String(input || '').trim();
@@ -2278,8 +2317,8 @@ let editingId = '';
 let newItem = null;
 let currentLimit = 20;
 const PAGE_SIZE = 20;
-const CATEGORY_ORDER = ['日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
-const CATEGORY_MAP_EN = {'日式料理':'Japanese','泰式料理':'Thai','義式料理':'Italian','中式料理':'Chinese','港點':'Dim Sum','餐酒館':'Bistro','酒吧':'Bar','咖啡廳':'Cafe','早午餐':'Brunch','甜點':'Dessert','小吃':'Street Food','素食':'Vegetarian','buffet':'Buffet','其他':'Other'};
+const CATEGORY_ORDER = [DAY_TRIP_CATEGORY,'日式料理','泰式料理','義式料理','中式料理','港點','餐酒館','酒吧','咖啡廳','早午餐','甜點','小吃','素食','buffet','其他'];
+const CATEGORY_MAP_EN = {'一日遊':'Day Trip','日式料理':'Japanese','泰式料理':'Thai','義式料理':'Italian','中式料理':'Chinese','港點':'Dim Sum','餐酒館':'Bistro','酒吧':'Bar','咖啡廳':'Cafe','早午餐':'Brunch','甜點':'Dessert','小吃':'Street Food','素食':'Vegetarian','buffet':'Buffet','其他':'Other'};
 
 function resetFilters(){
   currentLimit = PAGE_SIZE;
@@ -2508,6 +2547,7 @@ function setLanguage(lang) {
     const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn();
     authBtn.textContent = loggedIn ? t('logout') : t('login');
   }
+  if (imageLightboxClose) imageLightboxClose.textContent = t('close');
   const adminToolsToggle = document.getElementById('adminToolsToggle');
   if (adminToolsToggle) {
     const adminPanel = document.getElementById('adminToolsPanel');
@@ -2814,6 +2854,7 @@ function initFilters(){
 function mapCategory(value){
   const v = String(value || '');
   if (!v) return '';
+  if (isDayTripCategory(v)) return DAY_TRIP_CATEGORY;
   if (v.toLowerCase().includes('buffet')) return 'buffet';
   if (v.includes('素食') || v.includes('蔬食')) return '素食';
   if (v.includes('日式')) return '日式料理';
@@ -2956,6 +2997,35 @@ function parseDayTripBulk(text){
     stops.push({ name, maps, note:'', order: idx + 1 });
   });
   return stops;
+}
+function normalizeGalleryUrls(list){
+  if (!Array.isArray(list)) return [];
+  return list.map(url => safeUrl(url)).filter(Boolean);
+}
+function buildAdminGalleryItemHtml(url){
+  if (!url) return '';
+  return `
+    <div class="admin-gallery-item" data-gallery-url="${escapeHtml(url)}">
+      <img src="${escapeHtml(url)}" alt="">
+      <button class="admin-gallery-remove" type="button" data-admin-gallery-remove title="${escapeHtml(t('removeBtn'))}" aria-label="${escapeHtml(t('removeBtn'))}">×</button>
+    </div>
+  `;
+}
+function getGalleryUrlsFromList(listEl){
+  if (!listEl) return [];
+  return Array.from(listEl.querySelectorAll('[data-gallery-url]'))
+    .map(el => el.getAttribute('data-gallery-url') || '')
+    .map(url => safeUrl(url))
+    .filter(Boolean);
+}
+function renderAdminGalleryList(listEl, urls){
+  if (!listEl) return;
+  const cleaned = normalizeGalleryUrls(urls);
+  if (!cleaned.length){
+    listEl.innerHTML = `<div class="admin-gallery-empty">${escapeHtml(t('galleryEmpty'))}</div>`;
+    return;
+  }
+  listEl.innerHTML = cleaned.map(buildAdminGalleryItemHtml).join('');
 }
 function parseTimeMinutes(value){
   const raw = String(value || '').trim();
@@ -3559,6 +3629,10 @@ function render(){
     const dayTripStops = normalizeDayTripStops(item.dayTripStops || item.day_trip_stops);
     const isDayTrip = isDayTripCategory(item.category) || dayTripStops.length > 0;
     const dayTripRows = (dayTripStops.length ? dayTripStops : [{}]).map(buildDayTripRowHtml).join('');
+    const galleryImages = normalizeGalleryUrls(item.images || item.gallery || []);
+    const galleryItems = galleryImages.length
+      ? galleryImages.map(buildAdminGalleryItemHtml).join('')
+      : `<div class="admin-gallery-empty">${escapeHtml(t('galleryEmpty'))}</div>`;
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -3677,6 +3751,21 @@ function render(){
           <label class="admin-cover">${escapeHtml(t('desc'))}
             <textarea class="admin-textarea admin-textarea-large" data-admin-field="intro">${escapeHtml(introText)}</textarea>
           </label>
+          <div class="admin-field admin-cover">
+            <div class="admin-gallery-head">
+              <div>${escapeHtml(t('galleryLabel'))}</div>
+              <div class="admin-hint">${escapeHtml(t('galleryHint'))}</div>
+            </div>
+            <div class="admin-gallery">
+              <div class="admin-gallery-list" data-admin-gallery-list>
+                ${galleryItems}
+              </div>
+              <div class="admin-gallery-actions">
+                <input class="admin-file" data-admin-gallery-file type="file" accept="image/*" multiple>
+                <div class="admin-upload-status" data-admin-status="gallery"></div>
+              </div>
+            </div>
+          </div>
           <label class="admin-cover">${escapeHtml(t('coverImg'))}
             <div class="admin-upload">
               <div class="admin-preview" data-admin-preview="cover">${coverPreview}</div>
@@ -3945,6 +4034,7 @@ function render(){
         const dayTripToggle = wrap.querySelector('[data-admin-daytrip-toggle]');
         const dayTripEnabled = dayTripToggle ? dayTripToggle.checked : false;
         const dayTripStops = readDayTripStops(wrap);
+        const galleryUrls = getGalleryUrlsFromList(wrap.querySelector('[data-admin-gallery-list]'));
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
@@ -3972,6 +4062,7 @@ function render(){
           tags: tagsVal,
           dayTripStops: dayTripEnabled ? dayTripStops : [],
           day_trip_stops: dayTripEnabled ? dayTripStops : [],
+          images: galleryUrls,
           featured: read('featured') ?? original.featured,
           featured_: read('featured') ?? original.featured_,
           rating: getVal('rating'),
@@ -4129,6 +4220,7 @@ function render(){
     });
     initCoverPositionControls();
     initDayTripEditors(cardsEl);
+    initGalleryEditors(cardsEl);
   }
 }
 
@@ -4403,6 +4495,7 @@ function openNewItem(){
       ig: '',
       youtube: '',
       igComment: '',
+      images: [],
       cover: '',
       coverPos: '50% 50%',
       intro: '',
@@ -4619,6 +4712,56 @@ if (creatorProfileAvatarFile){
     }catch(_){
       if (creatorProfileAvatarStatus) creatorProfileAvatarStatus.textContent = t('uploadFail');
     }
+  });
+}
+function initGalleryEditors(root){
+  if (!root) return;
+  root.querySelectorAll('[data-admin-gallery-list]').forEach(listEl=>{
+    if (listEl.dataset.galleryReady === '1') return;
+    listEl.dataset.galleryReady = '1';
+    listEl.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-admin-gallery-remove]');
+      if (!btn) return;
+      const item = btn.closest('[data-gallery-url]');
+      if (item) item.remove();
+      if (!listEl.querySelector('[data-gallery-url]')){
+        renderAdminGalleryList(listEl, []);
+      }
+    });
+  });
+  root.querySelectorAll('[data-admin-gallery-file]').forEach(input=>{
+    if (input.dataset.galleryReady === '1') return;
+    input.dataset.galleryReady = '1';
+    input.addEventListener('change', async ()=>{
+      const files = Array.from(input.files || []);
+      if (!files.length) return;
+      const wrap = input.closest('[data-admin-id]');
+      const listEl = wrap ? wrap.querySelector('[data-admin-gallery-list]') : null;
+      const statusEl = wrap ? wrap.querySelector('[data-admin-status="gallery"]') : null;
+      const setStatus = (text)=>{ if (statusEl) statusEl.textContent = text || ''; };
+      const urls = getGalleryUrlsFromList(listEl);
+      let uploaded = 0;
+      let failed = 0;
+      input.disabled = true;
+      setStatus(t('uploading'));
+      for (const file of files){
+        try{
+          const url = await uploadCoverFile(file);
+          if (url) {
+            urls.push(url);
+            uploaded += 1;
+          }
+        }catch(_){
+          failed += 1;
+        }
+      }
+      renderAdminGalleryList(listEl, urls);
+      if (uploaded) setStatus(t('uploaded'));
+      else if (failed) setStatus(t('uploadFail'));
+      if (failed) alert(t('uploadFail'));
+      input.value = '';
+      input.disabled = false;
+    });
   });
 }
 if (creatorProfileCoverFile){
@@ -5033,6 +5176,50 @@ function openModal(id){
   const mapsUrl = safeUrl(item.maps);
   const igUrl = safeUrl(item.ig);
   const safeId = escapeHtml(item.id || '');
+  const dayTripStops = normalizeDayTripStops(item.dayTripStops || item.day_trip_stops);
+  const isDayTrip = isDayTripCategory(item.category) || dayTripStops.length > 0;
+  const galleryImages = normalizeGalleryUrls(item.images || item.gallery || []);
+  const galleryHtml = galleryImages.length
+    ? `
+      <div class="modal-gallery">
+        <div class="modal-gallery-title">${escapeHtml(t('galleryLabel'))}</div>
+        <div class="modal-gallery-grid">
+          ${galleryImages.map(url => `
+            <button class="modal-gallery-thumb" type="button" data-gallery-src="${escapeHtml(url)}" aria-label="${escapeHtml(t('galleryLabel'))}">
+              <img src="${escapeHtml(url)}" alt="${escapeHtml(item.name || '')}">
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `
+    : '';
+  const dayTripListHtml = dayTripStops.length
+    ? `
+      <div class="modal-section modal-daytrip">
+        <strong>${escapeHtml(t('dayTripListTitle'))}</strong>
+        <div class="modal-daytrip-list">
+          ${dayTripStops.map((stop, idx)=>{
+            const name = stop.name || extractPlaceNameFromMapsUrl(stop.maps) || extractMapsQuery(stop.maps) || t('dayTripStopFallback');
+            const note = String(stop.note || '').trim();
+            const navUrl = safeUrl(stop.maps);
+            const navLink = navUrl
+              ? `<a class="modal-daytrip-link" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener">${escapeHtml(t('navBtn'))}</a>`
+              : '';
+            return `
+              <div class="modal-daytrip-item">
+                <div class="modal-daytrip-index">${idx + 1}</div>
+                <div class="modal-daytrip-body">
+                  <div class="modal-daytrip-name">${escapeHtml(name)}</div>
+                  ${note ? `<div class="modal-daytrip-note">${escapeHtml(note)}</div>` : ''}
+                </div>
+                ${navLink}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `
+    : '';
   const shareBtn = item.id
     ? `<button id="foodShare" class="modal-icon-btn" title="${escapeHtml(t('share'))}" aria-label="${escapeHtml(t('share'))}">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -5074,6 +5261,8 @@ function openModal(id){
           ${iframe || `<div style="padding:20px;color:#94a3b8;text-align:center;">${escapeHtml(t('noYt'))}</div>`}
         </div>
       </div>
+      ${galleryHtml}
+      ${dayTripListHtml}
       <div class="modal-section">
         <strong>${escapeHtml(t('desc'))}</strong>
         <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || t('noIntro'))}</div>
@@ -5082,10 +5271,12 @@ function openModal(id){
         <div><strong>${escapeHtml(t('addr'))}：</strong>${escapeHtml(item.address || '') || escapeHtml(t('unknownAddr'))}</div>
         ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
       </div>
+      ${isDayTrip ? '' : `
       <div class="modal-section">
         <strong>${escapeHtml(t('reviews'))}</strong>
         <div id="googleReviewsBox" style="margin-top:4px;"></div>
       </div>
+      `}
       <div class="modal-actions">
         <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
         ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">${escapeHtml(t('viewIg'))}</a>` : ''}
@@ -5097,11 +5288,20 @@ function openModal(id){
   document.getElementById('foodClose').onclick = ()=> dlg.close();
   const shareBtnEl = document.getElementById('foodShare');
   if (shareBtnEl) shareBtnEl.onclick = ()=> shareFood(item);
-  ensureGoogleMaps().then(() => {
-    loadGooglePlaceDetails(item, document.getElementById('googleReviewsBox'));
-  });
+  if (!isDayTrip){
+    ensureGoogleMaps().then(() => {
+      const box = document.getElementById('googleReviewsBox');
+      if (box) loadGooglePlaceDetails(item, box);
+    });
+  }
   const favBtn = body.querySelector('button[data-fav]');
   if (favBtn){ favBtn.onclick = ()=> toggleFav(item.id); }
+  body.querySelectorAll('[data-gallery-src]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const src = btn.getAttribute('data-gallery-src') || '';
+      openImageLightbox(src, item.name || '');
+    };
+  });
 }
 
 // 收藏清單與收藏 API
