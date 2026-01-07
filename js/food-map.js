@@ -476,9 +476,9 @@ const TRANSLATIONS = {
     syncGFail: '無法取得 Google 詳細資訊',
     coordsShort: '座標',
     placeIdLabel: 'Google Place ID',
-    galleryLabel: '圖片集',
+    galleryLabel: '店家照片',
     galleryHint: '可上傳多張，會顯示在詳細資訊影片下方',
-    galleryEmpty: '尚未上傳圖片',
+    galleryEmpty: '尚未上傳店家照片',
     featured: '精選',
     recommend: '推薦',
     newPlace: '（新餐廳）',
@@ -795,9 +795,9 @@ const TRANSLATIONS = {
     syncGFail: 'Unable to fetch Google details.',
     coordsShort: 'Coordinates',
     placeIdLabel: 'Google Place ID',
-    galleryLabel: 'Gallery',
-    galleryHint: 'Upload multiple images to show under the video.',
-    galleryEmpty: 'No images yet.',
+    galleryLabel: 'Photos',
+    galleryHint: 'Upload multiple photos to show under the video.',
+    galleryEmpty: 'No photos yet.',
     featured: 'Featured',
     recommend: 'Recommended',
     newPlace: '(New)',
@@ -3005,8 +3005,9 @@ function normalizeGalleryUrls(list){
 function buildAdminGalleryItemHtml(url){
   if (!url) return '';
   return `
-    <div class="admin-gallery-item" data-gallery-url="${escapeHtml(url)}">
+    <div class="admin-gallery-item" data-gallery-item data-gallery-url="${escapeHtml(url)}" draggable="true">
       <img src="${escapeHtml(url)}" alt="">
+      <button class="admin-gallery-handle" type="button" data-gallery-handle title="${escapeHtml(t('dayTripDrag'))}" aria-label="${escapeHtml(t('dayTripDrag'))}">⋮⋮</button>
       <button class="admin-gallery-remove" type="button" data-admin-gallery-remove title="${escapeHtml(t('removeBtn'))}" aria-label="${escapeHtml(t('removeBtn'))}">×</button>
     </div>
   `;
@@ -3026,6 +3027,38 @@ function renderAdminGalleryList(listEl, urls){
     return;
   }
   listEl.innerHTML = cleaned.map(buildAdminGalleryItemHtml).join('');
+}
+function getGalleryAfterElement(container, x, y){
+  const elements = Array.from(container.querySelectorAll('[data-gallery-item]:not(.is-dragging)'));
+  let closest = { distance: Number.POSITIVE_INFINITY, element: null };
+  elements.forEach(child => {
+    const box = child.getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
+    const dist = Math.hypot(x - cx, y - cy);
+    if (dist < closest.distance) {
+      closest = { distance: dist, element: child };
+    }
+  });
+  return closest.element;
+}
+function initGalleryItem(item){
+  if (!item || item.dataset.dragReady === '1') return;
+  item.dataset.dragReady = '1';
+  item.addEventListener('dragstart', (event)=>{
+    if (!event.target.closest('[data-gallery-handle]')) {
+      event.preventDefault();
+      return;
+    }
+    item.classList.add('is-dragging');
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', 'gallery');
+    }
+  });
+  item.addEventListener('dragend', ()=>{
+    item.classList.remove('is-dragging');
+  });
 }
 function parseTimeMinutes(value){
   const raw = String(value || '').trim();
@@ -4719,6 +4752,14 @@ function initGalleryEditors(root){
   root.querySelectorAll('[data-admin-gallery-list]').forEach(listEl=>{
     if (listEl.dataset.galleryReady === '1') return;
     listEl.dataset.galleryReady = '1';
+    listEl.addEventListener('dragover', (event)=>{
+      event.preventDefault();
+      const dragging = listEl.querySelector('.is-dragging');
+      if (!dragging) return;
+      const after = getGalleryAfterElement(listEl, event.clientX, event.clientY);
+      if (!after) listEl.appendChild(dragging);
+      else listEl.insertBefore(dragging, after);
+    });
     listEl.addEventListener('click', (event)=>{
       const btn = event.target.closest('[data-admin-gallery-remove]');
       if (!btn) return;
@@ -4728,6 +4769,7 @@ function initGalleryEditors(root){
         renderAdminGalleryList(listEl, []);
       }
     });
+    listEl.querySelectorAll('[data-gallery-item]').forEach(item=> initGalleryItem(item));
   });
   root.querySelectorAll('[data-admin-gallery-file]').forEach(input=>{
     if (input.dataset.galleryReady === '1') return;
@@ -4756,6 +4798,7 @@ function initGalleryEditors(root){
         }
       }
       renderAdminGalleryList(listEl, urls);
+      initGalleryEditors(wrap || root);
       if (uploaded) setStatus(t('uploaded'));
       else if (failed) setStatus(t('uploadFail'));
       if (failed) alert(t('uploadFail'));
