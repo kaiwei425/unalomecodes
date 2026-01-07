@@ -5262,15 +5262,17 @@ function openModal(id){
         </div>
       </div>
       ${galleryHtml}
-      ${dayTripListHtml}
       <div class="modal-section">
         <strong>${escapeHtml(t('desc'))}</strong>
         <div style="white-space:pre-wrap;line-height:1.8;color:#475569;">${escapeHtml(introText || t('noIntro'))}</div>
       </div>
+      ${dayTripListHtml}
+      ${isDayTrip ? '' : `
       <div class="modal-section">
         <div><strong>${escapeHtml(t('addr'))}：</strong>${escapeHtml(item.address || '') || escapeHtml(t('unknownAddr'))}</div>
         ${metaTags ? `<div class="modal-tags" style="margin-top:8px;">${metaTags}</div>` : ''}
       </div>
+      `}
       ${isDayTrip ? '' : `
       <div class="modal-section">
         <strong>${escapeHtml(t('reviews'))}</strong>
@@ -5278,7 +5280,7 @@ function openModal(id){
       </div>
       `}
       <div class="modal-actions">
-        <a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>
+        ${isDayTrip ? '' : `<a class="btn primary" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('openGmaps'))}</a>`}
         ${igUrl ? `<a class="btn ghost" href="${escapeHtml(igUrl)}" target="_blank" rel="noopener" style="color:#d62976;border-color:#d62976;">${escapeHtml(t('viewIg'))}</a>` : ''}
         <button class="btn ghost" data-fav="${safeId}">${escapeHtml(t('addFav'))}</button>
       </div>
