@@ -470,6 +470,9 @@ body.nav-open .nav-drawer__panel{
 .section{
   margin-top:var(--sp-48);
 }
+.home-creator-mobile{
+  display:block;
+}
 .section-head{
   display:flex;
   align-items:flex-start;
@@ -694,6 +697,7 @@ a:focus-visible{
   .cta-form button{width:auto;}
   .entry-card{padding:20px;}
   .preview-card{padding:20px;}
+  .home-creator-mobile{display:none;}
 }
 
 /* Desktop: >=1025px */
