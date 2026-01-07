@@ -4,6 +4,7 @@
   var header = document.getElementById('siteHeader');
   var navToggle = document.getElementById('navToggle');
   var navDrawer = document.getElementById('navDrawer');
+  var navCta = document.getElementById('navCta');
 
   function handleSubmit(event){
     event.preventDefault();
@@ -14,6 +15,14 @@
 
   if (form && input){
     form.addEventListener('submit', handleSubmit);
+  }
+
+  if (navCta && input){
+    navCta.addEventListener('click', function(){
+      setTimeout(function(){
+        input.focus();
+      }, 150);
+    });
   }
 
   function updateHeader(){

@@ -18,26 +18,102 @@
 </head>
 <body data-page-key="itinerary">
   <div class="page">
-    <header class="site-header">
-      <a class="brand" href="/">
-        <img class="brand-mark" src="/img/favicon.png" alt="unalomecodes">
-        <span class="brand-name">unalomecodes | 懂玩泰國</span>
-      </a>
-      <nav class="nav-links">
-        <a href="/templemap"><span data-edit-key="itinerary-nav-temple">寺廟地圖</span></a>
-        <a href="/food-map"><span data-edit-key="itinerary-nav-food">美食地圖</span></a>
-        <a href="/shop"><span data-edit-key="itinerary-nav-shop">商城</span></a>
-      </nav>
+    <header class="site-header" id="siteHeader">
+      <div class="nav-shell">
+        <a class="brand" href="/">
+          <img class="brand-mark" src="/img/favicon.png" alt="unalomecodes">
+          <span class="brand-name">unalomecodes | 懂玩泰國</span>
+        </a>
+        <nav class="nav-links nav-links--desktop" aria-label="主選單">
+          <a href="/templemap"><span data-edit-key="itinerary-nav-temple">開運寺廟地圖</span></a>
+          <a href="/food-map"><span data-edit-key="itinerary-nav-food">在地美食地圖</span></a>
+          <a href="/itinerary"><span data-edit-key="itinerary-nav-itinerary">一日／三日路線</span></a>
+          <a href="/service"><span data-edit-key="itinerary-nav-service">祈福服務</span></a>
+          <a href="/shop"><span data-edit-key="itinerary-nav-shop">商城</span></a>
+          <a href="/about"><span data-edit-key="itinerary-nav-about">關於我們</span></a>
+        </nav>
+        <div class="nav-actions">
+          <a class="nav-cta" href="#preview"><span data-edit-key="itinerary-nav-cta">開始規劃</span></a>
+          <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="navDrawer">
+            <span class="sr-only">開啟選單</span>
+            <span class="nav-toggle__bar"></span>
+            <span class="nav-toggle__bar"></span>
+          </button>
+        </div>
+      </div>
     </header>
+
+    <div class="nav-drawer" id="navDrawer" aria-hidden="true">
+      <button class="nav-drawer__backdrop" type="button" data-nav-close aria-label="關閉選單"></button>
+      <div class="nav-drawer__panel">
+        <div class="nav-drawer__header">
+          <div class="brand">
+            <img class="brand-mark" src="/img/favicon.png" alt="unalomecodes">
+            <span class="brand-name">unalomecodes | 懂玩泰國</span>
+          </div>
+          <button class="nav-drawer__close" type="button" data-nav-close>✕</button>
+        </div>
+        <div class="nav-drawer__group">
+          <div class="nav-drawer__label">探索入口</div>
+          <a href="/templemap">
+            <span data-edit-key="itinerary-nav-temple">開運寺廟地圖</span>
+            <small>從需求開始找對寺廟</small>
+          </a>
+          <a href="/food-map">
+            <span data-edit-key="itinerary-nav-food">在地美食地圖</span>
+            <small>以主題探索在地口袋名單</small>
+          </a>
+          <a href="/itinerary">
+            <span data-edit-key="itinerary-nav-itinerary">一日／三日路線</span>
+            <small>快速找到適合的節奏</small>
+          </a>
+        </div>
+        <div class="nav-drawer__group">
+          <div class="nav-drawer__label">服務與品牌</div>
+          <a href="/service"><span data-edit-key="itinerary-nav-service">祈福服務</span></a>
+          <a href="/shop"><span data-edit-key="itinerary-nav-shop">商城</span></a>
+          <a href="/about"><span data-edit-key="itinerary-nav-about">關於我們</span></a>
+        </div>
+        <a class="nav-drawer__cta" href="#preview"><span data-edit-key="itinerary-nav-cta">開始規劃</span></a>
+      </div>
+    </div>
 
     <main class="subpage">
       <section class="sub-hero">
         <h1 data-edit-key="itinerary-hero-title">一日／三日路線</h1>
-        <p data-edit-key="itinerary-hero-desc">從行程節奏開始挑選，再逐步組合寺廟、美食與在地文化路線。</p>
+        <p data-edit-key="itinerary-hero-desc">這裡先提供策展 Preview，讓你快速找到節奏與方向。</p>
       </section>
 
-      <section>
-        <div class="query-pill"><span data-edit-key="itinerary-query-label">你想要的風格：</span><span id="queryOutput">不限</span></div>
+      <section class="query-pill">
+        <span data-edit-key="itinerary-query-label">你想要的方向：</span>
+        <span id="queryOutput">不限</span>
+      </section>
+
+      <section class="preview-grid" id="preview">
+        <a class="preview-card" id="previewTemple" href="/templemap">
+          <div>
+            <div class="preview-label" data-edit-key="itinerary-preview-1-label">策展路線</div>
+            <h3 data-edit-key="itinerary-preview-1-title">曼谷 {q} 半日路線</h3>
+            <p data-edit-key="itinerary-preview-1-desc">以你關注的方向精選寺廟與移動節奏。</p>
+          </div>
+          <span class="card-arrow">↗</span>
+        </a>
+        <a class="preview-card" id="previewFood" href="/food-map">
+          <div>
+            <div class="preview-label" data-edit-key="itinerary-preview-2-label">美食導向</div>
+            <h3 data-edit-key="itinerary-preview-2-title">{q} + 在地美食一日</h3>
+            <p data-edit-key="itinerary-preview-2-desc">把必吃與在地路線打包成一日攻略。</p>
+          </div>
+          <span class="card-arrow">↗</span>
+        </a>
+        <a class="preview-card" id="previewService" href="/service">
+          <div>
+            <div class="preview-label" data-edit-key="itinerary-preview-3-label">深度體驗</div>
+            <h3 data-edit-key="itinerary-preview-3-title">想更有感：祈福服務推薦</h3>
+            <p data-edit-key="itinerary-preview-3-desc">適合想要完整儀式體驗的人。</p>
+          </div>
+          <span class="card-arrow">↗</span>
+        </a>
       </section>
 
       <section class="mode-grid">
@@ -55,14 +131,21 @@
         </button>
       </section>
 
-      <section class="placeholder-card" data-edit-key="itinerary-placeholder">
-        行程自動規劃產生器即將上線
+      <section class="cta-card">
+        <div>
+          <h3 data-edit-key="itinerary-early-title">搶先體驗</h3>
+          <p data-edit-key="itinerary-early-desc">留下 LINE 或 Email，我們把你的第一版路線直接發給你。</p>
+        </div>
+        <form class="cta-form" action="javascript:void(0);">
+          <input type="text" placeholder="你的 LINE ID 或 Email" aria-label="LINE ID 或 Email">
+          <button type="submit">登記</button>
+        </form>
       </section>
     </main>
 
     <footer class="site-footer">
       <div data-edit-key="itinerary-footer-left">想要更完整的規劃？</div>
-      <div><a href="/shop"><span data-edit-key="itinerary-footer-link">前往祈福與服務入口</span></a></div>
+      <div><a href="/service"><span data-edit-key="itinerary-footer-link">前往祈福與服務入口</span></a></div>
     </footer>
   </div>
   <script src="/js/auth.js"></script>
