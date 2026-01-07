@@ -819,9 +819,9 @@ a:focus-visible{
   align-items:flex-start;
 }
 .home-creator-mobile .creator-card__content{
-  display:flex;
-  flex-direction:row-reverse;
-  align-items:flex-start;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:start;
   gap:var(--space-4);
 }
 .home-creator-mobile .creator-card__body{
@@ -833,6 +833,7 @@ a:focus-visible{
   border-radius:24px;
   object-fit:cover;
   margin-top:-10px;
+  aspect-ratio:1 / 1;
 }
 .creator-card__avatar img{
   width:84px;
