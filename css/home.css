@@ -181,7 +181,7 @@ a{text-decoration:none;color:inherit;}
   gap:4px;
 }
 .nav-toggle__text{
-  font-size:var(--fs-small);
+  font-size:12px;
   font-weight:600;
   letter-spacing:0.08em;
   color:var(--text);
@@ -811,6 +811,15 @@ a:focus-visible{
   gap:var(--space-4);
   padding:20px;
   align-items:flex-start;
+}
+.home-creator-mobile .creator-card__content{
+  display:flex;
+  flex-direction:row-reverse;
+  align-items:flex-start;
+  gap:var(--space-4);
+}
+.home-creator-mobile .creator-card__body{
+  flex:1 1 auto;
 }
 .creator-card__avatar img{
   width:84px;
