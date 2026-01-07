@@ -698,6 +698,12 @@ a:focus-visible{
   .entry-card{padding:20px;}
   .preview-card{padding:20px;}
   .home-creator-mobile{display:block;}
+  .home-creator-mobile .creator-card__content{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:var(--space-4);
+    align-items:center;
+  }
 }
 
 /* Desktop: >=1025px */
