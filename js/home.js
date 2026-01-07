@@ -4,7 +4,7 @@
   var header = document.getElementById('siteHeader');
   var navToggle = document.getElementById('navToggle');
   var navDrawer = document.getElementById('navDrawer');
-  var navCta = document.getElementById('navCta');
+  var navCtas = Array.from(document.querySelectorAll('[data-nav-cta]'));
 
   function handleSubmit(event){
     event.preventDefault();
@@ -17,11 +17,14 @@
     form.addEventListener('submit', handleSubmit);
   }
 
-  if (navCta && input){
-    navCta.addEventListener('click', function(){
-      setTimeout(function(){
-        input.focus();
-      }, 150);
+  if (navCtas.length && input){
+    navCtas.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        setDrawer(false);
+        setTimeout(function(){
+          input.focus();
+        }, 150);
+      });
     });
   }
 
