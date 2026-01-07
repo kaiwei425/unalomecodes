@@ -964,12 +964,11 @@ a:focus-visible{
 
 @media(min-width:1025px){
   .creator-card__content{
-    grid-template-columns:1fr;
+    grid-template-columns:1fr auto;
+    align-items:start;
   }
   .creator-card__avatar{
-    position:absolute;
-    right:20px;
-    top:48px;
+    align-self:start;
   }
   .creator-card__avatar img{
     width:96px;
