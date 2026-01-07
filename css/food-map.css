@@ -291,7 +291,9 @@
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
     .admin-cover{grid-column:1 / -1;}
-    .admin-daytrip-toggle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#0f172a;}
+    .admin-grid label.admin-daytrip-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#0f172a;}
+    .admin-grid label.admin-daytrip-toggle input{margin:0;}
+    .admin-grid label.admin-daytrip-toggle .admin-hint{flex-basis:100%;margin-left:26px;font-weight:600;color:#64748b;}
     .admin-daytrip-title{font-weight:700;color:#0f172a;}
     .admin-daytrip{grid-column:1 / -1;display:none;gap:10px;padding:10px;border-radius:12px;border:1px dashed #e2e8f0;background:#f8fafc;}
     .admin-daytrip.is-active{display:grid;}

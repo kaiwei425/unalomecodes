@@ -3005,6 +3005,31 @@ function inferOpenSlotsFromHours(hoursText){
   });
   return slotOrder.filter(slot=>chosen.has(slot));
 }
+function parseItemTimestamp(value){
+  if (!value) return null;
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return null;
+    return value > 1e12 ? value : value * 1000;
+  }
+  const text = String(value || '').trim();
+  if (!text) return null;
+  const parsed = Date.parse(text);
+  if (!Number.isNaN(parsed)) return parsed;
+  const num = Number(text);
+  if (!Number.isNaN(num)) return num > 1e12 ? num : num * 1000;
+  return null;
+}
+function getItemTimestamp(item){
+  if (!item) return 0;
+  const created = parseItemTimestamp(item.createdAt || item.created_at || item.publishedAt || item.published_at);
+  if (created) return created;
+  const updated = parseItemTimestamp(item.updatedAt || item.updated_at || item.updated || item.ts || item.timestamp || item.time);
+  return updated || 0;
+}
 function extractLatLngFromText(text){
   const m = String(text || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
   return m ? parseLatLngPair(m[1], m[2]) : null;
@@ -3313,6 +3338,10 @@ function render(){
     const bf = !!(b.featured || b.featured_);
     if (af !== bf) return af ? -1 : 1;
 
+    if (!sort){
+      const diff = getItemTimestamp(b) - getItemTimestamp(a);
+      if (diff !== 0) return diff;
+    }
     if (sort === 'name_asc'){
       const an = a.name || '';
       const bn = b.name || '';
