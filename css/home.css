@@ -818,6 +818,9 @@ a:focus-visible{
   padding:20px;
   align-items:flex-start;
 }
+.creator-card__body{
+  position:relative;
+}
 .home-creator-mobile .creator-card__content{
   display:grid;
   grid-template-columns:1fr auto;
@@ -949,6 +952,21 @@ a:focus-visible{
   .creator-card__cover img{height:220px;}
   .creator-admin__grid{grid-template-columns:repeat(2,minmax(0,1fr));}
   .creator-admin__upload{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+@media(min-width:1025px){
+  .creator-card__content{
+    grid-template-columns:1fr;
+  }
+  .creator-card__avatar{
+    position:absolute;
+    right:20px;
+    top:48px;
+  }
+  .creator-card__avatar img{
+    width:96px;
+    height:96px;
+  }
 }
 
 @media(min-width:1025px){
