@@ -62,6 +62,13 @@
   const savedList = document.getElementById('savedList');
 
   const DEFAULT_STAY = { food: 60, temple: 45, spot: 50 };
+  const MODE_DEFAULT_STAY = {
+    battle: { food: 45, temple: 35, spot: 40 },
+    balance: { food: 60, temple: 45, spot: 50 },
+    chill: { food: 80, temple: 60, spot: 70 }
+  };
+  const CLOSED_REGEX = /(休息|公休|店休|暫停營業|歇業|closed)/i;
+  const ALL_DAY_REGEX = /(24\s*小時|24\s*hr|24\s*h|24\/7|24-7|all\s*day|全天|全日)/i;
   const FOOD_SLOT_ORDER = ['morning', 'noon', 'afternoon', 'evening', 'night'];
   const TEMPLE_SLOT_ORDER = ['morning', 'afternoon', 'evening'];
   const MEAL_ORDER = ['breakfast', 'lunch', 'dinner'];
@@ -77,26 +84,41 @@
     { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7042168, lng:100.5028259, area:'曼谷', category:'夜市', group:'夜市/市集' },
     { name:'喬德夜市（Rama 9）', kind:'spot', lat:13.7581533, lng:100.5670256, area:'曼谷', category:'夜市', group:'夜市/市集' },
     { name:'火車夜市（席娜卡琳）', kind:'spot', lat:13.6946657, lng:100.6510865, area:'曼谷', category:'夜市', group:'夜市/市集' },
+    { name:'Patpong 夜市', kind:'spot', lat:13.730987, lng:100.529651, area:'曼谷', category:'夜市', group:'夜市/市集' },
     { name:'耀華力路（唐人街）', kind:'spot', lat:13.7400474, lng:100.5104603, area:'曼谷', category:'美食街', group:'夜市/市集' },
     { name:'巴空花市', kind:'spot', lat:13.7417086, lng:100.4963295, area:'曼谷', category:'花市', group:'夜市/市集' },
+    { name:'水門市場', kind:'spot', lat:13.751109, lng:100.540969, area:'曼谷', category:'市集', group:'夜市/市集' },
     { name:'ICONSIAM', kind:'spot', lat:13.7268226, lng:100.510294, area:'曼谷', category:'購物', group:'曼谷市區' },
+    { name:'暹羅百麗宮', kind:'spot', lat:13.7463659, lng:100.5347712, area:'曼谷', category:'購物', group:'曼谷市區' },
+    { name:'CentralWorld', kind:'spot', lat:13.7465986, lng:100.5393167, area:'曼谷', category:'購物', group:'曼谷市區' },
+    { name:'Terminal 21 Asok', kind:'spot', lat:13.7378796, lng:100.5606087, area:'曼谷', category:'購物', group:'曼谷市區' },
+    { name:'暹羅廣場', kind:'spot', lat:13.745718, lng:100.533997, area:'曼谷', category:'散步', group:'曼谷市區' },
     { name:'考山路', kind:'spot', lat:13.7587665, lng:100.4975792, area:'曼谷', category:'夜生活', group:'曼谷市區' },
     { name:'倫披尼公園', kind:'spot', lat:13.7306004, lng:100.5415377, area:'曼谷', category:'公園', group:'曼谷市區' },
+    { name:'班嘉奇蒂公園', kind:'spot', lat:13.7301846, lng:100.5593081, area:'曼谷', category:'公園', group:'曼谷市區' },
+    { name:'班哲希利公園', kind:'spot', lat:13.7302061, lng:100.5693937, area:'曼谷', category:'公園', group:'曼谷市區' },
     { name:'Mahanakhon SkyWalk', kind:'spot', lat:13.7231503, lng:100.5280809, area:'曼谷', category:'觀景', group:'曼谷市區' },
+    { name:'四面佛', kind:'spot', lat:13.7446127, lng:100.5400004, area:'曼谷', category:'地標', group:'曼谷市區' },
+    { name:'暹羅海洋世界', kind:'spot', lat:13.7460079, lng:100.5348824, area:'曼谷', category:'景點', group:'曼谷市區' },
     { name:'Jim Thompson House', kind:'spot', lat:13.7492268, lng:100.5282811, area:'曼谷', category:'博物館', group:'歷史文化' },
     { name:'曼谷藝術文化中心', kind:'spot', lat:13.746778, lng:100.5302625, area:'曼谷', category:'藝文', group:'歷史文化' },
+    { name:'湄南河河畔夜景', kind:'spot', lat:13.723563, lng:100.506354, area:'曼谷', category:'觀景', group:'曼谷市區' },
     { name:'丹嫩莎朵水上市場', kind:'spot', lat:13.5190148, lng:99.959346, area:'叻丕府', category:'水上市場', group:'水上市場' },
     { name:'安帕瓦水上市場', kind:'spot', lat:13.4248722, lng:99.9554592, area:'夜功府', category:'水上市場', group:'水上市場' },
+    { name:'塔卡水上市場', kind:'spot', lat:13.4526684, lng:99.9533106, area:'叻丕府', category:'水上市場', group:'水上市場' },
     { name:'美功鐵道市場', kind:'spot', lat:13.4077308, lng:100.0009031, area:'夜功府', category:'鐵道市場', group:'近郊一日' },
     { name:'瑪哈猜海鮮市場', kind:'spot', lat:13.5451019, lng:100.2761542, area:'龍仔厝府', category:'海鮮市場', group:'近郊一日' },
     { name:'大城古城', kind:'spot', lat:14.3535461, lng:100.5622548, area:'大城', category:'古城', group:'近郊一日' },
     { name:'邦芭茵皇宮', kind:'spot', lat:14.2326451, lng:100.5794291, area:'大城', category:'皇宮', group:'近郊一日' },
     { name:'古城（Muang Boran）', kind:'spot', lat:13.5405466, lng:100.6239998, area:'北欖府', category:'歷史園區', group:'近郊一日' },
     { name:'三頭象神博物館', kind:'spot', lat:13.6299759, lng:100.5891358, area:'北欖府', category:'博物館', group:'近郊一日' },
+    { name:'愛侶灣瀑布', kind:'spot', lat:14.3693371, lng:99.1385158, area:'北碧府', category:'自然景點', group:'近郊一日' },
     { name:'芭達雅海灘', kind:'spot', lat:12.936583, lng:100.8859605, area:'芭達雅', category:'海灘', group:'海邊' },
     { name:'真理寺', kind:'spot', lat:12.972777, lng:100.8891503, area:'芭達雅', category:'景點', group:'海邊' },
     { name:'東芭樂園（Nong Nooch）', kind:'spot', lat:12.7646849, lng:100.9361187, area:'芭達雅', category:'花園', group:'海邊' },
-    { name:'桂河大橋', kind:'spot', lat:14.0404105, lng:99.503463, area:'北碧府', category:'歷史景點', group:'近郊一日' }
+    { name:'桂河大橋', kind:'spot', lat:14.0404105, lng:99.503463, area:'北碧府', category:'歷史景點', group:'近郊一日' },
+    { name:'華欣海灘', kind:'spot', lat:12.570583, lng:99.957564, area:'華欣', category:'海灘', group:'海邊' },
+    { name:'華欣夜市', kind:'spot', lat:12.568633, lng:99.957852, area:'華欣', category:'夜市', group:'海邊' }
   ];
 
   const state = {
@@ -225,6 +247,22 @@
     }
   }
 
+  function formatPlaceLabel(label, fallback){
+    const raw = String(label || '').trim();
+    if (!raw) return String(fallback || '').trim();
+    const first = raw.split(',')[0].trim();
+    if (first && !/^[\d\s-]+$/.test(first)) return first;
+    return raw;
+  }
+
+  function isClosedText(raw){
+    return CLOSED_REGEX.test(String(raw || '').trim());
+  }
+
+  function isAllDayText(raw){
+    return ALL_DAY_REGEX.test(String(raw || '').trim());
+  }
+
   function haversineKm(a, b){
     if (!a || !b) return 9999;
     const toRad = (deg)=>deg * Math.PI / 180;
@@ -252,13 +290,21 @@
     return ranges;
   }
 
+  function parseOpenInfo(raw){
+    const text = String(raw || '').trim();
+    if (!text) return { ranges: [], allDay: false, hasHours: false, closedAllDay: false };
+    if (isAllDayText(text)) return { ranges: [], allDay: true, hasHours: true, closedAllDay: false };
+    if (isClosedText(text)) return { ranges: [], allDay: false, hasHours: true, closedAllDay: true };
+    return { ranges: parseHoursRanges(text), allDay: false, hasHours: true, closedAllDay: false };
+  }
+
   function inferSlotsFromHours(raw, slotWindows, slotOrder, allDayKey){
     const text = String(raw || '').trim();
     if (!text) return [];
-    if (/(24\s*小時|24\s*hr|24\s*h|24\/7|24-7|all\s*day|全天|全日)/i.test(text)) {
+    if (isAllDayText(text)) {
       return allDayKey ? [allDayKey] : slotOrder.slice();
     }
-    if (/(休息|公休|店休|暫停營業|歇業|closed)/i.test(text)) return [];
+    if (isClosedText(text)) return [];
     const ranges = parseHoursRanges(text);
     if (!ranges.length) return [];
     const chosen = new Set();
@@ -333,6 +379,18 @@
   }
 
   function isOpenAt(item, minutes){
+    if (!item) return false;
+    if (item.closedAllDay) return false;
+    if (item.openAllDay) return true;
+    const ranges = item.openRanges || [];
+    if (ranges.length){
+      return ranges.some(([start, end])=>{
+        if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+        if (start === end) return false;
+        if (end > start) return minutes >= start && minutes < end;
+        return minutes >= start || minutes < end;
+      });
+    }
     const slots = item.openSlotsResolved || [];
     if (!slots.length) return true;
     if (slots.includes('all_day')) return true;
@@ -356,8 +414,13 @@
         const coords = readCoords(item);
         if (!coords) return null;
         const stayMinRaw = item.stayMin || item.stay_min;
-        const stayMin = Number.isFinite(Number(stayMinRaw)) ? Number(stayMinRaw) : DEFAULT_STAY[kind];
+        const stayMinVal = Number(stayMinRaw);
+        const stayMinIsDefault = !Number.isFinite(stayMinVal);
+        const stayMin = stayMinIsDefault ? DEFAULT_STAY[kind] : stayMinVal;
+        const openInfo = parseOpenInfo(item.hours);
         const openSlotsResolved = kind === 'temple' ? resolveTempleSlots(item) : resolveFoodSlots(item);
+        const openAllDay = openInfo.allDay || openSlotsResolved.includes('all_day');
+        const closedAllDay = openInfo.closedAllDay && !openAllDay;
         return {
           id: String(item.id || ''),
           name: item.name || '',
@@ -373,8 +436,15 @@
           kind,
           coords,
           stayMin,
+          stayMinIsDefault,
           openSlotsResolved,
-          isCustom: false
+          openRanges: openInfo.ranges || [],
+          openAllDay,
+          closedAllDay,
+          hasHours: openInfo.hasHours,
+          isCustom: false,
+          isPopular: false,
+          group: ''
         };
       })
       .filter(Boolean);
@@ -394,6 +464,23 @@
       state.popularItems = RECOMMENDED_SPOTS.map(buildPresetItem);
     }
     return state.popularItems.slice();
+  }
+
+  function resolvePopularGroups(origin, popularItems){
+    if (!origin || !popularItems || !popularItems.length) return [];
+    const groups = new Map();
+    popularItems.forEach(item => {
+      if (!item.group) return;
+      const dist = haversineKm(origin, item.coords);
+      if (!Number.isFinite(dist)) return;
+      if (!groups.has(item.group)) groups.set(item.group, []);
+      groups.get(item.group).push(dist);
+    });
+    const ranked = Array.from(groups.entries()).map(([group, dists]) => {
+      const avg = dists.reduce((sum, val)=>sum + val, 0) / dists.length;
+      return { group, avg };
+    }).sort((a, b)=>a.avg - b.avg);
+    return ranked.slice(0, 3).map(entry => entry.group);
   }
 
   function uniqueValues(list, selector){
@@ -688,6 +775,9 @@
       || (place.placeId ? `https://www.google.com/maps/search/?api=1&query=place_id:${encodeURIComponent(place.placeId)}` : '')
       || (name ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}` : '');
     const id = place.placeId ? `custom:${place.placeId}` : `custom:${coords.lat.toFixed(5)},${coords.lng.toFixed(5)}`;
+    const openInfo = parseOpenInfo(place.hours);
+    const openAllDay = openInfo.allDay;
+    const closedAllDay = openInfo.closedAllDay && !openAllDay;
     return {
       id,
       name,
@@ -703,8 +793,15 @@
       kind,
       coords,
       stayMin: DEFAULT_STAY[kind] || 60,
+      stayMinIsDefault: true,
       openSlotsResolved: [],
-      isCustom: true
+      openRanges: openInfo.ranges || [],
+      openAllDay,
+      closedAllDay,
+      hasHours: openInfo.hasHours,
+      isCustom: true,
+      isPopular: false,
+      group: ''
     };
   }
 
@@ -713,6 +810,9 @@
     const coords = { lat: spot.lat, lng: spot.lng };
     const id = `preset:${spot.name}`;
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.name)}`;
+    const openInfo = parseOpenInfo(spot.hours);
+    const openAllDay = openInfo.allDay;
+    const closedAllDay = openInfo.closedAllDay && !openAllDay;
     return {
       id,
       name: spot.name,
@@ -728,15 +828,32 @@
       kind,
       coords,
       stayMin: DEFAULT_STAY[kind] || 50,
+      stayMinIsDefault: true,
       openSlotsResolved: [],
-      isCustom: true
+      openRanges: openInfo.ranges || [],
+      openAllDay,
+      closedAllDay,
+      hasHours: openInfo.hasHours,
+      isCustom: true,
+      isPopular: true,
+      group: spot.group || ''
     };
   }
 
   function applyModeSettings(mode){
-    if (mode === 'battle') return { stayMultiplier: 0.8, stopFactor: 70 };
-    if (mode === 'chill') return { stayMultiplier: 1.2, stopFactor: 110 };
-    return { stayMultiplier: 1.0, stopFactor: 90 };
+    if (mode === 'battle') return { stayMultiplier: 0.9, stopFactor: 60, stayByKind: MODE_DEFAULT_STAY.battle };
+    if (mode === 'chill') return { stayMultiplier: 1.1, stopFactor: 115, stayByKind: MODE_DEFAULT_STAY.chill };
+    return { stayMultiplier: 1.0, stopFactor: 85, stayByKind: MODE_DEFAULT_STAY.balance };
+  }
+
+  function computeStayMin(item, modeSettings){
+    if (!item) return 20;
+    const stayByKind = (modeSettings && modeSettings.stayByKind) || {};
+    const baseStay = item.stayMinIsDefault && Number.isFinite(stayByKind[item.kind])
+      ? stayByKind[item.kind]
+      : (Number.isFinite(item.stayMin) ? item.stayMin : (DEFAULT_STAY[item.kind] || 60));
+    const multiplier = modeSettings && Number.isFinite(modeSettings.stayMultiplier) ? modeSettings.stayMultiplier : 1;
+    return Math.max(20, Math.round(baseStay * multiplier));
   }
 
   function getModeLabel(mode){
@@ -913,7 +1030,7 @@
     return 'spot';
   }
 
-  function pickNextItem(candidates, currentCoords, preferredKind, mustSet, preferredIds){
+  function pickNextItem(candidates, currentCoords, preferredKind, mustSet, preferredIds, options){
     let pool = candidates;
     const mustCandidates = candidates.filter(item => mustSet.has(item.id));
     if (mustCandidates.length) pool = mustCandidates;
@@ -930,7 +1047,8 @@
       const dist = haversineKm(currentCoords, item.coords);
       const rating = Number(item.rating) || 0;
       const mustBoost = mustSet.has(item.id) ? -0.6 : 0;
-      const score = dist - (rating * 0.02) + mustBoost;
+      const bias = options && typeof options.getBias === 'function' ? options.getBias(item) : 0;
+      const score = dist - (rating * 0.02) + mustBoost + bias;
       if (score < bestScore) {
         bestScore = score;
         best = item;
@@ -953,37 +1071,61 @@
     const maxStops = Math.min(12, Math.max(3, Math.floor(totalMinutes / modeSettings.stopFactor)));
     const mustSet = settings.mustSet;
     const allowClosed = settings.allowClosed !== false;
+    const popularGroups = Array.isArray(settings.popularGroups) ? settings.popularGroups : [];
+    const popularTarget = Number.isFinite(settings.popularTarget)
+      ? settings.popularTarget
+      : Math.min(4, Math.max(1, Math.floor(totalMinutes / 240)));
     let usedClosedFallback = false;
 
-    const counts = { food: 0, temple: 0, spot: 0 };
+    const counts = { food: 0, temple: 0, spot: 0, popular: 0 };
 
     for (let i = 0; i < maxStops; i++){
       const mealPreferredIds = new Set();
+      const closedIds = new Set();
       const candidates = items.filter(item => {
         if (!item || !item.id || used.has(item.id)) return false;
         const distKm = haversineKm(currentCoords, item.coords);
         const travelMin = estimateTravelMinutes(distKm, transport);
         const arrive = currentTime + travelMin;
-        if (!isOpenAt(item, arrive)) return false;
+        const stayMin = computeStayMin(item, modeSettings);
+        if (arrive + stayMin > endMin) return false;
+        if (!isOpenAt(item, arrive)) {
+          if (!allowClosed) return false;
+          closedIds.add(item.id);
+        }
         if (item.kind === 'food'){
           const mealKey = getMealKeyForTime(arrive, meals, mealStatus);
           if (mealKey) mealPreferredIds.add(item.id);
         }
         return true;
       });
-      let fallback = candidates;
-      if (!fallback.length){
-        if (!allowClosed) break;
-        usedClosedFallback = true;
-        fallback = items.filter(item => item && item.id && !used.has(item.id));
+      if (!candidates.length) break;
+      const popularPreferredIds = new Set();
+      if (!mealPreferredIds.size && popularTarget && counts.popular < popularTarget) {
+        candidates.forEach(item => {
+          if (!item.isPopular || item.kind !== 'spot') return;
+          if (popularGroups.length && item.group && !popularGroups.includes(item.group)) return;
+          popularPreferredIds.add(item.id);
+        });
       }
-      if (!fallback.length) break;
       const preferred = mealPreferredIds.size ? 'food' : getPreferredKind(currentTime, counts, settings, lastKinds);
-      const next = pickNextItem(fallback, currentCoords, preferred, mustSet, mealPreferredIds);
+      const preferredIds = mealPreferredIds.size ? mealPreferredIds : popularPreferredIds;
+      const next = pickNextItem(candidates, currentCoords, preferred, mustSet, preferredIds, {
+        getBias: (item)=>{
+          let bias = 0;
+          if (item.isPopular) bias -= 0.35;
+          if (item.isPopular && popularGroups.length && item.group && !popularGroups.includes(item.group)) {
+            bias += 0.6;
+          }
+          if (closedIds.has(item.id)) bias += 0.7;
+          return bias;
+        }
+      });
       if (!next) break;
+      if (closedIds.has(next.id)) usedClosedFallback = true;
       const distKm = haversineKm(currentCoords, next.coords);
       const travelMin = estimateTravelMinutes(distKm, transport);
-      const stayMin = Math.max(20, Math.round(next.stayMin * modeSettings.stayMultiplier));
+      const stayMin = computeStayMin(next, modeSettings);
       const arrive = currentTime + travelMin;
       const depart = arrive + stayMin;
       if (depart > endMin) break;
@@ -1001,6 +1143,7 @@
       if (next.kind === 'food') counts.food += 1;
       else if (next.kind === 'temple') counts.temple += 1;
       else counts.spot += 1;
+      if (next.isPopular) counts.popular += 1;
       if (next.kind === 'food'){
         const mealKey = getMealKeyForTime(arrive, meals, mealStatus);
         if (mealKey) mealStatus[mealKey] = true;
@@ -1150,6 +1293,7 @@
     const foodCount = plan.filter(p => p.item.kind === 'food').length;
     const templeCount = plan.filter(p => p.item.kind === 'temple').length;
     const spotCount = plan.filter(p => p.item.kind === 'spot').length;
+    const popularCount = plan.filter(p => p.item.isPopular || (p.item.id && p.item.id.startsWith('preset:'))).length;
     const totalStay = plan.reduce((sum, p)=> sum + p.stayMin, 0);
     const totalTravel = plan.reduce((sum, p)=> sum + p.travelMin, 0);
     const origin = planData.startCoords || state.startCoords;
@@ -1163,6 +1307,7 @@
       const item = entry.item;
       const kindLabel = getKindLabel(item.kind);
       const kindClass = item.kind === 'temple' ? 'plan-kind temple' : 'plan-kind';
+      const isPopular = item.isPopular || (item.id && item.id.startsWith('preset:'));
       const timeText = `${formatMinutes(entry.arrive)} - ${formatMinutes(entry.depart)}`;
       const meta = [item.area, item.category].filter(Boolean).join(' · ');
       const mapLink = buildPlaceLink(item);
@@ -1176,6 +1321,7 @@
                 <h3 class="plan-title">${escapeHtml(item.name || '')}</h3>
                 <span class="${kindClass}">${escapeHtml(kindLabel)}</span>
                 ${state.mustIds.has(item.id) ? '<span class="plan-kind" style="background:#f1f5f9;border-color:#cbd5f5;color:#475569;">必去</span>' : ''}
+                ${isPopular ? '<span class="plan-kind" style="background:#fef3c7;border-color:#fde68a;color:#b45309;">熱門景點</span>' : ''}
               </div>
               ${meta ? `<div class="plan-meta">${escapeHtml(meta)}</div>` : ''}
               <div class="plan-meta">移動：${escapeHtml(distanceText)} · 停留 ${escapeHtml(String(entry.stayMin))} 分</div>
@@ -1215,7 +1361,7 @@
       ? `<div class="planner-hint" style="color:#b45309;">未排入：${escapeHtml(skippedMeals.join('、'))}，可調整時間或放寬條件。</div>`
       : '';
     const closedNote = planData.usedClosedFallback
-      ? '<div class="planner-hint" style="color:#b45309;">部分時段無符合營業時間的候選，已改用全部候選。</div>'
+      ? '<div class="planner-hint" style="color:#b45309;">行程已包含非營業時段候選（可在設定中關閉）。</div>'
       : '';
     const staleNote = state.planStale
       ? '<div class="planner-hint" style="color:#b45309;">設定已變更，請重新產生以更新行程。</div>'
@@ -1253,6 +1399,7 @@
       <div class="plan-summary">
         <span class="tag">起點：${escapeHtml(startLabel)}</span>
         <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}${spotCount ? ` / 景點 ${spotCount}` : ''}</span>
+        ${popularCount ? `<span class="tag">熱門景點 ${popularCount}</span>` : ''}
         <span class="tag">餐別：${escapeHtml(mealLabel)}</span>
         <span class="tag">寺廟：${escapeHtml(templeLabel)}</span>
         <span class="tag">停留 ${totalStay} 分 / 移動 ${totalTravel} 分</span>
@@ -1322,7 +1469,8 @@
     const res = await fetch(`/api/geo?q=${encodeURIComponent(q)}`, { credentials:'include' });
     const data = await res.json().catch(()=>({}));
     if (!data || !data.ok || !Number.isFinite(data.lat) || !Number.isFinite(data.lng)) return null;
-    return { lat: data.lat, lng: data.lng, label: data.display_name || q };
+    const label = formatPlaceLabel(data.display_name, q);
+    return { lat: data.lat, lng: data.lng, label };
   }
 
   async function resolveStartCoords(){
@@ -1367,6 +1515,7 @@
       setStatus('結束時間需大於開始時間', true);
       return false;
     }
+    const totalMinutes = endMin - startMin;
     const origin = await resolveStartCoords();
     if (!origin) return false;
 
@@ -1377,6 +1526,10 @@
     const includeTemples = includeTempleToggle ? includeTempleToggle.checked : true;
     const modeSettings = applyModeSettings(modeValue);
     const transport = getTransportSettings(transportMode);
+    const popularItems = getPopularItems();
+    const popularGroups = resolvePopularGroups(origin, popularItems);
+    const popularTargetBase = Math.max(1, Math.floor(totalMinutes / 240));
+    const popularTarget = Math.min(4, popularTargetBase + (modeValue === 'battle' ? 1 : 0));
     let items = getActiveItems();
     if (!includeTemples) items = items.filter(item => item.kind !== 'temple');
     const settings = {
@@ -1386,7 +1539,9 @@
       allowClosed,
       meals,
       includeTemples,
-      templeRatio: includeTemples ? 0.25 : 0
+      templeRatio: includeTemples ? 0.25 : 0,
+      popularGroups,
+      popularTarget
     };
     const planData = buildPlan(origin, startMin, endMin, items, settings);
     planData.travelMode = transport.travelMode;
@@ -1799,7 +1954,7 @@
         const loc = place && place.geometry && place.geometry.location;
         if (!loc) return;
         const coords = { lat: loc.lat(), lng: loc.lng() };
-        const label = place.formatted_address || place.name || startInput.value.trim();
+        const label = place.name || formatPlaceLabel(place.formatted_address || '', startInput.value.trim());
         state.startCoords = coords;
         state.startLabel = label;
         startInput.value = label || startInput.value;
