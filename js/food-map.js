@@ -3966,7 +3966,7 @@ function render(){
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
           ${item.id ? `
-            <button class="btn primary" data-open="${safeId}">${escapeHtml(isDayTrip ? t('dayTripDetailsBtn') : t('details'))}</button>
+            <button class="btn primary${isDayTrip ? ' daytrip-btn' : ''}" data-open="${safeId}">${escapeHtml(isDayTrip ? t('dayTripDetailsBtn') : t('details'))}</button>
             ${isDayTrip ? '' : `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('nav'))}</a>`}
           ` : `<span class="mini">${escapeHtml(t('actionsHint'))}</span>`}
         </div>

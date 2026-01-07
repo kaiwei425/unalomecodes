@@ -139,6 +139,7 @@
     .tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:var(--pill);color:#c2410c;font-weight:700;border:1px solid rgba(255,90,60,.25);font-size:12px;}
     .badge-hot{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(255,90,60,.12);color:var(--accent);font-weight:700;font-size:11px;}
     .card-actions{display:flex;flex-wrap:wrap;gap:8px;}
+    .card-actions .btn.daytrip-btn{flex:0 0 auto;min-width:160px;}
     .creator-card{
       border:1px solid var(--line);
       background:#fff;
