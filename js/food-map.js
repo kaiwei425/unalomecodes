@@ -468,7 +468,12 @@ const TRANSLATIONS = {
     delete: '刪除',
     edit: '編輯',
     syncG: '同步G',
-    syncGHint: '請先於左方輸入 Google Map 連結後先按儲存，再按同步G按鈕會自動同步 Google 評分',
+    syncGHint: '輸入 Google Map 連結後按同步G，會帶入評分、地址、營業時間與座標',
+    syncGUpdated: '已更新：{fields}',
+    syncGNoChange: '沒有需要更新的欄位',
+    syncGFail: '無法取得 Google 詳細資訊',
+    coordsShort: '座標',
+    placeIdLabel: 'Google Place ID',
     featured: '精選',
     recommend: '推薦',
     newPlace: '（新餐廳）',
@@ -779,7 +784,12 @@ const TRANSLATIONS = {
     delete: 'Delete',
     edit: 'Edit',
     syncG: 'Sync G',
-    syncGHint: 'Enter the Google Maps link above, save first, then click Sync G to pull the rating.',
+    syncGHint: 'Enter a Google Maps link, then click Sync G to pull rating, address, hours, and coordinates.',
+    syncGUpdated: 'Updated: {fields}',
+    syncGNoChange: 'No fields to update.',
+    syncGFail: 'Unable to fetch Google details.',
+    coordsShort: 'Coordinates',
+    placeIdLabel: 'Google Place ID',
     featured: 'Featured',
     recommend: 'Recommended',
     newPlace: '(New)',
@@ -2959,6 +2969,55 @@ function parseTimeMinutes(value){
   if (hour === 24 && minute !== 0) return null;
   return hour * 60 + minute;
 }
+function parsePlaceTime(value){
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  if (/^\d{3,4}$/.test(raw)){
+    const padded = raw.padStart(4, '0');
+    return parseTimeMinutes(`${padded.slice(0,2)}:${padded.slice(2)}`);
+  }
+  if (/^\d{1,2}:\d{2}$/.test(raw)) return parseTimeMinutes(raw);
+  return null;
+}
+function formatTimeMinutes(value){
+  if (!Number.isFinite(value)) return '';
+  const minutes = Math.round(value);
+  if (minutes === 1440) return '24:00';
+  const safe = ((minutes % 1440) + 1440) % 1440;
+  const hour = Math.floor(safe / 60) % 24;
+  const minute = Math.abs(safe % 60);
+  return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+}
+function formatHoursFromOpening(opening){
+  if (!opening) return '';
+  const weekdayText = Array.isArray(opening.weekday_text) ? opening.weekday_text.join(' ') : '';
+  if (/(Open 24 hours|24 hours|24 小時|24小時|24小时|24\s*hr|24\s*h|24\/7|24-7)/i.test(weekdayText)) {
+    return currentLang === 'en' ? '24 hours' : '24 小時';
+  }
+  const periods = Array.isArray(opening.periods) ? opening.periods : [];
+  if (!periods.length) return '';
+  if (periods.some(p=>{
+    const openMin = parsePlaceTime(p && p.open && p.open.time);
+    const closeMin = parsePlaceTime(p && p.close && p.close.time);
+    return openMin === 0 && closeMin === 0;
+  })) {
+    return currentLang === 'en' ? '24 hours' : '24 小時';
+  }
+  let minOpen = null;
+  let maxClose = null;
+  periods.forEach(p=>{
+    const openMin = parsePlaceTime(p && p.open && p.open.time);
+    const closeMin = parsePlaceTime(p && p.close && p.close.time);
+    if (openMin === null || closeMin === null) return;
+    if (minOpen === null || openMin < minOpen) minOpen = openMin;
+    let closeVal = closeMin;
+    if (closeVal < openMin) closeVal += 1440;
+    if (maxClose === null || closeVal > maxClose) maxClose = closeVal;
+  });
+  if (minOpen === null || maxClose === null) return '';
+  const endMin = maxClose > 1440 ? maxClose - 1440 : maxClose;
+  return `${formatTimeMinutes(minOpen)}-${formatTimeMinutes(endMin)}`;
+}
 function inferOpenSlotsFromHours(hoursText){
   const raw = String(hoursText || '').trim();
   if (!raw) return [];
@@ -3062,6 +3121,21 @@ function extractMapsQuery(url){
     return '';
   }
 }
+function extractPlaceIdFromMapsUrl(url){
+  const raw = safeUrl(url);
+  if (!raw) return '';
+  try{
+    const u = new URL(raw);
+    const direct = u.searchParams.get('place_id') || u.searchParams.get('query_place_id') || '';
+    if (direct) return direct;
+    const q = u.searchParams.get('q') || u.searchParams.get('query') || '';
+    if (!q) return '';
+    const match = q.match(/place_id:([^\s]+)/);
+    return match ? match[1] : '';
+  }catch(_){
+    return '';
+  }
+}
 function extractPlaceNameFromMapsUrl(url){
   const raw = safeUrl(url);
   if (!raw) return '';
@@ -3074,6 +3148,15 @@ function extractPlaceNameFromMapsUrl(url){
     }
   }catch(_){}
   return '';
+}
+function buildPlaceQueryFromInputs(maps, name, area){
+  const fromMaps = extractMapsQuery(maps) || extractPlaceNameFromMapsUrl(maps);
+  if (fromMaps) return fromMaps;
+  const baseName = String(name || '').trim();
+  if (!baseName) return '';
+  const baseArea = String(area || '').trim();
+  const suffix = baseArea ? ` ${baseArea} Thailand` : ' Thailand';
+  return baseName + suffix;
 }
 function storeCoords(item, coords){
   if (!coords || !item) return null;
@@ -3571,8 +3654,9 @@ function render(){
           <label>${escapeHtml(t('rating'))}
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
               <input class="admin-input" data-admin-field="rating" value="${escapeHtml(item.rating || '')}" placeholder="0-5" style="max-width:120px;flex:1 1 90px;">
-              <button class="btn pill" type="button" data-fetch-rating="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">${escapeHtml(t('syncG'))}</button>
+              <button class="btn pill" type="button" data-fetch-details="${safeId}" style="padding:0 8px;font-size:11px;white-space:nowrap">${escapeHtml(t('syncG'))}</button>
               <span class="admin-hint" style="flex:1 1 180px;min-width:160px;">${escapeHtml(t('syncGHint'))}</span>
+              <span class="admin-msg" data-sync-msg style="flex-basis:100%;"></span>
             </div>
           </label>
           <label>${escapeHtml(t('addr'))}<input class="admin-input" data-admin-field="address" value="${escapeHtml(item.address || '')}"></label>
@@ -3584,7 +3668,7 @@ function render(){
             <input class="admin-input" data-admin-field="coords" value="${escapeHtml(coordValue)}" placeholder="13.7563, 100.5018">
           </label>
           <label>${escapeHtml(t('hours'))}<input class="admin-input" data-admin-field="hours" value="${escapeHtml(item.hours || '')}"></label>
-          <label>Google Place ID
+          <label>${escapeHtml(t('placeIdLabel'))}
             <input class="admin-input" data-admin-field="googlePlaceId" value="${escapeHtml(item.googlePlaceId || item.google_place_id || '')}">
             <span class="admin-hint">${escapeHtml(t('placeIdHint'))}</span>
           </label>
@@ -3682,63 +3766,114 @@ function render(){
       }
     };
   });
-  cardsEl.querySelectorAll('[data-fetch-rating]').forEach(btn=>{
+  cardsEl.querySelectorAll('[data-fetch-details]').forEach(btn=>{
     btn.onclick = (e)=>{
       e.preventDefault();
-      const id = btn.getAttribute('data-fetch-rating');
-      const item = DATA.find(x=>x.id===id);
-      if(!item) return;
       const wrap = btn.closest('[data-admin-id]');
-      const input = wrap.querySelector('[data-admin-field="rating"]');
-      
+      if (!wrap) return;
+
       if(!window.google || !window.google.maps || !window.google.maps.places){
         alert(t('mapServiceWait'));
         ensureGoogleMaps();
         return;
       }
-      
+
+      const readField = (field)=>{
+        const el = wrap.querySelector(`[data-admin-field="${field}"]`);
+        return el ? el.value.trim() : '';
+      };
+
+      const mapsVal = readField('maps');
+      const nameVal = readField('name');
+      const areaVal = readField('area');
+      const ratingInput = wrap.querySelector('[data-admin-field="rating"]');
+      const addrInput = wrap.querySelector('[data-admin-field="address"]');
+      const hoursInput = wrap.querySelector('[data-admin-field="hours"]');
+      const coordsInput = wrap.querySelector('[data-admin-field="coords"]');
+      const placeIdInput = wrap.querySelector('[data-admin-field="googlePlaceId"]');
+      const syncMsgEl = wrap.querySelector('[data-sync-msg]');
+      const placeId = (placeIdInput && placeIdInput.value.trim()) || extractPlaceIdFromMapsUrl(mapsVal);
+
       btn.textContent = '...';
       btn.disabled = true;
-      
-      const service = new google.maps.places.PlacesService(document.createElement('div'));
-      
-      const onResult = (place, status) => {
+
+      const setSyncMsg = (text)=>{
+        if (!syncMsgEl) return;
+        syncMsgEl.textContent = text || '';
+        if (text) setTimeout(()=>{ if (syncMsgEl) syncMsgEl.textContent = ''; }, 2500);
+      };
+
+      const finish = ()=>{
         btn.textContent = t('syncG');
         btn.disabled = false;
-        if(status === google.maps.places.PlacesServiceStatus.OK && place && place.rating){
-          input.value = place.rating;
+      };
+
+      const applyPlace = (place)=>{
+        const updatedFields = [];
+        const fieldSep = currentLang === 'en' ? ', ' : '、';
+        const setField = (input, value, label)=>{
+          if (!input) return;
+          const next = String(value ?? '').trim();
+          if (!next) return;
+          if (input.value.trim() === next) return;
+          input.value = next;
+          updatedFields.push(label);
+        };
+        if (Number.isFinite(place.rating)) setField(ratingInput, place.rating, t('rating'));
+        const address = place.formatted_address || place.vicinity || '';
+        if (address) setField(addrInput, address, t('addr'));
+        const hours = formatHoursFromOpening(place.opening_hours);
+        if (hours) setField(hoursInput, hours, t('hours'));
+        if (coordsInput && place.geometry && place.geometry.location){
+          const loc = place.geometry.location;
+          const lat = (typeof loc.lat === 'function') ? loc.lat() : loc.lat;
+          const lng = (typeof loc.lng === 'function') ? loc.lng() : loc.lng;
+          if (Number.isFinite(lat) && Number.isFinite(lng)){
+            const coordValue = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            setField(coordsInput, coordValue, t('coordsShort'));
+          }
+        }
+        if (placeIdInput && place.place_id) setField(placeIdInput, place.place_id, t('placeIdLabel'));
+        if (updatedFields.length){
+          setSyncMsg(t('syncGUpdated', { fields: updatedFields.join(fieldSep) }));
         } else {
-          alert(t('ratingFail'));
+          setSyncMsg(t('syncGNoChange'));
         }
       };
 
-      const placeId = item.googlePlaceId || item.google_place_id;
-      if(placeId){
-        service.getDetails({ placeId, fields:['rating'] }, onResult);
+      const service = new google.maps.places.PlacesService(document.createElement('div'));
+      const fields = ['place_id', 'rating', 'formatted_address', 'geometry', 'opening_hours'];
+
+      const onDetails = (place, status)=>{
+        finish();
+        if (status === google.maps.places.PlacesServiceStatus.OK && place){
+          applyPlace(place);
+        } else {
+          alert(t('syncGFail'));
+        }
+      };
+
+      const loadDetails = (pid)=>{
+        service.getDetails({ placeId: pid, fields }, onDetails);
+      };
+
+      if (placeId){
+        loadDetails(placeId);
         return;
       }
-      
-      let query = '';
-      if (item.maps) {
-        try {
-          const u = new URL(item.maps);
-          const qVal = u.searchParams.get('q') || u.searchParams.get('query');
-          if (qVal) query = qVal;
-          else if (u.pathname.includes('/place/')) {
-            const parts = u.pathname.split('/');
-            const idx = parts.indexOf('place');
-            if (idx >= 0 && parts[idx + 1]) query = decodeURIComponent(parts[idx + 1]).replace(/\+/g, ' ');
-          }
-        } catch (e) {}
+
+      const query = buildPlaceQueryFromInputs(mapsVal, nameVal, areaVal);
+      if (!query){
+        finish();
+        alert(t('gmapFail'));
+        return;
       }
-      if (!query) query = (item.name || '') + ' ' + (item.area || '') + ' Thailand';
-      
-      service.findPlaceFromQuery({ query, fields:['place_id'] }, (res, stat)=>{
-        if(stat === google.maps.places.PlacesServiceStatus.OK && res && res[0]){
-          service.getDetails({ placeId: res[0].place_id, fields:['rating'] }, onResult);
+
+      service.findPlaceFromQuery({ query, fields: ['place_id'] }, (res, stat)=>{
+        if (stat === google.maps.places.PlacesServiceStatus.OK && res && res[0] && res[0].place_id){
+          loadDetails(res[0].place_id);
         } else {
-          btn.textContent = t('syncG');
-          btn.disabled = false;
+          finish();
           alert(t('gmapFail'));
         }
       });

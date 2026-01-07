@@ -65,6 +65,8 @@
   const savedList = document.getElementById('savedList');
 
   const DEFAULT_STAY = { food: 60, temple: 45, spot: 50 };
+  const POPULAR_STAY_BONUS = { food: 10, temple: 15, spot: 20 };
+  const DISPLAY_TIME_ROUND_STEP = 10;
   const MODE_DEFAULT_STAY = {
     battle: { food: 45, temple: 35, spot: 40 },
     balance: { food: 60, temple: 45, spot: 50 },
@@ -397,6 +399,12 @@
     const h = Math.floor(wrapped / 60);
     const mm = wrapped % 60;
     return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  }
+
+  function formatMinutesApprox(minutes){
+    const step = DISPLAY_TIME_ROUND_STEP;
+    const rounded = Math.round(minutes / step) * step;
+    return formatMinutes(rounded);
   }
 
   function setTimeInput(input, value){
@@ -1083,7 +1091,12 @@
       ? stayByKind[item.kind]
       : (Number.isFinite(item.stayMin) ? item.stayMin : (DEFAULT_STAY[item.kind] || 60));
     const multiplier = modeSettings && Number.isFinite(modeSettings.stayMultiplier) ? modeSettings.stayMultiplier : 1;
-    return Math.max(20, Math.round(baseStay * multiplier));
+    let stay = Math.round(baseStay * multiplier);
+    if (item.isPopular && item.stayMinIsDefault){
+      const bonus = Number(POPULAR_STAY_BONUS[item.kind]) || 15;
+      stay += bonus;
+    }
+    return Math.max(20, stay);
   }
 
   function getModeLabel(mode){
@@ -1690,10 +1703,10 @@
     const transportLabel = getTransportLabel(planData.transportMode || (transportSelect ? transportSelect.value : 'driving'));
     const routeLabel = planData.routeLabel || '自動';
     const startTimeLabel = Number.isFinite(planData.startMin)
-      ? formatMinutes(planData.startMin)
+      ? formatMinutesApprox(planData.startMin)
       : (startTimeInput ? startTimeInput.value : '');
     const endTimeLabel = Number.isFinite(planData.endMin)
-      ? formatMinutes(planData.endMin)
+      ? formatMinutesApprox(planData.endMin)
       : (endTimeInput ? endTimeInput.value : '');
     const today = new Date().toLocaleDateString('zh-TW', { month:'2-digit', day:'2-digit', weekday:'short' });
     const foodCount = plan.filter(p => p.item.kind === 'food').length;
@@ -1729,7 +1742,7 @@
       const kindLabel = getKindLabel(item.kind);
       const kindClass = item.kind === 'temple' ? 'plan-kind temple' : 'plan-kind';
       const isPopular = item.isPopular || (item.id && item.id.startsWith('preset:'));
-      const timeText = `${formatMinutes(entry.arrive)} - ${formatMinutes(entry.depart)}`;
+      const timeText = `${formatMinutesApprox(entry.arrive)} - ${formatMinutesApprox(entry.depart)}`;
       const meta = [item.area, item.category].filter(Boolean).join(' · ');
       const mapLink = buildPlaceLink(item);
       const distanceText = `${entry.distKm.toFixed(1)} km / 約 ${entry.travelMin} 分`;
@@ -1862,7 +1875,7 @@
       <div class="plan-board-header">
         <div>
           <div class="plan-board-title">行程安排</div>
-          <div class="plan-board-hint">依時段分欄，可用上移/下移微調順序。</div>
+          <div class="plan-board-hint">時間已四捨五入到 10 分，依時段分欄，可用上移/下移微調順序。</div>
         </div>
       </div>
       <div class="plan-board">
