@@ -4610,7 +4610,7 @@ function renderTripResult(sortedItems, gmapsUrl, startCoords) {
 // 按鈕事件
 [btnBack, btnFav, btnAdd].forEach(btn=>{
   if (!btn) return;
-  if (btn.id === 'btnBack') btn.onclick = ()=> { window.location.href = '/shop'; };
+  if (btn.id === 'btnBack') btn.onclick = ()=> { window.location.href = '/'; };
 });
 
 function checkLoginOrRedirect(msg){
