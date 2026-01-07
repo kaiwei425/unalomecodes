@@ -697,7 +697,7 @@ a:focus-visible{
   .cta-form button{width:auto;}
   .entry-card{padding:20px;}
   .preview-card{padding:20px;}
-  .home-creator-mobile{display:none;}
+  .home-creator-mobile{display:block;}
 }
 
 /* Desktop: >=1025px */
