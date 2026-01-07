@@ -96,6 +96,13 @@ a{text-decoration:none;color:inherit;}
   backdrop-filter:blur(12px);
   transition:all 0.25s ease;
 }
+.nav-title{
+  font-size:var(--fs-small);
+  font-weight:600;
+  letter-spacing:0.08em;
+  color:var(--text);
+  text-transform:none;
+}
 .site-header.is-scrolled .nav-shell{
   padding:8px var(--space-4);
   box-shadow:var(--shadow-md);
