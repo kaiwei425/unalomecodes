@@ -173,6 +173,17 @@
     })
     .catch(function(){});
 
+  if (pageKey === 'home'){
+    fetch('/api/page-meta?page=about', { credentials: 'include' })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if (data && data.ok){
+          applyMeta(data.meta || {});
+        }
+      })
+      .catch(function(){});
+  }
+
   bindInputs();
   bindUploads();
   initAdminMode();
