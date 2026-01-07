@@ -821,6 +821,10 @@ a:focus-visible{
 .home-creator-mobile .creator-card__body{
   flex:1 1 auto;
 }
+.home-creator-mobile .creator-card__avatar img{
+  width:96px;
+  height:96px;
+}
 .creator-card__avatar img{
   width:84px;
   height:84px;
