@@ -3627,3 +3627,38 @@ async function removeFav(id){
 }
 document.addEventListener('DOMContentLoaded', bootFoodMap);
 window.addEventListener('hashchange', openTempleFromUrl);
+
+(function(){
+  const chips = Array.from(document.querySelectorAll('.intent-chip'));
+  const status = document.getElementById('intentStatus');
+  if (!chips.length || !status) return;
+
+  function setActive(value){
+    chips.forEach(btn=>{
+      btn.classList.toggle('is-active', btn.dataset.intent === value);
+    });
+    status.textContent = `目前篩選：${value || '全部'}`;
+  }
+
+  function updateQuery(value){
+    const url = new URL(window.location.href);
+    if (value){
+      url.searchParams.set('intent', value);
+    }else{
+      url.searchParams.delete('intent');
+    }
+    window.history.replaceState(null, '', url.toString());
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const current = params.get('intent') || '';
+  setActive(current);
+
+  chips.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const value = btn.dataset.intent || '';
+      setActive(value);
+      updateQuery(value);
+    });
+  });
+})();
