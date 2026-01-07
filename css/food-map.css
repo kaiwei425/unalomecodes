@@ -291,6 +291,17 @@
     .admin-upload-hint{font-size:11px;color:#94a3b8;}
     .admin-upload-status{font-size:11px;color:#64748b;}
     .admin-cover{grid-column:1 / -1;}
+    .admin-daytrip-toggle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#0f172a;}
+    .admin-daytrip-title{font-weight:700;color:#0f172a;}
+    .admin-daytrip{grid-column:1 / -1;display:none;gap:10px;padding:10px;border-radius:12px;border:1px dashed #e2e8f0;background:#f8fafc;}
+    .admin-daytrip.is-active{display:grid;}
+    .admin-daytrip-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;color:#0f172a;}
+    .admin-daytrip-list{display:grid;gap:8px;}
+    .admin-daytrip-bulk{display:grid;gap:8px;}
+    .daytrip-row{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;}
+    .daytrip-row.is-dragging{opacity:0.6;}
+    .daytrip-handle{cursor:grab;color:#94a3b8;font-size:14px;text-align:center;user-select:none;}
+    .daytrip-row .btn{padding:6px 10px;font-size:11px;}
     .modal-body{padding:16px;display:grid;gap:14px;background:#fff;max-height:80vh;overflow:auto;}
     .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
     .modal-head-actions{display:flex;align-items:center;gap:8px;}
@@ -330,6 +341,8 @@
       .card{grid-template-columns:1fr;}
       .cover{aspect-ratio:4/5;}
       .admin-grid{grid-template-columns:1fr;}
+      .daytrip-row{grid-template-columns:20px 1fr;}
+      .daytrip-row .btn{justify-self:start;}
       .filter-row{grid-template-columns:1fr;}
       .nearby-input{grid-template-columns:1fr;}
       .nearby-item{flex-direction:column;align-items:flex-start;}

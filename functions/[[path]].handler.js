@@ -1137,6 +1137,8 @@ function normalizeFoodPayload(payload, fallbackId){
     out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
   }
   str('intro'); str('googlePlaceId');
+  const dayTripStops = normalizeDayTripStopsPayload(body.dayTripStops !== undefined ? body.dayTripStops : body.day_trip_stops);
+  if (dayTripStops !== undefined) out.dayTripStops = dayTripStops;
   
   if (body.highlights !== undefined) out.highlights = Array.isArray(body.highlights) ? body.highlights : [];
   if (body.dishes !== undefined) out.dishes = Array.isArray(body.dishes) ? body.dishes : [];
@@ -1149,6 +1151,34 @@ function normalizeFoodPayload(payload, fallbackId){
   if (body.lng !== undefined) out.lng = body.lng;
   
   return out;
+}
+function normalizeDayTripStopsPayload(raw){
+  if (raw === undefined) return undefined;
+  let list = raw;
+  if (typeof raw === 'string') {
+    try{
+      list = JSON.parse(raw);
+    }catch(_){
+      list = raw.split(/\n+/).map(line => ({ maps: line }));
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  const normalized = list.map((entry, idx)=>{
+    if (typeof entry === 'string') {
+      const maps = String(entry || '').trim();
+      if (!maps) return null;
+      return { name:'', maps, note:'', order: idx + 1 };
+    }
+    if (!entry || typeof entry !== 'object') return null;
+    const name = String(entry.name || entry.title || '').trim();
+    const maps = String(entry.maps || entry.mapsUrl || entry.map || entry.url || entry.link || entry.address || '').trim();
+    const note = String(entry.note || entry.memo || '').trim();
+    const orderRaw = Number(entry.order || entry.seq || entry.index);
+    const order = Number.isFinite(orderRaw) ? orderRaw : idx + 1;
+    if (!name && !maps) return null;
+    return { name, maps, note, order };
+  }).filter(Boolean);
+  return normalized;
 }
 function mergeFoodRecord(existing, incoming, options){
   const out = Object.assign({}, existing || {});
@@ -1183,6 +1213,7 @@ function mergeFoodRecord(existing, incoming, options){
   assignIf('ownerName', incoming.ownerName);
   assignIf('highlights', incoming.highlights);
   assignIf('dishes', incoming.dishes);
+  assignIf('dayTripStops', incoming.dayTripStops);
   assignIf('featured', incoming.featured);
   assignIf('rating', incoming.rating);
   assignIf('googlePlaceId', incoming.googlePlaceId);

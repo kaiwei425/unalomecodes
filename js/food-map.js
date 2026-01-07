@@ -251,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
 const FOOD_CACHE_KEY = 'food_map_data_v1';
 const FOOD_CACHE_TTL = 24 * 60 * 60 * 1000;
 const GOOGLE_MAPS_LANG = 'zh-TW';
+const DAY_TRIP_CATEGORY = '一日遊';
 
 let googleMapsKey = '';
 let googleReady = false;
@@ -418,6 +419,17 @@ const TRANSLATIONS = {
     tripTitle: '半日吃喝路線',
     planTrip: '規劃收藏路線',
     addFav: '加入收藏',
+    dayTripToggle: '一日遊類別',
+    dayTripToggleHint: '同一部影片可新增多個地點',
+    dayTripStopsLabel: '一日遊點位（可拖曳排序）',
+    dayTripAddRow: '新增一列',
+    dayTripBulkHint: '批次貼上：一行一個點，可貼 Google Maps 連結或「名稱 | 連結」',
+    dayTripBulkApply: '批次新增',
+    dayTripName: '地點名稱',
+    dayTripMap: 'Google Maps 連結',
+    dayTripNote: '備註',
+    dayTripRemove: '刪除',
+    dayTripDrag: '拖曳排序',
     distFromHere: '距離目前位置',
     distFromPrev: '距離上一站',
     openNav: '在 Google Maps 開啟導航',
@@ -836,6 +848,17 @@ const TRANSLATIONS = {
     nearbyIdle: 'No nearby search yet.',
     disclaimer: 'Hours and info may change. Please check store notices.',
     adminMode: 'Admin Mode: Saves directly to DB.',
+    dayTripToggle: 'Day Trip',
+    dayTripToggleHint: 'Add multiple places from one video',
+    dayTripStopsLabel: 'Day trip stops (drag to reorder)',
+    dayTripAddRow: 'Add row',
+    dayTripBulkHint: 'Bulk paste: one per line, Google Maps link or "Name | Link"',
+    dayTripBulkApply: 'Add from bulk',
+    dayTripName: 'Place name',
+    dayTripMap: 'Google Maps link',
+    dayTripNote: 'Note',
+    dayTripRemove: 'Remove',
+    dayTripDrag: 'Drag to reorder',
     dragHint: 'Drag image to adjust position',
     autoUpload: 'Auto upload on select',
     placeIdHint: 'Optional unless Google reviews cannot match the correct place.',
@@ -1357,6 +1380,143 @@ function buildCardSnippet(item){
   if (!snippet) return '';
   if (snippet.length > 120) snippet = snippet.slice(0, 120) + '…';
   return snippet;
+}
+function buildDayTripRowHtml(stop){
+  const name = stop && stop.name ? String(stop.name) : '';
+  const maps = stop && stop.maps ? String(stop.maps) : '';
+  const note = stop && stop.note ? String(stop.note) : '';
+  return `
+    <div class="daytrip-row" data-daytrip-row draggable="true">
+      <div class="daytrip-handle" data-daytrip-handle title="${escapeHtml(t('dayTripDrag'))}">⋮⋮</div>
+      <input class="admin-input" data-daytrip-name value="${escapeHtml(name)}" placeholder="${escapeHtml(t('dayTripName'))}">
+      <input class="admin-input" data-daytrip-maps value="${escapeHtml(maps)}" placeholder="${escapeHtml(t('dayTripMap'))}">
+      <input class="admin-input" data-daytrip-note value="${escapeHtml(note)}" placeholder="${escapeHtml(t('dayTripNote'))}">
+      <button class="btn ghost pill" type="button" data-daytrip-remove>${escapeHtml(t('dayTripRemove'))}</button>
+    </div>
+  `;
+}
+function readDayTripStops(wrap){
+  if (!wrap) return [];
+  const rows = Array.from(wrap.querySelectorAll('[data-daytrip-row]'));
+  return rows.map((row, idx)=>{
+    const nameInput = row.querySelector('[data-daytrip-name]');
+    const mapsInput = row.querySelector('[data-daytrip-maps]');
+    const noteInput = row.querySelector('[data-daytrip-note]');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const maps = mapsInput ? mapsInput.value.trim() : '';
+    const note = noteInput ? noteInput.value.trim() : '';
+    if (!name && !maps) return null;
+    return { name, maps, note, order: idx + 1 };
+  }).filter(Boolean);
+}
+function getDragAfterElement(container, y){
+  const elements = Array.from(container.querySelectorAll('[data-daytrip-row]:not(.is-dragging)'));
+  let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+  elements.forEach(child => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      closest = { offset, element: child };
+    }
+  });
+  return closest.element;
+}
+function initDayTripRow(row, list){
+  if (!row || !list) return;
+  const removeBtn = row.querySelector('[data-daytrip-remove]');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', ()=>{
+      row.remove();
+    });
+  }
+  row.addEventListener('dragstart', (event)=>{
+    row.classList.add('is-dragging');
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', 'daytrip');
+    }
+  });
+  row.addEventListener('dragend', ()=>{
+    row.classList.remove('is-dragging');
+  });
+}
+function initDayTripEditors(root){
+  if (!root) return;
+  root.querySelectorAll('[data-admin-daytrip]').forEach(panel=>{
+    const wrap = panel.closest('[data-admin-id]');
+    if (!wrap) return;
+    const toggle = wrap.querySelector('[data-admin-daytrip-toggle]');
+    const categoryInput = wrap.querySelector('[data-admin-field="category"]');
+    const list = panel.querySelector('[data-daytrip-list]');
+    const addBtn = panel.querySelector('[data-daytrip-add]');
+    const bulkInput = panel.querySelector('[data-daytrip-bulk]');
+    const bulkBtn = panel.querySelector('[data-daytrip-apply]');
+
+    const syncActive = ()=>{
+      const active = toggle ? toggle.checked : true;
+      panel.classList.toggle('is-active', active);
+      if (active && list && !list.querySelector('[data-daytrip-row]')) {
+        list.insertAdjacentHTML('beforeend', buildDayTripRowHtml({}));
+        const newRow = list.lastElementChild;
+        initDayTripRow(newRow, list);
+      }
+      if (active && categoryInput && !categoryInput.value.trim()) {
+        categoryInput.value = DAY_TRIP_CATEGORY;
+      }
+    };
+
+    if (toggle){
+      toggle.addEventListener('change', syncActive);
+    }
+    if (categoryInput && toggle){
+      categoryInput.addEventListener('input', ()=>{
+        if (isDayTripCategory(categoryInput.value)) {
+          toggle.checked = true;
+          syncActive();
+        }
+      });
+    }
+    if (list){
+      list.addEventListener('dragover', (event)=>{
+        event.preventDefault();
+        const dragging = list.querySelector('.is-dragging');
+        if (!dragging) return;
+        const after = getDragAfterElement(list, event.clientY);
+        if (!after) list.appendChild(dragging);
+        else list.insertBefore(dragging, after);
+      });
+      list.querySelectorAll('[data-daytrip-row]').forEach(row=> initDayTripRow(row, list));
+    }
+    if (addBtn && list){
+      addBtn.addEventListener('click', ()=>{
+        list.insertAdjacentHTML('beforeend', buildDayTripRowHtml({}));
+        const newRow = list.lastElementChild;
+        initDayTripRow(newRow, list);
+        if (toggle && !toggle.checked){
+          toggle.checked = true;
+          syncActive();
+        }
+      });
+    }
+    if (bulkBtn && bulkInput && list){
+      bulkBtn.addEventListener('click', ()=>{
+        const stops = parseDayTripBulk(bulkInput.value);
+        if (!stops.length) return;
+        stops.forEach(stop => {
+          list.insertAdjacentHTML('beforeend', buildDayTripRowHtml(stop));
+          const newRow = list.lastElementChild;
+          initDayTripRow(newRow, list);
+        });
+        bulkInput.value = '';
+        if (toggle && !toggle.checked){
+          toggle.checked = true;
+          syncActive();
+        }
+      });
+    }
+
+    syncActive();
+  });
 }
 let toastTimer = null;
 function showToast(text){
@@ -2733,6 +2893,60 @@ function normalizeListField(value){
   }
   return [];
 }
+function isDayTripCategory(value){
+  const raw = String(value || '').trim().toLowerCase();
+  return raw.includes(DAY_TRIP_CATEGORY) || raw.includes('一日游') || raw.includes('day trip') || raw.includes('daytrip') || raw.includes('day_trip');
+}
+function normalizeDayTripStops(value){
+  if (!value) return [];
+  let list = value;
+  if (typeof value === 'string') {
+    try{
+      list = JSON.parse(value);
+    }catch(_){
+      list = value.split(/\n+/).map(line => ({ maps: line }));
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  const normalized = list.map((entry, idx)=>{
+    if (typeof entry === 'string') {
+      const maps = String(entry || '').trim();
+      if (!maps) return null;
+      return { name:'', maps, note:'', order: idx + 1 };
+    }
+    if (!entry || typeof entry !== 'object') return null;
+    const name = String(entry.name || entry.title || '').trim();
+    const maps = String(entry.maps || entry.mapsUrl || entry.map || entry.url || entry.link || entry.address || '').trim();
+    const note = String(entry.note || entry.memo || '').trim();
+    const orderRaw = Number(entry.order || entry.seq || entry.index);
+    const order = Number.isFinite(orderRaw) ? orderRaw : idx + 1;
+    if (!name && !maps) return null;
+    return { name, maps, note, order };
+  }).filter(Boolean);
+  return normalized.sort((a, b)=> (a.order || 0) - (b.order || 0));
+}
+function parseDayTripBulk(text){
+  const lines = String(text || '').split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const stops = [];
+  lines.forEach((line, idx)=>{
+    let name = '';
+    let maps = '';
+    const urlMatch = line.match(/https?:\/\/\S+/);
+    if (urlMatch) {
+      maps = urlMatch[0];
+      name = line.replace(urlMatch[0], '').replace(/[|｜]/g, '').trim();
+    } else if (line.includes('|') || line.includes('｜')) {
+      const parts = line.split(/[|｜]/).map(part => part.trim()).filter(Boolean);
+      name = parts[0] || '';
+      maps = parts[1] || '';
+    } else {
+      name = line;
+    }
+    if (!name && !maps) return;
+    stops.push({ name, maps, note:'', order: idx + 1 });
+  });
+  return stops;
+}
 function parseTimeMinutes(value){
   const raw = String(value || '').trim();
   if (!raw) return null;
@@ -3230,6 +3444,9 @@ function render(){
     const openSlots = inferredSlots.length ? inferredSlots : openSlotsRaw;
     const tagsList = normalizeListField(item.tags);
     const tagsCustomText = tagsList.filter(tag=>!TAG_OPTION_VALUES.has(tag)).join(', ');
+    const dayTripStops = normalizeDayTripStops(item.dayTripStops || item.day_trip_stops);
+    const isDayTrip = isDayTripCategory(item.category) || dayTripStops.length > 0;
+    const dayTripRows = (dayTripStops.length ? dayTripStops : [{}]).map(buildDayTripRowHtml).join('');
     const coverStyle = coverPos ? ` style="object-position:${escapeHtml(coverPos)};"` : '';
     const eager = idx < 2;
     const coverImg = coverThumb
@@ -3275,6 +3492,26 @@ function render(){
               <option value="$$$" ${item.price === '$$$' ? 'selected' : ''}>${escapeHtml(t('priceOpt3'))}</option>
             </select>
           </label>
+          <div class="admin-field admin-cover">
+            <label class="admin-daytrip-toggle">
+              <input type="checkbox" data-admin-daytrip-toggle ${isDayTrip ? 'checked' : ''}>
+              <span class="admin-daytrip-title">${escapeHtml(t('dayTripToggle'))}</span>
+              <span class="admin-hint">${escapeHtml(t('dayTripToggleHint'))}</span>
+            </label>
+          </div>
+          <div class="admin-daytrip ${isDayTrip ? 'is-active' : ''}" data-admin-daytrip>
+            <div class="admin-daytrip-head">
+              <div>${escapeHtml(t('dayTripStopsLabel'))}</div>
+              <button class="btn ghost pill" type="button" data-daytrip-add>${escapeHtml(t('dayTripAddRow'))}</button>
+            </div>
+            <div class="admin-daytrip-list" data-daytrip-list>
+              ${dayTripRows}
+            </div>
+            <div class="admin-daytrip-bulk">
+              <textarea class="admin-textarea" data-daytrip-bulk placeholder="${escapeHtml(t('dayTripBulkHint'))}"></textarea>
+              <button class="btn ghost pill" type="button" data-daytrip-apply>${escapeHtml(t('dayTripBulkApply'))}</button>
+            </div>
+          </div>
           <label>${escapeHtml(t('stayMin'))}
             <input class="admin-input" data-admin-field="stayMin" type="number" min="15" step="5" value="${escapeHtml(String(stayMinVal || ''))}">
             <span class="admin-hint">${escapeHtml(t('stayMinHint'))}</span>
@@ -3541,6 +3778,9 @@ function render(){
         const stayMinVal = toIntOrEmpty(getVal('stayMin'));
         const customTags = normalizeListField(getVal('tagsCustom'));
         const tagsVal = Array.from(new Set(selectedTags.concat(customTags)));
+        const dayTripToggle = wrap.querySelector('[data-admin-daytrip-toggle]');
+        const dayTripEnabled = dayTripToggle ? dayTripToggle.checked : false;
+        const dayTripStops = readDayTripStops(wrap);
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
@@ -3555,16 +3795,19 @@ function render(){
           lngVal = pair.lng;
         }
 
+        const categoryVal = getVal('category');
         const payload = {
           ...original,
           id: id || original.id,
           name: getVal('name'),
-          category: getVal('category'),
+          category: (dayTripEnabled && !String(categoryVal || '').trim()) ? DAY_TRIP_CATEGORY : categoryVal,
           area: getVal('area'),
           price: getVal('price'),
           stayMin: stayMinVal,
           openSlots,
           tags: tagsVal,
+          dayTripStops: dayTripEnabled ? dayTripStops : [],
+          day_trip_stops: dayTripEnabled ? dayTripStops : [],
           featured: read('featured') ?? original.featured,
           featured_: read('featured') ?? original.featured_,
           rating: getVal('rating'),
@@ -3721,6 +3964,7 @@ function render(){
       };
     });
     initCoverPositionControls();
+    initDayTripEditors(cardsEl);
   }
 }
 
@@ -3984,6 +4228,7 @@ function openNewItem(){
       stayMin: '',
       openSlots: [],
       tags: [],
+      dayTripStops: [],
       featured_: false,
       featured: false,
       rating: '',
