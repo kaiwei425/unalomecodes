@@ -827,6 +827,11 @@ a:focus-visible{
   align-items:start;
   gap:var(--space-4);
 }
+.home-creator-mobile .creator-card__avatar{
+  display:block;
+  min-width:96px;
+  z-index:1;
+}
 .home-creator-mobile .creator-card__body{
   flex:1 1 auto;
 }
