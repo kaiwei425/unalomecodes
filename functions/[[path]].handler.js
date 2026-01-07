@@ -5251,6 +5251,28 @@ if (pathname === '/api/me/temple-favs') {
     return json({ ok:false, error:'method not allowed' }, 405);
   }
 
+  if (pathname === '/api/page-meta') {
+    const page = (url.searchParams.get('page') || '').trim();
+    if (!page) return json({ ok:false, error:'missing page' }, 400);
+    const store = env.PAGE_CONTENT || env.PRODUCTS || env.SERVICE_PRODUCTS;
+    if (!store) return json({ ok:false, error:'PAGE_CONTENT/PRODUCTS KV not bound' }, 500);
+    const key = `PAGE_META:${page}`;
+    if (request.method === 'GET'){
+      const raw = await store.get(key);
+      const meta = raw ? JSON.parse(raw) : {};
+      return json({ ok:true, meta });
+    }
+    if (request.method === 'POST'){
+      const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+      const body = await request.json().catch(()=>({}));
+      const meta = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
+      await store.put(key, JSON.stringify(meta));
+      return json({ ok:true, meta });
+    }
+    return json({ ok:false, error:'method not allowed' }, 405);
+  }
+
   if (pathname === '/api/service-guide/content') {
     if (request.method === 'GET'){
       const store = env.SERVICE_PRODUCTS || env.PRODUCTS;

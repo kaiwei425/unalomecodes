@@ -16,7 +16,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="/css/home.css">
 </head>
-<body>
+<body data-page-key="home">
   <div class="page">
     <header class="site-header reveal" style="--delay:0.05s;">
       <a class="brand" href="/">
@@ -24,95 +24,97 @@
         <span class="brand-name">unalomecodes 泰國入口網</span>
       </a>
       <nav class="nav-links">
-        <a href="/templemap">寺廟地圖</a>
-        <a href="/food-map">美食地圖</a>
-        <a href="/shop">祈福服務</a>
-        <a href="/faq">常見問題</a>
+        <a href="/templemap"><span data-edit-key="home-nav-temple">寺廟地圖</span></a>
+        <a href="/food-map"><span data-edit-key="home-nav-food">美食地圖</span></a>
+        <a href="/service"><span data-edit-key="home-nav-service">祈福服務</span></a>
+        <a href="/faq"><span data-edit-key="home-nav-faq">常見問題</span></a>
       </nav>
     </header>
 
     <main>
       <section class="hero">
         <div class="hero-content">
-          <div class="kicker reveal" style="--delay:0.1s;">STEP 1｜探索入口</div>
-          <h1 class="reveal" style="--delay:0.18s;">來泰國前 先來這裡</h1>
-          <p class="lead reveal" style="--delay:0.24s;">懂拜拜 懂美食 懂在地的泰國入口網</p>
+          <div class="kicker reveal" style="--delay:0.1s;" data-edit-key="home-hero-kicker">STEP 1｜探索入口</div>
+          <h1 class="reveal" style="--delay:0.18s;" data-edit-key="home-hero-title">來泰國前 先來這裡</h1>
+          <p class="lead reveal" style="--delay:0.24s;" data-edit-key="home-hero-subtitle">懂拜拜 懂美食 懂在地的泰國入口網</p>
 
           <form class="hero-search reveal" id="heroForm" style="--delay:0.3s;">
             <label class="sr-only" for="heroQuery">輸入你想求什麼或想玩什麼</label>
             <div class="search-field">
               <span class="search-icon">🔍</span>
               <input id="heroQuery" type="text" placeholder="你想求什麼 或想玩什麼" autocomplete="off">
-              <button class="primary-btn" type="submit">開始規劃</button>
+              <button class="primary-btn" type="submit"><span data-edit-key="home-search-btn">開始規劃</span></button>
             </div>
-            <div class="helper-text">例：求財 感情 避小人 咖啡 夜市 親子</div>
+            <div class="helper-text" data-edit-key="home-hero-helper">例：求財 感情 避小人 咖啡 夜市 親子</div>
           </form>
 
           <div class="hero-ctas reveal" style="--delay:0.36s;">
-            <a class="primary-cta" href="/templemap">🔮 開運寺廟地圖<span>找對地點拜對神</span></a>
-            <a class="primary-cta" href="/food-map">🍜 在地美食地圖<span>從小吃到深夜食堂</span></a>
-            <a class="primary-cta" href="/itinerary">🧭 一日／三日路線<span>探索路線一鍵切換</span></a>
+            <a class="primary-cta" href="/templemap"><span data-edit-key="home-cta-temple-title">🔮 開運寺廟地圖</span><span data-edit-key="home-cta-temple-desc">找對地點拜對神</span></a>
+            <a class="primary-cta" href="/food-map"><span data-edit-key="home-cta-food-title">🍜 在地美食地圖</span><span data-edit-key="home-cta-food-desc">從小吃到深夜食堂</span></a>
+            <a class="primary-cta" href="/itinerary"><span data-edit-key="home-cta-itinerary-title">🧭 一日／三日路線</span><span data-edit-key="home-cta-itinerary-desc">探索路線一鍵切換</span></a>
           </div>
         </div>
 
         <div class="hero-visual">
           <div class="focus-card reveal" style="--delay:0.2s;">
-            <h3>曼谷在地探索清單</h3>
-            <p>聚合寺廟、夜市、咖啡與小眾景點，先定位你想要的節奏。</p>
+            <h3 data-edit-key="home-focus-one-title">曼谷在地探索清單</h3>
+            <p data-edit-key="home-focus-one-desc">聚合寺廟、夜市、咖啡與小眾景點，先定位你想要的節奏。</p>
             <div class="tag-row">
-              <span class="tag">信仰文化</span>
-              <span class="tag">夜市散步</span>
-              <span class="tag">親子行程</span>
+              <span class="tag" data-edit-key="home-focus-one-tag-1">信仰文化</span>
+              <span class="tag" data-edit-key="home-focus-one-tag-2">夜市散步</span>
+              <span class="tag" data-edit-key="home-focus-one-tag-3">親子行程</span>
             </div>
           </div>
           <div class="focus-card reveal" style="--delay:0.28s;">
-            <h3>一張圖讀懂泰國拜拜</h3>
-            <p>整理拜法、禁忌、時段與路線建議，先理解再出發。</p>
+            <h3 data-edit-key="home-focus-two-title">一張圖讀懂泰國拜拜</h3>
+            <p data-edit-key="home-focus-two-desc">整理拜法、禁忌、時段與路線建議，先理解再出發。</p>
             <div class="tag-row">
-              <span class="tag">文化提醒</span>
-              <span class="tag">在地整理</span>
+              <span class="tag" data-edit-key="home-focus-two-tag-1">文化提醒</span>
+              <span class="tag" data-edit-key="home-focus-two-tag-2">在地整理</span>
             </div>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <h2 class="reveal" style="--delay:0.1s;">入口導覽</h2>
-        <p class="reveal" style="--delay:0.16s;">先選入口，再深入每個主題。不是購物，是探索。</p>
+        <h2 class="reveal" style="--delay:0.1s;" data-edit-key="home-section-title">入口導覽</h2>
+        <p class="reveal" style="--delay:0.16s;" data-edit-key="home-section-desc">先選入口，再深入每個主題。不是購物，是探索。</p>
         <div class="card-grid">
           <a class="entry-card reveal" style="--delay:0.2s;" href="/templemap">
-            <strong>開運寺廟地圖</strong>
-            <span>從需求出發的寺廟入口與路線提示。</span>
+            <strong data-edit-key="home-entry-temple-title">開運寺廟地圖</strong>
+            <span data-edit-key="home-entry-temple-desc">從需求出發的寺廟入口與路線提示。</span>
           </a>
           <a class="entry-card reveal" style="--delay:0.26s;" href="/food-map">
-            <strong>在地美食地圖</strong>
-            <span>用區域與主題探索，找得到也吃得到。</span>
+            <strong data-edit-key="home-entry-food-title">在地美食地圖</strong>
+            <span data-edit-key="home-entry-food-desc">用區域與主題探索，找得到也吃得到。</span>
           </a>
           <a class="entry-card reveal" style="--delay:0.32s;" href="/itinerary">
-            <strong>一日／三日路線</strong>
-            <span>從節奏到行程，先建立旅行主軸。</span>
+            <strong data-edit-key="home-entry-itinerary-title">一日／三日路線</strong>
+            <span data-edit-key="home-entry-itinerary-desc">從節奏到行程，先建立旅行主軸。</span>
           </a>
           <a class="entry-card reveal" style="--delay:0.38s;" href="/service">
-            <strong>祈福服務</strong>
-            <span>了解服務流程與在地安排細節。</span>
+            <strong data-edit-key="home-entry-service-title">祈福服務</strong>
+            <span data-edit-key="home-entry-service-desc">了解服務流程與在地安排細節。</span>
           </a>
           <a class="entry-card reveal" style="--delay:0.44s;" href="/shop">
-            <strong>商城</strong>
-            <span>延伸探索後，再挑選合適服務。</span>
+            <strong data-edit-key="home-entry-shop-title">商城</strong>
+            <span data-edit-key="home-entry-shop-desc">延伸探索後，再挑選合適服務。</span>
           </a>
           <a class="entry-card reveal" style="--delay:0.5s;" href="/about">
-            <strong>關於我們</strong>
-            <span>了解 unalomecodes 的整理方法。</span>
+            <strong data-edit-key="home-entry-about-title">關於我們</strong>
+            <span data-edit-key="home-entry-about-desc">了解 unalomecodes 的整理方法。</span>
           </a>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div>Unalomecodes · 泰國入口網 STEP 1</div>
-      <div>探索入口、整理在地、尊重文化</div>
+      <div data-edit-key="home-footer-left">Unalomecodes · 泰國入口網 STEP 1</div>
+      <div data-edit-key="home-footer-right">探索入口、整理在地、尊重文化</div>
     </footer>
   </div>
+  <script src="/js/auth.js"></script>
   <script src="/js/home.js"></script>
+  <script src="/js/page-admin.js"></script>
 </body>
 </html>

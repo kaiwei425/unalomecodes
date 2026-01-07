@@ -16,7 +16,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="/css/home.css">
 </head>
-<body>
+<body data-page-key="about">
   <div class="page">
     <header class="site-header">
       <a class="brand" href="/">
@@ -24,38 +24,40 @@
         <span class="brand-name">unalomecodes 泰國入口網</span>
       </a>
       <nav class="nav-links">
-        <a href="/templemap">寺廟地圖</a>
-        <a href="/food-map">美食地圖</a>
-        <a href="/shop">商城</a>
+        <a href="/templemap"><span data-edit-key="about-nav-temple">寺廟地圖</span></a>
+        <a href="/food-map"><span data-edit-key="about-nav-food">美食地圖</span></a>
+        <a href="/shop"><span data-edit-key="about-nav-shop">商城</span></a>
       </nav>
     </header>
 
     <main class="subpage">
       <section class="sub-hero">
-        <h1>關於 unalomecodes</h1>
-        <p>我們專注在泰國旅遊 × 信仰 × 在地文化的入口整理，讓你先理解、再探索。</p>
+        <h1 data-edit-key="about-hero-title">關於 unalomecodes</h1>
+        <p data-edit-key="about-hero-desc">我們專注在泰國旅遊 × 信仰 × 在地文化的入口整理，讓你先理解、再探索。</p>
       </section>
 
       <section class="trust-grid">
         <div class="trust-card">
-          <h3>在地整理</h3>
-          <p>整合寺廟、美食與路線資訊，避免資訊碎片化。</p>
+          <h3 data-edit-key="about-trust-1-title">在地整理</h3>
+          <p data-edit-key="about-trust-1-desc">整合寺廟、美食與路線資訊，避免資訊碎片化。</p>
         </div>
         <div class="trust-card">
-          <h3>文化提醒</h3>
-          <p>提供拜拜禮儀與旅遊提醒，尊重文化差異。</p>
+          <h3 data-edit-key="about-trust-2-title">文化提醒</h3>
+          <p data-edit-key="about-trust-2-desc">提供拜拜禮儀與旅遊提醒，尊重文化差異。</p>
         </div>
         <div class="trust-card">
-          <h3>可追溯服務</h3>
-          <p>透明流程與來源資訊，讓每一步都可回溯。</p>
+          <h3 data-edit-key="about-trust-3-title">可追溯服務</h3>
+          <p data-edit-key="about-trust-3-desc">透明流程與來源資訊，讓每一步都可回溯。</p>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div>想更深入？</div>
-      <div><a href="/itinerary">從一日／三日路線開始</a></div>
+      <div data-edit-key="about-footer-left">想更深入？</div>
+      <div><a href="/itinerary"><span data-edit-key="about-footer-link">從一日／三日路線開始</span></a></div>
     </footer>
   </div>
+  <script src="/js/auth.js"></script>
+  <script src="/js/page-admin.js"></script>
 </body>
 </html>

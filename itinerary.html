@@ -16,7 +16,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="/css/home.css">
 </head>
-<body>
+<body data-page-key="itinerary">
   <div class="page">
     <header class="site-header">
       <a class="brand" href="/">
@@ -24,47 +24,49 @@
         <span class="brand-name">unalomecodes 泰國入口網</span>
       </a>
       <nav class="nav-links">
-        <a href="/templemap">寺廟地圖</a>
-        <a href="/food-map">美食地圖</a>
-        <a href="/shop">商城</a>
+        <a href="/templemap"><span data-edit-key="itinerary-nav-temple">寺廟地圖</span></a>
+        <a href="/food-map"><span data-edit-key="itinerary-nav-food">美食地圖</span></a>
+        <a href="/shop"><span data-edit-key="itinerary-nav-shop">商城</span></a>
       </nav>
     </header>
 
     <main class="subpage">
       <section class="sub-hero">
-        <h1>一日／三日路線</h1>
-        <p>從行程節奏開始挑選，再逐步組合寺廟、美食與在地文化路線。</p>
+        <h1 data-edit-key="itinerary-hero-title">一日／三日路線</h1>
+        <p data-edit-key="itinerary-hero-desc">從行程節奏開始挑選，再逐步組合寺廟、美食與在地文化路線。</p>
       </section>
 
       <section>
-        <div class="query-pill">你想要的風格：<span id="queryOutput">不限</span></div>
+        <div class="query-pill"><span data-edit-key="itinerary-query-label">你想要的風格：</span><span id="queryOutput">不限</span></div>
       </section>
 
       <section class="mode-grid">
         <button class="mode-btn" type="button">
-          <h3>戰鬥模式</h3>
-          <p>一天塞滿地標與路線，適合特種兵玩法。</p>
+          <h3 data-edit-key="itinerary-mode-1-title">戰鬥模式</h3>
+          <p data-edit-key="itinerary-mode-1-desc">一天塞滿地標與路線，適合特種兵玩法。</p>
         </button>
         <button class="mode-btn" type="button">
-          <h3>隨意走走</h3>
-          <p>慢節奏探索，優先安排咖啡與散步場域。</p>
+          <h3 data-edit-key="itinerary-mode-2-title">隨意走走</h3>
+          <p data-edit-key="itinerary-mode-2-desc">慢節奏探索，優先安排咖啡與散步場域。</p>
         </button>
         <button class="mode-btn" type="button">
-          <h3>走馬看花</h3>
-          <p>主題式快速巡禮，掌握重點節奏。</p>
+          <h3 data-edit-key="itinerary-mode-3-title">走馬看花</h3>
+          <p data-edit-key="itinerary-mode-3-desc">主題式快速巡禮，掌握重點節奏。</p>
         </button>
       </section>
 
-      <section class="placeholder-card">
+      <section class="placeholder-card" data-edit-key="itinerary-placeholder">
         行程自動規劃產生器即將上線
       </section>
     </main>
 
     <footer class="site-footer">
-      <div>想要更完整的規劃？</div>
-      <div><a href="/shop">前往祈福與服務入口</a></div>
+      <div data-edit-key="itinerary-footer-left">想要更完整的規劃？</div>
+      <div><a href="/shop"><span data-edit-key="itinerary-footer-link">前往祈福與服務入口</span></a></div>
     </footer>
   </div>
+  <script src="/js/auth.js"></script>
   <script src="/js/itinerary.js"></script>
+  <script src="/js/page-admin.js"></script>
 </body>
 </html>
