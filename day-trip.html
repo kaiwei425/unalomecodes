@@ -109,6 +109,11 @@
     .plan-board .plan-actions .pill-btn{padding:6px 10px;font-size:12px;}
     .plan-board .plan-edit{margin-top:4px;}
     .plan-board .plan-edit input{width:100px;}
+    body.is-exporting .plan-controls,
+    body.is-exporting .plan-actions,
+    body.is-exporting .plan-edit,
+    body.is-exporting .step-actions{display:none !important;}
+    body.is-exporting .plan-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));overflow:visible;}
     .step-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;}
     .mode-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
     .mode-card{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;cursor:pointer;display:grid;gap:6px;}
@@ -272,6 +277,8 @@
       <div class="section-title">第四步｜行程結果</div>
       <div class="plan-controls">
         <button class="pill-btn primary" type="button" id="btnAdjustPlan">行程調整</button>
+        <button class="pill-btn" type="button" id="btnExportPdf">輸出 PDF</button>
+        <button class="pill-btn" type="button" id="btnExportJpg">輸出 JPG</button>
       </div>
       <section id="resultPanel" class="result-panel">
         <div class="result-empty">尚未產生行程</div>

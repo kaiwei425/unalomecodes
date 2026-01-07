@@ -436,6 +436,7 @@ const TRANSLATIONS = {
     distFromPrev: '距離上一站',
     openNav: '在 Google Maps 開啟導航',
     detailShort: '詳情',
+    dayTripDetailsBtn: '查看完整一日遊行程',
     locating: '定位中...',
     locFailed: '定位失敗',
     searching: '搜尋中...',
@@ -755,6 +756,7 @@ const TRANSLATIONS = {
     distFromPrev: 'Dist from prev',
     openNav: 'Open Navigation',
     detailShort: 'Details',
+    dayTripDetailsBtn: 'View full day trip',
     locating: 'Locating...',
     locFailed: 'Locating Failed',
     searching: 'Searching...',
@@ -2998,29 +3000,51 @@ function parseDayTripBulk(text){
   });
   return stops;
 }
-function normalizeGalleryUrls(list){
+function normalizeGalleryItems(list){
   if (!Array.isArray(list)) return [];
-  return list.map(url => safeUrl(url)).filter(Boolean);
+  return list.map((entry)=>{
+    if (!entry) return null;
+    if (typeof entry === 'string') {
+      const url = safeUrl(entry);
+      if (!url) return null;
+      return { url, pos: '50% 50%' };
+    }
+    if (typeof entry === 'object') {
+      const url = safeUrl(entry.url || entry.src || entry.image || entry.link || entry.href || entry.value || '');
+      if (!url) return null;
+      const pos = safeObjectPosition(entry.pos || entry.position || entry.objectPosition || '50% 50%');
+      return { url, pos };
+    }
+    return null;
+  }).filter(Boolean);
 }
-function buildAdminGalleryItemHtml(url){
-  if (!url) return '';
+function buildAdminGalleryItemHtml(item){
+  if (!item || !item.url) return '';
+  const pos = safeObjectPosition(item.pos || '50% 50%');
   return `
-    <div class="admin-gallery-item" data-gallery-item data-gallery-url="${escapeHtml(url)}" draggable="true">
-      <img src="${escapeHtml(url)}" alt="">
+    <div class="admin-gallery-item" data-gallery-item data-gallery-url="${escapeHtml(item.url)}" data-gallery-pos="${escapeHtml(pos)}" draggable="true">
+      <img src="${escapeHtml(item.url)}" alt="" style="object-position:${escapeHtml(pos)};">
+      <button class="admin-gallery-handle" type="button" data-gallery-handle title="${escapeHtml(t('dayTripDrag'))}" aria-label="${escapeHtml(t('dayTripDrag'))}">⋮⋮</button>
       <button class="admin-gallery-remove" type="button" data-admin-gallery-remove title="${escapeHtml(t('removeBtn'))}" aria-label="${escapeHtml(t('removeBtn'))}">×</button>
     </div>
   `;
 }
-function getGalleryUrlsFromList(listEl){
+function getGalleryItemsFromList(listEl){
   if (!listEl) return [];
   return Array.from(listEl.querySelectorAll('[data-gallery-url]'))
-    .map(el => el.getAttribute('data-gallery-url') || '')
-    .map(url => safeUrl(url))
-    .filter(Boolean);
+    .map(el => ({
+      url: el.getAttribute('data-gallery-url') || '',
+      pos: el.getAttribute('data-gallery-pos') || ''
+    }))
+    .map(entry => ({
+      url: safeUrl(entry.url),
+      pos: safeObjectPosition(entry.pos || '50% 50%')
+    }))
+    .filter(entry => entry.url);
 }
-function renderAdminGalleryList(listEl, urls){
+function renderAdminGalleryList(listEl, items){
   if (!listEl) return;
-  const cleaned = normalizeGalleryUrls(urls);
+  const cleaned = normalizeGalleryItems(items);
   if (!cleaned.length){
     listEl.innerHTML = `<div class="admin-gallery-empty">${escapeHtml(t('galleryEmpty'))}</div>`;
     return;
@@ -3044,7 +3068,114 @@ function getGalleryAfterElement(container, x, y){
 function initGalleryItem(item){
   if (!item || item.dataset.dragReady === '1') return;
   item.dataset.dragReady = '1';
+  const img = item.querySelector('img');
+  if (img){
+    img.draggable = false;
+    const setPos = (pos)=>{
+      const safe = safeObjectPosition(pos || '50% 50%');
+      img.style.objectPosition = safe;
+      item.setAttribute('data-gallery-pos', safe);
+    };
+    setPos(item.getAttribute('data-gallery-pos') || '50% 50%');
+    let dragging = null;
+    let dragMoved = false;
+    const startDrag = (clientX, clientY)=>{
+      const rect = item.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const pos = safeObjectPosition(img.style.objectPosition || '50% 50%');
+      const [xStr,yStr] = pos.split(' ');
+      dragging = {
+        startX: clientX,
+        startY: clientY,
+        startPosX: parseFloat(xStr),
+        startPosY: parseFloat(yStr),
+        width: rect.width,
+        height: rect.height
+      };
+      dragMoved = false;
+      item.dataset.dragging = '0';
+      item.style.cursor = 'grabbing';
+    };
+    const moveDrag = (clientX, clientY)=>{
+      if (!dragging) return;
+      const dx = clientX - dragging.startX;
+      const dy = clientY - dragging.startY;
+      if (!dragMoved && (Math.abs(dx) + Math.abs(dy) > 2)) dragMoved = true;
+      const nx = Math.max(0, Math.min(100, dragging.startPosX + (dx / dragging.width) * 100));
+      const ny = Math.max(0, Math.min(100, dragging.startPosY + (dy / dragging.height) * 100));
+      setPos(`${nx.toFixed(1)}% ${ny.toFixed(1)}%`);
+    };
+    const endDrag = ()=>{
+      if (!dragging) return;
+      dragging = null;
+      item.style.cursor = '';
+      if (dragMoved) {
+        item.dataset.dragging = '1';
+        setTimeout(()=>{ item.dataset.dragging = '0'; }, 0);
+      }
+      dragMoved = false;
+    };
+    const onClick = (ev)=>{
+      if (item.dataset.dragging === '1') {
+        ev.preventDefault();
+        ev.stopPropagation();
+        item.dataset.dragging = '0';
+      }
+    };
+    item.addEventListener('click', onClick);
+    if (typeof window !== 'undefined' && 'PointerEvent' in window){
+      img.addEventListener('pointerdown', (ev)=>{
+        if (ev.button !== undefined && ev.button !== 0) return;
+        ev.preventDefault();
+        startDrag(ev.clientX, ev.clientY);
+        img.setPointerCapture && img.setPointerCapture(ev.pointerId);
+      });
+      img.addEventListener('pointermove', (ev)=>{ if (dragging) moveDrag(ev.clientX, ev.clientY); });
+      img.addEventListener('pointerup', endDrag);
+      img.addEventListener('pointercancel', endDrag);
+      img.addEventListener('pointerleave', endDrag);
+    }else{
+      const onMouseMove = (ev)=>{ if (dragging) moveDrag(ev.clientX, ev.clientY); };
+      const onMouseUp = ()=>{
+        endDrag();
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+      img.addEventListener('mousedown', (ev)=>{
+        if (ev.button !== 0) return;
+        ev.preventDefault();
+        startDrag(ev.clientX, ev.clientY);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+      const onTouchMove = (ev)=>{
+        if (!dragging) return;
+        const t = ev.touches && ev.touches[0];
+        if (t) moveDrag(t.clientX, t.clientY);
+      };
+      const onTouchEnd = ()=>{
+        endDrag();
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+        window.removeEventListener('touchcancel', onTouchEnd);
+      };
+      img.addEventListener('touchstart', (ev)=>{
+        const t = ev.touches && ev.touches[0];
+        if (!t) return;
+        ev.preventDefault();
+        startDrag(t.clientX, t.clientY);
+        window.addEventListener('touchmove', onTouchMove, { passive:false });
+        window.addEventListener('touchend', onTouchEnd);
+        window.addEventListener('touchcancel', onTouchEnd);
+      }, { passive:false });
+    }
+    img.addEventListener('dragstart', (ev)=> ev.preventDefault());
+  }
   item.addEventListener('dragstart', (event)=>{
+    if (!event.target.closest('[data-gallery-handle]')) {
+      event.preventDefault();
+      return;
+    }
     item.classList.add('is-dragging');
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -3657,7 +3788,7 @@ function render(){
     const dayTripStops = normalizeDayTripStops(item.dayTripStops || item.day_trip_stops);
     const isDayTrip = isDayTripCategory(item.category) || dayTripStops.length > 0;
     const dayTripRows = (dayTripStops.length ? dayTripStops : [{}]).map(buildDayTripRowHtml).join('');
-    const galleryImages = normalizeGalleryUrls(item.images || item.gallery || []);
+    const galleryImages = normalizeGalleryItems(item.images || item.gallery || []);
     const galleryItems = galleryImages.length
       ? galleryImages.map(buildAdminGalleryItemHtml).join('')
       : `<div class="admin-gallery-empty">${escapeHtml(t('galleryEmpty'))}</div>`;
@@ -3834,8 +3965,10 @@ function render(){
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
-          ${item.id ? `<button class="btn primary" data-open="${safeId}">${escapeHtml(t('details'))}</button>` : `<span class="mini">${escapeHtml(t('actionsHint'))}</span>`}
-          ${item.id ? `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('nav'))}</a>` : ''}
+          ${item.id ? `
+            <button class="btn primary" data-open="${safeId}">${escapeHtml(isDayTrip ? t('dayTripDetailsBtn') : t('details'))}</button>
+            ${isDayTrip ? '' : `<a class="btn ghost" href="${escapeHtml(mapsUrl || '#')}" target="_blank" rel="noopener">${escapeHtml(t('nav'))}</a>`}
+          ` : `<span class="mini">${escapeHtml(t('actionsHint'))}</span>`}
         </div>
         ${adminPanel}
       </div>
@@ -4062,7 +4195,7 @@ function render(){
         const dayTripToggle = wrap.querySelector('[data-admin-daytrip-toggle]');
         const dayTripEnabled = dayTripToggle ? dayTripToggle.checked : false;
         const dayTripStops = readDayTripStops(wrap);
-        const galleryUrls = getGalleryUrlsFromList(wrap.querySelector('[data-admin-gallery-list]'));
+        const galleryUrls = getGalleryItemsFromList(wrap.querySelector('[data-admin-gallery-list]'));
         const coordRaw = read('coords');
         const hasCoords = coordRaw !== undefined && String(coordRaw).trim() !== '';
         let latVal;
@@ -4745,25 +4878,26 @@ if (creatorProfileAvatarFile){
 function initGalleryEditors(root){
   if (!root) return;
   root.querySelectorAll('[data-admin-gallery-list]').forEach(listEl=>{
-    if (listEl.dataset.galleryReady === '1') return;
-    listEl.dataset.galleryReady = '1';
-    listEl.addEventListener('dragover', (event)=>{
-      event.preventDefault();
-      const dragging = listEl.querySelector('.is-dragging');
-      if (!dragging) return;
-      const after = getGalleryAfterElement(listEl, event.clientX, event.clientY);
-      if (!after) listEl.appendChild(dragging);
-      else listEl.insertBefore(dragging, after);
-    });
-    listEl.addEventListener('click', (event)=>{
-      const btn = event.target.closest('[data-admin-gallery-remove]');
-      if (!btn) return;
-      const item = btn.closest('[data-gallery-url]');
-      if (item) item.remove();
-      if (!listEl.querySelector('[data-gallery-url]')){
-        renderAdminGalleryList(listEl, []);
-      }
-    });
+    if (listEl.dataset.galleryReady !== '1') {
+      listEl.dataset.galleryReady = '1';
+      listEl.addEventListener('dragover', (event)=>{
+        event.preventDefault();
+        const dragging = listEl.querySelector('.is-dragging');
+        if (!dragging) return;
+        const after = getGalleryAfterElement(listEl, event.clientX, event.clientY);
+        if (!after) listEl.appendChild(dragging);
+        else listEl.insertBefore(dragging, after);
+      });
+      listEl.addEventListener('click', (event)=>{
+        const btn = event.target.closest('[data-admin-gallery-remove]');
+        if (!btn) return;
+        const item = btn.closest('[data-gallery-url]');
+        if (item) item.remove();
+        if (!listEl.querySelector('[data-gallery-url]')){
+          renderAdminGalleryList(listEl, []);
+        }
+      });
+    }
     listEl.querySelectorAll('[data-gallery-item]').forEach(item=> initGalleryItem(item));
   });
   root.querySelectorAll('[data-admin-gallery-file]').forEach(input=>{
@@ -4776,7 +4910,7 @@ function initGalleryEditors(root){
       const listEl = wrap ? wrap.querySelector('[data-admin-gallery-list]') : null;
       const statusEl = wrap ? wrap.querySelector('[data-admin-status="gallery"]') : null;
       const setStatus = (text)=>{ if (statusEl) statusEl.textContent = text || ''; };
-      const urls = getGalleryUrlsFromList(listEl);
+      const urls = getGalleryItemsFromList(listEl);
       let uploaded = 0;
       let failed = 0;
       input.disabled = true;
@@ -4785,7 +4919,7 @@ function initGalleryEditors(root){
         try{
           const url = await uploadCoverFile(file);
           if (url) {
-            urls.push(url);
+            urls.push({ url, pos: '50% 50%' });
             uploaded += 1;
           }
         }catch(_){
@@ -5216,15 +5350,15 @@ function openModal(id){
   const safeId = escapeHtml(item.id || '');
   const dayTripStops = normalizeDayTripStops(item.dayTripStops || item.day_trip_stops);
   const isDayTrip = isDayTripCategory(item.category) || dayTripStops.length > 0;
-  const galleryImages = normalizeGalleryUrls(item.images || item.gallery || []);
+  const galleryImages = normalizeGalleryItems(item.images || item.gallery || []);
   const galleryHtml = galleryImages.length
     ? `
       <div class="modal-gallery">
         <div class="modal-gallery-title">${escapeHtml(t('galleryLabel'))}</div>
         <div class="modal-gallery-grid">
-          ${galleryImages.map(url => `
-            <button class="modal-gallery-thumb" type="button" data-gallery-src="${escapeHtml(url)}" aria-label="${escapeHtml(t('galleryLabel'))}">
-              <img src="${escapeHtml(url)}" alt="${escapeHtml(item.name || '')}">
+          ${galleryImages.map(entry => `
+            <button class="modal-gallery-thumb" type="button" data-gallery-src="${escapeHtml(entry.url)}" aria-label="${escapeHtml(t('galleryLabel'))}">
+              <img src="${escapeHtml(entry.url)}" alt="${escapeHtml(item.name || '')}" style="object-position:${escapeHtml(entry.pos || '50% 50%')};">
             </button>
           `).join('')}
         </div>

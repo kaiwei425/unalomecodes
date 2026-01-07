@@ -1129,7 +1129,6 @@ function normalizeFoodPayload(payload, fallbackId){
   list('openSlots', 'open_slots');
   list('tags');
   list('wishTags', 'wish_tags');
-  list('images', 'gallery');
   str('address'); str('hours'); str('maps'); str('ig');
   str('youtube'); str('igComment'); str('cover');
   str('ownerId'); str('ownerName');
@@ -1138,6 +1137,8 @@ function normalizeFoodPayload(payload, fallbackId){
     out.coverPos = String(body.coverPos || body.cover_pos || '').trim();
   }
   str('intro'); str('googlePlaceId');
+  const images = normalizeFoodImagesPayload(body.images !== undefined ? body.images : body.gallery);
+  if (images !== undefined) out.images = images;
   const dayTripStops = normalizeDayTripStopsPayload(body.dayTripStops !== undefined ? body.dayTripStops : body.day_trip_stops);
   if (dayTripStops !== undefined) out.dayTripStops = dayTripStops;
   
@@ -1152,6 +1153,36 @@ function normalizeFoodPayload(payload, fallbackId){
   if (body.lng !== undefined) out.lng = body.lng;
   
   return out;
+}
+function normalizeFoodImagesPayload(raw){
+  if (raw === undefined) return undefined;
+  let list = raw;
+  if (typeof raw === 'string') {
+    try{
+      list = JSON.parse(raw);
+    }catch(_){
+      list = raw.split(/[\n,，]+/).map(v=>v.trim()).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  const normalized = list.map((entry)=>{
+    if (!entry) return null;
+    if (typeof entry === 'string') {
+      const url = String(entry || '').trim();
+      if (!url) return null;
+      return { url };
+    }
+    if (typeof entry === 'object') {
+      const url = String(entry.url || entry.src || entry.image || entry.link || entry.href || entry.value || '').trim();
+      if (!url) return null;
+      const pos = String(entry.pos || entry.position || entry.objectPosition || '').trim();
+      const out = { url };
+      if (pos) out.pos = pos;
+      return out;
+    }
+    return null;
+  }).filter(Boolean);
+  return normalized;
 }
 function normalizeDayTripStopsPayload(raw){
   if (raw === undefined) return undefined;

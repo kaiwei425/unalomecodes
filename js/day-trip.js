@@ -20,6 +20,8 @@
   const btnGenerate = document.getElementById('btnGenerate');
   const btnSavePlan = document.getElementById('btnSavePlan');
   const btnPrint = document.getElementById('btnPrint');
+  const btnExportPdf = document.getElementById('btnExportPdf');
+  const btnExportJpg = document.getElementById('btnExportJpg');
   const btnShareLine = document.getElementById('btnShareLine');
   const shareLinkInput = document.getElementById('shareLinkInput');
   const btnCopyShare = document.getElementById('btnCopyShare');
@@ -71,6 +73,12 @@
   const COMMONS_THUMB_WIDTH = 240;
   const COMMONS_SEARCH_LIMIT = 4;
   const COMMONS_LICENSE_ALLOW = ['Public domain', 'CC0', 'CC BY', 'CC BY-SA', 'PD'];
+  const DESSERT_KEYWORDS = [
+    '甜點','甜品','甜食','蛋糕','派','塔','鬆餅','可麗餅','煎餅','布丁','冰淇淋','冰品','雪花冰','刨冰','冰沙','雪糕','甜湯','糖水','豆花','麻糬','麵包','烘焙','餅乾','巧克力','甜圈',
+    '飲料','飲品','咖啡','咖啡廳','咖啡館','茶','奶茶','果汁','手搖','果茶','氣泡飲','點心','下午茶',
+    'dessert','cake','ice cream','gelato','sorbet','pudding','crepe','waffle','bingsu','shaved ice','bakery','pastry','sweet','chocolate','donut',
+    'drink','beverage','coffee','cafe','tea','milk tea','juice','smoothie'
+  ].map(k => k.toLowerCase());
   const MODE_DEFAULT_STAY = {
     battle: { food: 45, temple: 35, spot: 40 },
     balance: { food: 60, temple: 45, spot: 50 },
@@ -413,6 +421,14 @@
     return formatMinutes(rounded);
   }
 
+  function isDessertLike(item){
+    if (!item || item.kind !== 'food') return false;
+    const parts = [item.name, item.category].concat(item.tags || []);
+    const text = parts.filter(Boolean).join(' ').toLowerCase();
+    if (!text) return false;
+    return DESSERT_KEYWORDS.some(key => text.includes(key));
+  }
+
   function safeObjectPosition(input){
     const raw = String(input || '').trim();
     if (!raw) return '';
@@ -576,6 +592,54 @@
         link.setAttribute('href', cover.sourceUrl);
         link.style.display = '';
       });
+    }
+  }
+
+  function loadHtml2Canvas(){
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    return new Promise((resolve, reject)=>{
+      const src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      const existing = document.querySelector(`script[data-html2canvas="1"]`);
+      if (existing){
+        existing.addEventListener('load', ()=> resolve(window.html2canvas));
+        existing.addEventListener('error', reject);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.html2canvas = '1';
+      script.onload = ()=> resolve(window.html2canvas);
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function exportPlanAsImage(){
+    if (!resultEl || !state.currentSummary || !state.currentSummary.plan || !state.currentSummary.plan.length){
+      setStatus('請先產生行程', true);
+      return;
+    }
+    setStatus('JPG 產生中…');
+    document.body.classList.add('is-exporting');
+    try{
+      const html2canvas = await loadHtml2Canvas();
+      const canvas = await html2canvas(resultEl, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true
+      });
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const name = `day-trip-${new Date().toISOString().slice(0,10)}.jpg`;
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = name;
+      link.click();
+      setStatus('JPG 已下載');
+    }catch(err){
+      setStatus('JPG 產生失敗，請稍後再試', true);
+    }finally{
+      document.body.classList.remove('is-exporting');
     }
   }
 
@@ -1652,7 +1716,9 @@
 
       const dueMeal = getDueMealSlot(mealSlots, mealStatus, currentTime);
       if (dueMeal){
-        const pick = pickCandidate(foodPool, nextRoute.coords);
+        const isMainMeal = dueMeal.key !== 'snack';
+        const filter = isMainMeal ? (item)=> !isDessertLike(item) : null;
+        const pick = pickCandidate(foodPool, nextRoute.coords, filter ? { filter } : null);
         if (pick){
           scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
           mealStatus[dueMeal.key] = true;
@@ -1706,7 +1772,9 @@
       markMissedMeals(mealSlots, mealStatus, currentTime, skippedMeals);
       const dueMeal = getDueMealSlot(mealSlots, mealStatus, currentTime);
       if (dueMeal){
-        const pick = pickCandidate(foodPool, null);
+        const isMainMeal = dueMeal.key !== 'snack';
+        const filter = isMainMeal ? (item)=> !isDessertLike(item) : null;
+        const pick = pickCandidate(foodPool, null, filter ? { filter } : null);
         if (pick){
           scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
         } else {
@@ -2890,6 +2958,12 @@
   }
   if (btnPrint){
     btnPrint.addEventListener('click', ()=>{ window.print(); });
+  }
+  if (btnExportPdf){
+    btnExportPdf.addEventListener('click', ()=>{ window.print(); });
+  }
+  if (btnExportJpg){
+    btnExportJpg.addEventListener('click', exportPlanAsImage);
   }
   if (btnShareLine){
     btnShareLine.addEventListener('click', shareToLine);
