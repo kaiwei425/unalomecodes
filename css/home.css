@@ -838,6 +838,14 @@ a:focus-visible{
   margin-top:-10px;
   aspect-ratio:1 / 1;
 }
+@media(max-width:480px){
+  .home-creator-mobile .creator-card__avatar{
+    align-self:flex-start;
+  }
+  .home-creator-mobile .creator-card__avatar img{
+    margin-top:-18px;
+  }
+}
 .creator-card__avatar img{
   width:84px;
   height:84px;
