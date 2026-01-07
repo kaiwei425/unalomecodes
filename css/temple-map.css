@@ -156,6 +156,10 @@
       color:var(--muted);
       margin:4px 0 8px;
     }
+    .intent-chips,
+    .intent-status{
+      display:none;
+    }
     @media (hover:hover){
       .intent-chip:hover{
         border-color:#cbd5e1;
