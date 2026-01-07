@@ -180,12 +180,11 @@ a{text-decoration:none;color:inherit;}
   justify-content:center;
   gap:4px;
 }
-.nav-toggle__bar{
-  width:18px;
-  height:2px;
-  background:var(--text);
-  border-radius:999px;
-  display:block;
+.nav-toggle__text{
+  font-size:var(--fs-small);
+  font-weight:600;
+  letter-spacing:0.08em;
+  color:var(--text);
 }
 
 .nav-drawer{
