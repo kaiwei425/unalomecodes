@@ -1,0 +1,11 @@
+    .faq-hero{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .faq-hero h1{margin:0 0 6px;font-size:24px;font-weight:800;}
+    .faq-hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.7;}
+    .faq-list{margin-top:14px;display:grid;gap:10px;}
+    .faq-list details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);}
+    .faq-list summary{cursor:pointer;font-weight:800;font-size:15px;outline:none;}
+    .faq-list summary::marker{color:#16a34a;}
+    .faq-answer{margin-top:8px;color:#334155;font-size:14px;line-height:1.7;}
+    .faq-note{margin-top:14px;background:#f8fafc;border:1px dashed var(--line);border-radius:14px;padding:12px;font-size:13px;color:#64748b;}
+    .faq-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;}
+  

@@ -1,0 +1,13 @@
+    .account-wrap{display:grid;gap:16px;margin-top:14px;}
+    .account-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);}
+    .account-card h2{margin:0 0 10px;font-size:18px;font-weight:800;}
+    .item{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#f9fafb;display:flex;gap:12px;align-items:center;}
+    .item img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
+    .item .meta{flex:1;}
+    .item .name{font-weight:800;}
+    .item .price{font-size:13px;color:#475569;margin-top:4px;}
+    .item .actions{display:flex;gap:8px;}
+    .empty-msg{padding:12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:#94a3b8;text-align:center;}
+    .top-actions{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;}
+    .back-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer;box-shadow:var(--shadow);}
+  

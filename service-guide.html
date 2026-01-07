@@ -36,21 +36,7 @@
     }
   </script>
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .guide-hero{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
-    .guide-hero h1{margin:0 0 6px;font-size:24px;font-weight:800;}
-    .guide-hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.7;}
-    .guide-grid{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
-    .guide-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);display:grid;gap:8px;}
-    .guide-card h3{margin:0;font-size:17px;font-weight:800;}
-    .guide-card p{margin:0;color:#334155;font-size:13px;line-height:1.7;}
-    .guide-steps{margin-top:14px;display:grid;gap:10px;}
-    .guide-step{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow);}
-    .guide-step strong{display:block;margin-bottom:4px;}
-    .guide-note{margin-top:14px;background:#f8fafc;border:1px dashed var(--line);border-radius:14px;padding:12px;font-size:13px;color:#64748b;}
-    .guide-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;}
-    .guide-content.is-editing{outline:2px dashed #fb923c;outline-offset:6px;border-radius:18px;}
-  </style>
+  <link rel="stylesheet" href="/css/service-guide.inline-1.css">
 </head>
 <body>
   <div class="wrap">
@@ -114,84 +100,6 @@
     </div>
   </div>
   <script src="/js/auth.js?v=20240930"></script>
-  <script>
-  (function(){
-    const contentEl = document.getElementById('guideContent');
-    const editBtn = document.getElementById('guideEditBtn');
-    const saveBtn = document.getElementById('guideSaveBtn');
-    const cancelBtn = document.getElementById('guideCancelBtn');
-    if (!contentEl || !editBtn || !saveBtn || !cancelBtn) return;
-    let originalHtml = '';
-
-    function setEditing(isEditing){
-      contentEl.contentEditable = isEditing ? 'true' : 'false';
-      contentEl.classList.toggle('is-editing', isEditing);
-      editBtn.style.display = isEditing ? 'none' : '';
-      saveBtn.style.display = isEditing ? '' : 'none';
-      cancelBtn.style.display = isEditing ? '' : 'none';
-    }
-
-    function applyAdminState(isAdmin){
-      editBtn.style.display = isAdmin ? '' : 'none';
-      if (!isAdmin){
-        saveBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-        contentEl.contentEditable = 'false';
-        contentEl.classList.remove('is-editing');
-      }
-    }
-
-    if (window.authState && typeof window.authState.onAdmin === 'function'){
-      window.authState.onAdmin(applyAdminState);
-    } else {
-      applyAdminState(false);
-    }
-
-    editBtn.addEventListener('click', () => {
-      originalHtml = contentEl.innerHTML;
-      setEditing(true);
-    });
-
-    cancelBtn.addEventListener('click', () => {
-      if (originalHtml){
-        contentEl.innerHTML = originalHtml;
-      }
-      setEditing(false);
-    });
-
-    saveBtn.addEventListener('click', async () => {
-      const html = contentEl.innerHTML.trim();
-      if (!html){
-        alert('內容不能為空');
-        return;
-      }
-      try{
-        const res = await fetch('/api/service-guide/content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ html })
-        });
-        const data = await res.json().catch(()=>({}));
-        if (data && data.ok){
-          setEditing(false);
-        }else{
-          alert('儲存失敗：' + (data.error || '未知錯誤'));
-        }
-      }catch(err){
-        alert('儲存失敗：' + err.message);
-      }
-    });
-
-    fetch('/api/service-guide/content', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.ok && data.html){
-          contentEl.innerHTML = data.html;
-        }
-      })
-      .catch(()=>{});
-  })();
-  </script>
+  <script src="/js/service-guide.inline-1.js"></script>
 </body>
 </html>

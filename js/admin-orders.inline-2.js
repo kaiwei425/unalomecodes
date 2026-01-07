@@ -1,0 +1,1123 @@
+const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+async function authedFetch(url, options){
+  const opts = Object.assign({}, options || {});
+  opts.credentials = 'include';
+  const target = /^https?:/i.test(url) ? url : API_BASE + url;
+  const res = await fetch(target, opts);
+  if (res.status === 401){
+    throw new Error('未登入或無權限，請使用管理員帳號重新登入');
+  }
+  return res;
+}
+const fmt = ts => ts ? new Date(ts).toLocaleString() : '';
+
+let ORDERS = [];
+let current = [];
+let selected = new Set();
+let activeTab = 'all';
+
+function toast(msg){
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=> t.remove(), 1600);
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function escapeXml(s){
+  return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function normalizeDisplayStatus(status){
+  const s = String(status || '').trim();
+  if (!s || s === 'pending' || s === '待付款' || s === 'waiting_verify' || s.includes('待處理') || s.includes('待確認')) {
+    return '訂單待處理';
+  }
+  if (s.includes('已付款待出貨') || s === '待出貨') return '待出貨';
+  if (s.includes('已寄件') || s.includes('已寄出') || s.includes('已出貨') || s.includes('寄出')) return '已寄件';
+  if (s.includes('已取件') || s.includes('已完成訂單') || s.includes('完成訂單') || s.includes('訂單完成')) {
+    return '已取件（訂單完成）';
+  }
+  if (s.includes('付款逾期') || s.includes('付款失敗') || s.includes('金額不符')) return '付款逾期';
+  if (s.includes('取消') || s.includes('退款') || s.includes('作廢')) return '取消訂單';
+  return s;
+}
+
+function normalizeDigits(val){
+  return String(val || '').replace(/\D/g, '');
+}
+
+function getTrackingNo(order){
+  if (!order) return '';
+  const shipment = (order.shipment && typeof order.shipment === 'object') ? order.shipment : {};
+  const tracking = order.shippingTracking || order.trackingNo || order.tracking || order.trackingNumber
+    || shipment.tracking || shipment.trackingNo || shipment.trackingNumber || '';
+  return String(tracking || '').trim();
+}
+
+function promptTrackingNo(order){
+  const existing = getTrackingNo(order);
+  const hint = existing ? `目前配送單號：${existing}\n` : '';
+  const input = prompt(`${hint}請輸入 7-11 配送單號`, existing || '');
+  if (input == null) return null;
+  const val = String(input).trim();
+  if (!val){
+    alert('請輸入配送單號');
+    return null;
+  }
+  return val;
+}
+
+function pickStoreId(o){
+  const buyer = o && o.buyer ? o.buyer : {};
+  const raw = buyer.store ?? o.store ?? o.storeid ?? o.storeId ?? '';
+  if (raw && typeof raw === 'object'){
+    return String(raw.id || raw.storeid || raw.code || raw.store || '').trim();
+  }
+  return String(raw || '').trim();
+}
+
+function orderItemsSummary711(o){
+  const items = Array.isArray(o.items) ? o.items : [{
+    productName:o.productName, productId:o.productId, price:o.price, qty:o.qty, deity:o.deity
+  }];
+  const parts = items.map(it => {
+    const title = String(it.productName || it.name || o.productName || it.title || '商品').trim();
+    const spec = String(it.variantName || it.variant || it.spec || '').trim();
+    const fullTitle = spec ? `${title}｜規格：${spec}` : title;
+    if (!title) return '';
+    const qty = Math.max(1, Number(it.qty || it.quantity || 1));
+    return qty > 1 ? `${fullTitle}*${qty}` : fullTitle;
+  }).filter(Boolean);
+  let summary = parts.join('；');
+  if (summary.length > 200) summary = summary.slice(0, 200);
+  return summary;
+}
+
+function orderTotalAmount(o){
+  if (o && o.amount != null){
+    const n = Number(String(o.amount).replace(/[^\d.]/g,'')) || 0;
+    return Math.max(0, n);
+  }
+  return Math.max(0, Number(amountNumber(o) || 0));
+}
+
+function orderShippingFee711(o){
+  const raw = (o && (o.shippingFee ?? o.shipping ?? o.shipping_fee ?? o.shipFee ?? o.shipmentFee)) ?? '';
+  if (raw !== '' && raw != null){
+    const n = Number(String(raw).replace(/[^\d.]/g,'')) || 0;
+    return Math.max(0, n);
+  }
+  const shipDisc = Number(o && o.coupon && o.coupon.shippingDiscount || 0) || 0;
+  if (shipDisc > 0) return Math.max(0, 38 - shipDisc);
+  if (Array.isArray(o && o.couponAssignment)){
+    const hasShip = o.couponAssignment.some(line => /ship/i.test(String(line && (line.deity || line.type || line.code || ''))));
+    if (hasShip) return 0;
+  }
+  return 38;
+}
+
+function build711Rows(orders){
+  const rows = [];
+  const warnings = [];
+  let rowIndex = 7;
+  for (const o of orders){
+    const buyer = o && o.buyer ? o.buyer : {};
+    const name = String(buyer.name || o.name || o.buyer_name || '').trim();
+    const phone = normalizeDigits(buyer.phone || o.phone || o.contact || o.buyer_phone || o.bfContact || '');
+    const storeRaw = pickStoreId(o);
+    const storeDigits = normalizeDigits(storeRaw);
+    const store = storeDigits.length >= 6 ? storeDigits.slice(0, 6) : String(storeRaw || '');
+    const product = orderItemsSummary711(o);
+    const orderNote = String(o.id || '').trim();
+    const totalAmount = orderTotalAmount(o);
+    const shipping = orderShippingFee711(o);
+    const productAmount = Math.max(0, totalAmount - shipping);
+    const total = productAmount + shipping;
+    const cols = ['A','B','C','D','E','F','G','H','I','J','K'];
+    const values = [name, phone, store, '常溫', product, String(productAmount), String(shipping), '', orderNote, '', ''];
+
+    if (!name) warnings.push(`${o.id || '未知訂單'}：缺少取件人姓名`);
+    if (!phone || phone.length !== 10) warnings.push(`${o.id || '未知訂單'}：取件人手機格式可能不正確`);
+    if (!storeDigits || storeDigits.length !== 6) warnings.push(`${o.id || '未知訂單'}：取件門市店號可能不正確`);
+    if (total < 55) warnings.push(`${o.id || '未知訂單'}：訂單金額+運費低於 55`);
+
+    const cells = cols.map((col, idx) => {
+      const val = values[idx] == null ? '' : String(values[idx]);
+      return `<c r="${col}${rowIndex}" t="inlineStr"><is><t>${escapeXml(val)}</t></is></c>`;
+    }).join('');
+    rows.push(`<row r="${rowIndex}">${cells}</row>`);
+    rowIndex++;
+  }
+  return { rows, warnings };
+}
+
+const qnaDialog = document.getElementById('qnaDialog');
+const qnaTitle = document.getElementById('qnaTitle');
+const qnaList = document.getElementById('qnaList');
+const qnaInput = document.getElementById('qnaInput');
+const qnaSend = document.getElementById('qnaSend');
+const qnaClose = document.getElementById('qnaClose');
+let qnaOrderId = '';
+let qnaItems = [];
+
+function renderQna(items){
+  if (!qnaList) return;
+  const list = Array.isArray(items) ? items : [];
+  qnaItems = list;
+  if (!list.length){
+    qnaList.innerHTML = '<div class="muted">尚無留言。</div>';
+    return;
+  }
+  qnaList.innerHTML = list.map(item=>{
+    const role = item.role === 'admin' ? '客服' : '顧客';
+    const edited = item.edited ? '（已編輯）' : '';
+    const ts = item.updatedAt || item.ts || '';
+    return `
+      <div class="qna-item ${item.role === 'admin' ? 'admin' : ''}">
+        <div class="qna-meta">
+          <div>${escapeHtml(role)} ${edited}</div>
+          <div>${escapeHtml(ts ? new Date(ts).toLocaleString('zh-TW',{hour12:false}) : '')}</div>
+        </div>
+        <div class="qna-text">${escapeHtml(item.text || '')}</div>
+        <div class="qna-actions">
+          <button type="button" data-qna-edit="1" data-id="${escapeHtml(item.id||'')}">編輯</button>
+          <button type="button" data-qna-del="1" data-id="${escapeHtml(item.id||'')}">刪除</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadQna(orderId){
+  if (!orderId) return;
+  const res = await authedFetch(`/api/order/qna?orderId=${encodeURIComponent(orderId)}`, { cache:'no-store' });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok || !data || data.ok === false){
+    throw new Error((data && data.error) || ('HTTP '+res.status));
+  }
+  renderQna(data.items || []);
+}
+
+async function sendQna(text){
+  if (!qnaOrderId) return;
+  const res = await authedFetch('/api/order/qna', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ orderId: qnaOrderId, text })
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok || !data || data.ok === false){
+    throw new Error((data && data.error) || ('HTTP '+res.status));
+  }
+}
+
+async function editQna(id, text){
+  if (!qnaOrderId) return;
+  const res = await authedFetch('/api/order/qna', {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ orderId: qnaOrderId, id, text })
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok || !data || data.ok === false){
+    throw new Error((data && data.error) || ('HTTP '+res.status));
+  }
+}
+
+async function deleteQna(id){
+  if (!qnaOrderId) return;
+  const res = await authedFetch('/api/order/qna', {
+    method:'DELETE',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ orderId: qnaOrderId, id })
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok || !data || data.ok === false){
+    throw new Error((data && data.error) || ('HTTP '+res.status));
+  }
+}
+
+
+function normalizeProof(u){
+  if (!u) return "";
+  u = String(u).trim();
+  if (/^https?:\/\//i.test(u) || /^\/api\/proof(?:\.inline|\.view)?\//.test(u)) return u;
+  return API_BASE + '/api/proof/' + encodeURIComponent(u);
+}
+
+function matchesQuery(order, q){
+  if (!q) return true;
+  try{
+    return JSON.stringify(order).toLowerCase().includes(q);
+  }catch(_){
+    return false;
+  }
+}
+
+function getStatusGroup(status){
+  const s = normalizeDisplayStatus(status);
+  if (!s || s === '訂單待處理') return 'pending';
+  if (s.includes('待出貨')) return 'ready';
+  if (s.includes('已寄件')) return 'shipped';
+  if (s.includes('已取件') || s.includes('訂單完成')) return 'done';
+  if (s.includes('取消') || s.includes('逾期')) return 'cancel';
+  return 'other';
+}
+
+function updateTabCounts(){
+  const q = $('#q').value.trim().toLowerCase();
+  const items = ORDERS.filter(o => matchesQuery(o, q));
+  const counts = { all: items.length, pending:0, ready:0, shipped:0, done:0, cancel:0 };
+  items.forEach(o=>{
+    const g = getStatusGroup(o.status);
+    if (counts[g] != null) counts[g]++;
+  });
+  document.querySelectorAll('.tab-count[data-tab]').forEach(el=>{
+    const key = el.getAttribute('data-tab');
+    el.textContent = String(counts[key] != null ? counts[key] : 0);
+  });
+}
+
+function setActiveTab(tabId){
+  activeTab = tabId || 'all';
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn=>{
+    const key = btn.getAttribute('data-tab');
+    if (key === activeTab) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+}
+
+
+async function loadOrders(){
+  const tbody = document.getElementById('tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">載入中…</td></tr>';
+  try{
+    const res = await authedFetch('/api/orders?limit=500', { cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+    ORDERS = Array.isArray(data.items)
+      ? data.items
+      : (Array.isArray(data.orders) ? data.orders : []);
+  }catch(e){
+    ORDERS = [];
+    console.error('loadOrders error', e);
+    if (tbody){
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">讀取失敗：${(e && e.message) || e}</td></tr>`;
+    }
+  }
+  render();
+}
+
+async function clearQnaUnread(){
+  try{
+    await authedFetch('/api/admin/qna/unread', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'clear' })
+    });
+  }catch(_){}
+}
+
+function applyFilter(){
+  const q  = $('#q').value.trim().toLowerCase();
+  const st = $('#statusSel').value;
+  let items = ORDERS.filter(o => matchesQuery(o, q));
+  if (activeTab !== 'all'){
+    items = items.filter(o => getStatusGroup(o.status) === activeTab);
+  }
+  if (st) items = items.filter(o=> normalizeDisplayStatus(o.status) === st);
+  current = items;
+  $('#count').textContent = `共 ${items.length} 筆`;
+  const sort = $('#sortSel') ? $('#sortSel').value : 'time_desc';
+  if (sort === 'time_desc') items.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  else if (sort === 'time_asc') items.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+  else if (sort === 'amt_desc') items.sort((a,b)=> amountNumber(b) - amountNumber(a));
+  else if (sort === 'amt_asc') items.sort((a,b)=> amountNumber(a) - amountNumber(b));
+  else if (sort === 'status') items.sort((a,b)=> String(a.status||'').localeCompare(String(b.status||'')));
+
+}
+
+function render(){
+  updateTabCounts();
+  applyFilter();
+  const rows = current.map(o=> {
+    const buyer = o.buyer || {};
+    const shipment = o.shipment || {};
+    const trackingNo = getTrackingNo(o);
+    const remarkVal = String(
+      o.note || o.notes || o.remark || o.memo || o.comment ||
+      (o.payment && (o.payment.note || o.payment.remark || o.payment.memo)) ||
+      (buyer && (buyer.note || buyer.notes || buyer.remark || buyer.memo)) ||
+      (o.transfer && (o.transfer.note || o.transfer.remark)) ||
+      ''
+    ).trim();
+    const checked = selected.has(o.id) ? 'checked' : '';
+    const displayStatus = normalizeDisplayStatus(o.status);
+
+
+const items = Array.isArray(o.items) ? o.items : [{
+      productName:o.productName, productId:o.productId, price:o.price, qty:o.qty, deity:o.deity
+    }];
+
+    const itemsHtml = items.map(it => {
+      const title = escapeHtml(it.productName || it.name || o.productName || it.title || '商品');
+      const spec  = String(it.variantName || it.variant || it.spec || '').trim();
+      const specLine = spec ? `｜規格：${escapeHtml(spec)}` : '';
+      const qty   = Math.max(1, Number(it.qty || it.quantity || 1));
+      const rawPrice = (it.price != null ? it.price : (it.unitPrice != null ? it.unitPrice : 0));
+      const priceNum = Number(String(rawPrice).replace(/[^\d.]/g,'')) || 0;
+      const sub   = priceNum * qty;
+      return `<div style="margin:2px 0">
+        <div><span class="mono">${title}</span></div>
+        <div class="muted">單價：NT$ ${priceNum.toLocaleString('en-US')}${specLine}｜數量：${qty}｜小計：NT$ ${sub.toLocaleString('en-US')}</div>
+      </div>`;
+    }).join('');
+
+    const amount = (function(){
+      if (o.amount != null) {
+        const n = Number(String(o.amount).replace(/[^\d.]/g,'')) || 0;
+        return n.toLocaleString('en-US');
+      }
+      const sum = items.reduce((s,it)=>{
+        const rawPrice = (it.price != null ? it.price : (it.unitPrice != null ? it.unitPrice : 0));
+        const priceNum = Number(String(rawPrice).replace(/[^\d.]/g,'')) || 0;
+        const qty   = Math.max(1, Number(it.qty || it.quantity || 1));
+        return s + priceNum * qty;
+      }, 0);
+      return sum.toLocaleString('en-US');
+    })();
+
+    const payHtml = ((()=>{
+      const m = String(o.method||'').trim();
+      const ml = m.toLowerCase();
+      const isBank = (ml === 'bank-transfer') || (ml === 'bank_transfer') || (ml === 'bank transfer') || /bank|轉帳|匯款/.test(ml);
+      if (!isBank) return `<div>${escapeHtml(m)}</div>`;
+      // --- bank-transfer 區塊（憑證 + 祈福照片） ---
+      const last5 = String(o.transferLast5 || (o.transfer && (o.transfer.last5 || o.transfer.lastFive)) || '').trim() || '（未填）';
+      let proof = o.receiptUrl || (o.transfer && o.transfer.proofUrl);
+      proof = normalizeProof(proof);
+      const parts = [
+        `<div><span class="badge">轉帳匯款</span></div>`,
+        `<div class="muted">後五碼：${escapeHtml(last5)}</div>`
+      ];
+      // 憑證連結
+      try{
+        let proofKey = '';
+        if (proof){
+          try {
+            const u2 = new URL(proof, API_BASE);
+            proofKey = u2.pathname.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
+          } catch {
+            proofKey = (proof||'').replace(/^.*\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
+          }
+        }
+        if (proofKey){
+          const inlineUrl = `${API_BASE}/api/proof.inline/${encodeURIComponent(proofKey)}`;
+          const debugUrl  = `${API_BASE}/api/proof/${encodeURIComponent(proofKey)}?debug=1`;
+          parts.push(`<div class="muted"><a class="proofLink" data-src="${inlineUrl}" href="${inlineUrl}" target="_blank" rel="noopener noreferrer">查看憑證</a>　<a href="${debugUrl}" target="_blank" rel="noopener noreferrer" class="muted">（debug）</a></div>`);
+        }
+      }catch{}
+      // ritual photo candidates (broadened, deep)
+      function pickRitual(o){
+        // direct fields
+        let v = o.ritualPhotoUrl || o.ritual_photo_url || o.ritual_photo ||
+                (o.ritual && (o.ritual.photoUrl || o.ritual.photo || o.ritual.url)) ||
+                (o.transfer && (o.transfer.ritualPhotoUrl || o.transfer.ritual_photo || o.transfer.ritual)) ||
+                (o.payment && (o.payment.ritualPhotoUrl || o.payment.ritual_photo));
+        // explicit support for legacy path
+        if (!v){
+          v = o.extra && o.extra.candle && o.extra.candle.photoUrl;
+        }
+        // files/attachments array {url|path|key|id, role|type|kind|category|field|name}
+        if (!v){
+          const arr = Array.isArray(o.files) ? o.files : (Array.isArray(o.attachments) ? o.attachments : []);
+          for (const f of arr){
+            const role = (f.role || f.type || f.kind || f.category || f.field || f.name || '').toString();
+            if (/ritual.*photo|photo.*ritual|ritual_photo|祈福/i.test(role) || /ritual|祈福/i.test((f.filename||'').toString())){
+              v = f.url || f.path || f.key || f.id || '';
+              if (v) break;
+            }
+          }
+        }
+        // meta/form style
+        if (!v){
+          const meta = o.meta || o.form || o.payload || {};
+          v = meta.ritual_photo || meta.ritualPhoto || meta.ritualPhotoUrl || meta.ritual || '';
+        }
+        // deep search (depth <= 3) for any key that looks like ritual photo
+        if (!v){
+          const seen = new WeakSet();
+          const keyRe = /(ritual.*photo|photo.*ritual|ritual_photo|ritualphoto|祈福)/i;
+          const badRe = /(receipt|proof|invoice)/i;
+          function dfs(node, depth){
+            if (!node || typeof node !== 'object' || depth>3 || seen.has(node)) return '';
+            seen.add(node);
+            if (Array.isArray(node)){
+              for (const el of node){
+                const r = dfs(el, depth+1);
+                if (r) return r;
+              }
+              return '';
+            }
+            for (const k of Object.keys(node)){
+              const val = node[k];
+              if (typeof val === 'string' && keyRe.test(k) && !badRe.test(k)){
+                return val;
+              }
+            }
+            for (const k of Object.keys(node)){
+              const val = node[k];
+              const r = dfs(val, depth+1);
+              if (r) return r;
+            }
+            return '';
+          }
+          v = dfs(o, 0);
+        }
+        // normalize: keep http(s) or any absolute-path as-is; if it's a plain key, map to /api/proof/
+        if (!v) return '';
+        v = String(v).trim();
+        if (/^https?:\/\//i.test(v) || /^\//.test(v)) return v;
+        return API_BASE + '/api/proof/' + encodeURIComponent(v);
+      }
+      let ritual = pickRitual(o);
+      // 祈福照片連結
+      try{
+        let ritualKey = '';
+        if (ritual){
+          try {
+            const u3 = new URL(ritual, API_BASE);
+            const path = u3.pathname.replace(/\?.*$/,'');
+            if (/^\/api\/proof(?:\.(?:view|inline))?\//.test(path)){
+              ritualKey = path.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
+            } else if (!/^https?:\/\//i.test(ritual) && !/^\//.test(ritual)) {
+              // looks like a bare key (no scheme, no leading slash)
+              ritualKey = ritual;
+            } else {
+              ritualKey = '';
+            }
+          } catch {
+            ritualKey = ritual.replace(/^.*\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
+          }
+        }
+        if (ritualKey){
+          const rInline = `${API_BASE}/api/proof.inline/${encodeURIComponent(ritualKey)}`;
+          const rDebug  = `${API_BASE}/api/proof/${encodeURIComponent(ritualKey)}?debug=1`;
+          parts.push(`<div class="muted"><a class="proofLink" data-src="${rInline}" href="${rInline}" target="_blank" rel="noopener noreferrer">祈福照片</a>　<a href="${rDebug}" target="_blank" rel="noopener noreferrer" class="muted">（debug）</a></div>`);
+        } else if (ritual){
+          // 無法抽出 key 時，至少給原始連結
+          parts.push(`<div class="muted"><a href="${escapeHtml(ritual)}" target="_blank" rel="noopener noreferrer">祈福照片</a></div>`);
+        }
+      }catch{}
+      return parts.join('');
+    }))();
+
+    return `<tr data-id="${o.id}">
+      <td><input class="checkbox rowcheck" type="checkbox" ${checked} data-id="${o.id}"></td>
+      <td>
+        <div><span class="badge">${o.id||''}</span></div>
+        <div class="muted">${fmt(o.createdAt)}</div>
+      </td>
+      <td>${itemsHtml}</td>
+      <td><strong>NT$ ${amount}</strong></td>
+      <td>${payHtml}</td>
+      <td>
+  <div>${escapeHtml(buyer.name||"")}</div>
+  ${ (buyer.phone||o.phone||buyer.tel||buyer.mobile) ? `<div class="muted">電話：${escapeHtml(buyer.phone||o.phone||buyer.tel||buyer.mobile)}</div>` : "" }
+  ${ (buyer.email||o.email) ? `<div class="muted">Email：${escapeHtml(buyer.email||o.email)}</div>` : "" }
+  ${ buyer.line ? `<div class="muted">LINE：${escapeHtml(buyer.line)}</div>` : "" }
+  ${ (buyer.store||o.store) ? `<div class="muted">7-11 門市：${escapeHtml(buyer.store||o.store)}</div>` : "" }
+  ${ trackingNo ? `<div class="muted order-tracking">配送單號：${escapeHtml(trackingNo)}</div>` : "" }
+  <div class="muted">備註：${escapeHtml(remarkVal) || '（無）'}</div>
+</td>
+      <td><span class="badge ${statusClass(displayStatus)}">${escapeHtml(displayStatus || "訂單待處理")}</span></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <select class="opStatus" style="padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#0b1022;color:#e5e7eb" data-id="${o.id}">
+          <option value="">選擇狀態</option>
+          <option value="訂單待處理" ${displayStatus === "訂單待處理" ? "selected":""}>訂單待處理</option>
+          <option value="待出貨" ${displayStatus === "待出貨" ? "selected":""}>待出貨</option>
+          <option value="已寄件" ${displayStatus === "已寄件" ? "selected":""}>已寄件</option>
+          <option value="已取件（訂單完成）" ${displayStatus === "已取件（訂單完成）" ? "selected":""}>已取件（訂單完成）</option>
+          <option value="付款逾期" ${displayStatus === "付款逾期" ? "selected":""}>付款逾期</option>
+          <option value="取消訂單" ${displayStatus === "取消訂單" ? "selected":""}>取消訂單</option>
+        </select>
+        <button class="btn" data-act="applyStatus" data-id="${o.id}">套用</button>
+        <button class="btn" data-act="qna" data-id="${o.id}">問與答</button>
+        <button class="btn danger" data-act="singleDel" data-id="${o.id}">刪除</button>
+      </td>
+    </tr>`;
+  }).join('');
+  $('#tbody').innerHTML = rows || '<tr><td colspan="8" class="muted">目前沒有訂單</td></tr>';
+  hydrateProofThumbs();
+function hydrateProofThumbs(){
+  const thumbs = document.querySelectorAll('img.proofThumb[data-src]');
+  thumbs.forEach(async (img)=>{
+    const src = img.getAttribute('data-src');
+    if (!src) return;
+    // derive key from /api/proof or /api/proof.view or /api/proof.inline or raw
+    let key = '';
+    try {
+      const u = new URL(src, API_BASE);
+      key = u.pathname.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
+    } catch { key = src.replace(/^.*\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, ''); }
+    try {
+      const r = await fetch(`${API_BASE}/api/proof.data/${key}`);
+      const dataUrl = await r.text();
+      if (/^data:image\//i.test(dataUrl)){
+        img.src = dataUrl;    // 直接用 data URL 顯示
+        img.alt = '憑證';
+      } else {
+        img.style.display = 'none';
+        const link = img.nextElementSibling && img.nextElementSibling.matches('a.proofLink') ? img.nextElementSibling : null;
+        if (link) link.style.display = 'inline';
+      }
+    } catch(e){
+      img.style.display = 'none';
+      const link = img.nextElementSibling && img.nextElementSibling.matches('a.proofLink') ? img.nextElementSibling : null;
+      if (link) link.style.display = 'inline';
+    }
+  });
+}
+  updateSelCount();
+  syncHeaderCheckbox();
+}
+
+function updateTrackingCell(row, trackingNo){
+  if (!row) return;
+  const infoCell = row.querySelector('td:nth-child(6)');
+  if (!infoCell) return;
+  let el = infoCell.querySelector('.order-tracking');
+  if (!trackingNo){
+    if (el) el.remove();
+    return;
+  }
+  if (!el){
+    el = document.createElement('div');
+    el.className = 'muted order-tracking';
+    infoCell.appendChild(el);
+  }
+  el.textContent = '配送單號：' + trackingNo;
+}
+
+function updateSelCount(){ $('#selCount').textContent = selected.size; }
+
+function syncHeaderCheckbox(){
+  const allVisibleIds = new Set(current.map(o=> o.id));
+  const allChecked = current.length > 0 && current.every(o=> selected.has(o.id));
+  $('#checkAll').checked = allChecked;
+  for (const id of Array.from(selected)){
+    if (!allVisibleIds.has(id)) selected.delete(id);
+  }
+  updateSelCount();
+}
+
+function requireDeleteConfirm(message){
+  const tip = message || '此動作無法復原。';
+  const input = prompt(`為了刪除訂單，請輸入「刪除」確認。\n${tip}`);
+  if (input !== '刪除'){
+    toast('未輸入「刪除」，已取消');
+    return false;
+  }
+  return true;
+}
+
+// --- Events ---
+$('#reload').addEventListener('click', loadOrders);
+$('#q').addEventListener('input', render);
+$('#statusSel').addEventListener('change', render);
+document.querySelectorAll('.tab-btn[data-tab]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const tab = btn.getAttribute('data-tab') || 'all';
+    setActiveTab(tab);
+    const sel = document.getElementById('statusSel');
+    if (sel) sel.value = '';
+    render();
+  });
+});
+
+// Row checkbox toggle
+document.addEventListener('change', e=>{
+  const cb = e.target.closest && e.target.closest('.rowcheck');
+  if (!cb) return;
+  const id = cb.getAttribute('data-id');
+  if (cb.checked) selected.add(id); else selected.delete(id);
+  updateSelCount();
+  syncHeaderCheckbox();
+});
+
+// Header check-all
+$('#checkAll').addEventListener('change', e=>{
+  if (e.target.checked){
+    current.forEach(o=> selected.add(o.id));
+  } else {
+    current.forEach(o=> selected.delete(o.id));
+  }
+  render();
+});
+
+// Single row actions
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest && e.target.closest('button[data-act]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  const act = btn.getAttribute('data-act');
+
+  if (act === 'qna'){
+    qnaOrderId = id || '';
+    if (qnaTitle) qnaTitle.textContent = `訂單問與答｜${qnaOrderId}`;
+    if (qnaInput) qnaInput.value = '';
+    if (qnaList) qnaList.innerHTML = '<div class="muted">載入中…</div>';
+    try{
+      await loadQna(qnaOrderId);
+    }catch(err){
+      if (qnaList) qnaList.innerHTML = `<div class="muted">讀取失敗：${escapeHtml(err.message || 'error')}</div>`;
+    }
+    if (qnaDialog && typeof qnaDialog.showModal === 'function') qnaDialog.showModal();
+    else if (qnaDialog) qnaDialog.setAttribute('open','');
+    return;
+  }
+
+  if (act === 'applyStatus'){
+    const row = btn.closest('tr');
+    const sel = row && row.querySelector('select.opStatus');
+    if (!sel){ toast('找不到狀態選單'); return; }
+    const status = sel.value;
+    if (!status){ toast('請先選擇狀態'); return; }
+    const target = ORDERS.find(x=> x.id === id);
+    let trackingNo = '';
+    if (status.includes('已寄件')){
+      trackingNo = promptTrackingNo(target);
+      if (!trackingNo) return;
+    }
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'set', id, status, trackingNo })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
+      const badge = row && row.querySelector('td:nth-child(7) .badge');
+      if (badge) badge.textContent = status;
+      if (row){
+        row.classList.remove('mail-ok','mail-fail');
+        if (j.notified) row.classList.add('mail-ok');
+        else row.classList.add('mail-fail');
+        const infoCell = row.querySelector('td:nth-child(2) .muted');
+        if (infoCell){
+          const stamp = new Date().toLocaleString('zh-TW',{hour12:false});
+          infoCell.textContent = j.notified ? `通知信已寄出：${stamp}` : `未寄信：${stamp}`;
+        }
+      }
+      if (target){
+        target.status = status;
+        if (trackingNo) target.shippingTracking = trackingNo;
+      }
+      if (trackingNo) updateTrackingCell(row, trackingNo);
+      toast(j.notified ? '狀態已更新，已寄出通知信' : '狀態已更新');
+    }catch(err){
+      toast('更新狀態失敗：' + (err && err.message || err));
+    }
+    return;
+  }
+
+  if (act === 'singleDel'){
+    const row = btn.closest('tr');
+    const titleCell = row ? row.querySelector('td:nth-child(3)') : null;
+    const orderHint = titleCell ? titleCell.textContent.trim().slice(0, 60) : '';
+    const ok = confirm(`確定要刪除訂單「${id}」嗎？\n${orderHint ? '商品：' + orderHint + '\n' : ''}此動作無法復原。`);
+    if (!ok) return;
+    if (!requireDeleteConfirm(`訂單編號：${id}`)) return;
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'delete' })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
+      toast('已刪除 1 筆');
+      await loadOrders();
+    }catch(err){
+      toast('刪除失敗：' + (err && err.message || err));
+    }
+    return;
+  }
+
+});
+
+if (qnaClose && qnaDialog){
+  qnaClose.addEventListener('click', ()=> qnaDialog.close());
+}
+if (qnaSend){
+  qnaSend.addEventListener('click', async ()=>{
+    if (!qnaOrderId) return;
+    const text = (qnaInput && qnaInput.value || '').trim();
+    if (!text){ alert('請先輸入回覆內容'); return; }
+    qnaSend.disabled = true;
+    qnaSend.textContent = '送出中…';
+    try{
+      await sendQna(text);
+      if (qnaInput) qnaInput.value = '';
+      await loadQna(qnaOrderId);
+    }catch(err){
+      alert('送出失敗：' + (err.message || err));
+    }finally{
+      qnaSend.disabled = false;
+      qnaSend.textContent = '送出回覆';
+    }
+  });
+}
+if (qnaList){
+  qnaList.addEventListener('click', async (e)=>{
+    const editBtn = e.target.closest && e.target.closest('[data-qna-edit]');
+    const delBtn = e.target.closest && e.target.closest('[data-qna-del]');
+    if (!editBtn && !delBtn) return;
+    const id = (editBtn || delBtn).getAttribute('data-id') || '';
+    if (!id) return;
+    if (editBtn){
+      const msgId = editBtn.getAttribute('data-id') || '';
+      const target = qnaItems.find(it => it && it.id === msgId);
+      const currentText = target ? (target.text || '') : '';
+      const next = prompt('修改留言', currentText);
+      if (next == null) return;
+      const text = String(next).trim();
+      if (!text){ alert('內容不可空白'); return; }
+      try{
+        await editQna(id, text);
+        await loadQna(qnaOrderId);
+      }catch(err){
+        alert('更新失敗：' + (err.message || err));
+      }
+      return;
+    }
+    if (delBtn){
+      const ok = confirm('確定要刪除這則留言？');
+      if (!ok) return;
+      try{
+        await deleteQna(id);
+        await loadQna(qnaOrderId);
+      }catch(err){
+        alert('刪除失敗：' + (err.message || err));
+      }
+    }
+  });
+}
+
+// Batch: mark ready to ship
+$('#markPaid').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  let ok = 0;
+  let notified = 0;
+  for (const id of selected){
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'set', status:'待出貨' })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (res.ok && j && j.ok){
+        ok++;
+        if (j.notified) notified++;
+      }
+    }catch(_){}
+  }
+  toast('已標記待出貨：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
+  await loadOrders();
+});
+
+// Batch: mark shipped
+$('#markShipped').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  let ok = 0;
+  let notified = 0;
+  let skipped = 0;
+  for (const id of selected){
+    try{
+      const target = ORDERS.find(x=> x.id === id);
+      const trackingNo = promptTrackingNo(target);
+      if (!trackingNo){
+        skipped++;
+        continue;
+      }
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'set', status:'已寄件', trackingNo })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (res.ok && j && j.ok){
+        ok++;
+        if (j.notified) notified++;
+      }
+    }catch(_){}
+  }
+  const skipText = skipped ? `（略過 ${skipped} 筆未輸入配送單號）` : '';
+  toast('已標記已寄件：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : '') + skipText);
+  await loadOrders();
+});
+
+// Batch: mark done
+$('#markDone').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  let ok = 0;
+  let notified = 0;
+  for (const id of selected){
+    try{
+      const res = await authedFetch('/api/order/status', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, action:'set', status:'已取件（訂單完成）' })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (res.ok && j && j.ok){
+        ok++;
+        if (j.notified) notified++;
+      }
+    }catch(_){}
+  }
+  toast('已標記已取件（訂單完成）：' + ok + ' 筆' + (notified ? `（已寄出 ${notified} 封通知）` : ''));
+  await loadOrders();
+});
+
+// Batch: delete
+$('#batchDelete').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  if (!requireDeleteConfirm(`將刪除 ${selected.size} 筆訂單`)) return;
+  let ok = 0;
+  for (const id of selected){
+    const res = await authedFetch('/api/order/status', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id, action:'delete' })
+    });
+    if (res.ok) ok++;
+  }
+  toast('已刪除：' + ok + ' 筆');
+  selected.clear();
+  await loadOrders();
+});
+
+// Manual release expired holds
+$('#releaseHolds').addEventListener('click', async ()=>{
+  const ok = confirm('確定要釋放「逾期未付款」的訂單保留（庫存/優惠券）？');
+  if (!ok) return;
+  try{
+    const res = await authedFetch('/api/admin/cron/release-holds', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ dryRun:false })
+    });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
+    toast(`已釋放 ${Number(j.released||0)} 筆（掃描 ${Number(j.scanned||0)}）`);
+    await loadOrders();
+  }catch(err){
+    toast('釋放失敗：' + (err.message||err));
+  }
+});
+
+// Export selected to CSV (use backend API so金額/備註/憑證網址都正確)
+$('#exportCsv').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  const ids = Array.from(selected).join(',');
+  const url = `${API_BASE}/api/orders/export?ids=${encodeURIComponent(ids)}`;
+  try{
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = 'orders.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  }catch(err){
+    toast('匯出失敗：' + (err.message||err));
+  }
+});
+
+// Export selected to 7-11 XLSM (front-end uses template)
+$('#export711').addEventListener('click', async ()=>{
+  if (selected.size === 0){ toast('請先選取訂單'); return; }
+  if (!window.fflate || !fflate.unzipSync || !fflate.zipSync){
+    toast('匯出失敗：缺少壓縮模組');
+    return;
+  }
+  const orders = Array.from(selected).map(id => ORDERS.find(o => o.id === id)).filter(Boolean);
+  if (!orders.length){
+    toast('查無選取訂單');
+    return;
+  }
+  try{
+    const res = await fetch('/admin/711-template.xlsm', { cache:'no-store' });
+    if (!res.ok) throw new Error('無法讀取模板檔');
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const zipped = fflate.unzipSync(buf);
+    const sheetPath = 'xl/worksheets/sheet1.xml';
+    if (!zipped[sheetPath]) throw new Error('模板缺少 sheet1.xml');
+    const sheetXml = fflate.strFromU8(zipped[sheetPath]);
+    const built = build711Rows(orders);
+    if (!built.rows.length){
+      toast('沒有可匯出的資料');
+      return;
+    }
+    if (!sheetXml.includes('</sheetData>')) throw new Error('模板格式不符');
+    let nextXml = sheetXml.replace('</sheetData>', `${built.rows.join('')}</sheetData>`);
+    const lastRow = 6 + built.rows.length;
+    nextXml = nextXml.replace(/ref="A1:K\\d+"/, `ref="A1:K${lastRow}"`);
+    zipped[sheetPath] = fflate.strToU8(nextXml);
+    const out = fflate.zipSync(zipped, { level: 0 });
+    const blob = new Blob([out], { type: 'application/vnd.ms-excel.sheet.macroEnabled.12' });
+    const stamp = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `orders-711-${stamp}.xlsm`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+    if (built.warnings.length){
+      console.warn('[711-export warnings]', built.warnings);
+      toast(`已匯出，但有 ${built.warnings.length} 筆資料需要檢查`);
+    }else{
+      toast('已匯出 7-11 XLSM');
+    }
+  }catch(err){
+    toast('匯出失敗：' + (err.message || err));
+  }
+});
+
+// Proof lightbox
+document.addEventListener('click', async function(e){
+  const a = e.target.closest && e.target.closest('a.proofLink');
+  if (!a) return;
+  e.preventDefault();
+  const src = a.getAttribute('data-src') || '';
+  if (!src) return;
+  const m = document.getElementById('imgLightbox');
+  const img = document.getElementById('imgLightboxImg');
+  if (!m || !img) return;
+  // derive key
+  let key = '';
+  try {
+    const u = new URL(src, API_BASE);
+    key = u.pathname.replace(/^\/api\/proof(?:\.(?:view|inline))?\//,'').replace(/\?.*$/, '');
+  } catch { key = src; }
+  try {
+    const r = await fetch(`${API_BASE}/api/proof.data/${key}`);
+    const dataUrl = await r.text();
+    if (!/^data:image\//i.test(dataUrl)) throw new Error('not image data');
+    img.src = dataUrl;
+    m.style.display = 'flex';
+  } catch(err){
+    toast('憑證載入失敗，請點（debug）檢查');
+  }
+});
+document.addEventListener('click', function(e){
+  const m = e.target.closest && e.target.closest('#imgLightbox');
+  if (!m) return;
+  m.style.display = 'none';
+  const img = document.getElementById('imgLightboxImg');
+  if (img) img.src = '';
+});
+
+
+// helpers for badge color + amount sorting
+function statusClass(s){
+  const v = normalizeDisplayStatus(s);
+  if (!v) return '';
+  if (v === '訂單待處理') return 'status-pending';
+  if (v.includes('待出貨')) return 'status-paid';
+  if (v.includes('已寄件')) return 'status-shipped';
+  if (v.includes('已取件') || v.includes('訂單完成')) return 'status-done';
+  if (v.includes('付款逾期')) return 'status-fail';
+  if (v.includes('取消') || v.includes('作廢') || v.includes('退款') || v.includes('逾期')) return 'status-cancel';
+  return '';
+}
+function amountNumber(o){
+
+const items = Array.isArray(o.items) ? o.items : [{
+    productName:o.productName, productId:o.productId, price:o.price, qty:o.qty, deity:o.deity
+  }];
+  if (o.amount != null){
+    return Number(String(o.amount).replace(/[^\d.]/g,'')) || 0;
+  }
+  return items.reduce((s,it)=>{
+    const rawPrice = (it.price != null ? it.price : (it.unitPrice != null ? it.unitPrice : 0));
+    const priceNum = Number(String(rawPrice).replace(/[^\d.]/g,'')) || 0;
+    const qty   = Math.max(1, Number(it.qty || it.quantity || 1));
+    return s + priceNum * qty;
+  }, 0);
+}
+
+async function ensureAdminSession(){
+  const gate = document.getElementById('loginGate');
+  if (!gate) return true;
+  try{
+    const res = await authedFetch('/api/auth/admin/me', { cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data && data.ok){
+      gate.style.display = 'none';
+      return true;
+    }
+  }catch(_){}
+  gate.style.display = 'flex';
+  return false;
+}
+
+// init
+async function boot(){
+  try{
+    setActiveTab(activeTab);
+    if (await ensureAdminSession()){
+      clearQnaUnread();
+      loadOrders();
+    }
+  }catch(e){ console.error('init loadOrders error', e); }
+}
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', boot);
+}else{
+  boot();
+}
+
+// sort change
+const sortSel = document.getElementById('sortSel');
+if (sortSel) sortSel.addEventListener('change', render);
+
+// auto refresh every 60s (pause if login gate showing)
+let __autoTimer = setInterval(()=>{
+  const gate = document.getElementById('loginGate');
+  if (gate && gate.style.display === 'flex') return;
+  loadOrders();
+}, 60000);
+
+// login gate (admin OAuth)
+(function(){
+  const gate = document.getElementById('loginGate');
+  if (!gate) return;
+  const btnGo = document.getElementById('loginGo');
+  if (btnGo){
+    btnGo.addEventListener('click', ()=>{
+      const redirect = encodeURIComponent('/admin/orders');
+      window.location.href = `${API_BASE}/api/auth/google/admin/start?redirect=${redirect}`;
+    });
+  }
+  const btnCancel = document.getElementById('loginCancel');
+  if (btnCancel){
+    btnCancel.addEventListener('click', ()=>{
+      gate.style.display='none'; // 允許查看但不載入資料
+    });
+  }
+})();
