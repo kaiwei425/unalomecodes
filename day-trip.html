@@ -195,8 +195,12 @@
     <section class="planner-card step-section" data-step-section="3">
       <div class="section-title">第三步｜自動規劃設定</div>
       <div class="planner-grid">
-        <div class="planner-hint">依起點與時間，自動結合熱門景點與順路餐廳，產出一日行程。</div>
-        <div class="planner-hint">熱門景點涵蓋：水上市場、海鮮市場、夜市、古城、海邊等。</div>
+        <div class="planner-hint">依起點與時間，自動套用熱門路線主軸，再穿插順路餐廳與寺廟。</div>
+        <div class="planner-hint">可選擇熱門路線主軸，或交由系統自動挑選。</div>
+        <label>路線主軸
+          <select id="routeSelect"></select>
+        </label>
+        <div class="planner-hint" id="routeHint"></div>
         <div class="planner-row">
           <label class="inline-toggle">
             <input type="checkbox" id="mealBreakfast" checked>
@@ -205,6 +209,10 @@
           <label class="inline-toggle">
             <input type="checkbox" id="mealLunch" checked>
             午餐
+          </label>
+          <label class="inline-toggle">
+            <input type="checkbox" id="mealSnack" checked>
+            下午茶/點心
           </label>
           <label class="inline-toggle">
             <input type="checkbox" id="mealDinner" checked>

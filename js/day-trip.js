@@ -8,6 +8,7 @@
   const transportSelect = document.getElementById('transportSelect');
   const mealBreakfast = document.getElementById('mealBreakfast');
   const mealLunch = document.getElementById('mealLunch');
+  const mealSnack = document.getElementById('mealSnack');
   const mealDinner = document.getElementById('mealDinner');
   const includeTempleToggle = document.getElementById('includeTempleToggle');
   const allowClosedToggle = document.getElementById('allowClosedToggle');
@@ -58,6 +59,8 @@
   const mapCanvas = document.getElementById('mapCanvas');
 
   const modeCards = document.getElementById('modeCards');
+  const routeSelect = document.getElementById('routeSelect');
+  const routeHint = document.getElementById('routeHint');
 
   const savedList = document.getElementById('savedList');
 
@@ -71,11 +74,12 @@
   const ALL_DAY_REGEX = /(24\s*小時|24\s*hr|24\s*h|24\/7|24-7|all\s*day|全天|全日)/i;
   const FOOD_SLOT_ORDER = ['morning', 'noon', 'afternoon', 'evening', 'night'];
   const TEMPLE_SLOT_ORDER = ['morning', 'afternoon', 'evening'];
-  const MEAL_ORDER = ['breakfast', 'lunch', 'dinner'];
-  const MEAL_LABELS = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' };
+  const MEAL_ORDER = ['breakfast', 'lunch', 'snack', 'dinner'];
+  const MEAL_LABELS = { breakfast: '早餐', lunch: '午餐', snack: '下午茶', dinner: '晚餐' };
   const MEAL_WINDOWS = {
     breakfast: [420, 600],
     lunch: [660, 840],
+    snack: [840, 1020],
     dinner: [1020, 1200]
   };
   const STORAGE_KEY = 'day_trip_saved_plans_v1';
@@ -121,6 +125,161 @@
     { name:'華欣夜市', kind:'spot', lat:12.568633, lng:99.957852, area:'華欣', category:'夜市', group:'海邊' }
   ];
 
+  const ROUTE_SPOTS = {
+    grandPalace: { name:'大皇宮', kind:'temple', lat:13.7500, lng:100.4913, area:'曼谷', category:'皇宮寺廟', hours:'08:30-15:30' },
+    watPho: { name:'臥佛寺', kind:'temple', lat:13.7467, lng:100.4927, area:'曼谷', category:'寺廟', hours:'08:00-18:30' },
+    watArun: { name:'鄭王廟', kind:'temple', lat:13.7436, lng:100.4889, area:'曼谷', category:'寺廟', hours:'08:00-18:00' },
+    watSaket: { name:'金山寺', kind:'temple', lat:13.7538, lng:100.5066, area:'曼谷', category:'寺廟', hours:'07:30-19:00' },
+    giantSwing: { name:'大鞦韆', kind:'spot', lat:13.7513, lng:100.5018, area:'曼谷', category:'地標', hours:'全天' },
+    erawanShrine: { name:'四面佛', kind:'temple', lat:13.7446, lng:100.5400, area:'曼谷', category:'寺廟', hours:'06:00-23:00' },
+    siamSquare: { name:'暹羅廣場', kind:'spot', lat:13.7457, lng:100.5340, area:'曼谷', category:'散步', hours:'10:00-22:00' },
+    siamParagon: { name:'暹羅百麗宮', kind:'spot', lat:13.7464, lng:100.5348, area:'曼谷', category:'購物', hours:'10:00-22:00' },
+    centralWorld: { name:'CentralWorld', kind:'spot', lat:13.7466, lng:100.5393, area:'曼谷', category:'購物', hours:'10:00-22:00' },
+    terminal21: { name:'Terminal 21 Asok', kind:'spot', lat:13.7379, lng:100.5606, area:'曼谷', category:'購物', hours:'10:00-22:00' },
+    bacc: { name:'曼谷藝術文化中心', kind:'spot', lat:13.7468, lng:100.5303, area:'曼谷', category:'藝文', hours:'10:00-20:00' },
+    jimThompson: { name:'Jim Thompson House', kind:'spot', lat:13.7492, lng:100.5283, area:'曼谷', category:'博物館', hours:'10:00-18:00' },
+    mahanakhon: { name:'Mahanakhon SkyWalk', kind:'spot', lat:13.7232, lng:100.5281, area:'曼谷', category:'觀景', hours:'10:00-22:00' },
+    iconSiam: { name:'ICONSIAM', kind:'spot', lat:13.7268, lng:100.5103, area:'曼谷', category:'購物', hours:'10:00-22:00' },
+    asiatique: { name:'Asiatique 河濱夜市', kind:'spot', lat:13.7042, lng:100.5028, area:'曼谷', category:'夜市', hours:'16:00-24:00' },
+    khaoSan: { name:'考山路', kind:'spot', lat:13.7588, lng:100.4976, area:'曼谷', category:'夜生活', hours:'16:00-24:00' },
+    yaowarat: { name:'耀華力路（唐人街）', kind:'spot', lat:13.7400, lng:100.5105, area:'曼谷', category:'美食街', hours:'16:00-24:00' },
+    pakKhlong: { name:'巴空花市', kind:'spot', lat:13.7417, lng:100.4963, area:'曼谷', category:'花市', hours:'全天' },
+    chatuchak: { name:'恰圖恰市集', kind:'spot', lat:13.8003, lng:100.5511, area:'曼谷', category:'市集', hours:'09:00-18:00' },
+    joddFairs: { name:'喬德夜市（Rama 9）', kind:'spot', lat:13.7581, lng:100.5670, area:'曼谷', category:'夜市', hours:'16:00-23:00' },
+    trainMarket: { name:'火車夜市（席娜卡琳）', kind:'spot', lat:13.6947, lng:100.6511, area:'曼谷', category:'夜市', hours:'16:00-24:00' },
+    watergate: { name:'水門市場', kind:'spot', lat:13.7511, lng:100.5410, area:'曼谷', category:'市集', hours:'10:00-20:00' },
+    lumphini: { name:'倫披尼公園', kind:'spot', lat:13.7306, lng:100.5415, area:'曼谷', category:'公園', hours:'04:30-21:00' },
+    benjakitti: { name:'班嘉奇蒂公園', kind:'spot', lat:13.7302, lng:100.5593, area:'曼谷', category:'公園', hours:'05:00-21:00' },
+    benchasiri: { name:'班哲希利公園', kind:'spot', lat:13.7302, lng:100.5694, area:'曼谷', category:'公園', hours:'05:00-21:00' },
+    damnoen: { name:'丹嫩莎朵水上市場', kind:'spot', lat:13.5190, lng:99.9593, area:'叻丕府', category:'水上市場', hours:'07:00-12:00' },
+    amphawa: { name:'安帕瓦水上市場', kind:'spot', lat:13.4249, lng:99.9555, area:'夜功府', category:'水上市場', hours:'14:00-20:00' },
+    maeklong: { name:'美功鐵道市場', kind:'spot', lat:13.4077, lng:100.0009, area:'夜功府', category:'鐵道市場', hours:'07:00-17:00' },
+    ayutthaya: { name:'大城古城', kind:'spot', lat:14.3535, lng:100.5623, area:'大城', category:'古城', hours:'08:00-18:00' },
+    watMahathat: { name:'瑪哈泰寺', kind:'temple', lat:14.3571, lng:100.5690, area:'大城', category:'寺廟', hours:'08:00-18:00' },
+    watChaiwatthanaram: { name:'柴瓦塔那蘭寺', kind:'temple', lat:14.3449, lng:100.4887, area:'大城', category:'寺廟', hours:'08:00-18:00' },
+    bangPaIn: { name:'邦芭茵皇宮', kind:'spot', lat:14.2326, lng:100.5794, area:'大城', category:'皇宮', hours:'08:30-16:30' },
+    muangBoran: { name:'古城（Muang Boran）', kind:'spot', lat:13.5405, lng:100.6240, area:'北欖府', category:'歷史園區', hours:'09:00-18:00' },
+    erawanMuseum: { name:'三頭象神博物館', kind:'spot', lat:13.6299, lng:100.5891, area:'北欖府', category:'博物館', hours:'09:00-18:00' },
+    mahachai: { name:'瑪哈猜海鮮市場', kind:'spot', lat:13.5451, lng:100.2762, area:'龍仔厝府', category:'海鮮市場', hours:'06:00-17:00' },
+    riverKwai: { name:'桂河大橋', kind:'spot', lat:14.0404, lng:99.5035, area:'北碧府', category:'歷史景點', hours:'全天' },
+    erawanFalls: { name:'愛侶灣瀑布', kind:'spot', lat:14.3693, lng:99.1385, area:'北碧府', category:'自然景點', hours:'08:00-16:30' },
+    pattayaBeach: { name:'芭達雅海灘', kind:'spot', lat:12.9366, lng:100.8860, area:'芭達雅', category:'海灘', hours:'全天' },
+    sanctuaryTruth: { name:'真理寺', kind:'spot', lat:12.9728, lng:100.8892, area:'芭達雅', category:'景點', hours:'08:00-18:00' },
+    nongNooch: { name:'東芭樂園（Nong Nooch）', kind:'spot', lat:12.7647, lng:100.9361, area:'芭達雅', category:'花園', hours:'08:00-18:00' },
+    pattayaWalking: { name:'Walking Street', kind:'spot', lat:12.9277, lng:100.8762, area:'芭達雅', category:'夜生活', hours:'18:00-24:00' },
+    huaHinBeach: { name:'華欣海灘', kind:'spot', lat:12.5706, lng:99.9576, area:'華欣', category:'海灘', hours:'全天' },
+    huaHinNight: { name:'華欣夜市', kind:'spot', lat:12.5686, lng:99.9579, area:'華欣', category:'夜市', hours:'17:00-23:00' },
+    cicada: { name:'Cicada Market', kind:'spot', lat:12.5312, lng:99.9659, area:'華欣', category:'市集', hours:'16:00-23:00' }
+  };
+
+  const ROUTE_TEMPLATES = [
+    {
+      id: 'bkk-riverside',
+      name: '曼谷河岸寺廟經典',
+      group: '曼谷市區',
+      desc: '大皇宮・臥佛寺・鄭王廟・ICONSIAM・河濱夜市',
+      stops: [ROUTE_SPOTS.grandPalace, ROUTE_SPOTS.watPho, ROUTE_SPOTS.watArun, ROUTE_SPOTS.iconSiam, ROUTE_SPOTS.asiatique]
+    },
+    {
+      id: 'bkk-oldtown',
+      name: '曼谷老城文化路線',
+      group: '曼谷市區',
+      desc: '金山寺・大鞦韆・考山路・唐人街・花市',
+      stops: [ROUTE_SPOTS.watSaket, ROUTE_SPOTS.giantSwing, ROUTE_SPOTS.khaoSan, ROUTE_SPOTS.yaowarat, ROUTE_SPOTS.pakKhlong]
+    },
+    {
+      id: 'bkk-shopping',
+      name: '曼谷購物夜景線',
+      group: '曼谷市區',
+      desc: '暹羅・百麗宮・CentralWorld・四面佛・Mahanakhon',
+      stops: [ROUTE_SPOTS.siamSquare, ROUTE_SPOTS.siamParagon, ROUTE_SPOTS.centralWorld, ROUTE_SPOTS.erawanShrine, ROUTE_SPOTS.mahanakhon]
+    },
+    {
+      id: 'bkk-art',
+      name: '曼谷藝文文青線',
+      group: '曼谷市區',
+      desc: 'BACC・Jim Thompson・暹羅・河畔夜景',
+      stops: [ROUTE_SPOTS.bacc, ROUTE_SPOTS.jimThompson, ROUTE_SPOTS.siamSquare, ROUTE_SPOTS.iconSiam]
+    },
+    {
+      id: 'bkk-parks',
+      name: '曼谷公園慢遊',
+      group: '曼谷市區',
+      desc: '倫披尼・班嘉奇蒂・班哲希利・Terminal 21',
+      stops: [ROUTE_SPOTS.lumphini, ROUTE_SPOTS.benjakitti, ROUTE_SPOTS.benchasiri, ROUTE_SPOTS.terminal21]
+    },
+    {
+      id: 'bkk-night',
+      name: '曼谷夜市巡禮',
+      group: '曼谷市區',
+      desc: '喬德夜市・席娜卡琳・河濱夜市・唐人街',
+      stops: [ROUTE_SPOTS.joddFairs, ROUTE_SPOTS.trainMarket, ROUTE_SPOTS.asiatique, ROUTE_SPOTS.yaowarat]
+    },
+    {
+      id: 'bkk-chatuchak',
+      name: '恰圖恰北區一日',
+      group: '曼谷市區',
+      desc: '恰圖恰・水門市場・BACC',
+      stops: [ROUTE_SPOTS.chatuchak, ROUTE_SPOTS.watergate, ROUTE_SPOTS.bacc]
+    },
+    {
+      id: 'floating-markets',
+      name: '水上市場經典線',
+      group: '近郊一日',
+      desc: '丹嫩莎朵・美功鐵道市場・安帕瓦',
+      stops: [ROUTE_SPOTS.damnoen, ROUTE_SPOTS.maeklong, ROUTE_SPOTS.amphawa]
+    },
+    {
+      id: 'maeklong-amphawa',
+      name: '美功＋安帕瓦夕陽',
+      group: '近郊一日',
+      desc: '美功鐵道市場・安帕瓦',
+      stops: [ROUTE_SPOTS.maeklong, ROUTE_SPOTS.amphawa]
+    },
+    {
+      id: 'ayutthaya',
+      name: '大城古城一日',
+      group: '近郊一日',
+      desc: '邦芭茵・大城古城・瑪哈泰寺・柴瓦塔那蘭寺',
+      stops: [ROUTE_SPOTS.bangPaIn, ROUTE_SPOTS.ayutthaya, ROUTE_SPOTS.watMahathat, ROUTE_SPOTS.watChaiwatthanaram]
+    },
+    {
+      id: 'samutprakan',
+      name: '北欖府古城＋象神博物館',
+      group: '近郊一日',
+      desc: '古城・三頭象神博物館',
+      stops: [ROUTE_SPOTS.muangBoran, ROUTE_SPOTS.erawanMuseum]
+    },
+    {
+      id: 'mahachai',
+      name: '瑪哈猜海鮮市場一日',
+      group: '近郊一日',
+      desc: '海鮮市場・曼谷市區晚餐',
+      stops: [ROUTE_SPOTS.mahachai, ROUTE_SPOTS.yaowarat]
+    },
+    {
+      id: 'kanchanaburi',
+      name: '北碧府桂河自然',
+      group: '近郊一日',
+      desc: '桂河大橋・愛侶灣瀑布',
+      stops: [ROUTE_SPOTS.riverKwai, ROUTE_SPOTS.erawanFalls]
+    },
+    {
+      id: 'pattaya',
+      name: '芭達雅海邊一日',
+      group: '海邊一日',
+      desc: '芭達雅海灘・真理寺・東芭樂園・Walking Street',
+      stops: [ROUTE_SPOTS.pattayaBeach, ROUTE_SPOTS.sanctuaryTruth, ROUTE_SPOTS.nongNooch, ROUTE_SPOTS.pattayaWalking]
+    },
+    {
+      id: 'huahin',
+      name: '華欣海灘慢旅',
+      group: '海邊一日',
+      desc: '華欣海灘・Cicada Market・華欣夜市',
+      stops: [ROUTE_SPOTS.huaHinBeach, ROUTE_SPOTS.cicada, ROUTE_SPOTS.huaHinNight]
+    }
+  ];
+
   const state = {
     foods: [],
     temples: [],
@@ -138,6 +297,7 @@
     currentSummary: null,
     planStale: false,
     savedPlans: [],
+    selectedRouteId: 'auto',
     selectedMapPlace: null,
     googleReady: false,
     googleMap: null,
@@ -465,6 +625,76 @@
     }
     return state.popularItems.slice();
   }
+
+  function buildRouteItem(spot, routeId){
+    const item = buildPresetItem(spot);
+    item.isRoute = true;
+    item.routeId = routeId || '';
+    item.isPopular = true;
+    return item;
+  }
+
+  function buildRouteItems(route, includeTemples){
+    if (!route || !Array.isArray(route.stops)) return [];
+    return route.stops
+      .filter(stop => includeTemples || stop.kind !== 'temple')
+      .map(stop => buildRouteItem(stop, route.id));
+  }
+
+  function getRouteById(routeId){
+    if (!routeId) return null;
+    return ROUTE_TEMPLATES.find(route => route.id === routeId) || null;
+  }
+
+  function updateRouteHint(route){
+    if (!routeHint) return;
+    if (!route){
+      routeHint.textContent = '自動挑選熱門路線主軸，依時間安排。';
+      return;
+    }
+    const names = route.stops.map(stop => stop.name).filter(Boolean);
+    const preview = names.slice(0, 6).join('・');
+    const extra = names.length > 6 ? `等 ${names.length} 個` : '';
+    const desc = route.desc || route.name;
+    routeHint.textContent = `${desc}：${preview}${extra}`;
+  }
+
+  function renderRouteOptions(){
+    if (!routeSelect) return;
+    const current = routeSelect.value || state.selectedRouteId || 'auto';
+    routeSelect.innerHTML = '';
+    const autoOpt = document.createElement('option');
+    autoOpt.value = 'auto';
+    autoOpt.textContent = '自動挑選熱門路線';
+    routeSelect.appendChild(autoOpt);
+
+    const groups = new Map();
+    ROUTE_TEMPLATES.forEach(route => {
+      const group = route.group || '其他';
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(route);
+    });
+    groups.forEach((routes, group) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group;
+      routes.forEach(route => {
+        const opt = document.createElement('option');
+        opt.value = route.id;
+        opt.textContent = route.name;
+        optgroup.appendChild(opt);
+      });
+      routeSelect.appendChild(optgroup);
+    });
+
+    if (routeSelect.querySelector(`option[value="${current}"]`)) {
+      routeSelect.value = current;
+    } else {
+      routeSelect.value = 'auto';
+    }
+    state.selectedRouteId = routeSelect.value;
+    updateRouteHint(getRouteById(routeSelect.value));
+  }
+
 
   function resolvePopularGroups(origin, popularItems){
     if (!origin || !popularItems || !popularItems.length) return [];
@@ -822,7 +1052,7 @@
       rating: '',
       maps: mapsUrl,
       googlePlaceId: '',
-      hours: '',
+      hours: spot.hours || '',
       tags: [],
       wishTags: [],
       kind,
@@ -866,6 +1096,7 @@
     return {
       breakfast: mealBreakfast ? mealBreakfast.checked : true,
       lunch: mealLunch ? mealLunch.checked : true,
+      snack: mealSnack ? mealSnack.checked : true,
       dinner: mealDinner ? mealDinner.checked : true
     };
   }
@@ -893,6 +1124,36 @@
     const end = Number(endMin);
     if (!Number.isFinite(start) || !Number.isFinite(end)) return true;
     return Math.max(start, window[0]) < Math.min(end, window[1]);
+  }
+
+  function buildMealSlots(meals, startMin, endMin){
+    const slots = [];
+    MEAL_ORDER.forEach(key => {
+      if (!meals[key]) return;
+      const window = MEAL_WINDOWS[key];
+      if (!window) return;
+      if (!mealWindowOverlaps(startMin, endMin, window)) return;
+      slots.push({ key, start: window[0], end: window[1] });
+    });
+    return slots;
+  }
+
+  function getDueMealSlot(slots, status, currentTime){
+    return slots.find(slot => !status[slot.key] && currentTime >= slot.start && currentTime < slot.end) || null;
+  }
+
+  function markMissedMeals(slots, status, currentTime, skippedMeals){
+    slots.forEach(slot => {
+      if (!status[slot.key] && currentTime >= slot.end){
+        status[slot.key] = true;
+        skippedMeals.add(slot.key);
+      }
+    });
+  }
+
+  function getDetourLimitMin(slackMin){
+    const slack = Math.max(0, Number(slackMin) || 0);
+    return Math.max(15, Math.min(60, Math.round(slack * 0.2)));
   }
 
   function getTransportLabel(mode){
@@ -924,6 +1185,64 @@
       return Math.max(10, Math.round(distance * 4));
     }
     return Math.max(10, Math.round(distance * transport.speedMinPerKm));
+  }
+
+  function estimateRouteTime(startCoords, routeStops, startIdx, transport, modeSettings){
+    if (!startCoords || !Array.isArray(routeStops) || startIdx >= routeStops.length) return 0;
+    let total = 0;
+    let prev = startCoords;
+    for (let i = startIdx; i < routeStops.length; i++){
+      const stop = routeStops[i];
+      if (!stop || !stop.coords) continue;
+      const distKm = haversineKm(prev, stop.coords);
+      total += estimateTravelMinutes(distKm, transport);
+      total += computeStayMin(stop, modeSettings);
+      prev = stop.coords;
+    }
+    return total;
+  }
+
+  function countFittableStops(origin, startMin, endMin, routeStops, settings){
+    if (!origin || !Array.isArray(routeStops) || !routeStops.length) return 0;
+    let time = startMin;
+    let coords = origin;
+    let count = 0;
+    const transport = settings.transport;
+    const modeSettings = settings.modeSettings;
+    for (const stop of routeStops){
+      if (!stop || !stop.coords) continue;
+      const distKm = haversineKm(coords, stop.coords);
+      const travelMin = estimateTravelMinutes(distKm, transport);
+      const stayMin = computeStayMin(stop, modeSettings);
+      const arrive = time + travelMin;
+      const depart = arrive + stayMin;
+      if (depart > endMin) break;
+      time = depart;
+      coords = stop.coords;
+      count += 1;
+    }
+    return count;
+  }
+
+  function resolveRouteSelection(origin, startMin, endMin, settings){
+    const routeId = routeSelect ? routeSelect.value : (state.selectedRouteId || 'auto');
+    if (routeId && routeId !== 'auto'){
+      const picked = getRouteById(routeId);
+      const routeItems = buildRouteItems(picked, settings.includeTemples);
+      return { route: picked, routeItems, auto: false };
+    }
+    let best = null;
+    ROUTE_TEMPLATES.forEach(route => {
+      const items = buildRouteItems(route, settings.includeTemples);
+      const count = countFittableStops(origin, startMin, endMin, items, settings);
+      const est = estimateRouteTime(origin, items, 0, settings.transport, settings.modeSettings);
+      const score = (count * 1000) - est;
+      if (!best || score > best.score){
+        best = { route, routeItems: items, score };
+      }
+    });
+    if (!best) return { route: null, routeItems: [], auto: true };
+    return { route: best.route, routeItems: best.routeItems, auto: true };
   }
 
   function itemMatchesTags(item, selectedTags){
@@ -1057,105 +1376,191 @@
     return best;
   }
 
-  function buildPlan(origin, startMin, endMin, items, settings){
-    const used = new Set();
+  function buildPlan(origin, startMin, endMin, pools, settings){
     const plan = [];
-    let currentTime = startMin;
-    let currentCoords = origin;
-    const lastKinds = [];
-    const totalMinutes = endMin - startMin;
+    const used = new Set();
+    const routeStops = pools && Array.isArray(pools.routeStops) ? pools.routeStops.slice() : [];
+    const foodPool = pools && Array.isArray(pools.foods) ? pools.foods : [];
+    const templePool = pools && Array.isArray(pools.temples) ? pools.temples : [];
     const modeSettings = settings.modeSettings;
     const transport = settings.transport;
     const meals = settings.meals || {};
-    const mealStatus = { breakfast: false, lunch: false, dinner: false };
-    const maxStops = Math.min(12, Math.max(3, Math.floor(totalMinutes / modeSettings.stopFactor)));
-    const mustSet = settings.mustSet;
+    const mustSet = settings.mustSet || new Set();
+    const includeTemples = settings.includeTemples !== false;
     const allowClosed = settings.allowClosed !== false;
-    const popularGroups = Array.isArray(settings.popularGroups) ? settings.popularGroups : [];
-    const popularTarget = Number.isFinite(settings.popularTarget)
-      ? settings.popularTarget
-      : Math.min(4, Math.max(1, Math.floor(totalMinutes / 240)));
+    const skippedMeals = new Set();
+    const mealSlots = buildMealSlots(meals, startMin, endMin);
+    const mealStatus = {};
+    mealSlots.forEach(slot => { mealStatus[slot.key] = false; });
+    MEAL_ORDER.forEach(key => {
+      if (meals[key] && !mealWindowOverlaps(startMin, endMin, MEAL_WINDOWS[key])) skippedMeals.add(key);
+    });
+
+    const totalMinutes = Math.max(0, endMin - startMin);
+    const maxStops = Math.max(1, Math.floor(totalMinutes / modeSettings.stopFactor));
+    const maxExtraStops = Math.max(0, maxStops - routeStops.length);
+    let extraStopsUsed = 0;
+
     let usedClosedFallback = false;
+    let currentTime = startMin;
+    let currentCoords = origin;
+    let routeIdx = 0;
+    let optionalTempleInserted = false;
+    const skippedRoute = [];
 
-    const counts = { food: 0, temple: 0, spot: 0, popular: 0 };
+    const scheduleItem = (item, arrive, stayMin, travelMin, distKm, wasClosed)=>{
+      const depart = arrive + stayMin;
+      plan.push({ item, arrive, depart, travelMin, distKm, stayMin });
+      used.add(item.id);
+      currentCoords = item.coords;
+      currentTime = depart;
+      if (wasClosed) usedClosedFallback = true;
+    };
 
-    for (let i = 0; i < maxStops; i++){
-      const mealPreferredIds = new Set();
-      const closedIds = new Set();
-      const candidates = items.filter(item => {
-        if (!item || !item.id || used.has(item.id)) return false;
+    const pickCandidate = (pool, nextCoords, options)=>{
+      let best = null;
+      let bestScore = Infinity;
+      const directDist = nextCoords ? haversineKm(currentCoords, nextCoords) : 0;
+      const detourLimitMin = getDetourLimitMin(endMin - currentTime);
+      pool.forEach(item => {
+        if (!item || !item.id || used.has(item.id)) return;
+        if (options && options.mustOnly && !mustSet.has(item.id)) return;
+        if (options && options.filter && !options.filter(item)) return;
         const distKm = haversineKm(currentCoords, item.coords);
         const travelMin = estimateTravelMinutes(distKm, transport);
         const arrive = currentTime + travelMin;
+        if (arrive >= endMin) return;
+        const wasClosed = !isOpenAt(item, arrive);
+        if (wasClosed && !allowClosed) return;
         const stayMin = computeStayMin(item, modeSettings);
-        if (arrive + stayMin > endMin) return false;
-        if (!isOpenAt(item, arrive)) {
-          if (!allowClosed) return false;
-          closedIds.add(item.id);
-        }
-        if (item.kind === 'food'){
-          const mealKey = getMealKeyForTime(arrive, meals, mealStatus);
-          if (mealKey) mealPreferredIds.add(item.id);
-        }
-        return true;
-      });
-      if (!candidates.length) break;
-      const popularPreferredIds = new Set();
-      if (!mealPreferredIds.size && popularTarget && counts.popular < popularTarget) {
-        candidates.forEach(item => {
-          if (!item.isPopular || item.kind !== 'spot') return;
-          if (popularGroups.length && item.group && !popularGroups.includes(item.group)) return;
-          popularPreferredIds.add(item.id);
-        });
-      }
-      const preferred = mealPreferredIds.size ? 'food' : getPreferredKind(currentTime, counts, settings, lastKinds);
-      const preferredIds = mealPreferredIds.size ? mealPreferredIds : popularPreferredIds;
-      const next = pickNextItem(candidates, currentCoords, preferred, mustSet, preferredIds, {
-        getBias: (item)=>{
-          let bias = 0;
-          if (item.isPopular) bias -= 0.35;
-          if (item.isPopular && popularGroups.length && item.group && !popularGroups.includes(item.group)) {
-            bias += 0.6;
+        const depart = arrive + stayMin;
+        if (depart > endMin) return;
+
+        if (nextCoords){
+          const remaining = estimateRouteTime(item.coords, routeStops, routeIdx, transport, modeSettings);
+          if (depart + remaining > endMin) return;
+          const distToNext = haversineKm(item.coords, nextCoords);
+          const detourKm = (distKm + distToNext - directDist);
+          const detourMin = estimateTravelMinutes(Math.max(0, detourKm), transport);
+          if (!mustSet.has(item.id) && detourMin > detourLimitMin) return;
+          const rating = Number(item.rating) || 0;
+          let score = detourKm + (distKm * 0.2) - (rating * 0.05);
+          if (mustSet.has(item.id)) score -= 1.2;
+          if (score < bestScore) {
+            bestScore = score;
+            best = { item, arrive, depart, travelMin, distKm, stayMin, wasClosed };
           }
-          if (closedIds.has(item.id)) bias += 0.7;
-          return bias;
+        } else {
+          const detourMin = estimateTravelMinutes(distKm, transport);
+          if (!mustSet.has(item.id) && detourMin > detourLimitMin) return;
+          const rating = Number(item.rating) || 0;
+          let score = distKm + (distKm * 0.2) - (rating * 0.05);
+          if (mustSet.has(item.id)) score -= 1.2;
+          if (score < bestScore) {
+            bestScore = score;
+            best = { item, arrive, depart, travelMin, distKm, stayMin, wasClosed };
+          }
         }
       });
-      if (!next) break;
-      if (closedIds.has(next.id)) usedClosedFallback = true;
-      const distKm = haversineKm(currentCoords, next.coords);
-      const travelMin = estimateTravelMinutes(distKm, transport);
-      const stayMin = computeStayMin(next, modeSettings);
-      const arrive = currentTime + travelMin;
-      const depart = arrive + stayMin;
-      if (depart > endMin) break;
-      plan.push({
-        item: next,
-        arrive,
-        depart,
-        travelMin,
-        distKm,
-        stayMin
-      });
-      used.add(next.id);
-      currentCoords = next.coords;
-      currentTime = depart;
-      if (next.kind === 'food') counts.food += 1;
-      else if (next.kind === 'temple') counts.temple += 1;
-      else counts.spot += 1;
-      if (next.isPopular) counts.popular += 1;
-      if (next.kind === 'food'){
-        const mealKey = getMealKeyForTime(arrive, meals, mealStatus);
-        if (mealKey) mealStatus[mealKey] = true;
+      return best;
+    };
+
+    while (routeIdx < routeStops.length){
+      markMissedMeals(mealSlots, mealStatus, currentTime, skippedMeals);
+      const nextRoute = routeStops[routeIdx];
+      if (!nextRoute || !nextRoute.coords){
+        routeIdx += 1;
+        continue;
       }
-      lastKinds.push(next.kind);
-      if (lastKinds.length > 2) lastKinds.shift();
+
+      const dueMeal = getDueMealSlot(mealSlots, mealStatus, currentTime);
+      if (dueMeal){
+        const pick = pickCandidate(foodPool, nextRoute.coords);
+        if (pick){
+          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
+          mealStatus[dueMeal.key] = true;
+          continue;
+        }
+      }
+
+      if (includeTemples){
+        let pick = null;
+        if (templePool.some(item => mustSet.has(item.id))) {
+          pick = pickCandidate(templePool, nextRoute.coords, { mustOnly: true });
+        }
+        if (!pick && !optionalTempleInserted && extraStopsUsed < maxExtraStops){
+          pick = pickCandidate(templePool, nextRoute.coords);
+        }
+        if (pick){
+          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
+          optionalTempleInserted = true;
+          if (!mustSet.has(pick.item.id)) extraStopsUsed += 1;
+          continue;
+        }
+      }
+
+      const distKm = haversineKm(currentCoords, nextRoute.coords);
+      const travelMin = estimateTravelMinutes(distKm, transport);
+      const arrive = currentTime + travelMin;
+      if (arrive > endMin) break;
+      const wasClosed = !isOpenAt(nextRoute, arrive);
+      if (wasClosed && !allowClosed){
+        skippedRoute.push(nextRoute.id);
+        routeIdx += 1;
+        optionalTempleInserted = false;
+        continue;
+      }
+      const stayMin = computeStayMin(nextRoute, modeSettings);
+      const depart = arrive + stayMin;
+      if (depart > endMin){
+        skippedRoute.push(nextRoute.id);
+        routeIdx += 1;
+        optionalTempleInserted = false;
+        continue;
+      }
+      scheduleItem(nextRoute, arrive, stayMin, travelMin, distKm, wasClosed);
+      routeIdx += 1;
+      optionalTempleInserted = false;
     }
+
+    let safety = 0;
+    while (currentTime < endMin && safety < 10){
+      safety += 1;
+      markMissedMeals(mealSlots, mealStatus, currentTime, skippedMeals);
+      const dueMeal = getDueMealSlot(mealSlots, mealStatus, currentTime);
+      if (dueMeal){
+        const pick = pickCandidate(foodPool, null);
+        if (pick){
+          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
+        } else {
+          mealStatus[dueMeal.key] = true;
+          skippedMeals.add(dueMeal.key);
+        }
+        continue;
+      }
+      if (includeTemples){
+        const pick = pickCandidate(templePool, null, { mustOnly: true });
+        if (pick){
+          scheduleItem(pick.item, pick.arrive, pick.stayMin, pick.travelMin, pick.distKm, pick.wasClosed);
+          continue;
+        }
+      }
+      break;
+    }
+
+    mealSlots.forEach(slot => {
+      if (!mealStatus[slot.key]) skippedMeals.add(slot.key);
+    });
     const skippedMust = Array.from(mustSet).filter(id => !plan.some(entry => entry.item.id === id));
-    const skippedMeals = MEAL_ORDER.filter(key => meals[key] && !mealStatus[key]);
-    const windowSkips = MEAL_ORDER.filter(key => meals[key] && !mealWindowOverlaps(startMin, endMin, MEAL_WINDOWS[key]));
-    const skippedMealsAll = Array.from(new Set(skippedMeals.concat(windowSkips)));
-    return { plan, skippedMust, skippedMeals: skippedMealsAll, startMin, endMin, usedClosedFallback };
+    return {
+      plan,
+      skippedMust,
+      skippedMeals: Array.from(skippedMeals),
+      startMin,
+      endMin,
+      usedClosedFallback,
+      skippedRoute
+    };
   }
 
   function recomputeTravelStats(plan, origin, transport){
@@ -1283,6 +1688,7 @@
     const mealLabel = getMealLabel(planData.meals || getMealSelections());
     const templeLabel = (planData.includeTemples ?? (includeTempleToggle ? includeTempleToggle.checked : true)) ? '加入寺廟' : '不含寺廟';
     const transportLabel = getTransportLabel(planData.transportMode || (transportSelect ? transportSelect.value : 'driving'));
+    const routeLabel = planData.routeLabel || '自動';
     const startTimeLabel = Number.isFinite(planData.startMin)
       ? formatMinutes(planData.startMin)
       : (startTimeInput ? startTimeInput.value : '');
@@ -1320,6 +1726,7 @@
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 <h3 class="plan-title">${escapeHtml(item.name || '')}</h3>
                 <span class="${kindClass}">${escapeHtml(kindLabel)}</span>
+                ${item.isRoute ? '<span class="plan-kind" style="background:#e0f2fe;border-color:#bae6fd;color:#0369a1;">路線主軸</span>' : ''}
                 ${state.mustIds.has(item.id) ? '<span class="plan-kind" style="background:#f1f5f9;border-color:#cbd5f5;color:#475569;">必去</span>' : ''}
                 ${isPopular ? '<span class="plan-kind" style="background:#fef3c7;border-color:#fde68a;color:#b45309;">熱門景點</span>' : ''}
               </div>
@@ -1379,6 +1786,10 @@
             ${escapeHtml(startLabel)}
           </div>
           <div class="plan-cover-badge">
+            <span>路線</span>
+            ${escapeHtml(routeLabel)}
+          </div>
+          <div class="plan-cover-badge">
             <span>模式</span>
             ${escapeHtml(modeLabel)}
           </div>
@@ -1398,6 +1809,7 @@
       </div>
       <div class="plan-summary">
         <span class="tag">起點：${escapeHtml(startLabel)}</span>
+        <span class="tag">路線：${escapeHtml(routeLabel)}</span>
         <span class="tag">美食 ${foodCount} / 寺廟 ${templeCount}${spotCount ? ` / 景點 ${spotCount}` : ''}</span>
         ${popularCount ? `<span class="tag">熱門景點 ${popularCount}</span>` : ''}
         <span class="tag">餐別：${escapeHtml(mealLabel)}</span>
@@ -1515,7 +1927,6 @@
       setStatus('結束時間需大於開始時間', true);
       return false;
     }
-    const totalMinutes = endMin - startMin;
     const origin = await resolveStartCoords();
     if (!origin) return false;
 
@@ -1523,27 +1934,30 @@
     const transportMode = transportSelect ? transportSelect.value : 'driving';
     const allowClosed = allowClosedToggle ? allowClosedToggle.checked : true;
     const meals = getMealSelections();
+    if (startMin >= MEAL_WINDOWS.breakfast[1]) {
+      meals.breakfast = false;
+    }
     const includeTemples = includeTempleToggle ? includeTempleToggle.checked : true;
     const modeSettings = applyModeSettings(modeValue);
     const transport = getTransportSettings(transportMode);
-    const popularItems = getPopularItems();
-    const popularGroups = resolvePopularGroups(origin, popularItems);
-    const popularTargetBase = Math.max(1, Math.floor(totalMinutes / 240));
-    const popularTarget = Math.min(4, popularTargetBase + (modeValue === 'battle' ? 1 : 0));
-    let items = getActiveItems();
-    if (!includeTemples) items = items.filter(item => item.kind !== 'temple');
     const settings = {
       modeSettings,
       transport,
       mustSet: new Set(state.mustIds),
       allowClosed,
       meals,
-      includeTemples,
-      templeRatio: includeTemples ? 0.25 : 0,
-      popularGroups,
-      popularTarget
+      includeTemples
     };
-    const planData = buildPlan(origin, startMin, endMin, items, settings);
+    const routeSelection = resolveRouteSelection(origin, startMin, endMin, settings);
+    const routeItems = routeSelection.routeItems || [];
+    const routeIds = new Set(routeItems.map(item => item.id));
+    const activeItems = getActiveItems();
+    const foodPool = activeItems.filter(item => item.kind === 'food' && !routeIds.has(item.id));
+    const templePool = activeItems.filter(item => item.kind === 'temple' && !routeIds.has(item.id));
+    const planData = buildPlan(origin, startMin, endMin, { routeStops: routeItems, foods: foodPool, temples: templePool }, settings);
+    const routeLabel = routeSelection.route
+      ? (routeSelection.auto ? `自動：${routeSelection.route.name}` : routeSelection.route.name)
+      : '自動';
     planData.travelMode = transport.travelMode;
     planData.transport = transport;
     planData.transportMode = transportMode;
@@ -1553,6 +1967,9 @@
     planData.allowClosed = allowClosed;
     planData.startLabel = state.startLabel;
     planData.startCoords = state.startCoords;
+    planData.routeId = routeSelection.route ? routeSelection.route.id : 'auto';
+    planData.routeLabel = routeLabel;
+    planData.routeAuto = !!routeSelection.auto;
     renderPlan(planData);
     if (planData.plan && planData.plan.length){
       clearPlanStale();
@@ -1594,6 +2011,9 @@
     const startLabel = planData.startLabel || state.startLabel;
     const startCoords = planData.startCoords || state.startCoords;
     const mode = planData.mode || (modeSelect ? modeSelect.value : 'balance');
+    const routeId = planData.routeId || (routeSelect ? routeSelect.value : 'auto');
+    const routeLabel = planData.routeLabel || '';
+    const routeAuto = planData.routeAuto || false;
     const meals = planData.meals || getMealSelections();
     const includeTemples = planData.includeTemples ?? (includeTempleToggle ? includeTempleToggle.checked : true);
     const allowClosed = planData.allowClosed ?? (allowClosedToggle ? allowClosedToggle.checked : true);
@@ -1608,6 +2028,9 @@
       includeTemples,
       allowClosed,
       transport,
+      routeId,
+      routeLabel,
+      routeAuto,
       plan: plan.map(entry => ({
         item: {
           id: entry.item.id,
@@ -1648,11 +2071,26 @@
     if (payload.meals){
       if (mealBreakfast) mealBreakfast.checked = !!payload.meals.breakfast;
       if (mealLunch) mealLunch.checked = !!payload.meals.lunch;
+      if (mealSnack && Object.prototype.hasOwnProperty.call(payload.meals, 'snack')) {
+        mealSnack.checked = !!payload.meals.snack;
+      }
       if (mealDinner) mealDinner.checked = !!payload.meals.dinner;
     }
     if (includeTempleToggle) includeTempleToggle.checked = payload.includeTemples !== false;
     if (allowClosedToggle) allowClosedToggle.checked = payload.allowClosed !== false;
     if (payload.mode) selectMode(payload.mode, true);
+    let resolvedRouteLabel = payload.routeLabel || '';
+    if (routeSelect){
+      routeSelect.value = payload.routeId && routeSelect.querySelector(`option[value="${payload.routeId}"]`)
+        ? payload.routeId
+        : 'auto';
+      state.selectedRouteId = routeSelect.value;
+      const routeInfo = getRouteById(routeSelect.value);
+      updateRouteHint(routeInfo);
+      if (!resolvedRouteLabel) {
+        resolvedRouteLabel = routeInfo ? routeInfo.name : '自動';
+      }
+    }
 
     const plan = (payload.plan || []).map(entry => ({
       item: Object.assign({}, entry.item, {
@@ -1687,6 +2125,9 @@
       endMin: Number.isFinite(endMin) ? endMin : 0,
       startLabel: payload.startLabel || state.startLabel,
       startCoords: payload.startCoords || state.startCoords,
+      routeId: payload.routeId || (routeSelect ? routeSelect.value : 'auto'),
+      routeLabel: resolvedRouteLabel || '',
+      routeAuto: payload.routeAuto || false,
       skippedMust: [],
       skippedMeals: []
     };
@@ -1743,6 +2184,9 @@
     const includeTemplesValue = summary.includeTemples ?? (includeTempleToggle ? includeTempleToggle.checked : true);
     const allowClosedValue = summary.allowClosed ?? (allowClosedToggle ? allowClosedToggle.checked : true);
     const transportValue = summary.transportMode || (transportSelect ? transportSelect.value : 'driving');
+    const routeId = summary.routeId || (routeSelect ? routeSelect.value : 'auto');
+    const routeLabel = summary.routeLabel || '';
+    const routeAuto = summary.routeAuto || false;
     const record = {
       id: `plan_${Date.now()}`,
       name,
@@ -1756,6 +2200,9 @@
       includeTemples: includeTemplesValue,
       allowClosed: allowClosedValue,
       transport: transportValue,
+      routeId,
+      routeLabel,
+      routeAuto,
       plan: state.currentSummary.plan
     };
     state.savedPlans.unshift(record);
@@ -1830,11 +2277,26 @@
     if (plan.meals){
       if (mealBreakfast) mealBreakfast.checked = !!plan.meals.breakfast;
       if (mealLunch) mealLunch.checked = !!plan.meals.lunch;
+      if (mealSnack && Object.prototype.hasOwnProperty.call(plan.meals, 'snack')) {
+        mealSnack.checked = !!plan.meals.snack;
+      }
       if (mealDinner) mealDinner.checked = !!plan.meals.dinner;
     }
     if (includeTempleToggle) includeTempleToggle.checked = plan.includeTemples !== false;
     if (allowClosedToggle) allowClosedToggle.checked = plan.allowClosed !== false;
     if (plan.mode) selectMode(plan.mode, true);
+    let resolvedRouteLabel = plan.routeLabel || '';
+    if (routeSelect){
+      routeSelect.value = plan.routeId && routeSelect.querySelector(`option[value="${plan.routeId}"]`)
+        ? plan.routeId
+        : 'auto';
+      state.selectedRouteId = routeSelect.value;
+      const routeInfo = getRouteById(routeSelect.value);
+      updateRouteHint(routeInfo);
+      if (!resolvedRouteLabel) {
+        resolvedRouteLabel = routeInfo ? routeInfo.name : '自動';
+      }
+    }
     const transportMode = plan.transport || 'driving';
     const transport = getTransportSettings(transportMode);
     const startMin = plan.startTime ? timeInputToMinutes(plan.startTime) : null;
@@ -1862,6 +2324,9 @@
       endMin: Number.isFinite(endMin) ? endMin : 0,
       startLabel: plan.startLabel || state.startLabel,
       startCoords: plan.startCoords || state.startCoords,
+      routeId: plan.routeId || (routeSelect ? routeSelect.value : 'auto'),
+      routeLabel: resolvedRouteLabel || '',
+      routeAuto: plan.routeAuto || false,
       skippedMust: [],
       skippedMeals: []
     };
@@ -2069,6 +2534,13 @@
       });
     });
   }
+  if (routeSelect){
+    routeSelect.addEventListener('change', ()=>{
+      state.selectedRouteId = routeSelect.value;
+      updateRouteHint(getRouteById(routeSelect.value));
+      markPlanStale('路線已變更，請重新產生');
+    });
+  }
 
   if (stepper){
     stepPills.forEach(pill=>{
@@ -2124,7 +2596,7 @@
       markPlanStale('交通方式已變更，請重新產生');
     });
   }
-  [mealBreakfast, mealLunch, mealDinner].forEach(el => {
+  [mealBreakfast, mealLunch, mealSnack, mealDinner].forEach(el => {
     if (!el) return;
     el.addEventListener('change', ()=>{
       markPlanStale('餐別已變更，請重新產生');
@@ -2227,6 +2699,7 @@
   loadData().then(()=>{
     renderMustList();
     renderRecommendedList();
+    renderRouteOptions();
     selectMode(modeSelect ? modeSelect.value : 'balance', true);
     ensureGoogleMaps().then(()=>{
       if (state.currentSummary) maybeApplyGoogleTimes(state.currentSummary);
