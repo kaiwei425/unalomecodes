@@ -459,11 +459,18 @@
   }
 
   function pickCommonsLicense(meta){
-    const name = meta && meta.LicenseShortName && meta.LicenseShortName.value
-      ? String(meta.LicenseShortName.value).replace(/<[^>]*>/g, '').trim()
-      : '';
-    if (!name) return '';
-    return COMMONS_LICENSE_ALLOW.find(allow => name.includes(allow)) ? name : '';
+    const read = (key)=>{
+      const val = meta && meta[key] && meta[key].value
+        ? String(meta[key].value).replace(/<[^>]*>/g, '').trim()
+        : '';
+      return val;
+    };
+    const parts = [read('LicenseShortName'), read('License'), read('UsageTerms')].filter(Boolean);
+    if (!parts.length) return '';
+    const name = parts.join(' ');
+    const ok = COMMONS_LICENSE_ALLOW.find(allow => name.includes(allow))
+      || /(CC\s*BY|CC\s*BY-SA|CC0|Public\s*domain|PD)/i.test(name);
+    return ok ? name : '';
   }
 
   async function fetchCommonsCover(query){
@@ -497,6 +504,29 @@
     return null;
   }
 
+  function buildCommonsQueries(item){
+    const name = String(item && item.name || '').trim();
+    if (!name) return [];
+    const noParen = name.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
+    const ascii = name.replace(/[^\x20-\x7E]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const bases = [name, noParen, ascii].filter(Boolean);
+    const list = [];
+    bases.forEach(base=>{
+      list.push(`${base} Thailand`.trim());
+      list.push(base);
+    });
+    return Array.from(new Set(list.filter(Boolean)));
+  }
+
+  async function fetchCommonsCoverWithFallbacks(item){
+    const queries = buildCommonsQueries(item);
+    for (const query of queries){
+      const cover = await fetchCommonsCover(query);
+      if (cover) return cover;
+    }
+    return null;
+  }
+
   function getCoverInfo(item){
     const coverRaw = item && (item.cover || item.coverUrl || item.cover_url || '');
     const coverPos = item && safeObjectPosition(item.coverPos || item.cover_pos);
@@ -513,13 +543,7 @@
     }
     if (!state.popularCoverPending.has(key)) {
       state.popularCoverPending.add(key);
-      const baseName = String(item.name || '').trim();
-      const query = `${baseName} Thailand`.trim();
-      fetchCommonsCover(query)
-        .then((cover)=>{
-          if (!cover && baseName) return fetchCommonsCover(baseName);
-          return cover;
-        })
+      fetchCommonsCoverWithFallbacks(item)
         .then((cover)=>{
           state.popularCoverPending.delete(key);
           state.popularCoverCache.set(key, cover || null);

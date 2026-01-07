@@ -3007,7 +3007,6 @@ function buildAdminGalleryItemHtml(url){
   return `
     <div class="admin-gallery-item" data-gallery-item data-gallery-url="${escapeHtml(url)}" draggable="true">
       <img src="${escapeHtml(url)}" alt="">
-      <button class="admin-gallery-handle" type="button" data-gallery-handle title="${escapeHtml(t('dayTripDrag'))}" aria-label="${escapeHtml(t('dayTripDrag'))}">⋮⋮</button>
       <button class="admin-gallery-remove" type="button" data-admin-gallery-remove title="${escapeHtml(t('removeBtn'))}" aria-label="${escapeHtml(t('removeBtn'))}">×</button>
     </div>
   `;
@@ -3046,10 +3045,6 @@ function initGalleryItem(item){
   if (!item || item.dataset.dragReady === '1') return;
   item.dataset.dragReady = '1';
   item.addEventListener('dragstart', (event)=>{
-    if (!event.target.closest('[data-gallery-handle]')) {
-      event.preventDefault();
-      return;
-    }
     item.classList.add('is-dragging');
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
