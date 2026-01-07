@@ -1709,7 +1709,22 @@
       ? Math.max(0, plan[plan.length - 1].depart - planData.endMin)
       : 0;
 
-    const listHtml = plan.map((entry, idx)=>{
+    const bucketDefs = [
+      { id: 'morning', label: '早上', range: '06:00-11:00' },
+      { id: 'noon', label: '中午', range: '11:00-14:00' },
+      { id: 'afternoon', label: '下午', range: '14:00-18:00' },
+      { id: 'evening', label: '晚上', range: '18:00-23:59' }
+    ];
+    const bucketMap = Object.fromEntries(bucketDefs.map(bucket => [bucket.id, []]));
+    const resolveBucket = (minutes)=>{
+      if (!Number.isFinite(minutes)) return 'morning';
+      if (minutes < 660) return 'morning';
+      if (minutes < 840) return 'noon';
+      if (minutes < 1080) return 'afternoon';
+      return 'evening';
+    };
+
+    plan.forEach((entry, idx)=>{
       const item = entry.item;
       const kindLabel = getKindLabel(item.kind);
       const kindClass = item.kind === 'temple' ? 'plan-kind temple' : 'plan-kind';
@@ -1718,8 +1733,8 @@
       const meta = [item.area, item.category].filter(Boolean).join(' · ');
       const mapLink = buildPlaceLink(item);
       const distanceText = `${entry.distKm.toFixed(1)} km / 約 ${entry.travelMin} 分`;
-      return `
-        <div class="plan-card">
+      const cardHtml = `
+        <div class="plan-card" data-kind="${escapeHtml(item.kind || '')}">
           <div class="plan-row">
             <div class="plan-time">${escapeHtml(timeText)}</div>
             <div>
@@ -1743,6 +1758,27 @@
                 <button class="pill-btn" type="button" data-stay-update="${idx}">更新</button>
               </div>
             </div>
+          </div>
+        </div>
+      `;
+      const bucketId = resolveBucket(entry.arrive);
+      if (!bucketMap[bucketId]) bucketMap[bucketId] = [];
+      bucketMap[bucketId].push(cardHtml);
+    });
+
+    const boardHtml = bucketDefs.map(bucket=>{
+      const cards = bucketMap[bucket.id] || [];
+      return `
+        <div class="plan-column" data-bucket="${bucket.id}">
+          <div class="plan-column-header">
+            <div>
+              <div class="plan-column-title">${escapeHtml(bucket.label)}</div>
+              <div class="plan-column-sub">${escapeHtml(bucket.range)}</div>
+            </div>
+            <div class="plan-column-count">${cards.length}</div>
+          </div>
+          <div class="plan-column-list">
+            ${cards.length ? cards.join('') : '<div class="plan-column-empty">尚未安排</div>'}
           </div>
         </div>
       `;
@@ -1823,7 +1859,15 @@
       ${endOverrun ? `<div class="planner-hint" style="color:#b91c1c;">依目前預估會超過結束時間約 ${Math.ceil(endOverrun)} 分鐘。</div>` : ''}
       ${mealWarning}
       ${warning}
-      ${listHtml}
+      <div class="plan-board-header">
+        <div>
+          <div class="plan-board-title">行程安排</div>
+          <div class="plan-board-hint">依時段分欄，可用上移/下移微調順序。</div>
+        </div>
+      </div>
+      <div class="plan-board">
+        ${boardHtml}
+      </div>
     `;
 
     resultEl.querySelectorAll('[data-move]').forEach(btn=>{
