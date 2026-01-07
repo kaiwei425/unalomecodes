@@ -830,10 +830,9 @@ a:focus-visible{
 .home-creator-mobile .creator-card__avatar img{
   width:96px;
   height:96px;
-  border-radius:16px;
-  object-fit:contain;
-  background:var(--surface);
-  margin-top:-6px;
+  border-radius:24px;
+  object-fit:cover;
+  margin-top:-10px;
 }
 .creator-card__avatar img{
   width:84px;
