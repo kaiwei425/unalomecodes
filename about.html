@@ -52,17 +52,83 @@
       </section>
 
       <section class="creator-card">
-        <div class="creator-card__avatar">
-          <img src="/img/favicon.png" alt="創作者頭像">
+        <div class="creator-card__cover">
+          <img src="/img/logo.png" alt="創作者封面" data-edit-key="about-creator-cover" data-edit-attr="src">
         </div>
-        <div class="creator-card__body">
-          <div class="creator-card__label" data-edit-key="about-creator-label">創作者介紹</div>
-          <h2 data-edit-key="about-creator-name">Kaiwei｜在地探索整理者</h2>
-          <p data-edit-key="about-creator-bio">長期整理泰國寺廟與美食地圖，專注把繁雜資訊轉成可操作的旅遊路線。</p>
-          <div class="creator-card__meta">
-            <span class="creator-chip" data-edit-key="about-creator-tag-1">曼谷常駐</span>
-            <span class="creator-chip" data-edit-key="about-creator-tag-2">信仰文化整理</span>
-            <span class="creator-chip" data-edit-key="about-creator-tag-3">路線規劃</span>
+        <div class="creator-card__content">
+          <div class="creator-card__avatar">
+            <img src="/img/favicon.png" alt="創作者頭像" data-edit-key="about-creator-avatar" data-edit-attr="src">
+          </div>
+          <div class="creator-card__body">
+            <div class="creator-card__label" data-edit-key="about-creator-label">創作者介紹</div>
+            <h2 data-edit-key="about-creator-name">Kaiwei｜在地探索整理者</h2>
+            <p data-edit-key="about-creator-bio">長期整理泰國寺廟與美食地圖，專注把繁雜資訊轉成可操作的旅遊路線。</p>
+            <div class="creator-card__meta">
+              <span class="creator-chip" data-edit-key="about-creator-tag-1">曼谷常駐</span>
+              <span class="creator-chip" data-edit-key="about-creator-tag-2">信仰文化整理</span>
+              <span class="creator-chip" data-edit-key="about-creator-tag-3">路線規劃</span>
+            </div>
+            <div class="creator-card__socials">
+              <a class="creator-social" href="https://www.instagram.com/" target="_blank" rel="noopener" data-edit-key="about-creator-ig" data-edit-attr="href">
+                <img src="/img/brand/logo-instagram.png" alt="Instagram">
+                <span data-edit-key="about-creator-ig-label">Instagram</span>
+              </a>
+              <a class="creator-social" href="https://www.youtube.com/" target="_blank" rel="noopener" data-edit-key="about-creator-yt" data-edit-attr="href">
+                <img src="/img/brand/logo-youtube.svg" alt="YouTube">
+                <span data-edit-key="about-creator-yt-label">YouTube</span>
+              </a>
+              <a class="creator-social" href="https://www.facebook.com/" target="_blank" rel="noopener" data-edit-key="about-creator-fb" data-edit-attr="href">
+                <img src="/img/brand/logo-facebook.svg" alt="Facebook">
+                <span data-edit-key="about-creator-fb-label">Facebook</span>
+              </a>
+              <a class="creator-social" href="https://line.me/ti/p/" target="_blank" rel="noopener" data-edit-key="about-creator-line" data-edit-attr="href">
+                <img src="/img/brand/logo-line.png" alt="LINE">
+                <span data-edit-key="about-creator-line-label">LINE</span>
+              </a>
+              <a class="creator-social" href="https://www.tiktok.com/" target="_blank" rel="noopener" data-edit-key="about-creator-tiktok" data-edit-attr="href">
+                <img src="/img/brand/logo-tiktok.svg" alt="TikTok">
+                <span data-edit-key="about-creator-tiktok-label">TikTok</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="creator-admin" data-admin-only style="display:none;">
+        <h3>創作者卡片管理</h3>
+        <div class="creator-admin__grid">
+          <label>封面圖片 URL
+            <input type="text" data-edit-input="about-creator-cover" placeholder="https://...">
+          </label>
+          <label>頭像圖片 URL
+            <input type="text" data-edit-input="about-creator-avatar" placeholder="https://...">
+          </label>
+          <label>Instagram 連結
+            <input type="text" data-edit-input="about-creator-ig" placeholder="https://...">
+          </label>
+          <label>YouTube 連結
+            <input type="text" data-edit-input="about-creator-yt" placeholder="https://...">
+          </label>
+          <label>Facebook 連結
+            <input type="text" data-edit-input="about-creator-fb" placeholder="https://...">
+          </label>
+          <label>LINE 連結
+            <input type="text" data-edit-input="about-creator-line" placeholder="https://...">
+          </label>
+          <label>TikTok 連結
+            <input type="text" data-edit-input="about-creator-tiktok" placeholder="https://...">
+          </label>
+        </div>
+        <div class="creator-admin__upload">
+          <div>
+            <div class="creator-admin__label">上傳封面照</div>
+            <input type="file" accept="image/*" data-upload-target="about-creator-cover">
+            <div class="creator-admin__hint">登入管理員後可上傳，會自動存到圖片網址。</div>
+          </div>
+          <div>
+            <div class="creator-admin__label">上傳頭像</div>
+            <input type="file" accept="image/*" data-upload-target="about-creator-avatar">
+            <div class="creator-admin__hint">建議正方形圖片。</div>
           </div>
         </div>
       </section>

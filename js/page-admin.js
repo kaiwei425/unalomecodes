@@ -3,7 +3,9 @@
   if (!pageKey) return;
 
   var editableNodes = Array.from(document.querySelectorAll('[data-edit-key]'));
-  if (!editableNodes.length) return;
+  var inputNodes = Array.from(document.querySelectorAll('[data-edit-input]'));
+  var uploadNodes = Array.from(document.querySelectorAll('[data-upload-target]'));
+  if (!editableNodes.length && !inputNodes.length) return;
 
   function applyMeta(meta){
     if (!meta) return;
@@ -11,7 +13,19 @@
       var key = node.getAttribute('data-edit-key');
       if (!key) return;
       if (Object.prototype.hasOwnProperty.call(meta, key)){
-        node.textContent = String(meta[key]);
+        var attr = node.getAttribute('data-edit-attr');
+        if (attr){
+          node.setAttribute(attr, String(meta[key]));
+        }else{
+          node.textContent = String(meta[key]);
+        }
+      }
+    });
+    inputNodes.forEach(function(node){
+      var key = node.getAttribute('data-edit-input');
+      if (!key) return;
+      if (Object.prototype.hasOwnProperty.call(meta, key)){
+        node.value = String(meta[key]);
       }
     });
   }
@@ -21,7 +35,13 @@
     editableNodes.forEach(function(node){
       var key = node.getAttribute('data-edit-key');
       if (!key) return;
-      payload[key] = node.textContent.trim();
+      var attr = node.getAttribute('data-edit-attr');
+      payload[key] = attr ? String(node.getAttribute(attr) || '').trim() : node.textContent.trim();
+    });
+    inputNodes.forEach(function(node){
+      var key = node.getAttribute('data-edit-input');
+      if (!key) return;
+      payload[key] = String(node.value || '').trim();
     });
     return payload;
   }
@@ -29,6 +49,7 @@
   function setEditing(enabled){
     document.body.classList.toggle('is-editing', enabled);
     editableNodes.forEach(function(node){
+      if (node.getAttribute('data-edit-attr')) return;
       if (enabled){
         node.setAttribute('contenteditable', 'true');
         node.setAttribute('spellcheck', 'false');
@@ -82,6 +103,57 @@
     return bar;
   }
 
+  function syncPreview(key, value){
+    editableNodes.forEach(function(node){
+      if (node.getAttribute('data-edit-key') !== key) return;
+      var attr = node.getAttribute('data-edit-attr');
+      if (attr){
+        node.setAttribute(attr, value);
+      }else{
+        node.textContent = value;
+      }
+    });
+  }
+
+  function bindInputs(){
+    inputNodes.forEach(function(input){
+      input.addEventListener('input', function(){
+        syncPreview(input.getAttribute('data-edit-input'), input.value);
+      });
+    });
+  }
+
+  function bindUploads(){
+    if (!uploadNodes.length) return;
+    uploadNodes.forEach(function(input){
+      input.addEventListener('change', async function(){
+        var targetKey = input.getAttribute('data-upload-target');
+        if (!targetKey) return;
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var form = new FormData();
+        form.append('files[]', file);
+        try{
+          var res = await fetch('/api/upload', { method:'POST', body: form, credentials:'include' });
+          var data = await res.json().catch(function(){ return {}; });
+          if (!res.ok || !data || !data.ok || !data.files || !data.files[0]){
+            alert('上傳失敗：' + (data && data.error ? data.error : '未知錯誤'));
+            return;
+          }
+          var url = data.files[0].url || '';
+          inputNodes.forEach(function(node){
+            if (node.getAttribute('data-edit-input') === targetKey){
+              node.value = url;
+            }
+          });
+          syncPreview(targetKey, url);
+        }catch(err){
+          alert('上傳失敗：' + err.message);
+        }
+      });
+    });
+  }
+
   var adminBar = null;
   function initAdminMode(){
     if (!window.authState || typeof window.authState.onAdmin !== 'function') return;
@@ -101,5 +173,7 @@
     })
     .catch(function(){});
 
+  bindInputs();
+  bindUploads();
   initAdminMode();
 })();
