@@ -51,7 +51,10 @@
   };
 
   const resolveImage = (item)=>{
-    const direct = pickFirst(item, ['thumbnail_url','thumbnail','image_url','image','cover','picture']);
+    const direct = pickFirst(item, [
+      'thumbnail_url','thumbnailUrl','thumbnail','image_url','image','cover','picture',
+      'desktopImageUrls','mobileImageUrls','desktopImage_urls','mobileImage_urls'
+    ]);
     if (direct) return direct;
     const gallery = item && (item.images || item.gallery || item.photos);
     if (Array.isArray(gallery) && gallery.length){
@@ -64,7 +67,7 @@
 
   const resolveTitle = (item)=>{
     return pickFirst(item, [
-      'name','name_en','name_th','title','place_name','attraction_name','event_name','route_name'
+      'name','name_en','name_th','title','place_name','placeName','attraction_name','event_name','route_name'
     ]) || '未命名項目';
   };
 
@@ -113,6 +116,11 @@
       }else{
         params.set('keyword', state.keyword ? `${state.keyword} ${state.province}` : state.province);
       }
+    }
+    if (state.type === 'places'){
+      params.set('has_name', 'true');
+      params.set('has_thumbnail', 'true');
+      params.set('has_introduction', 'true');
     }
     params.set('lang', state.lang === 'en' ? 'en' : 'zh');
     return params;
