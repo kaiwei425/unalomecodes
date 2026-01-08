@@ -433,6 +433,7 @@
         
         if (!res.ok) return;
         const data = await res.json();
+        console.log('Home stats data:', data); // Debug: 檢查 API 回傳結構
         // 預期 data 結構: { today: number, total: number, history: [{date: string, count: number}] }
 
         // 1. 更新今日數據卡片
