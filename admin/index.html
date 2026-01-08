@@ -86,6 +86,11 @@
         <div class="admin-stat-value" data-stat="coupons-used">—</div>
         <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
       </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">今日入口瀏覽</div>
+        <div class="admin-stat-value" data-stat="home-views-today">—</div>
+        <div class="admin-stat-sub" data-stat-sub="home-views-sub">載入中…</div>
+      </div>
     </div>
   </section>
 
@@ -183,6 +188,18 @@
     </div>
     <div class="data-grid">
       <div class="data-stack">
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>入口首頁流量統計</h3>
+            <div class="muted">
+              總累積不重複訪客：<span id="homeTotal" class="stat-accent">—</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="homeChart"></canvas>
+          </div>
+        </div>
+
         <div class="data-card">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
             <h3>美食地圖流量統計</h3>
@@ -399,5 +416,83 @@
 </div>
 
 <script src="/js/admin-index.inline-2.js"></script>
+<script>
+  // 補丁：獨立抓取入口首頁 (home_view) 的數據並渲染圖表
+  (function() {
+    const API_BASE = 'https://coupon-service.kaiwei425.workers.dev';
+    
+    async function fetchHomeStats() {
+      try {
+        const token = localStorage.getItem('admin_token');
+        if (!token) return;
+
+        // 抓取 home_view 趨勢數據 (14天)
+        const res = await fetch(`${API_BASE}/admin/stats/trend?event=home_view&days=14`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) return;
+        const data = await res.json();
+        // 預期 data 結構: { today: number, total: number, history: [{date: string, count: number}] }
+
+        // 1. 更新今日數據卡片
+        const todayEl = document.querySelector('[data-stat="home-views-today"]');
+        const subEl = document.querySelector('[data-stat-sub="home-views-sub"]');
+        if (todayEl) todayEl.textContent = (data.today || 0).toLocaleString();
+        if (subEl) subEl.textContent = '已更新';
+
+        // 2. 更新圖表區總數
+        const totalEl = document.getElementById('homeTotal');
+        if (totalEl) totalEl.textContent = (data.total || 0).toLocaleString();
+
+        // 3. 繪製圖表
+        const ctx = document.getElementById('homeChart');
+        if (ctx && data.history && window.Chart) {
+          // 如果已經有實例則銷毀 (避免重複渲染)
+          const existingChart = Chart.getChart(ctx);
+          if (existingChart) existingChart.destroy();
+
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: data.history.map(h => h.date),
+              datasets: [{
+                label: '瀏覽人次',
+                data: data.history.map(h => h.count),
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+              },
+              interaction: { intersect: false, mode: 'index' }
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Home stats fetch error:', err);
+        const subEl = document.querySelector('[data-stat-sub="home-views-sub"]');
+        if (subEl) subEl.textContent = '載入失敗';
+      }
+    }
+
+    // 頁面載入後執行
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fetchHomeStats);
+    } else {
+      fetchHomeStats();
+    }
+  })();
+</script>
 </body>
 </html>
