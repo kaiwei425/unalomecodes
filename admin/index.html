@@ -434,21 +434,26 @@
         if (!res.ok) return;
         const data = await res.json();
         console.log('Home stats data:', data); // Debug: 檢查 API 回傳結構
-        // 預期 data 結構: { today: number, total: number, history: [{date: string, count: number}] }
+        
+        // 修正：API 回傳結構為 stats 陣列，而非 history
+        const history = data.stats || [];
+        const total = data.total || 0;
+        const lastEntry = history.length > 0 ? history[history.length - 1] : { count: 0 };
+        const todayCount = lastEntry.count || 0;
 
         // 1. 更新今日數據卡片
         const todayEl = document.querySelector('[data-stat="home-views-today"]');
         const subEl = document.querySelector('[data-stat-sub="home-views-sub"]');
-        if (todayEl) todayEl.textContent = (data.today || 0).toLocaleString();
+        if (todayEl) todayEl.textContent = todayCount.toLocaleString();
         if (subEl) subEl.textContent = '已更新';
 
         // 2. 更新圖表區總數
         const totalEl = document.getElementById('homeTotal');
-        if (totalEl) totalEl.textContent = (data.total || 0).toLocaleString();
+        if (totalEl) totalEl.textContent = total.toLocaleString();
 
         // 3. 繪製圖表
         const ctx = document.getElementById('homeChart');
-        if (ctx && data.history && window.Chart) {
+        if (ctx && history.length > 0 && window.Chart) {
           // 如果已經有實例則銷毀 (避免重複渲染)
           const existingChart = Chart.getChart(ctx);
           if (existingChart) existingChart.destroy();
@@ -456,10 +461,10 @@
           new Chart(ctx, {
             type: 'line',
             data: {
-              labels: data.history.map(h => h.date),
+              labels: history.map(h => h.date),
               datasets: [{
                 label: '瀏覽人次',
-                data: data.history.map(h => h.count),
+                data: history.map(h => h.count),
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
                 borderWidth: 2,
