@@ -1,3 +1,17 @@
+.brand .brand-logo,
+.brand .brand-logo img{
+  width:auto;
+  height:40px;
+  max-height:44px;
+  display:block;
+  object-fit:contain;
+}
+@media (max-width:640px){
+  .brand .brand-logo,
+  .brand .brand-logo img{
+    height:32px;
+  }
+}
 .planner-hero{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
 .planner-hero h1{margin:0 0 6px;font-size:24px;font-weight:800;}
 .planner-hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.7;}
