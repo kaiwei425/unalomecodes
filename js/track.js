@@ -55,7 +55,24 @@
     return id;
   }
 
-  function sendTrack(payload){
+  function normalizePayload(eventOrPayload, extra){
+    if (!eventOrPayload) return null;
+    if (typeof eventOrPayload === 'string'){
+      const name = eventOrPayload.trim();
+      if (!name) return null;
+      return Object.assign({ event: name }, (extra && typeof extra === 'object') ? extra : {});
+    }
+    if (typeof eventOrPayload === 'object'){
+      if (!eventOrPayload.event && extra && typeof extra === 'object'){
+        return Object.assign({}, eventOrPayload, extra);
+      }
+      return eventOrPayload;
+    }
+    return null;
+  }
+
+  function sendTrack(eventOrPayload, extra){
+    const payload = normalizePayload(eventOrPayload, extra);
     if (!payload || !payload.event) return;
     const body = Object.assign({
       page: window.location.pathname,
@@ -83,6 +100,7 @@
   }
 
   window.trackEvent = sendTrack;
+  window.track = sendTrack;
   window.getUtmData = getStoredUtm;
   initUtm();
 })();
