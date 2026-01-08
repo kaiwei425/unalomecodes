@@ -7,7 +7,6 @@
 
     var navItems = [
       { href: '/admin', label: '總覽', icon: '🏠', group: 'extra' },
-      { href: '/admin/traffic', label: '入口流量', icon: '📈', group: 'extra' },
       { href: '/admin/orders', label: '訂單管理', icon: '🧾', group: 'primary' },
       { href: '/admin/products', label: '商品管理', icon: '📦', group: 'primary' },
       { href: '/admin/service-products', label: '服務商品', icon: '🕯️', group: 'extra' },
