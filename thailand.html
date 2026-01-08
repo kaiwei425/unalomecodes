@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="泰國入口資料庫，匯整景點、節慶、路線等開放數據，支援中文/英文瀏覽。">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://unalomecodes.com/thailand">
+  <title>unalomecodes | Thailand 入口資料庫</title>
+  <link rel="stylesheet" href="/css/thailand.inline-1.css">
+  <script src="/js/thailand.inline-1.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <a class="back-link" href="/">← 回入口首頁</a>
+      <div class="hero-head">
+        <p class="eyebrow">Thailand Open Data</p>
+        <h1>Thailand 入口資料庫</h1>
+        <p class="hero-desc">用 TAT 開放數據整理景點、活動、路線，作為探索與轉化的入口層。</p>
+      </div>
+      <div class="hero-meta">
+        <div class="meta-card">
+          <div class="meta-label">資料來源</div>
+          <div class="meta-value">TAT Open Data</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">更新策略</div>
+          <div class="meta-value">API 動態載入</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">語系</div>
+          <div class="meta-value">中文 / English</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>資料篩選</h2>
+          <p class="muted">先以類型與語系為主，再使用關鍵字或省份縮小範圍。</p>
+        </div>
+        <div class="status" id="statusText">等待載入</div>
+      </div>
+      <div class="controls">
+        <label class="control">
+          <span>內容類型</span>
+          <select id="typeSelect">
+            <option value="attractions">景點</option>
+            <option value="events">活動</option>
+            <option value="routes">路線</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>語系</span>
+          <select id="langSelect">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>關鍵字</span>
+          <input id="keywordInput" type="text" placeholder="例如：寺廟、夜市、festival">
+        </label>
+        <label class="control">
+          <span>省份/城市</span>
+          <input id="provinceInput" type="text" placeholder="例如：Bangkok / Chiang Mai">
+        </label>
+        <button class="btn primary" id="searchBtn" type="button">搜尋</button>
+      </div>
+      <div class="result-meta">
+        <div class="muted" id="resultMeta">尚未載入資料</div>
+        <button class="btn ghost" id="resetBtn" type="button">清除條件</button>
+      </div>
+    </section>
+
+    <section class="grid" id="resultGrid">
+      <div class="empty">請點擊「搜尋」載入資料。</div>
+    </section>
+
+    <div class="load-more">
+      <button class="btn" id="loadMoreBtn" type="button" disabled>載入更多</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -9614,6 +9614,9 @@ if (pathname === "/api/stories" && request.method === "DELETE") {
     if (pathname === "/api/geo" && request.method === "GET") {
       return geocodePlace(request, url, env);
     }
+    if (pathname.startsWith("/api/tat") && request.method === "GET") {
+      return proxyTat(request, url, env);
+    }
     // Image resize proxy
     if (pathname === "/api/img" && request.method === "GET") {
       return resizeImage(url, env, origin);
@@ -10626,6 +10629,61 @@ async function deleteStories(request, url, env){
   }
   await env.STORIES.put(idxKey, JSON.stringify([]));
   return withCorsOrigin(json({ ok:true, deleted: n }), request, env, env.STORY_ORIGINS || '');
+}
+
+/* ========== /api/tat (TAT API proxy) ========== */
+async function proxyTat(request, url, env){
+  const key = (env.TAT_API_KEY || env.TAT_KEY || '').trim();
+  if (!key) return withCORS(json({ ok:false, error:"Missing TAT API key" }, 500));
+  const ip = getClientIp(request) || 'unknown';
+  const ok = await checkRateLimit(env, `rl:tat:${ip}`, 120, 60);
+  if (!ok) return withCORS(json({ ok:false, error:"Too many requests" }, 429));
+
+  const params = new URLSearchParams(url.searchParams);
+  const rawPath = params.get('path') || params.get('endpoint') || '';
+  if (rawPath) {
+    params.delete('path');
+    params.delete('endpoint');
+  }
+  const normalizePath = (input)=>{
+    const raw = String(input || '').trim();
+    if (!raw) return '';
+    if (raw.includes('://') || raw.includes('..')) return '';
+    const out = raw.startsWith('/') ? raw : `/${raw}`;
+    if (!/^\/[a-z0-9/_-]+$/i.test(out)) return '';
+    return out;
+  };
+  const pathFromRoute = url.pathname.replace(/^\/api\/tat/i, '');
+  const tatPath = normalizePath(rawPath || pathFromRoute) || '/attractions';
+
+  const base = (env.TAT_API_BASE || 'https://tatapi.tourismthailand.org/tatapi/v5').replace(/\/+$/,'');
+  const query = params.toString();
+  const endpoint = query ? `${base}${tatPath}?${query}` : `${base}${tatPath}`;
+
+  const headerName = (env.TAT_API_HEADER || 'Authorization').trim() || 'Authorization';
+  const prefix = (env.TAT_API_PREFIX || '').trim();
+  let authValue = key;
+  if (prefix) authValue = `${prefix}${key}`;
+  else if (!/^bearer\s|^token\s|^apikey\s/i.test(key)) authValue = `Bearer ${key}`;
+
+  let resp;
+  try{
+    resp = await fetch(endpoint, {
+      headers: {
+        [headerName]: authValue,
+        'Accept': 'application/json'
+      }
+    });
+  }catch(err){
+    return withCORS(json({ ok:false, error:String(err) }, 502));
+  }
+  const contentType = resp.headers.get('content-type') || 'application/json; charset=utf-8';
+  const body = await resp.text();
+  const out = new Response(body, {
+    status: resp.status,
+    headers: { 'Content-Type': contentType }
+  });
+  return withCORS(out);
 }
 
 /* ========== /api/geo (Geocode helper) ========== */
