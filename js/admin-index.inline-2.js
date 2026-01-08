@@ -139,6 +139,78 @@
     });
   }
 
+  // Load Home Traffic Stats
+  const homeCtx = document.getElementById('homeChart');
+  const homeTotalEl = document.getElementById('homeTotal');
+  if (homeCtx) {
+    fetch('/api/admin/track-stats?event=home_view&days=14', { credentials:'include', cache:'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.ok) return;
+        if (homeTotalEl) homeTotalEl.textContent = (data.total || 0).toLocaleString() + ' 人';
+
+        const labels = (data.stats || []).map(s => s.date.slice(5));
+        const counts = (data.stats || []).map(s => s.count);
+
+        if (!window.Chart) return;
+        try{
+          new Chart(homeCtx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: '每日瀏覽',
+                data: counts,
+                borderColor: '#f97316',
+                backgroundColor: 'rgba(249,115,22,0.12)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#f97316',
+                pointRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false,
+                  backgroundColor: 'rgba(15,23,42,0.9)',
+                  titleColor: '#e2e8f0',
+                  bodyColor: '#e2e8f0',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  borderWidth: 1
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: { color: 'rgba(0,0,0,0.05)' },
+                  ticks: { stepSize: 1, font: { size: 11 } }
+                },
+                x: {
+                  grid: { display: false },
+                  ticks: { font: { size: 11 } }
+                }
+              },
+              interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+              }
+            }
+          });
+        }catch(err){
+          console.error(err);
+        }
+      })
+      .catch(console.error);
+  }
+
   // Load Food Map Stats
   const ctx = document.getElementById('foodMapChart');
   const totalEl = document.getElementById('foodMapTotal');
