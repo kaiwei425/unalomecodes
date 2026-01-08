@@ -66,4 +66,8 @@
       }
     });
   }
+
+  if (window.trackEvent){
+    window.trackEvent('home_view', { pageType: 'home' });
+  }
 })();

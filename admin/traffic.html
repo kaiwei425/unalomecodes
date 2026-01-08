@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="入口網每日流量統計（僅限管理員）。">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://shop.unalomecodes.com/admin/traffic">
+<title>unalomecodes | 懂玩泰國 - 入口流量</title>
+<link rel="stylesheet" href="/css/admin-traffic.inline-1.css">
+<script src="/js/admin-traffic.inline-1.js"></script>
+<script src="/js/admin-guard.js" defer></script>
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/js/admin-shell.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
+    <header class="traffic-hero">
+      <div class="traffic-eyebrow">Dashboard</div>
+      <h1>入口網流量儀表板</h1>
+      <div class="muted">統計入口首頁每日瀏覽（事件：home_view）。</div>
+      <div class="traffic-controls">
+        <label>顯示天數
+          <input id="daysInput" type="number" min="1" max="90" value="30">
+        </label>
+        <button class="btn primary" id="reloadBtn" type="button">重新整理</button>
+      </div>
+    </header>
+
+    <section class="traffic-stats">
+      <div class="traffic-stat">
+        <div class="label">今日瀏覽</div>
+        <div class="value" id="todayCount">—</div>
+        <div class="sub">今日入口首頁</div>
+      </div>
+      <div class="traffic-stat">
+        <div class="label">近 7 日</div>
+        <div class="value" id="weekCount">—</div>
+        <div class="sub">7 日累積</div>
+      </div>
+      <div class="traffic-stat">
+        <div class="label">近 N 日</div>
+        <div class="value" id="monthCount">—</div>
+        <div class="sub">目前區間累積</div>
+      </div>
+      <div class="traffic-stat">
+        <div class="label">累積總覽</div>
+        <div class="value" id="totalCount">—</div>
+        <div class="sub">全部記錄</div>
+      </div>
+    </section>
+
+    <section class="traffic-grid">
+      <div class="traffic-card">
+        <h2>每日趨勢</h2>
+        <div class="chart-wrap">
+          <canvas id="trafficChart" aria-label="每日流量" role="img"></canvas>
+        </div>
+      </div>
+      <div class="traffic-card">
+        <h2>每日明細</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>瀏覽數</th>
+              </tr>
+            </thead>
+            <tbody id="trafficTableBody">
+              <tr><td colspan="2" class="muted">載入中…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="traffic-card">
+        <h2>來源（Top 8）</h2>
+        <div class="traffic-list" id="sourceList"></div>
+      </div>
+      <div class="traffic-card">
+        <h2>Campaign（Top 8）</h2>
+        <div class="traffic-list" id="campaignList"></div>
+      </div>
+    </section>
+  </div>
+
+<script src="/js/admin-traffic.inline-2.js"></script>
+</body>
+</html>
