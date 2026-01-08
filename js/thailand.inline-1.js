@@ -206,7 +206,7 @@
       const imgTag = image ? `<img src="${esc(image)}" alt="${title}">` : '';
       const placeId = resolvePlaceId(item);
       const internalLink = (state.type === 'places' && placeId)
-        ? `<a class="card-link" href="/thailand/place/${esc(placeId)}?lang=${state.lang}" target="_self">查看詳情 →</a>`
+        ? `<a class="card-link" href="/thailand-place?id=${esc(placeId)}&lang=${state.lang}" target="_self">查看詳情 →</a>`
         : '';
       return `
         <article class="card">
