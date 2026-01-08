@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#f6f4ef;
+  --fg:#111827;
+  --muted:#6b7280;
+  --accent:#f97316;
+  --panel:#ffffff;
+  --line:rgba(15,23,42,0.12);
+  --shadow:0 18px 36px rgba(15,23,42,0.12);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:"IBM Plex Sans","Noto Sans TC",system-ui,-apple-system,sans-serif;
+  color:var(--fg);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(249,115,22,0.18), transparent 42%),
+    radial-gradient(circle at 90% 20%, rgba(14,165,233,0.12), transparent 36%),
+    var(--bg);
+}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 18px 60px;}
+.hero{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:22px 24px 18px;
+  box-shadow:var(--shadow);
+  display:grid;
+  gap:16px;
+}
+.back-link{
+  text-decoration:none;
+  color:var(--fg);
+  font-weight:600;
+  font-size:13px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  width:fit-content;
+}
+.hero-head h1{margin:6px 0 0;font-size:30px;}
+.eyebrow{margin:0;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+.hero-desc{margin:10px 0 0;color:var(--muted);font-size:15px;max-width:720px;}
+.content{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);
+  gap:16px;
+}
+.gallery{
+  display:grid;
+  gap:10px;
+}
+.gallery img{
+  width:100%;
+  border-radius:16px;
+  border:1px solid var(--line);
+  box-shadow:0 10px 20px rgba(15,23,42,0.08);
+  object-fit:cover;
+  max-height:340px;
+}
+.details{
+  display:grid;
+  gap:16px;
+}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 10px 20px rgba(15,23,42,0.08);
+}
+.card h2{margin:0 0 12px;font-size:18px;}
+.meta{display:grid;gap:8px;font-size:13px;color:var(--muted);}
+.meta strong{color:var(--fg);}
+.text{font-size:14px;line-height:1.6;color:#374151;}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#fff7ed;
+  border:1px solid rgba(249,115,22,0.2);
+  color:#c2410c;
+  font-size:12px;
+  font-weight:600;
+}
+@media (max-width: 900px){
+  .content{grid-template-columns:1fr;}
+}

@@ -40,6 +40,32 @@
     return '';
   };
 
+  const keywordMap = [
+    { key: '夜市', value: 'night market' },
+    { key: '寺廟', value: 'temple' },
+    { key: '佛', value: 'temple' },
+    { key: '佛牌', value: 'amulet' },
+    { key: '美食', value: 'food' },
+    { key: '海灘', value: 'beach' },
+    { key: '市場', value: 'market' },
+    { key: '按摩', value: 'massage' },
+    { key: '節慶', value: 'festival' },
+    { key: '活動', value: 'event' }
+  ];
+  const hasCjk = (text)=> /[\u4e00-\u9fff]/.test(String(text || ''));
+  const translateKeyword = (keyword)=>{
+    let out = String(keyword || '').trim();
+    if (!out) return '';
+    let changed = false;
+    keywordMap.forEach(({ key, value })=>{
+      if (out.includes(key)){
+        out = out.replace(new RegExp(key, 'g'), value);
+        changed = true;
+      }
+    });
+    return changed ? out : '';
+  };
+
   const extractItems = (data)=>{
     if (!data) return [];
     if (Array.isArray(data.data)) return data.data;
@@ -55,6 +81,7 @@
       'thumbnail_url','thumbnailUrl','thumbnail','image_url','image','cover','picture',
       'desktopImageUrls','mobileImageUrls','desktopImage_urls','mobileImage_urls'
     ]);
+    if (Array.isArray(direct)) return direct[0] || '';
     if (direct) return direct;
     const gallery = item && (item.images || item.gallery || item.photos);
     if (Array.isArray(gallery) && gallery.length){
@@ -76,11 +103,18 @@
   };
 
   const resolveLocation = (item)=>{
+    if (item && item.location && item.location.province && item.location.province.name){
+      return item.location.province.name;
+    }
     return pickFirst(item, ['location','address','address_en','province','city','district','area']);
   };
 
   const resolveLink = (item)=>{
     return pickFirst(item, ['url','link','website','official_site','share_url']);
+  };
+
+  const resolvePlaceId = (item)=>{
+    return pickFirst(item, ['placeId','place_id','id']);
   };
 
   const updateStatus = (text)=>{
@@ -107,14 +141,23 @@
     const params = new URLSearchParams();
     params.set('page', String(state.page));
     params.set('limit', String(state.pageSize));
-    if (state.keyword) params.set('keyword', state.keyword);
+    let keyword = state.keyword;
+    state.keywordTranslated = '';
+    if (state.lang === 'zh' && keyword && hasCjk(keyword)){
+      const translated = translateKeyword(keyword);
+      if (translated){
+        keyword = translated;
+        state.keywordTranslated = translated;
+      }
+    }
+    if (keyword) params.set('keyword', keyword);
     if (state.province){
       const num = Number(state.province);
       if (Number.isFinite(num) && num > 0){
         if (state.type === 'events') params.set('provinceId', String(num));
         else if (state.type === 'places') params.set('province_id', String(num));
       }else{
-        params.set('keyword', state.keyword ? `${state.keyword} ${state.province}` : state.province);
+        params.set('keyword', keyword ? `${keyword} ${state.province}` : state.province);
       }
     }
     if (state.type === 'places'){
@@ -122,14 +165,14 @@
       params.set('has_thumbnail', 'true');
       params.set('has_introduction', 'true');
     }
-    params.set('lang', state.lang === 'en' ? 'en' : 'zh');
+    params.set('lang', state.lang === 'en' ? 'en' : 'en');
     return params;
   };
 
   const fetchData = async (append)=>{
     if (state.loading) return;
     setLoading(true);
-    updateStatus('載入中…');
+    updateStatus(state.keywordTranslated ? `載入中…（已用英文：${state.keywordTranslated}）` : '載入中…');
     const params = buildParams();
     const endpoint = `/api/tat/${encodeURIComponent(state.type)}?${params.toString()}`;
     try{
@@ -140,7 +183,11 @@
       const total = data && (data.total || data.count || data.total_records || data.totalResults);
       state.total = Number.isFinite(Number(total)) ? Number(total) : state.total;
       render(items, append);
-      updateStatus(items.length ? '已更新' : '沒有資料');
+      if (!items.length && state.lang === 'zh' && state.keyword && !state.keywordTranslated){
+        updateStatus('沒有資料（中文關鍵字請改用英文）');
+      }else{
+        updateStatus(items.length ? '已更新' : '沒有資料');
+      }
     }catch(err){
       updateStatus('載入失敗');
       renderError(String(err || '載入失敗'));
@@ -157,6 +204,10 @@
       const link = resolveLink(item);
       const image = resolveImage(item);
       const imgTag = image ? `<img src="${esc(image)}" alt="${title}">` : '';
+      const placeId = resolvePlaceId(item);
+      const internalLink = (state.type === 'places' && placeId)
+        ? `<a class="card-link" href="/thailand/place/${esc(placeId)}?lang=${state.lang}" target="_self">查看詳情 →</a>`
+        : '';
       return `
         <article class="card">
           ${imgTag}
@@ -164,7 +215,7 @@
             <h3 class="card-title">${title}</h3>
             ${desc ? `<p class="card-desc">${desc}</p>` : ''}
             ${location ? `<div class="card-meta">${location}</div>` : ''}
-            ${link ? `<a class="card-link" href="${esc(link)}" target="_blank" rel="noopener">查看官方資訊 →</a>` : ''}
+            ${internalLink || (link ? `<a class="card-link" href="${esc(link)}" target="_blank" rel="noopener">查看官方資訊 →</a>` : '')}
           </div>
         </article>
       `;
