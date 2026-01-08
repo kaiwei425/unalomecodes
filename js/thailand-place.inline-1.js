@@ -27,7 +27,7 @@
     const path = window.location.pathname || '';
     const parts = path.split('/').filter(Boolean);
     const last = parts[parts.length - 1] || '';
-    if (last && last !== 'place') return last;
+    if (last && last !== 'place' && last !== 'thailand-place' && last !== 'thailand-place.html') return last;
     const params = new URLSearchParams(window.location.search);
     return params.get('id') || '';
   };
@@ -122,7 +122,7 @@
 
   const load = async ()=>{
     const id = getIdFromPath();
-    if (!id) {
+    if (!id || id === 'thailand-place' || id === 'thailand-place.html') {
       if (titleEl) titleEl.textContent = '找不到景點 ID';
       if (detailEl) detailEl.textContent = '請從入口頁點擊進入。';
       return;
