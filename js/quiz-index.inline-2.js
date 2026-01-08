@@ -5,7 +5,7 @@
 const ADVICE_BASE = 'https://proud-boat-794c.kaiwei425.workers.dev';
 const API_BASE = ADVICE_BASE; // 供舊有分享/守護神資料 API 使用
 // 本站 API（新優惠券系統、商品結帳）
-const SITE_BASE   = (function(){ try{ return location.origin; }catch(e){ return 'https://shop.unalomecodes.com'; }})();
+const SITE_BASE   = (function(){ try{ return location.origin; }catch(e){ return 'https://unalomecodes.com'; }})();
 // 分享結果仍使用既有外部網域
 const SHARE_PAGE = 'https://unalomecodes.pages.dev/share';
 // 內部神祇頁面改為新網址

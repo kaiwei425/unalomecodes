@@ -1811,7 +1811,7 @@ const DEFAULT_SERVICE_PRODUCTS = [
     duration: '約 7 天',
     includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
     price: 799,
-    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-basic.png',
+    cover: 'https://unalomecodes.com/api/file/mock/candle-basic.png',
     options: [
       { name: '基礎蠟燭', price: 0 },
       { name: '祈願蠟燭 + 供品', price: 300 }
@@ -1825,7 +1825,7 @@ const DEFAULT_SERVICE_PRODUCTS = [
     duration: '約 14 天',
     includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
     price: 1299,
-    cover: 'https://shop.unalomecodes.com/api/file/mock/candle-plus.png',
+    cover: 'https://unalomecodes.com/api/file/mock/candle-plus.png',
     options: [
       { name: '進階供品組', price: 0 },
       { name: '供品＋特別祈禱', price: 500 }
@@ -5678,7 +5678,7 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
 
       try{
         const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
-        const originUrl = env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com';
+        const originUrl = env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://unalomecodes.com';
         const base = originUrl.replace(/\/$/, '');
         const orderLinkAdmin = `${base}/${orderType === 'service' ? 'admin/service-orders' : 'admin/orders'}`;
         const orderLinkCustomer = `${base}/account-orders`;
@@ -7420,7 +7420,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     const origin = (ctx.origin || '').replace(/\/$/, '');
-    const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://unalomecodes.com').replace(/\/$/, '');
     const serviceLookupBase = env.SERVICE_LOOKUP_URL
       ? env.SERVICE_LOOKUP_URL.replace(/\/$/, '')
       : `${primarySite}/service`;
@@ -7453,7 +7453,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const adminSubject = emailContext === 'status_update'
       ? `[${siteName}] 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
       : `[${siteName}] 新訂單通知 #${order.id}`;
-    const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://shop.unalomecodes.com';
+    const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://unalomecodes.com';
     const imageHost = ctx.imageHost || defaultImageHost || origin;
     const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext, blessingDone: isBlessingDone };
     const { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
@@ -9726,7 +9726,7 @@ async function handleUpload(request, env, origin) {
         }
       });
 
-      const publicHost = env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://shop.unalomecodes.com';
+      const publicHost = env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://unalomecodes.com';
       const base = publicHost.startsWith('http') ? publicHost.replace(/\/+$/,'') : `https://${publicHost.replace(/\/+$/,'')}`;
       const url = `${base}/api/file/${encodeURIComponent(key)}`;
       out.push({ url, key });
@@ -10436,7 +10436,7 @@ async function maybeSendStoryEmail(env, item, requestUrl){
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     let origin = '';
     try{ origin = new URL(requestUrl).origin; }catch(_){}
-    const base = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://shop.unalomecodes.com').replace(/\/$/, '');
+    const base = (env.SITE_URL || env.PUBLIC_SITE_URL || origin || 'https://unalomecodes.com').replace(/\/$/, '');
     const adminLink = `${base}/admin/code-viewer?code=${encodeURIComponent(item.code || '')}`;
     const nick = String(item.nick || '訪客').trim();
     const productName = String(item.productName || '').trim();
@@ -10703,7 +10703,7 @@ async function resizeImage(url, env, origin){
 
     let target = u;
     if (!target && key){
-      const publicHost = env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://shop.unalomecodes.com';
+      const publicHost = env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://unalomecodes.com';
       const base = publicHost.startsWith('http') ? publicHost.replace(/\/+$/,'') : `https://${publicHost.replace(/\/+$/,'')}`;
       target = `${base}/api/file/${encodeURIComponent(key)}`;
     }
@@ -10714,6 +10714,20 @@ async function resizeImage(url, env, origin){
       targetUrl = new URL(target, origin);
     } catch (_) {
       return withCORS(json({ ok:false, error:"Invalid target url" }, 400));
+    }
+    const legacyHosts = ['shop.unalomecodes.com'];
+    let originHost = '';
+    let originProto = '';
+    try{
+      const originUrl = new URL(origin);
+      originHost = originUrl.host || '';
+      originProto = originUrl.protocol || '';
+    }catch(_){}
+    if (legacyHosts.includes(targetUrl.host) && originHost){
+      const rewritten = new URL(targetUrl.toString());
+      rewritten.host = originHost;
+      if (originProto) rewritten.protocol = originProto;
+      targetUrl = rewritten;
     }
     if (!/^https?:$/.test(targetUrl.protocol)) {
       return withCORS(json({ ok:false, error:"Invalid target protocol" }, 400));
@@ -10730,6 +10744,7 @@ async function resizeImage(url, env, origin){
     addHost(env.FILE_HOST);
     addHost(env.PUBLIC_FILE_HOST);
     addHost(env.SITE_URL);
+    legacyHosts.forEach(addHost);
     const extraHosts = (env.IMG_PROXY_HOSTS || env.IMG_PROXY_ALLOWLIST || '').split(',').map(s=>s.trim()).filter(Boolean);
     extraHosts.forEach(addHost);
     const allowSuffixes = [

@@ -1,5 +1,5 @@
 (function(){
- const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+ const API_BASE = window.__SHOP_ORIGIN || 'https://unalomecodes.com';
   async function authedFetch(url, init){
     const opts = Object.assign({}, init||{}, { credentials:'include' });
     const target = /^https?:/i.test(url) ? url : API_BASE + url;

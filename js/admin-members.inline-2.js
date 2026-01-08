@@ -1,8 +1,8 @@
-  const API = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users';
-  const API_RESET = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/reset-guardian';
-  const API_DELETE = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/delete';
-  const API_CREATOR_INVITE = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/users/creator-invite';
-  const API_CREATOR_LINK = (window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com') + '/api/admin/creator/invite';
+  const API = (window.__SHOP_ORIGIN || 'https://unalomecodes.com') + '/api/admin/users';
+  const API_RESET = (window.__SHOP_ORIGIN || 'https://unalomecodes.com') + '/api/admin/users/reset-guardian';
+  const API_DELETE = (window.__SHOP_ORIGIN || 'https://unalomecodes.com') + '/api/admin/users/delete';
+  const API_CREATOR_INVITE = (window.__SHOP_ORIGIN || 'https://unalomecodes.com') + '/api/admin/users/creator-invite';
+  const API_CREATOR_LINK = (window.__SHOP_ORIGIN || 'https://unalomecodes.com') + '/api/admin/creator/invite';
   const q = document.getElementById('q');
   const tbody = document.getElementById('tbody');
   const sortSel = document.getElementById('sortSel');

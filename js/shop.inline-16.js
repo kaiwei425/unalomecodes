@@ -30,7 +30,7 @@
     var raw = (window.LOOKUP_IMAGE_HOST || window.ORDER_LOOKUP_IMAGE_HOST || window.PUBLIC_FILE_HOST || window.FILE_HOST || '').trim();
     if (!raw){
       if (/\.pages\.dev$/i.test(window.location.hostname)){
-        raw = 'https://shop.unalomecodes.com';
+        raw = 'https://unalomecodes.com';
       }else{
         raw = window.location.origin;
       }

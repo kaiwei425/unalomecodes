@@ -1,4 +1,4 @@
-const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+const API_BASE = window.__SHOP_ORIGIN || 'https://unalomecodes.com';
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 async function authedFetch(url, options){

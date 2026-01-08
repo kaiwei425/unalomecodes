@@ -34,7 +34,7 @@
       if(cat.key === selectedCat) b.classList.add('active');
       if (cat.key === '蠟燭加持祈福') {
         b.addEventListener('click', function(){
-          window.location.href = 'https://shop.unalomecodes.com/service';
+          window.location.href = 'https://unalomecodes.com/service';
         });
       } else {
         b.addEventListener('click', ()=>{

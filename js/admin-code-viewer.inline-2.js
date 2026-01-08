@@ -1,4 +1,4 @@
-const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+const API_BASE = window.__SHOP_ORIGIN || 'https://unalomecodes.com';
 function authHeaders(extra){
   const base = {};
   if (extra) return Object.assign(base, extra);

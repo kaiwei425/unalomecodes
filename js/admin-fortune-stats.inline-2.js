@@ -1,4 +1,4 @@
-const API_BASE = window.__SHOP_ORIGIN || 'https://shop.unalomecodes.com';
+const API_BASE = window.__SHOP_ORIGIN || 'https://unalomecodes.com';
 const tbody = document.getElementById('tbody');
 const totalEl = document.getElementById('total');
 const daysInput = document.getElementById('daysInput');
