@@ -38,6 +38,10 @@
     return lang === 'en' ? 'en' : 'zh';
   };
 
+  const toApiLang = (lang)=>{
+    return lang === 'en' ? 'en' : 'en';
+  };
+
   const resolveImages = (data)=>{
     const list = [];
     const add = (val)=>{
@@ -124,7 +128,8 @@
       return;
     }
     const lang = getLang();
-    const endpoint = `/api/tat/places/${encodeURIComponent(id)}?lang=${encodeURIComponent(lang)}`;
+    const apiLang = toApiLang(lang);
+    const endpoint = `/api/tat/places/${encodeURIComponent(id)}?lang=${encodeURIComponent(apiLang)}`;
     try{
       const res = await fetch(endpoint, { cache:'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -132,8 +137,19 @@
       if (!data) throw new Error('No data');
       render(data.data || data);
     }catch(err){
-      if (titleEl) titleEl.textContent = '載入失敗';
-      if (detailEl) detailEl.textContent = String(err || '載入失敗');
+      try{
+        const fallback = `/api/tat/places/details?ids=${encodeURIComponent(id)}&lang=${encodeURIComponent(apiLang)}`;
+        const res2 = await fetch(fallback, { cache:'no-store' });
+        if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
+        const data2 = await res2.json().catch(()=>null);
+        const first = data2 && Array.isArray(data2.data) ? data2.data[0] : null;
+        if (!first) throw new Error('No data');
+        render(first);
+        return;
+      }catch(err2){
+        if (titleEl) titleEl.textContent = '載入失敗';
+        if (detailEl) detailEl.textContent = String(err2 || err || '載入失敗');
+      }
     }
   };
 

@@ -10667,7 +10667,10 @@ async function proxyTat(request, url, env){
   if (langParam) params.delete('lang');
   if (langParam) params.delete('language');
   if (langParam) params.delete('accept_language');
-  const acceptLanguage = langParam || 'en';
+  let acceptLanguage = langParam || 'en';
+  if (/^(zh|zh-tw|zh-hant|zh-hans|cn)$/i.test(acceptLanguage)){
+    acceptLanguage = 'en';
+  }
 
   const base = (env.TAT_API_BASE || 'https://tatdataapi.io').replace(/\/+$/,'');
   const query = params.toString();
