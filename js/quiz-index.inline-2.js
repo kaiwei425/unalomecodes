@@ -12,7 +12,7 @@ const SHARE_PAGE = 'https://unalomecodes.pages.dev/share';
 const DEITY_PAGE = SITE_BASE + '/deity';
 const DEITY_IMG_OVERRIDES = { CD:'https://i.ibb.co/rGpp2w1s/image.jpg', RH:'https://i.ibb.co/qMy9RxVx/image.jpg', HM:'https://i.ibb.co/kV0pz49B/image.jpg', WE:'https://i.ibb.co/pv4Jc4sc/image.jpg', XZ:'https://i.ibb.co/V0hNnFHT/image.jpg', JL:'https://i.ibb.co/wrWW3ddN/image.jpg', ZD:'https://i.ibb.co/xtJtDTVy/image.jpg', KP:'https://i.ibb.co/k29dc4Qn/image.jpg', FM:'https://i.ibb.co/SXGB6vKj/image.jpg', GA:'https://i.ibb.co/2RhD1k9/image.jpg', HP:'https://i.ibb.co/ymcrPm1C/image.jpg', ZF:'https://i.ibb.co/CRctyB3/image.jpg' };
 const BRAND_NAME = '守護指引';
-const BRAND_LOGO = 'https://i.ibb.co/7mtppQQ/logo.jpg';
+const BRAND_LOGO = '/img/logo.png';
 // Coupon service endpoint + token reader (needed for REAL issuance)
 const COUPON_API = (function(){ try{ return SITE_BASE + '/api/coupons'; }catch(e){ return '/api/coupons'; }})();
 function readQuizToken(){

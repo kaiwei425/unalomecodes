@@ -34,12 +34,15 @@
     }
     .wrap{max-width:980px;margin:0 auto;padding:20px 16px 32px}
     .brand{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-    .brand img{width:46px;height:46px;border-radius:14px;box-shadow:0 0 0 4px rgba(245,158,11,.35)}
+    .brand .brand-logo,
+    .brand .brand-logo img{width:auto;height:40px;display:block;object-fit:contain}
     .brand h1{font-size:22px;margin:0;color:#fff;letter-spacing:.35px;font-weight:800;}
     .tagline{margin:2px 0 0;color:rgba(255,255,255,0.78);font-size:13px;}
     .brand-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
     .brand-actions .btn{font-size:13px;padding:10px 14px;min-height:40px}
     @media(max-width:720px){
+      .brand .brand-logo,
+      .brand .brand-logo img{height:32px}
       .brand-actions{width:100%;justify-content:flex-end}
       .brand-actions .btn{flex:1 1 48%}
     }

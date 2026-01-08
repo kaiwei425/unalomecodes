@@ -115,12 +115,12 @@ a{text-decoration:none;color:inherit;}
   font-weight:600;
   min-width:0;
 }
-.brand-mark{
-  width:34px;
-  height:34px;
-  border-radius:10px;
-  object-fit:cover;
-  box-shadow:0 6px 14px rgba(17,24,39,0.12);
+.brand-mark,
+.brand-mark img{
+  width:auto;
+  height:40px;
+  display:block;
+  object-fit:contain;
 }
 .brand-name{
   font-size:var(--text-sm);
@@ -961,4 +961,11 @@ a:focus-visible{
 
 @media(min-width:1025px){
   .trust-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
+@media (max-width:720px){
+  .brand-mark,
+  .brand-mark img{
+    height:32px;
+  }
 }
