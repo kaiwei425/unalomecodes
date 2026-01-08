@@ -186,5 +186,11 @@
   <script src="/js/track.js"></script>
   <script src="/js/home.js"></script>
   <script src="/js/page-admin.js"></script>
+  <script>
+    // 補丁：手動觸發 home_view 事件，確保後台儀表板能抓到數據
+    window.addEventListener('load', function() {
+      if (typeof track === 'function') track('home_view');
+    });
+  </script>
 </body>
 </html>
