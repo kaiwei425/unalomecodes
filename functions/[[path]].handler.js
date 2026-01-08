@@ -10654,24 +10654,32 @@ async function proxyTat(request, url, env){
     return out;
   };
   const pathFromRoute = url.pathname.replace(/^\/api\/tat/i, '');
-  const tatPath = normalizePath(rawPath || pathFromRoute) || '/attractions';
+  let tatPath = normalizePath(rawPath || pathFromRoute) || '/places';
+  if (!/^\/api\/v2\//i.test(tatPath)) {
+    tatPath = `/api/v2${tatPath.startsWith('/') ? tatPath : `/${tatPath}`}`;
+  }
 
-  const base = (env.TAT_API_BASE || 'https://tatapi.tourismthailand.org/tatapi/v5').replace(/\/+$/,'');
-  const query = params.toString();
-  const endpoint = query ? `${base}${tatPath}?${query}` : `${base}${tatPath}`;
-
-  const headerName = (env.TAT_API_HEADER || 'Authorization').trim() || 'Authorization';
+  const headerName = (env.TAT_API_HEADER || 'x-api-key').trim() || 'x-api-key';
   const prefix = (env.TAT_API_PREFIX || '').trim();
   let authValue = key;
   if (prefix) authValue = `${prefix}${key}`;
-  else if (!/^bearer\s|^token\s|^apikey\s/i.test(key)) authValue = `Bearer ${key}`;
+  const langParam = (params.get('lang') || params.get('language') || params.get('accept_language') || '').trim();
+  if (langParam) params.delete('lang');
+  if (langParam) params.delete('language');
+  if (langParam) params.delete('accept_language');
+  const acceptLanguage = langParam || 'en';
+
+  const base = (env.TAT_API_BASE || 'https://tatdataapi.io').replace(/\/+$/,'');
+  const query = params.toString();
+  const endpoint = query ? `${base}${tatPath}?${query}` : `${base}${tatPath}`;
 
   let resp;
   try{
     resp = await fetch(endpoint, {
       headers: {
         [headerName]: authValue,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Accept-Language': acceptLanguage
       }
     });
   }catch(err){

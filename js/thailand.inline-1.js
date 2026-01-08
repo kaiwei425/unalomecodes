@@ -15,7 +15,7 @@
   const state = {
     page: 1,
     pageSize: 12,
-    type: 'attractions',
+    type: 'places',
     lang: 'zh',
     keyword: '',
     province: '',
@@ -103,11 +103,18 @@
   const buildParams = ()=>{
     const params = new URLSearchParams();
     params.set('page', String(state.page));
-    params.set('per_page', String(state.pageSize));
     params.set('limit', String(state.pageSize));
     if (state.keyword) params.set('keyword', state.keyword);
-    if (state.province) params.set('province', state.province);
-    params.set('language', state.lang === 'en' ? 'EN' : 'ZH');
+    if (state.province){
+      const num = Number(state.province);
+      if (Number.isFinite(num) && num > 0){
+        if (state.type === 'events') params.set('provinceId', String(num));
+        else if (state.type === 'places') params.set('province_id', String(num));
+      }else{
+        params.set('keyword', state.keyword ? `${state.keyword} ${state.province}` : state.province);
+      }
+    }
+    params.set('lang', state.lang === 'en' ? 'en' : 'zh');
     return params;
   };
 
