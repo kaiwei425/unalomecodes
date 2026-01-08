@@ -154,6 +154,23 @@ a{text-decoration:none;color:inherit;}
   align-items:center;
   gap:var(--space-2);
 }
+.site-header .lang-toggle{
+  margin-left:auto;
+}
+.lang-toggle{
+  min-width:56px;
+  height:36px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.06em;
+  color:var(--text);
+  cursor:pointer;
+  padding:0 12px;
+}
+.lang-toggle:hover{border-color:#d6b37a;box-shadow:0 6px 14px rgba(17,24,39,0.08);}
 .nav-cta{
   display:none;
   min-height:44px;
