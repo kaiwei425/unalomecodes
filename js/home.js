@@ -46,7 +46,7 @@
       'about-creator-bio': '📍 Taiwanese in Bangkok | MA student at Chula\n🧭 Exploring local life, hidden gems & food\n✉️ bkkaiwei@gmail.com',
       'about-creator-tag-1': '曼谷常駐',
       'about-creator-tag-2': '在地生活',
-      'about-creator-tag-3': '在地美食寺廟介紹'
+      'about-creator-tag-3': '在地美食寺廟介紹',
       'about-back': '返回上一頁'
     },
     en: {
@@ -86,7 +86,7 @@
       'about-creator-bio': '📍 Taiwanese in Bangkok | MA student at Chula\n🧭 Exploring local life, hidden gems & food\n✉️ bkkaiwei@gmail.com',
       'about-creator-tag-1': 'Based in Bangkok',
       'about-creator-tag-2': 'Local Life',
-      'about-creator-tag-3': 'Local Food & Temples'
+      'about-creator-tag-3': 'Local Food & Temples',
       'about-back': 'Back'
     }
   };
@@ -197,33 +197,3 @@
     window.trackEvent('home_view', { pageType: 'home' });
   }
 })();
-      'nav-title': 'unalomecodes | 懂玩泰國',
-      'drawer-label': '探索入口',
-      'drawer-temple-desc': '用地圖探索寺廟與文化',
-      'drawer-food-desc': '用地圖探索在地美食',
-      'drawer-service-desc': '提供祈福服務及代捐棺木',
-      'drawer-shop-desc': '精選服務與商品',
-      'drawer-about-desc': 'unalomecodes品牌介紹',
-      'home-nav-temple': '寺廟地圖',
-      'home-nav-food': '美食地圖',
-      'home-nav-shop': '商城',
-      'home-nav-about': '關於我們',
-      'home-nav-service': '祈福及代捐棺服務',
-      'home-hero-kicker': '入口首頁',
-      'home-hero-title': '最懂玩泰國的入口',
-      'home-hero-subtitle': '懂拜拜、懂美食、懂在地，把泰國整理成你用得上的資訊。',
-      'nav-title': 'unalomecodes | Thailand Portal',
-      'drawer-label': 'Explore',
-      'drawer-temple-desc': 'Discover temples and culture on the map',
-      'drawer-food-desc': 'Explore local food picks on the map',
-      'drawer-service-desc': 'Blessing services & donation assistance',
-      'drawer-shop-desc': 'Curated services and products',
-      'drawer-about-desc': 'About unalomecodes',
-      'home-nav-temple': 'Temple Map',
-      'home-nav-food': 'Food Map',
-      'home-nav-shop': 'Shop',
-      'home-nav-about': 'About',
-      'home-nav-service': 'Blessing Services',
-      'home-hero-kicker': 'Home',
-      'home-hero-title': 'Your Gateway to Thailand',
-      'home-hero-subtitle': 'Temples, food, and local culture—organized into what you need.',
