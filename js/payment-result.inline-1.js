@@ -6,7 +6,6 @@
   }
   const params = new URLSearchParams(location.search);
   const orderId = params.get('orderId') || params.get('id') || '';
-  const token = params.get('token') || '';
   const statusEl = document.getElementById('status');
   const detailEl = document.getElementById('detail');
   const btnLookup = document.getElementById('btnLookup');
@@ -22,11 +21,10 @@
     try{
       const qs = new URLSearchParams();
       qs.set('id', orderId);
-      if (token) qs.set('token', token);
       const r = await fetch(`/api/order?${qs.toString()}`, { cache:'no-store' });
       const j = await r.json().catch(()=>({}));
       if (r.status === 401) {
-        statusEl.textContent = '需要驗證才能查看訂單狀態，請回商品頁以手機與訂單末五碼（英數）查詢。';
+        statusEl.textContent = '需要驗證才能查看訂單狀態，請登入或回商品頁以手機與訂單末五碼查詢。';
         statusEl.className = 'status warn';
         return;
       }

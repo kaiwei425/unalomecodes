@@ -2207,13 +2207,17 @@
       src = 'https://' + src.replace(/^\/+/, '');
     }
     src = src.replace(/[\?#].*$/, '');
-    const match = src.match(/(https?:\/\/[^/]*instagram\.com\/(?:p|reel|tv)\/[^/?#]+)/i);
-    if (match){
-      src = match[1].replace(/\/$/, '') + '/embed';
-    }else if (!/\/embed$/.test(src)){
-      src = src.replace(/\/$/, '') + '/embed';
+    try{
+      const u = new URL(src);
+      const host = (u.hostname || '').toLowerCase();
+      if (!host.endsWith('instagram.com')) return '';
+      if (!/^\/(p|reel|tv)\//.test(u.pathname)) return '';
+      const cleanPath = u.pathname.replace(/\/?$/, '/');
+      const embed = `${u.origin}${cleanPath}embed`;
+      return `<iframe src="${escapeHtml(embed)}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups" allowfullscreen="true" frameborder="0"></iframe>`;
+    }catch(_){
+      return '';
     }
-    return `<iframe src="${escapeHtml(src)}" allowtransparency="true" allowfullscreen="true" frameborder="0"></iframe>`;
   }
 
   window.addEventListener('hashchange', () => {

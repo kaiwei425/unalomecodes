@@ -13,14 +13,8 @@ const DEITY_PAGE = SITE_BASE + '/deity';
 const DEITY_IMG_OVERRIDES = { CD:'https://i.ibb.co/rGpp2w1s/image.jpg', RH:'https://i.ibb.co/qMy9RxVx/image.jpg', HM:'https://i.ibb.co/kV0pz49B/image.jpg', WE:'https://i.ibb.co/pv4Jc4sc/image.jpg', XZ:'https://i.ibb.co/V0hNnFHT/image.jpg', JL:'https://i.ibb.co/wrWW3ddN/image.jpg', ZD:'https://i.ibb.co/xtJtDTVy/image.jpg', KP:'https://i.ibb.co/k29dc4Qn/image.jpg', FM:'https://i.ibb.co/SXGB6vKj/image.jpg', GA:'https://i.ibb.co/2RhD1k9/image.jpg', HP:'https://i.ibb.co/ymcrPm1C/image.jpg', ZF:'https://i.ibb.co/CRctyB3/image.jpg' };
 const BRAND_NAME = '守護指引';
 const BRAND_LOGO = '/img/logo.png';
-// Coupon service endpoint + token reader (needed for REAL issuance)
+// Coupon service endpoint
 const COUPON_API = (function(){ try{ return SITE_BASE + '/api/coupons'; }catch(e){ return '/api/coupons'; }})();
-function readQuizToken(){
-  try{
-    var el = document.querySelector('meta[name="quiz-token"]');
-    return el && el.content ? String(el.content).trim() : '';
-  }catch(e){ return ''; }
-}
 
 /* =====================
    基礎資料（取自 worker.js）
@@ -598,10 +592,7 @@ async function ensureMemberLoginForCoupon(){
 }
 async function issueCoupon(deityCode, amount, quizPayload){
   const payload = { deity: String(deityCode||'').toUpperCase(), amount: Number(amount||200), quiz: quizPayload || undefined };
-  const quizKey = readQuizToken();
   const headers = { 'Content-Type':'application/json' };
-  if (quizKey) headers['X-Quiz-Key'] = quizKey;
-  if (quizKey) payload.key = quizKey;
   // 直接呼叫本站新優惠券系統（公共 quiz 發券端點）
   const res = await fetch(`${COUPON_API}/issue-quiz`, {
     method: 'POST',
@@ -860,6 +851,10 @@ async function showResult(){
           }
           if (err && err.code === 'daily_limit'){
             alert('今天已領取過優惠券，請於台灣時間午夜 12 點後再領取。');
+            return;
+          }
+          if (err && err.code === 'quiz_required'){
+            alert('請先完成守護神測驗後再領取優惠券。');
             return;
           }
           alert('目前系統暫時無法發放優惠券，請稍後再試或聯繫客服。');

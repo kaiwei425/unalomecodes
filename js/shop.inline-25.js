@@ -59,7 +59,7 @@ window.loadReviews = async function(productCode) {
     });
 
   } catch (err) {
-    listEl.innerHTML = `<div style="text-align:center; color:#ef4444; padding:10px;">${err.message || '讀取失敗'}</div>`;
+    listEl.innerHTML = `<div style="text-align:center; color:#ef4444; padding:10px;">${escapeHtml(err.message || '讀取失敗')}</div>`;
   }
 };
 

@@ -225,7 +225,7 @@
         </tr>`;
       }).join('');
     }catch(err){
-      if (listBody) listBody.innerHTML = `<tr><td colspan="10" class="error">讀取失敗：${err.message||err}</td></tr>`;
+      if (listBody) listBody.innerHTML = `<tr><td colspan="10" class="error">讀取失敗：${escapeHtml(err.message||err)}</td></tr>`;
     }
   }
   function renderGlobal(){

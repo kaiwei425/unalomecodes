@@ -3550,23 +3550,8 @@ export async function onRequest(context) {
         form.get('customfield1') ||
         form.get('orderId') ||
         form.get('order_id') || '';
-      let token = '';
-      if (env.ORDERS && oid) {
-        try {
-          const raw = await env.ORDERS.get(String(oid));
-          if (raw) {
-            const order = JSON.parse(raw);
-            if (!order.resultToken) {
-              order.resultToken = makeToken(32);
-              await env.ORDERS.put(String(oid), JSON.stringify(order));
-            }
-            token = String(order.resultToken || '');
-          }
-        } catch (_) {}
-      }
       const target = new URL(url.origin + '/payment-result');
       if (oid) target.searchParams.set('orderId', String(oid));
-      if (token) target.searchParams.set('token', token);
       return Response.redirect(target.toString(), 302);
     } catch (e) {
       return Response.redirect(url.origin + '/payment-result', 302);
@@ -4159,6 +4144,43 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const result = await updateDashboardStats(env);
     await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: dashboardCacheTtl });
     return json({ ok: true, ...result, fromCache: false });
+  }
+
+  if (pathname === '/api/admin/home-stats' && request.method === 'GET') {
+    if (!(await isAdmin(request, env))){
+      return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    const base = String(env.ADMIN_STATS_API_BASE || env.ADMIN_STATS_BASE || 'https://coupon-service.kaiwei425.workers.dev').trim();
+    const event = String(url.searchParams.get('event') || 'home_view').trim();
+    const days = Math.min(60, Math.max(1, Number(url.searchParams.get('days') || 14) || 14));
+    if (!base) return json({ ok:false, error:'missing_stats_base' }, 500);
+    const target = `${base.replace(/\/+$/, '')}/admin/stats/trend?event=${encodeURIComponent(event)}&days=${days}`;
+    const headers = new Headers();
+    const bearer = String(env.ADMIN_STATS_TOKEN || env.ADMIN_TOKEN || '').trim();
+    const accessId = String(env.CF_ACCESS_CLIENT_ID || env.ACCESS_CLIENT_ID || '').trim();
+    const accessSecret = String(env.CF_ACCESS_CLIENT_SECRET || env.ACCESS_CLIENT_SECRET || '').trim();
+    if (bearer) headers.set('Authorization', `Bearer ${bearer}`);
+    if (accessId && accessSecret){
+      headers.set('CF-Access-Client-Id', accessId);
+      headers.set('CF-Access-Client-Secret', accessSecret);
+    }
+    if (!bearer && !(accessId && accessSecret)){
+      return json({ ok:false, error:'missing_admin_stats_credentials' }, 500);
+    }
+    try{
+      const res = await fetch(target, { headers });
+      const text = await res.text();
+      let data = {};
+      try{ data = JSON.parse(text); }catch(_){
+        data = { ok:false, error:'invalid_upstream_json' };
+      }
+      if (!res.ok){
+        return json({ ok:false, error: data && data.error ? data.error : `upstream_${res.status}` }, res.status);
+      }
+      return json(data, 200);
+    }catch(e){
+      return json({ ok:false, error:String(e) }, 500);
+    }
   }
 
   if (pathname === '/api/admin/cron/update-dashboard' && request.method === 'POST') {
@@ -6604,7 +6626,6 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       ? order.items.map(it => `${it.productName||''}x${Math.max(1, Number(it.qty||1))}`).join('#')
       : `${order.productName || '訂單'}x${Math.max(1, Number(order.qty||1))}`;
 
-    const tokenParam = order.resultToken ? `&token=${encodeURIComponent(order.resultToken)}` : '';
     const params = {
       MerchantID: merchantId,
       MerchantTradeNo: tradeNo,
@@ -6614,8 +6635,8 @@ if (pathname === '/api/payment/ecpay/create' && request.method === 'POST') {
       TradeDesc: '聖物訂單',
       ItemName: itemsStr,
       ReturnURL: `${origin}/api/payment/ecpay/notify`,
-      OrderResultURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}${tokenParam}`,
-      ClientBackURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}${tokenParam}`,
+      OrderResultURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}`,
+      ClientBackURL: `${origin}/payment-result?orderId=${encodeURIComponent(order.id)}`,
       ChoosePayment: 'Credit',
       EncryptType: 1,
       CustomField1: order.id
@@ -6952,14 +6973,8 @@ if (pathname === '/api/coupons/issue-quiz' && request.method === 'POST') {
     if (!ok){
       return json({ ok:false, error:'Too many requests' }, 429, request, env);
     }
-    const secret = String(env.QUIZ_COUPON_SECRET || env.QUIZ_COUPON_KEY || '').trim();
-    if (secret){
-      const headerKey = (request.headers.get('x-quiz-key') || request.headers.get('X-Quiz-Key') || '').trim();
-      const queryKey = (url.searchParams.get('key') || '').trim();
-      const bodyKey = String(body.key || body.secret || body.quizKey || body.token || '').trim();
-      if (headerKey !== secret && queryKey !== secret && bodyKey !== secret){
-        return json({ ok:false, error:'Unauthorized' }, 401, request, env);
-      }
+    if (!record.quiz && !record.guardian && !body.quiz){
+      return json({ ok:false, error:'quiz_required' }, 400, request, env);
     }
     const deityRaw = String(body.deity || body.code || '').trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(deityRaw)){
@@ -8243,12 +8258,19 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
           return new Response(JSON.stringify({ ok:false, error:'ORDERS KV not bound' }), { status:500, headers: jsonHeaders });
         }
         const id = decodeURIComponent(m[1]);
-        const token = String(url.searchParams.get("token") || "");
         const raw = await env.ORDERS.get(id);
         if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeaders });
         const order = JSON.parse(raw);
-        if (!token || token !== order.resultToken){
-          return new Response(JSON.stringify({ ok:false, error:'Forbidden' }), { status:403, headers: jsonHeaders });
+        const admin = await isAdmin(request, env);
+        if (!admin){
+          const user = await getSessionUser(request, env);
+          if (!user) return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeaders });
+          const buyer = order && order.buyer ? order.buyer : {};
+          const uidMatch = buyer.uid && user.id && String(buyer.uid) === String(user.id);
+          const emailMatch = buyer.email && user.email && String(buyer.email).toLowerCase() === String(user.email).toLowerCase();
+          if (!uidMatch && !emailMatch){
+            return new Response(JSON.stringify({ ok:false, error:'Forbidden' }), { status:403, headers: jsonHeaders });
+          }
         }
         const signed = await attachSignedProofs(order, env);
         return new Response(JSON.stringify({ ok:true, results: Array.isArray(signed.results)? signed.results: [] }), { status:200, headers: jsonHeaders });
@@ -8265,12 +8287,19 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
           return new Response("ORDERS KV not bound", { status:500, headers: { "Content-Type":"text/plain; charset=utf-8", "Access-Control-Allow-Origin":"*" } });
         }
         const id = decodeURIComponent(m[1]);
-        const token = String(url.searchParams.get("token") || "");
         const raw = await env.ORDERS.get(id);
         if (!raw) return new Response("Not found", { status:404, headers: { "Content-Type":"text/plain; charset=utf-8", "Access-Control-Allow-Origin":"*" } });
         const order = JSON.parse(raw);
-        if (!token || token !== order.resultToken){
-          return new Response("Forbidden", { status:403, headers: { "Content-Type":"text/plain; charset=utf-8", "Access-Control-Allow-Origin":"*" } });
+        const admin = await isAdmin(request, env);
+        if (!admin){
+          const user = await getSessionUser(request, env);
+          if (!user) return new Response("Unauthorized", { status:401, headers: { "Content-Type":"text/plain; charset=utf-8", "Access-Control-Allow-Origin":"*" } });
+          const buyer = order && order.buyer ? order.buyer : {};
+          const uidMatch = buyer.uid && user.id && String(buyer.uid) === String(user.id);
+          const emailMatch = buyer.email && user.email && String(buyer.email).toLowerCase() === String(user.email).toLowerCase();
+          if (!uidMatch && !emailMatch){
+            return new Response("Forbidden", { status:403, headers: { "Content-Type":"text/plain; charset=utf-8", "Access-Control-Allow-Origin":"*" } });
+          }
         }
         const signed = await attachSignedProofs(order, env);
         const resultsAll = Array.isArray(signed.results) ? signed.results : [];
@@ -8676,7 +8705,6 @@ if (pathname === '/api/order') {
         }
       }
       const id = url.searchParams.get('id');
-      const token = String(url.searchParams.get('token') || '').trim();
       const qPhoneRaw = getAny(url.searchParams, ['phone','mobile','contact','tel','qPhone','qP']);
       const qLast5Raw = getAny(url.searchParams, ['last5','last','l5','code','transferLast5','bankLast5','qLast5']);
       const qPhone = normalizePhone(qPhoneRaw);
@@ -8687,9 +8715,14 @@ if (pathname === '/api/order') {
         const one = JSON.parse(raw);
         if (!admin) {
           let allowed = false;
-          if (token && token === one.resultToken) {
-            allowed = true;
-          } else if (qPhone && qLast5) {
+          const user = await getSessionUser(request, env);
+          if (user) {
+            const buyer = one && one.buyer ? one.buyer : {};
+            const uidMatch = buyer.uid && user.id && String(buyer.uid) === String(user.id);
+            const emailMatch = buyer.email && user.email && String(buyer.email).toLowerCase() === String(user.email).toLowerCase();
+            allowed = uidMatch || emailMatch;
+          }
+          if (!allowed && qPhone && qLast5) {
             const phoneCandidates = [
               one?.buyer?.phone, one?.buyer?.contact, one?.phone, one?.contact, one?.recipientPhone
             ].filter(Boolean);

@@ -407,21 +407,12 @@
 <script>
   // 補丁：獨立抓取入口首頁 (home_view) 的數據並渲染圖表
   (function() {
-    const API_BASE = 'https://coupon-service.kaiwei425.workers.dev';
-    
     async function fetchHomeStats() {
       try {
-        const token = localStorage.getItem('admin_token');
-        if (!token) return;
-
         // 抓取 home_view 趨勢數據 (14天)
-        const res = await fetch(`${API_BASE}/admin/stats/trend?event=home_view&days=14`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
+        const res = await fetch('/api/admin/home-stats?event=home_view&days=14', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
-        console.log('Home stats data:', data); // Debug: 檢查 API 回傳結構
         
         // 修正：API 回傳結構為 stats 陣列，而非 history
         const history = data.stats || [];
