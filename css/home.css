@@ -524,6 +524,13 @@ body.nav-open .nav-drawer__panel{
   color:var(--text-muted);
   line-height:1.6;
 }
+.section-note{
+  font-size:var(--text-sm);
+  color:var(--text-muted);
+  font-weight:600;
+  letter-spacing:0.02em;
+  margin-top:4px;
+}
 
 .card-grid{
   display:grid;
