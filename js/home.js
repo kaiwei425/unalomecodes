@@ -39,7 +39,14 @@
       'home-entry-shop-title': 'Unalomecodes商城',
       'home-entry-shop-desc': '可先點選測驗與您有緣的神祇，找到與您共鳴的守護神，精選泰國佛牌及聖物。未來也會推出泰國必買/代購商品。',
       'home-entry-shop-tag-1': '精選',
-      'home-entry-shop-tag-2': '服務'
+      'home-entry-shop-tag-2': '服務',
+      'home-creator-title': '創作者簡介',
+      'about-creator-label': '作者介紹',
+      'about-creator-name': 'Kaiwei｜曼谷讀書人',
+      'about-creator-bio': '📍 Taiwanese in Bangkok | MA student at Chula\n🧭 Exploring local life, hidden gems & food\n✉️ bkkaiwei@gmail.com',
+      'about-creator-tag-1': '曼谷常駐',
+      'about-creator-tag-2': '在地生活',
+      'about-creator-tag-3': '在地美食寺廟介紹'
     },
     en: {
       'about-brand': 'unalomecodes | Thailand Portal',
@@ -71,7 +78,14 @@
       'home-entry-shop-title': 'Unalomecodes Shop',
       'home-entry-shop-desc': 'Take the quiz to find the deity that resonates with you, then explore curated Thai amulets and sacred items. More Thailand must-buys and sourcing services are coming.',
       'home-entry-shop-tag-1': 'Curated',
-      'home-entry-shop-tag-2': 'Services'
+      'home-entry-shop-tag-2': 'Services',
+      'home-creator-title': 'Creator',
+      'about-creator-label': 'Creator',
+      'about-creator-name': 'Kaiwei | Bangkok Scholar',
+      'about-creator-bio': '📍 Taiwanese in Bangkok | MA student at Chula\n🧭 Exploring local life, hidden gems & food\n✉️ bkkaiwei@gmail.com',
+      'about-creator-tag-1': 'Based in Bangkok',
+      'about-creator-tag-2': 'Local Life',
+      'about-creator-tag-3': 'Local Food & Temples'
     }
   };
 
