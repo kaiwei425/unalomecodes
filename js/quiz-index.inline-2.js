@@ -660,14 +660,16 @@ async function showResult(){
   const color    = DOW[state.dow]?.color || '';
   const tip      = DOW[state.dow]?.tip || '';
   const zName    = ZODIAC[state.zod]?.name || '—';
-  const traits = [
-    QUESTIONS[2].opts[state.p2],
-    QUESTIONS[3].opts[state.p3],
-    QUESTIONS[4].opts[state.p4],
-    QUESTIONS[5].opts[state.p5],
-    QUESTIONS[6].opts[state.p6],
-    QUESTIONS[7].opts[state.p7]
-  ].filter(Boolean);
+  const element = ZODIAC[state.zod]?.element || '';
+  const elementHint = (function(el){
+    switch(el){
+      case '火': return '行動與突破';
+      case '土': return '穩定與累積';
+      case '風': return '溝通與連結';
+      case '水': return '直覺與感受';
+      default: return '';
+    }
+  })(element);
   const quizProfile = {
     dow: state.dow,
     dowLabel: dayName,
@@ -676,7 +678,7 @@ async function showResult(){
     job: state.job,
     jobLabel,
     color,
-    traits,
+    traits: [],
     answers: { p2: state.p2, p3: state.p3, p4: state.p4, p5: state.p5, p6: state.p6, p7: state.p7 },
     ts: Date.now()
   };
@@ -698,8 +700,7 @@ async function showResult(){
     `星座：${zName}`,
     color ? `生日星期：${dayName}（幸運色：${color}）` : `生日星期：${dayName}`,
     `職業／當前角色：${jobLabel}`,
-    tip ? `守護重點：${tip}` : '',
-    `緣分值：${aff}%｜${affinityBrief(aff)}`
+    tip ? `守護重點：${tip}` : ''
   ].filter(Boolean).join('\n\n');
   document.getElementById('resultText').textContent = result;
   const resultTitle = document.getElementById('resultTitle');
@@ -711,8 +712,12 @@ async function showResult(){
   }
   const traitList = document.getElementById('resultTraits');
   if (traitList){
+    const guideItems = [];
+    if (tip) guideItems.push(`守護重點：${tip}`);
+    if (color) guideItems.push(`幸運色：${color}`);
+    if (element) guideItems.push(`星座元素：${element}（${elementHint || '平衡能量'}）`);
     traitList.innerHTML = '';
-    traits.slice(0,3).forEach(item=>{
+    guideItems.slice(0,3).forEach(item=>{
       const li = document.createElement('li');
       li.textContent = item;
       traitList.appendChild(li);
@@ -724,27 +729,6 @@ async function showResult(){
   document.getElementById('affText').textContent = `${aff}% ｜ ${affinityBrief(aff)}`;
   // links
   document.getElementById('deityLink').href = `${DEITY_PAGE}?code=${encodeURIComponent(code)}&api=${encodeURIComponent(API_BASE)}`;
-  const shareUrl = buildShareUrl({ code, job:state.job, dow:state.dow, zod:state.zod, aff:aff, img: finalImg });
-  const shareBtn = document.getElementById('shareLink');
-  if (shareBtn){
-    shareBtn.dataset.url = shareUrl;
-    if (!shareBtn._bound){
-      shareBtn._bound = true;
-      shareBtn.addEventListener('click', async ()=>{
-        const url = shareBtn.dataset.url || '';
-        if (!url) return;
-        try{
-          await navigator.clipboard.writeText(url);
-          const old = shareBtn.textContent;
-          shareBtn.textContent = '已複製連結';
-          setTimeout(()=>{ shareBtn.textContent = old; }, 1200);
-        }catch(_){
-          window.prompt('請複製連結', url);
-        }
-      });
-    }
-  }
-  document.getElementById('menuLink').href = `${DEITY_PAGE}`;
 
   // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
   try {
@@ -776,7 +760,7 @@ async function showResult(){
     const box = document.getElementById('couponWrap');
     const copyBtn = document.getElementById('copyCouponBtn');
     const saveBtn = document.getElementById('saveCouponBtn');
-    const shopBtn = document.getElementById('ctaShop');
+    const shopBtn = null;
     async function saveToAccount(codeStr){
       if (!codeStr) return;
       try{

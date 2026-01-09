@@ -103,12 +103,18 @@
           <img id="deityImg" alt="守護神" crossorigin="anonymous" referrerpolicy="no-referrer" style="display:none;">
           <div class="result" id="resultText">尚未完成作答</div>
         </div>
-        <div class="result-panel">
-          <div class="step">緣分值</div>
-          <div class="bar"><div id="affBar" class="fill"></div></div>
-          <div id="affText" class="note" style="margin-top:6px"></div>
-          <div class="step" style="margin-top:16px;">你的關鍵指引</div>
-          <ul class="result-list" id="resultTraits"></ul>
+        <div class="result-aside">
+          <div class="result-mini affinity-card">
+            <div class="affinity-head">
+              <div class="step">緣分值</div>
+              <div class="affinity-value" id="affText">—</div>
+            </div>
+            <div class="bar"><div id="affBar" class="fill"></div></div>
+          </div>
+          <div class="result-mini guidance-card">
+            <div class="step">你的關鍵指引</div>
+            <ul class="result-list" id="resultTraits"></ul>
+          </div>
         </div>
       </div>
 
@@ -125,14 +131,17 @@
         </div>
       </div>
 
-      <div class="cta-actions">
-        <a id="ctaTemple" class="btn btn-primary" href="/templemap">查看寺廟地圖</a>
-        <a id="ctaShop" class="btn" href="/shop">前往選購專屬聖物</a>
+      <div class="card member-card">
+        <h3>完成後你會獲得</h3>
+        <ul>
+          <li>你的守護神會顯示在會員中心旁邊，方便隨時查看。</li>
+          <li>每天台灣時間午夜 12 點可領取一次日籤。</li>
+          <li>日籤包含：守護神提醒、今日能量建議、生活小提示與加持方向。</li>
+        </ul>
       </div>
+
       <div class="cta-secondary">
-        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost">查看完整介紹</a>
-        <a id="menuLink" target="_blank" rel="noopener" class="btn btn-ghost">瀏覽其他守護者</a>
-        <button id="shareLink" class="btn btn-ghost" type="button">複製分享連結</button>
+        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-primary">查看完整介紹</a>
         <button id="retakeBtn" class="btn btn-ghost" type="button">重新測驗一次</button>
       </div>
     </section>
