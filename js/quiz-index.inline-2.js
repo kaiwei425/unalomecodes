@@ -210,6 +210,54 @@ let currentStep = 0; // 0: dow, 1: zod, 2..8: questions 1-7
 const TOTAL_STEPS = 2 + 7;
 let currentQuestion = 1;
 const resultLoading = document.getElementById('resultLoading');
+const intro = document.getElementById('quizIntro');
+const quizFlow = document.getElementById('quizFlow');
+const resultBox = document.getElementById('resultBox');
+const startBtn = document.getElementById('startQuizBtn');
+const resumeBtn = document.getElementById('resumeQuizBtn');
+const previewBtn = document.getElementById('previewBtn');
+const previewPanel = document.getElementById('quizPreview');
+const saveHint = document.getElementById('saveHint');
+const backBtn = document.getElementById('backBtn');
+const restartBtn = document.getElementById('restartBtn');
+const nextStepBtn = document.getElementById('nextStepBtn');
+const progressLabel = document.getElementById('progressLabel');
+const progressFill = document.getElementById('progressFill');
+const STORAGE_KEY = '__quiz_state_v2__';
+
+function fireTrack(event, payload){
+  try{
+    if (typeof window.track === 'function') window.track(event, payload);
+    else if (typeof window.trackEvent === 'function') window.trackEvent(event, payload);
+  }catch(_){}
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      step: currentStep,
+      state,
+      ts: Date.now()
+    }));
+    if (saveHint) saveHint.style.display = '';
+  }catch(_){}
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.state) return null;
+    return data;
+  }catch(_){
+    return null;
+  }
+}
+
+function clearState(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+}
 function setResultLoading(on){
   if (!resultLoading) return;
   resultLoading.style.display = on ? 'flex' : 'none';
@@ -231,6 +279,9 @@ function setQuizVisible(show){
     const el = document.getElementById(id);
     if (el) el.style.display = show ? '' : 'none';
   });
+  if (quizFlow) quizFlow.hidden = !show;
+  if (intro) intro.style.display = show ? 'none' : '';
+  if (show && lineEntry) lineEntry.style.display = 'none';
 }
 function showLineEntry(profile){
   if (!lineEntry) return;
@@ -247,6 +298,7 @@ function showLineEntry(profile){
     lineGuardianBadge.style.display = 'flex';
   }
   lineEntry.style.display = '';
+  if (intro) intro.style.display = 'none';
   setQuizVisible(false);
 }
 if (lineRetakeBtn){
@@ -260,35 +312,108 @@ if (lineRetakeBtn){
   });
 }
 
-// render weekday
 const dowBox = document.getElementById('dowBox');
-Object.entries(DOW).forEach(([k,v])=>{
-  const b = document.createElement('div');
-  b.className = 'chip'; b.textContent = v.label;
-  b.onclick = ()=>{
-    state.dow=k;
-    [...dowBox.children].forEach(x=>x.classList.remove('active')); b.classList.add('active');
-    nextStep();
-  };
-  dowBox.appendChild(b);
-});
-
-// render zodiac
 const zodiacBox = document.getElementById('zodiacBox');
-Object.entries(ZODIAC).forEach(([k,v])=>{
-  const b = document.createElement('div');
-  b.className='chip'; b.textContent = v.name;
-  b.onclick = ()=>{
-    state.zod=k;
-    [...zodiacBox.children].forEach(x=>x.classList.remove('active')); b.classList.add('active');
-    nextStep();
-  };
-  zodiacBox.appendChild(b);
-});
-
-// render questions
 const qTitle = document.getElementById('qTitle');
 const optsEl  = document.getElementById('opts');
+
+function updateProgress(){
+  if (progressLabel) progressLabel.textContent = `步驟 ${currentStep + 1}/${TOTAL_STEPS}`;
+  if (progressFill){
+    const pct = Math.min(100, Math.max(0, ((currentStep + 1) / TOTAL_STEPS) * 100));
+    progressFill.style.width = pct + '%';
+  }
+}
+
+function updateNextState(){
+  if (!nextStepBtn) return;
+  let enabled = false;
+  if (currentStep === 0) enabled = !!state.dow;
+  else if (currentStep === 1) enabled = !!state.zod;
+  else enabled = !!state['p' + (currentStep - 1)];
+  nextStepBtn.disabled = !enabled;
+}
+
+function setBackState(){
+  if (!backBtn) return;
+  backBtn.disabled = currentStep === 0;
+}
+
+function setOptionActive(container, value){
+  if (!container) return;
+  const options = Array.from(container.querySelectorAll('[data-option]'));
+  options.forEach((btn, idx)=>{
+    const isActive = btn.dataset.option === value;
+    btn.classList.toggle('is-selected', isActive);
+    btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    btn.tabIndex = isActive || (!value && idx === 0) ? 0 : -1;
+  });
+}
+
+function bindOptionGroup(container, onSelect){
+  if (!container) return;
+  container.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('[data-option]');
+    if (!btn) return;
+    onSelect(btn.dataset.option);
+  });
+  container.addEventListener('keydown', (ev)=>{
+    const keys = ['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'];
+    if (!keys.includes(ev.key)) return;
+    ev.preventDefault();
+    const items = Array.from(container.querySelectorAll('[data-option]'));
+    if (!items.length) return;
+    const currentIndex = items.findIndex(el=>el === document.activeElement);
+    const dir = (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') ? 1 : -1;
+    const nextIndex = (currentIndex + dir + items.length) % items.length;
+    items[nextIndex].focus();
+  });
+}
+
+function renderDow(){
+  if (!dowBox) return;
+  dowBox.innerHTML = '';
+  Object.entries(DOW).forEach(([k,v])=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'option-card';
+    b.textContent = v.label;
+    b.dataset.option = k;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', 'false');
+    dowBox.appendChild(b);
+  });
+  bindOptionGroup(dowBox, (val)=>{
+    state.dow = val;
+    setOptionActive(dowBox, val);
+    updateNextState();
+    saveState();
+  });
+  setOptionActive(dowBox, state.dow);
+}
+
+function renderZodiac(){
+  if (!zodiacBox) return;
+  zodiacBox.innerHTML = '';
+  Object.entries(ZODIAC).forEach(([k,v])=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'option-card';
+    b.textContent = v.name;
+    b.dataset.option = k;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', 'false');
+    zodiacBox.appendChild(b);
+  });
+  bindOptionGroup(zodiacBox, (val)=>{
+    state.zod = val;
+    setOptionActive(zodiacBox, val);
+    updateNextState();
+    saveState();
+  });
+  setOptionActive(zodiacBox, state.zod);
+}
+
 function renderQ(qNum){
   currentQuestion = qNum;
   const q = QUESTIONS[qNum];
@@ -297,32 +422,39 @@ function renderQ(qNum){
   const isJob = (qNum===1);
   Object.entries(q.opts).forEach(([k,label])=>{
     const btn = document.createElement('button');
-    btn.className = 'btn'; btn.textContent = label;
-    btn.style.textAlign='left';
-    btn.onclick = ()=>{
-      state['p'+qNum] = k;
-      if (isJob) state.job = k;
-      if (currentStep < TOTAL_STEPS-1){ nextStep(); }
-      else { showResult(); }
-    };
-    const wrap = document.createElement('div'); wrap.appendChild(btn);
-    optsEl.appendChild(wrap);
+    btn.type = 'button';
+    btn.className = 'option-card';
+    btn.textContent = label;
+    btn.dataset.option = k;
+    btn.setAttribute('role', 'radio');
+    btn.setAttribute('aria-checked', 'false');
+    optsEl.appendChild(btn);
   });
-  document.getElementById('prevBtn').style.display = currentStep>1 ? 'inline-flex' : 'none';
-  document.getElementById('nextBtn').style.display = currentStep<TOTAL_STEPS-1 ? 'inline-flex' : 'none';
+  bindOptionGroup(optsEl, (val)=>{
+    state['p'+qNum] = val;
+    if (isJob) state.job = val;
+    setOptionActive(optsEl, val);
+    updateNextState();
+    saveState();
+  });
+  setOptionActive(optsEl, state['p'+qNum] || '');
 }
-document.getElementById('prevBtn').onclick = ()=>{
-  if (currentStep>0){ currentStep--; renderStep(); }
-};
-const prevStepBtn = document.getElementById('prevStepBtn');
-if (prevStepBtn){
-  prevStepBtn.onclick = ()=>{
-    if (currentStep>0){ currentStep--; renderStep(); }
-  };
+
+function resetQuiz(toIntro){
+  state.dow=''; state.zod=''; state.job=''; state.p2=''; state.p3=''; state.p4=''; state.p5=''; state.p6=''; state.p7='';
+  currentStep = 0; currentQuestion = 1;
+  clearState();
+  setOptionActive(dowBox, '');
+  setOptionActive(zodiacBox, '');
+  if (resultBox) resultBox.style.display = 'none';
+  if (toIntro){
+    setQuizVisible(false);
+    if (intro) intro.style.display = '';
+  }else{
+    setQuizVisible(true);
+  }
+  renderStep();
 }
-document.getElementById('nextBtn').onclick = ()=>{
-  if (currentStep<TOTAL_STEPS-1){ currentStep++; renderStep(); }
-};
 
 function renderStep(){
   const cards = document.querySelectorAll('.step-card');
@@ -335,6 +467,9 @@ function renderStep(){
     document.getElementById('quizBox').style.display='';
     renderQ(currentStep-1);
   }
+  updateProgress();
+  updateNextState();
+  setBackState();
 }
 function nextStep(){
   if (currentStep < TOTAL_STEPS-1){
@@ -345,7 +480,73 @@ function nextStep(){
   }
 }
 
+renderDow();
+renderZodiac();
 renderStep();
+
+if (startBtn){
+  startBtn.addEventListener('click', ()=>{
+    resetQuiz(false);
+    fireTrack('quiz_start');
+  });
+}
+if (resumeBtn){
+  resumeBtn.addEventListener('click', ()=>{
+    setQuizVisible(true);
+    renderStep();
+    fireTrack('quiz_start', { resume: true });
+  });
+}
+if (previewBtn && previewPanel){
+  previewBtn.addEventListener('click', ()=>{
+    previewPanel.open = true;
+    previewPanel.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+}
+if (backBtn){
+  backBtn.addEventListener('click', ()=>{
+    if (currentStep>0){ currentStep--; renderStep(); saveState(); }
+  });
+}
+if (restartBtn){
+  restartBtn.addEventListener('click', ()=>{
+    if (confirm('確定要重新開始測驗嗎？')){
+      resetQuiz(true);
+    }
+  });
+}
+if (nextStepBtn){
+  nextStepBtn.addEventListener('click', ()=>{
+    if (nextStepBtn.disabled) return;
+    if (currentStep < TOTAL_STEPS-1){
+      currentStep++;
+      renderStep();
+      saveState();
+    }else{
+      showResult();
+    }
+  });
+}
+document.addEventListener('keydown', (ev)=>{
+  if (ev.key !== 'Enter') return;
+  if (!quizFlow || quizFlow.hidden) return;
+  if (document.activeElement && document.activeElement.closest('.option-card')) return;
+  if (nextStepBtn && !nextStepBtn.disabled){
+    nextStepBtn.click();
+  }
+});
+
+const saved = loadState();
+if (saved && saved.state){
+  const hasProgress = Object.values(saved.state).some(val=>!!val);
+  if (hasProgress){
+    Object.assign(state, saved.state);
+    if (typeof saved.step === 'number') currentStep = Math.min(Math.max(saved.step, 0), TOTAL_STEPS-1);
+    renderStep();
+    if (resumeBtn) resumeBtn.style.display = '';
+    if (saveHint) saveHint.style.display = '';
+  }
+}
 if (window.authState && typeof window.authState.onProfile === 'function'){
   window.authState.onProfile(profile=>{
     if (isLineClient() && profile && profile.guardian && profile.quiz){
@@ -501,13 +702,48 @@ async function showResult(){
     `緣分值：${aff}%｜${affinityBrief(aff)}`
   ].filter(Boolean).join('\n\n');
   document.getElementById('resultText').textContent = result;
+  const resultTitle = document.getElementById('resultTitle');
+  const resultSummary = document.getElementById('resultSummary');
+  if (resultTitle) resultTitle.textContent = `守護者：${meta.name || name}`;
+  if (resultSummary){
+    const summary = meta.desc ? meta.desc.trim() : (tip || '守護神正在為你指引下一步。');
+    resultSummary.textContent = summary;
+  }
+  const traitList = document.getElementById('resultTraits');
+  if (traitList){
+    traitList.innerHTML = '';
+    traits.slice(0,3).forEach(item=>{
+      const li = document.createElement('li');
+      li.textContent = item;
+      traitList.appendChild(li);
+    });
+  }
   // affinity bar
   const bar = document.getElementById('affBar');
   bar.style.width = aff + '%';
   document.getElementById('affText').textContent = `${aff}% ｜ ${affinityBrief(aff)}`;
   // links
   document.getElementById('deityLink').href = `${DEITY_PAGE}?code=${encodeURIComponent(code)}&api=${encodeURIComponent(API_BASE)}`;
-  document.getElementById('shareLink').href = buildShareUrl({ code, job:state.job, dow:state.dow, zod:state.zod, aff:aff, img: finalImg });
+  const shareUrl = buildShareUrl({ code, job:state.job, dow:state.dow, zod:state.zod, aff:aff, img: finalImg });
+  const shareBtn = document.getElementById('shareLink');
+  if (shareBtn){
+    shareBtn.dataset.url = shareUrl;
+    if (!shareBtn._bound){
+      shareBtn._bound = true;
+      shareBtn.addEventListener('click', async ()=>{
+        const url = shareBtn.dataset.url || '';
+        if (!url) return;
+        try{
+          await navigator.clipboard.writeText(url);
+          const old = shareBtn.textContent;
+          shareBtn.textContent = '已複製連結';
+          setTimeout(()=>{ shareBtn.textContent = old; }, 1200);
+        }catch(_){
+          window.prompt('請複製連結', url);
+        }
+      });
+    }
+  }
   document.getElementById('menuLink').href = `${DEITY_PAGE}`;
 
   // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
@@ -540,7 +776,7 @@ async function showResult(){
     const box = document.getElementById('couponWrap');
     const copyBtn = document.getElementById('copyCouponBtn');
     const saveBtn = document.getElementById('saveCouponBtn');
-    const shopBtn = Array.from(document.querySelectorAll('#resultBox .footer a')).find(a=>/shopunalomecodes\.pages\.dev\/shop/.test(a.href) || /\/shop$/.test(a.pathname));
+    const shopBtn = document.getElementById('ctaShop');
     async function saveToAccount(codeStr){
       if (!codeStr) return;
       try{
@@ -649,46 +885,26 @@ async function showResult(){
   })();
 
 
-  document.getElementById('resultBox').style.display='block';
-
-  // 將結果移至全新頁面（移除前面的題目卡片，僅保留結果）
-  try{
-    const main = document.querySelector('main');
-    const res = document.getElementById('resultBox');
-    const newWrap = document.createElement('div');
-    newWrap.className = 'wrap';
-    newWrap.appendChild(res);
-    main.innerHTML = '';
-    main.appendChild(newWrap);
-    res.style.marginTop = '12px';
-  }catch(_){ }
-
+  if (quizFlow) quizFlow.hidden = true;
+  if (intro) intro.style.display = 'none';
+  if (resultBox) resultBox.style.display = 'block';
+  if (lineEntry) lineEntry.style.display = 'none';
   window.scrollTo({ top: 0, behavior:'smooth' });
+  fireTrack('quiz_complete', { deity: code });
+  clearState();
 
   // 重新測驗：回到初始狀態
   try{
-    const reBtn = document.getElementById('shareLink');
+    const reBtn = document.getElementById('retakeBtn');
     if (reBtn){
       reBtn.onclick = async (ev)=>{
         ev.preventDefault();
         const ok = await checkQuizDailyLimit(true);
         if (!ok) return;
-        // 重置狀態
-        state.dow=''; state.zod=''; state.job=''; state.p2=''; state.p3=''; state.p4=''; state.p5=''; state.p6=''; state.p7='';
-        currentStep = 0; currentQuestion = 1;
-        // 清空卡片並還原 DOM
-        const main = document.querySelector('main');
-        if (main){
-          main.innerHTML = `
-            <div class="card step-card" id="stepDow"><h2>你是星期幾出生？</h2><div id="dowBox" class="chips" role="group" aria-label="weekday"></div></div>
-            <div class="card step-card" id="stepZod"><h2>你的星座？</h2><div id="zodiacBox" class="chips" role="group" aria-label="zodiac"></div></div>
-            <div class="card step-card" id="quizBox"><div id="qTitle" class="q"></div><div id="opts" class="grid"></div><div class="footer"><button id="prevBtn" class="btn">← 上一題</button><button id="nextBtn" class="btn primary">下一題 →</button></div></div>
-          `;
-          // 重新繫結元件與事件
-          setTimeout(()=>{ try{ location.reload(); }catch(_){ location.href = location.href; } }, 50);
-        }else{
-          try{ location.reload(); }catch(_){ location.href = location.href; }
-        }
+        resetQuiz(true);
+        if (resultBox) resultBox.style.display = 'none';
+        if (intro) intro.style.display = '';
+        window.scrollTo({ top: 0, behavior:'smooth' });
       };
     }
   }catch(_){}

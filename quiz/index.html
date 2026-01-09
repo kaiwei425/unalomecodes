@@ -9,83 +9,133 @@
   <link rel="stylesheet" href="/css/quiz-index.inline-1.css">
   <meta name="quiz-token" content="quiz_5A9kU3tZmE4hW2xP7qL8vN0r">
 </head>
-<body>
-  <header>
-    <div class="wrap brand">
-      <picture class="brand-logo">
-        <source srcset="/img/logo.svg" type="image/svg+xml">
-        <img id="brandLogo" src="/img/logo.png" alt="unalomecodes" />
-      </picture>
-      <div>
-        <h1>測驗與您有緣的守護神</h1>
-        <p class="tagline">7 題 1 分鐘，找出守護神，解鎖專屬優惠與配戴建議</p>
-      </div>
-      <div class="brand-actions">
-        <button type="button" class="btn primary" data-fortune-btn>領取日籤</button>
-        <a class="btn primary" href="/shop">回到首頁</a>
+<body class="quiz-page">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="/">
+        <picture class="brand-logo">
+          <source srcset="/img/logo.svg" type="image/svg+xml">
+          <img id="brandLogo" src="/img/logo.png" alt="unalomecodes">
+        </picture>
+      </a>
+      <div class="nav-title">守護神測驗</div>
+      <div class="nav-actions">
+        <button type="button" class="btn btn-ghost" data-fortune-btn>領取日籤</button>
+        <a class="btn btn-primary" href="/shop">前往商城</a>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-    <div class="card step-card" id="stepDow">
-      <h2>你是星期幾出生？</h2>
-      <div id="dowBox" class="chips" role="group" aria-label="weekday"></div>
-    </div>
-
-    <div class="card step-card" id="stepZod">
-      <h2>你的星座？</h2>
-      <div id="zodiacBox" class="chips" role="group" aria-label="zodiac"></div>
-      <div class="footer single">
-        <button id="prevStepBtn" class="btn">← 上一題</button>
+    <section class="card intro-card" id="quizIntro">
+      <span class="kicker">守護神測驗</span>
+      <h1>用測驗找出此刻最適合你的守護神</h1>
+      <p class="lead">1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）</p>
+      <div class="intro-actions">
+        <button class="btn btn-primary" id="startQuizBtn" type="button">開始測驗</button>
+        <button class="btn" id="resumeQuizBtn" type="button" style="display:none;">繼續上次</button>
+        <button class="btn btn-ghost" id="previewBtn" type="button">先看看測驗會問什麼</button>
       </div>
-    </div>
+      <details class="intro-details" id="quizPreview">
+        <summary>測驗會問什麼</summary>
+        <ul>
+          <li>出生星期與星座（快速定位個人能量）</li>
+          <li>7 題生活與意圖題（推導最合拍的守護神）</li>
+          <li>結果會給你下一步建議（寺廟、商品、內容）</li>
+        </ul>
+      </details>
+      <div class="save-hint" id="saveHint" style="display:none;">已自動保存作答</div>
+    </section>
 
-    <div class="card step-card" id="quizBox">
-      <div id="qTitle" class="q"></div>
-      <div id="opts" class="grid"></div>
-      <div class="footer">
-        <button id="prevBtn" class="btn">← 上一題</button>
-        <button id="nextBtn" class="btn primary">下一題 →</button>
-      </div>
-    </div>
-
-    <div class="card" id="lineFortuneEntry" style="display:none">
-      <h2>已完成守護神測驗</h2>
-      <div id="lineGuardianBadge" class="guardian-badge" style="display:none;"></div>
-      <div class="footer line-entry-actions">
-        <button type="button" class="btn" id="lineRetakeBtn">重新測驗守護神</button>
-      </div>
-    </div>
-
-    <div class="card" id="resultBox" style="display:none">
-      <h2>你的守護者</h2>
-      <img id="deityImg" alt="守護神" crossorigin="anonymous" referrerpolicy="no-referrer" style="display:none;width:100%;max-height:300px;object-fit:contain;border:1px solid var(--border);border-radius:12px;background:#fff;margin-bottom:12px;" />
-      <div class="result" id="resultText">尚未完成作答</div>
-      <div style="margin:12px 0">
-        <div class="step">緣分值</div>
-        <div class="bar"><div id="affBar" class="fill"></div></div>
-        <div id="affText" class="note" style="margin-top:6px"></div>
-      </div>
-      <div style="margin:18px 0 8px">
-        <h2 style="margin-bottom:8px">佛牌配戴建議</h2>
-        <div id="amuletAdvice" class="result" style="display:none">載入中…</div>
-        <div class="footer" id="adviceActions" style="margin-top:8px">
-          <button id="getCouponBtn" class="btn ok">點我領取專屬優惠</button>
+    <section class="quiz-flow" id="quizFlow" hidden>
+      <div class="flow-head">
+        <button type="button" class="btn btn-ghost" id="backBtn">← 上一題</button>
+        <div class="progress" aria-live="polite">
+          <div class="progress-label" id="progressLabel">步驟 1/9</div>
+          <div class="progress-bar" aria-hidden="true"><span id="progressFill"></span></div>
         </div>
+        <button type="button" class="btn btn-ghost" id="restartBtn">重新開始</button>
+      </div>
+
+      <div class="card question-card step-card" id="stepDow">
+        <fieldset class="option-fieldset">
+          <legend>你是星期幾出生？</legend>
+          <div id="dowBox" class="option-grid" role="radiogroup" aria-label="weekday"></div>
+        </fieldset>
+      </div>
+
+      <div class="card question-card step-card" id="stepZod">
+        <fieldset class="option-fieldset">
+          <legend>你的星座？</legend>
+          <div id="zodiacBox" class="option-grid" role="radiogroup" aria-label="zodiac"></div>
+        </fieldset>
+      </div>
+
+      <div class="card question-card step-card" id="quizBox">
+        <fieldset class="option-fieldset">
+          <legend id="qTitle"></legend>
+          <div id="opts" class="option-grid" role="radiogroup" aria-label="question-options"></div>
+        </fieldset>
+      </div>
+
+      <div class="flow-actions">
+        <button id="nextStepBtn" class="btn btn-primary" type="button" disabled>下一步</button>
+      </div>
+    </section>
+
+    <section class="card line-entry-card" id="lineFortuneEntry" style="display:none">
+      <h2>已完成守護神測驗</h2>
+      <p class="muted">系統已讀取你的守護神紀錄，可直接領取日籤或重新測驗。</p>
+      <div id="lineGuardianBadge" class="guardian-badge" style="display:none;"></div>
+      <div class="line-entry-actions">
+        <button type="button" class="btn btn-ghost" id="lineRetakeBtn">重新測驗守護神</button>
+      </div>
+    </section>
+
+    <section class="card result-card" id="resultBox" style="display:none">
+      <div class="result-head">
+        <div class="kicker">測驗結果</div>
+        <h2 id="resultTitle">你的守護者</h2>
+        <p class="muted" id="resultSummary">守護神正在為你指引下一步。</p>
+      </div>
+      <div class="result-grid">
+        <div class="result-panel">
+          <img id="deityImg" alt="守護神" crossorigin="anonymous" referrerpolicy="no-referrer" style="display:none;">
+          <div class="result" id="resultText">尚未完成作答</div>
+        </div>
+        <div class="result-panel">
+          <div class="step">緣分值</div>
+          <div class="bar"><div id="affBar" class="fill"></div></div>
+          <div id="affText" class="note" style="margin-top:6px"></div>
+          <div class="step" style="margin-top:16px;">你的關鍵指引</div>
+          <ul class="result-list" id="resultTraits"></ul>
+        </div>
+      </div>
+
+      <div class="card advice-card">
+        <div class="advice-head">
+          <h3>佛牌配戴建議</h3>
+          <button id="getCouponBtn" class="btn btn-primary">點我領取專屬優惠</button>
+        </div>
+        <div id="amuletAdvice" class="result" style="display:none">載入中…</div>
         <div id="couponWrap" class="result" style="display:none"></div>
-        <div style="margin-top:8px">
-          <button id="copyCouponBtn" class="btn ghost" style="display:none">複製優惠碼</button>
+        <div class="coupon-actions">
+          <button id="copyCouponBtn" class="btn btn-ghost" style="display:none">複製優惠碼</button>
           <button id="saveCouponBtn" class="btn" style="display:none">存到我的優惠券</button>
         </div>
       </div>
-      <div class="footer">
-        <a id="deityLink" target="_blank" rel="noopener" class="btn">查看完整介紹</a>
-        <a id="shareLink" class="btn ok">重新測驗一次</a>
-        <a id="menuLink" target="_blank" rel="noopener" class="btn">瀏覽其他守護者</a>
-        <a class="btn" href="/shop">前往選購專屬聖物</a>
+
+      <div class="cta-actions">
+        <a id="ctaTemple" class="btn btn-primary" href="/templemap">查看寺廟地圖</a>
+        <a id="ctaShop" class="btn" href="/shop">前往選購專屬聖物</a>
       </div>
-    </div>
+      <div class="cta-secondary">
+        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost">查看完整介紹</a>
+        <a id="menuLink" target="_blank" rel="noopener" class="btn btn-ghost">瀏覽其他守護者</a>
+        <button id="shareLink" class="btn btn-ghost" type="button">複製分享連結</button>
+        <button id="retakeBtn" class="btn btn-ghost" type="button">重新測驗一次</button>
+      </div>
+    </section>
 
     <dialog id="fortuneDialogQuiz" class="fortune-dialog">
       <div class="fortune-shell">
