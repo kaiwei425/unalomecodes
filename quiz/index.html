@@ -21,6 +21,7 @@
       <div class="nav-actions">
         <button type="button" class="btn btn-ghost" data-fortune-btn>領取日籤</button>
         <a class="btn btn-primary" href="/shop">前往商城</a>
+        <button class="btn btn-ghost lang-toggle" id="langToggle" type="button" aria-label="切換語言">ZH/EN</button>
       </div>
     </div>
   </header>
@@ -93,40 +94,59 @@
 
     <section class="card result-card" id="resultBox" style="display:none">
       <div class="result-head">
-        <div class="kicker">測驗結果</div>
-        <h2 id="resultTitle">你的守護者</h2>
-        <p class="muted" id="resultSummary">守護神正在為你指引下一步。</p>
+        <div class="kicker" data-i18n="result-kicker">測驗結果</div>
+        <h2 id="resultTitle">你的守護神</h2>
+        <p class="lead" id="resultHook"></p>
+        <p class="muted" id="resultSummary"></p>
       </div>
-      <div class="result-grid">
-        <div class="result-panel">
-          <img id="deityImg" alt="守護神" crossorigin="anonymous" referrerpolicy="no-referrer" style="display:none;">
-          <div class="result" id="resultText">尚未完成作答</div>
-        </div>
+
+      <div class="result-main">
+        <div id="primaryDeityProfile"></div>
         <div class="result-aside">
-          <div class="result-mini affinity-card">
+          <div class="card affinity-card">
             <div class="affinity-head">
-              <div class="step">緣分值</div>
+              <div class="step" data-i18n="result-affinity-title">緣分值</div>
               <div class="affinity-value" id="affText">—</div>
             </div>
             <div class="bar"><div id="affBar" class="fill"></div></div>
+            <div class="affinity-breakdown" id="affBreakdown"></div>
           </div>
-          <div class="result-mini guidance-card">
-            <div class="step">你的關鍵指引</div>
-            <ul class="result-list" id="resultTraits"></ul>
+          <div class="card evidence-card">
+            <h3 data-i18n="result-evidence-title">你這次最關鍵的線索</h3>
+            <ul class="result-list" id="evidenceList"></ul>
+          </div>
+          <div class="card secondary-card">
+            <h3 data-i18n="result-secondary-title">副守護神</h3>
+            <div id="secondaryDeityCard"></div>
           </div>
         </div>
       </div>
 
+      <div class="card stories-card">
+        <div class="section-head">
+          <h3 data-i18n="result-stories-title">真實故事</h3>
+        </div>
+        <div class="story-list" id="deityStories"></div>
+      </div>
+
+      <div class="card actions-card">
+        <div class="section-head">
+          <h3 data-i18n="result-actions-title">接下來怎麼做</h3>
+        </div>
+        <div class="action-grid" id="actionList"></div>
+        <div class="muted disclaimer" data-i18n="disclaimer">自我覺察與文化體驗建議，不構成保證。</div>
+      </div>
+
       <div class="card advice-card">
         <div class="advice-head">
-          <h3>佛牌配戴建議</h3>
-          <button id="getCouponBtn" class="btn btn-primary">點我領取專屬優惠</button>
+          <h3 data-i18n="result-amulet-title">佛牌配戴建議</h3>
+          <button id="getCouponBtn" class="btn btn-primary" data-i18n="cta-coupon">點我領取專屬優惠</button>
         </div>
         <div id="amuletAdvice" class="result" style="display:none">載入中…</div>
         <div id="couponWrap" class="result" style="display:none"></div>
         <div class="coupon-actions">
-          <button id="copyCouponBtn" class="btn btn-ghost" style="display:none">複製優惠碼</button>
-          <button id="saveCouponBtn" class="btn" style="display:none">存到我的優惠券</button>
+          <button id="copyCouponBtn" class="btn btn-ghost" style="display:none" data-i18n="cta-copy-coupon">複製優惠碼</button>
+          <button id="saveCouponBtn" class="btn" style="display:none" data-i18n="cta-save-coupon">存到我的優惠券</button>
         </div>
       </div>
 
@@ -139,9 +159,15 @@
         </ul>
       </div>
 
+      <div class="card user-stories-card" id="userStoriesWrap"></div>
+
+      <div class="cta-primary">
+        <a id="ctaShopBtn" class="btn btn-primary" href="/shop" data-i18n="cta-shop">看你的專屬配戴精選</a>
+        <a id="ctaTempleBtn" class="btn btn-ghost" href="/templemap" data-i18n="cta-temple">去拜更有感的寺廟建議</a>
+        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="cta-deity">看完整神祇介紹</a>
+      </div>
       <div class="cta-secondary">
-        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-primary">查看完整介紹</a>
-        <button id="retakeBtn" class="btn btn-ghost" type="button">重新測驗一次</button>
+        <button id="retakeBtn" class="btn btn-ghost" type="button" data-i18n="cta-retake">重新測驗一次</button>
       </div>
     </section>
 
@@ -177,6 +203,8 @@
   <script src="/js/quiz-index.inline-1.js"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="/js/auth.js?v=20240930"></script>
+  <script src="/js/deity.inline-1.js"></script>
+  <script src="/js/deity-components.js"></script>
   <div id="resultLoading" class="loading-overlay" role="status" aria-live="polite">
     <div class="loading-card">
       <div class="loading-spinner" aria-hidden="true"></div>

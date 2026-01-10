@@ -301,8 +301,58 @@
     }
   };
 
-  const params = new URLSearchParams(location.search);
+  const NAME_MAP = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
+  const NAME_MAP_EN = {
+    FM:'Brahma',GA:'Ganesha',CD:'Somdej',KP:'Khun Paen',HP:'Hun Phayon',XZ:'Jujaka',WE:'Five Eyes Four Ears',
+    HM:'Hanuman',RH:'Rahu',JL:'Garuda',ZD:'Jatukam',ZF:'Nang Kwak'
+  };
+  const DESC_EN = {
+    FM:'Brahma represents balance, creation, and clear judgment. Seek him when you need steady progress in work and relationships.',
+    GA:'Ganesha removes obstacles and opens new starts. A guide for study, creativity, and focused action.',
+    CD:'Somdej reflects calm, discipline, and inner stability. For grounding and steady protection.',
+    KP:'Khun Paen embodies charisma and brave action. For momentum, people luck, and decisive steps.',
+    HP:'Hun Phayon symbolizes protection and boundaries. For safety, order, and mindful vigilance.',
+    XZ:'Jujaka represents turning chances into opportunity. For business flow and practical luck.',
+    WE:'Five Eyes Four Ears stands for clarity and awareness. For insight, focus, and discernment.',
+    HM:'Hanuman is courage and loyal action. For overcoming fear and pushing forward.',
+    RH:'Rahu is transformation through shadow. For turning chaos into discipline and new direction.',
+    JL:'Garuda is righteousness and strength. For protection and a clear moral path.',
+    ZD:'Jatukam is steadfast faith and resilience. For stability in storms and long-term goals.',
+    ZF:'Nang Kwak is hospitality and good fortune. For customer flow and steady income.'
+  };
+  const WEAR_GUIDE = {
+    FM:{ zh:'適合在需要平衡工作與人際的時期配戴，提醒自己穩定與公正。', en:'Wear when balancing work and relationships; it reminds you to stay steady and fair.' },
+    GA:{ zh:'適合新開始或學習期配戴，提醒自己保持專注與行動力。', en:'Wear for new starts or study phases; it keeps focus and momentum.' },
+    CD:{ zh:'適合壓力大或心浮時配戴，提醒回到穩定與清明。', en:'Wear when stressed or scattered to return to calm and clarity.' },
+    KP:{ zh:'適合需要人際助力或談判時配戴，提醒自己果斷且有分寸。', en:'Wear when you need people luck or negotiation strength; act with charm and clarity.' },
+    HP:{ zh:'適合出行與日常守護配戴，提醒保持界線與安全感。', en:'Wear for daily protection and travel; it reinforces boundaries and safety.' },
+    XZ:{ zh:'適合商務與金錢流動期配戴，提醒自己把握機會與回饋。', en:'Wear during business and money flow; it cues opportunity and reciprocity.' },
+    WE:{ zh:'適合需要專注與判斷的時期配戴，提醒看清再行動。', en:'Wear when focus and discernment are needed; see clearly before acting.' },
+    HM:{ zh:'適合面對挑戰或需要勇氣時配戴，提醒先穩住再前進。', en:'Wear when facing challenges to steady courage before moving.' },
+    RH:{ zh:'適合轉運與變局期配戴，提醒在不確定中守住節奏。', en:'Wear during shifts and uncertainty to keep rhythm and discipline.' },
+    JL:{ zh:'適合需要正氣與保護時配戴，提醒自己守正不偏。', en:'Wear when integrity and protection are needed; stay upright and clear.' },
+    ZD:{ zh:'適合長期目標與抗壓期配戴，提醒以穩定累積成果。', en:'Wear for long-term goals and resilience; build steadily over time.' },
+    ZF:{ zh:'適合經營客源與財運時配戴，提醒以善意與禮貌迎人。', en:'Wear for customer flow and abundance; lead with warmth and service.' }
+  };
+
   const DEITY_ORDER = ['FM','GA','CD','KP','HP','XZ','WE','HM','RH','JL','ZD','ZF'];
+
+  window.DEITY_DATA = window.DEITY_DATA || {
+    images: LOCAL_IMG,
+    stories: LOCAL_STORIES,
+    desc: LOCAL_DESC,
+    descEn: DESC_EN,
+    names: NAME_MAP,
+    namesEn: NAME_MAP_EN,
+    wear: WEAR_GUIDE,
+    templeGuides: TEMPLE_GUIDES,
+    order: DEITY_ORDER
+  };
+
+  const hasDeityPage = document.getElementById('deityListSection') || document.getElementById('deityName');
+  if (!hasDeityPage) return;
+
+  const params = new URLSearchParams(location.search);
   // temple guide rendering function
   function renderTempleGuide(code){
     const box = document.getElementById('templeGuide');
@@ -433,8 +483,7 @@
     }
   }
   function guessName(code){
-    const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
-    return map[code] || '守護神';
+    return NAME_MAP[code] || '守護神';
   }
   function shortDesc(text, len=88){
     const clean = String(text || '').replace(/\s+/g, ' ').trim();

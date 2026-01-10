@@ -10,7 +10,6 @@ const SITE_BASE   = (function(){ try{ return location.origin; }catch(e){ return 
 const SHARE_PAGE = 'https://unalomecodes.pages.dev/share';
 // 內部神祇頁面改為新網址
 const DEITY_PAGE = SITE_BASE + '/deity';
-const DEITY_IMG_OVERRIDES = { CD:'https://i.ibb.co/rGpp2w1s/image.jpg', RH:'https://i.ibb.co/qMy9RxVx/image.jpg', HM:'https://i.ibb.co/kV0pz49B/image.jpg', WE:'https://i.ibb.co/pv4Jc4sc/image.jpg', XZ:'https://i.ibb.co/V0hNnFHT/image.jpg', JL:'https://i.ibb.co/wrWW3ddN/image.jpg', ZD:'https://i.ibb.co/xtJtDTVy/image.jpg', KP:'https://i.ibb.co/k29dc4Qn/image.jpg', FM:'https://i.ibb.co/SXGB6vKj/image.jpg', GA:'https://i.ibb.co/2RhD1k9/image.jpg', HP:'https://i.ibb.co/ymcrPm1C/image.jpg', ZF:'https://i.ibb.co/CRctyB3/image.jpg' };
 const BRAND_NAME = '守護指引';
 const BRAND_LOGO = '/img/logo.png';
 // Coupon service endpoint
@@ -29,6 +28,15 @@ const DOW = {
   Fri:{label:'星期五', color:'藍色',  tip:'象徵愛與藝術，讓你更具包容與親和力',                   weight:['ZF','KP','XZ']},
   Sat:{label:'星期六', color:'紫色',  tip:'象徵守護與洞察，幫你轉危為安',                         weight:['RH','WE','CD']}
 };
+const DOW_EN = {
+  Sun:{label:'Sunday', color:'Red',   tip:'Confidence and shine—step forward and lead clearly.'},
+  Mon:{label:'Monday', color:'Yellow',tip:'Understanding and wisdom—soft strength wins.'},
+  Tue:{label:'Tuesday', color:'Pink', tip:'Courage and love—move first with heart.'},
+  Wed:{label:'Wednesday', color:'Green', tip:'Growth and harmony—steady progress in change.'},
+  Thu:{label:'Thursday', color:'Orange', tip:'Learning and insight—new knowledge finds you.'},
+  Fri:{label:'Friday', color:'Blue',  tip:'Love and art—warmth and connection expand.'},
+  Sat:{label:'Saturday', color:'Purple', tip:'Protection and clarity—turn risks into calm.'}
+};
 const ZODIAC = {
   Aries:{name:'牡羊座 ♈️', element:'火'},
   Taurus:{name:'金牛座 ♉️', element:'土'},
@@ -42,6 +50,20 @@ const ZODIAC = {
   Capricorn:{name:'魔羯座 ♑️', element:'土'},
   Aquarius:{name:'水瓶座 ♒️', element:'風'},
   Pisces:{name:'雙魚座 ♓️', element:'水'}
+};
+const ZODIAC_EN = {
+  Aries:{name:'Aries ♈️', element:'Fire'},
+  Taurus:{name:'Taurus ♉️', element:'Earth'},
+  Gemini:{name:'Gemini ♊️', element:'Air'},
+  Cancer:{name:'Cancer ♋️', element:'Water'},
+  Leo:{name:'Leo ♌️', element:'Fire'},
+  Virgo:{name:'Virgo ♍️', element:'Earth'},
+  Libra:{name:'Libra ♎️', element:'Air'},
+  Scorpio:{name:'Scorpio ♏️', element:'Water'},
+  Sagittarius:{name:'Sagittarius ♐️', element:'Fire'},
+  Capricorn:{name:'Capricorn ♑️', element:'Earth'},
+  Aquarius:{name:'Aquarius ♒️', element:'Air'},
+  Pisces:{name:'Pisces ♓️', element:'Water'}
 };
 const QUESTIONS = {
   1:{ text:'你的職業最接近哪一種？',
@@ -60,6 +82,24 @@ const QUESTIONS = {
       opts:{A:'調整方法再試一次',B:'停下來並好好觀察一切',C:'找人商量或以信念穩心',D:'退一步先穩住自己',E:'正面迎戰勇敢行動'}},
   7:{ text:'你理想中的人生狀態是？',
       opts:{A:'不斷接受新挑戰讓自己進步',B:'財富自由生活富足',C:'擁有穩定而深刻的人際關係',D:'內心平穩被保護的踏實感',E:'方向清楚並且專注前行'}}
+};
+const QUESTIONS_EN = {
+  1:{ text:'Which role best describes you?',
+      opts:{ A:'Founder / Self-employed', B:'Management / Admin', C:'Design / Art / Content',
+             D:'Sales / Marketing / PR', E:'Engineering / Tech / Finance & Data', F:'Service / Healthcare / Education / Wellness',
+             G:'Freelance / Part-time / Transition', H:'Public sector' } },
+  2:{ text:'When you want to change your life, what do you want first?',
+      opts:{A:'Breakthrough on a stuck area',B:'Stable wealth and abundance',C:'Clear direction and guidance',D:'Safety and protection',E:'Let go and see yourself clearly'}},
+  3:{ text:'If you could receive only one blessing, which would it be?',
+      opts:{A:'More paths and options open up',B:'Luck and resources arrive',C:'People luck and support',D:'Strong protection from interference',E:'Clear focus without inner noise'}},
+  4:{ text:'Which pattern do you keep encountering?',
+      opts:{A:'Opportunities and obstacles alternate',B:'Wealth fluctuates up and down',C:'Relationships repeat the same loops',D:'Easily affected by others\' energy',E:'Stuck between gain and loss'}},
+  5:{ text:'How would friends describe you?',
+      opts:{A:'Driven and decisive',B:'Warm, charming, good with people',C:'Sharp, calm, and analytical',D:'Steady and reliable',E:'Visionary and strategic'}},
+  6:{ text:'When things go wrong, how do you respond?',
+      opts:{A:'Adjust and try again',B:'Pause and observe',C:'Seek advice or anchor in belief',D:'Step back and stabilize first',E:'Face it head-on'}},
+  7:{ text:'Your ideal life state is?',
+      opts:{A:'Keep taking on new challenges',B:'Financial freedom and abundance',C:'Stable, deep relationships',D:'Inner calm and protection',E:'Clear direction and focus'}}
 };
 // 問題選項對應加權（每題每選項對應神祇）
 const MAP = {
@@ -182,18 +222,231 @@ function calcAffinityPercent(st, winner){
   const pct = Math.max(83, Math.min(99, base + tweak));
   return pct;
 }
-function affinityBrief(n){
+function affinityBrief(n, lang){
   const p = Number(n)||0;
-  if (p>=95) return '極強連結';
-  if (p>=92) return '高度共鳴';
-  if (p>=88) return '穩定合拍';
-  if (p>=85) return '正在靠近';
-  return '有縁待啟動';
+  const isEn = lang === 'en';
+  if (p>=95) return isEn ? 'Exceptional match' : '極強連結';
+  if (p>=92) return isEn ? 'Strong resonance' : '高度共鳴';
+  if (p>=88) return isEn ? 'Steady alignment' : '穩定合拍';
+  if (p>=85) return isEn ? 'Getting closer' : '正在靠近';
+  return isEn ? 'Awakening link' : '有縁待啟動';
 }
 // 神祇代碼→中文名（與 deity.html 同步）
-function deityName(code){
+function deityName(code, lang){
+  if (typeof window.getDeityById === 'function'){
+    const d = window.getDeityById(code);
+    if (d && d.name){
+      const name = lang === 'en' ? d.name.en : d.name.zh;
+      return name || d.name.zh || d.name.en || '守護神';
+    }
+  }
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   return map[code] || '守護神';
+}
+
+const LANG_KEY = 'uc_lang';
+const I18N = {
+  zh: {
+    'result-kicker': '測驗結果',
+    'result-affinity-title': '緣分值',
+    'result-secondary-title': '副守護神',
+    'result-stories-title': '真實故事',
+    'result-actions-title': '接下來怎麼做',
+    'result-amulet-title': '佛牌配戴建議',
+    'result-why-title': '為什麼是祂',
+    'result-evidence-title': '你這次最關鍵的線索',
+    'cta-shop': '看你的專屬配戴精選',
+    'cta-temple': '去拜更有感的寺廟建議',
+    'cta-deity': '看完整神祇介紹',
+    'cta-retake': '重新測驗一次',
+    'cta-coupon': '點我領取專屬優惠',
+    'cta-copy-coupon': '複製優惠碼',
+    'cta-save-coupon': '存到我的優惠券',
+    'empty-stories': '目前還沒有故事分享。',
+    'disclaimer': '自我覺察與文化體驗建議，不構成保證。',
+    'action-today': '今天',
+    'action-week': '本週',
+    'action-wear': '配戴建議',
+    'breakdown-total': '總分',
+    'breakdown-base': '出生能量',
+    'breakdown-role': '角色線索',
+    'breakdown-intent': '意圖線索',
+    'breakdown-action': '行動線索',
+    'result-hook-1': '從「{goal}」到「{blessing}」，你現在最需要的是 {deity} 的節奏。',
+    'result-hook-2': '你在「{challenge}」上反覆遇到課題，{deity} 會先讓你穩住方向。',
+    'result-hook-3': '你的生活關鍵字是「{desc}」與「{response}」，{deity} 正好補上這段。',
+    'result-hook-4': '選擇「{ideal}」作為理想狀態，代表你需要更清楚的節奏，{deity} 會帶來對位。',
+    'result-hook-5': '星座是 {zodiac}、生日星期是 {day}，{deity} 會放大你的優勢並補齊盲點。',
+    'result-hook-6': '從「{job}」的角色出發，{deity} 會讓你更容易穩定推進。'
+  },
+  en: {
+    'result-kicker': 'Result',
+    'result-affinity-title': 'Affinity',
+    'result-secondary-title': 'Secondary Deity',
+    'result-stories-title': 'True Stories',
+    'result-actions-title': 'What to do next',
+    'result-amulet-title': 'Wearing Tips',
+    'result-why-title': 'Why this deity',
+    'result-evidence-title': 'Key signals',
+    'cta-shop': 'See your curated picks',
+    'cta-temple': 'Visit a matching temple',
+    'cta-deity': 'Full deity profile',
+    'cta-retake': 'Retake the quiz',
+    'cta-coupon': 'Get your personal offer',
+    'cta-copy-coupon': 'Copy coupon',
+    'cta-save-coupon': 'Save to my coupons',
+    'empty-stories': 'No stories yet.',
+    'disclaimer': 'For reflection and cultural exploration, no guarantees.',
+    'action-today': 'Today',
+    'action-week': 'This week',
+    'action-wear': 'Wearing tip',
+    'breakdown-total': 'Total',
+    'breakdown-base': 'Birth energy',
+    'breakdown-role': 'Role signals',
+    'breakdown-intent': 'Intent signals',
+    'breakdown-action': 'Action signals',
+    'result-hook-1': 'From “{goal}” to “{blessing}”, you’re aligning most with {deity} right now.',
+    'result-hook-2': 'You keep meeting “{challenge}”, so {deity} helps you steady the direction first.',
+    'result-hook-3': 'Your keywords are “{desc}” and “{response}”—{deity} fills the missing piece.',
+    'result-hook-4': 'Choosing “{ideal}” as your ideal state shows what you need now, and {deity} matches that rhythm.',
+    'result-hook-5': 'With {zodiac} and a {day} birthday, {deity} amplifies your strengths and balances blind spots.',
+    'result-hook-6': 'Based on your role in “{job}”, {deity} helps you move with steadier momentum.'
+  }
+};
+
+function applyLang(lang){
+  const dict = I18N[lang] || I18N.zh;
+  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-Hant';
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    const key = el.dataset.i18n;
+    if (dict[key]) el.textContent = dict[key];
+  });
+  if (langToggle){
+    langToggle.textContent = 'ZH/EN';
+    langToggle.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : '切換英文');
+    langToggle.dataset.lang = lang;
+  }
+}
+
+function resolveLang(){
+  let stored = '';
+  try{ stored = localStorage.getItem(LANG_KEY) || ''; }catch(_){}
+  if (stored === 'zh' || stored === 'en') return stored;
+  const browser = (navigator.language || '').toLowerCase();
+  return browser.startsWith('en') ? 'en' : 'zh';
+}
+
+function setLang(lang){
+  try{ localStorage.setItem(LANG_KEY, lang); }catch(_){}
+  applyLang(lang);
+}
+
+function getLang(){
+  return (langToggle && langToggle.dataset.lang) || resolveLang();
+}
+
+function t(key, lang){
+  const dict = I18N[lang] || I18N.zh;
+  return dict[key] || I18N.zh[key] || '';
+}
+
+function formatTemplate(tpl, ctx){
+  return String(tpl || '').replace(/\{(\w+)\}/g, function(_, key){
+    return (ctx && ctx[key] != null) ? String(ctx[key]) : '';
+  });
+}
+
+function getQuestionText(num, lang){
+  const src = lang === 'en' ? QUESTIONS_EN : QUESTIONS;
+  return (src[num] && src[num].text) || (QUESTIONS[num] && QUESTIONS[num].text) || '';
+}
+
+function getOptionLabel(num, key, lang){
+  const src = lang === 'en' ? QUESTIONS_EN : QUESTIONS;
+  return (src[num] && src[num].opts && src[num].opts[key]) || (QUESTIONS[num] && QUESTIONS[num].opts && QUESTIONS[num].opts[key]) || '';
+}
+
+function getDayInfo(key, lang){
+  const src = lang === 'en' ? DOW_EN : DOW;
+  return src[key] || DOW[key] || {};
+}
+
+function getZodiacInfo(key, lang){
+  const src = lang === 'en' ? ZODIAC_EN : ZODIAC;
+  return src[key] || ZODIAC[key] || {};
+}
+
+function getElementHint(element, lang){
+  if (!element) return '';
+  if (lang === 'en'){
+    return ({ Fire:'Action & breakthroughs', Earth:'Stability & accumulation', Air:'Communication & connection', Water:'Intuition & feeling' })[element] || '';
+  }
+  return ({ 火:'行動與突破', 土:'穩定與累積', 風:'溝通與連結', 水:'直覺與感受' })[element] || '';
+}
+
+function buildPersonalHook(ctx, lang){
+  const dict = I18N[lang] || I18N.zh;
+  const templates = [1,2,3,4,5,6].map(i => dict['result-hook-' + i]).filter(Boolean);
+  const seed = stableHash(encodeState(state) + ':' + lang);
+  const chosen = templates[seed % templates.length] || templates[0] || '';
+  return formatTemplate(chosen, ctx);
+}
+
+function scoreForQuestion(code, num, pick){
+  const arr = MAP[num]?.[pick] || [];
+  const idx = arr.indexOf(code);
+  if (idx === -1) return 0;
+  return Math.max(0, 4 - idx);
+}
+
+function buildScoreBreakdown(code){
+  const base = (DOW[state.dow]?.weight || []).includes(code) ? 1 : 0;
+  const role = scoreForQuestion(code, 1, state.job);
+  let intent = 0;
+  let action = 0;
+  for (let i=2;i<=4;i++){ intent += scoreForQuestion(code, i, state['p'+i]); }
+  for (let i=5;i<=7;i++){ action += scoreForQuestion(code, i, state['p'+i]); }
+  return { base, role, intent, action, total: base + role + intent + action };
+}
+
+function buildEvidence(code, lang, deityNameText){
+  const items = [];
+  const dayInfo = getDayInfo(state.dow, lang);
+  if ((DOW[state.dow]?.weight || []).includes(code)){
+    const text = lang === 'en'
+      ? `Your birth weekday (${dayInfo.label || ''}) directly boosts ${deityNameText}.`
+      : `出生星期（${dayInfo.label || ''}）直接加強了 ${deityNameText}。`;
+    items.push({ weight: 1, text });
+  }
+  for (let i=1;i<=7;i++){
+    const pick = (i === 1) ? state.job : state['p'+i];
+    if (!pick) continue;
+    const weight = scoreForQuestion(code, i, pick);
+    if (!weight) continue;
+    const qText = getQuestionText(i, lang);
+    const optText = getOptionLabel(i, pick, lang);
+    const text = lang === 'en'
+      ? `Because you chose “${optText}” for “${qText}”.`
+      : `因為你在「${qText}」選了「${optText}」。`;
+    items.push({ weight, text });
+  }
+  items.sort((a,b)=> b.weight - a.weight);
+  return items.slice(0, 3).map(it => it.text);
+}
+
+function buildActionItems(deity, lang){
+  const dayInfo = getDayInfo(state.dow, lang);
+  const today = dayInfo.tip || (lang === 'en' ? 'Focus on one small step today.' : '今天先完成一件小事。');
+  const weekFocus = getOptionLabel(6, state.p6, lang) || getOptionLabel(7, state.p7, lang);
+  const week = weekFocus
+    ? (lang === 'en' ? `Use “${weekFocus}” as your weekly rhythm and make one concrete move.` : `本週聚焦「${weekFocus}」，安排一件事落地。`)
+    : (lang === 'en' ? 'Set one weekly rhythm and keep it simple.' : '本週設定一個固定節奏並持續。');
+  const wear = (deity && deity.wear && (lang === 'en' ? deity.wear.en : deity.wear.zh)) || (deity && deity.wear && (deity.wear.zh || deity.wear.en)) || (lang === 'en' ? 'Wear your deity item when you need steady focus.' : '在需要穩定時配戴守護神聖物。');
+  return [
+    { title: t('action-today', lang), body: today },
+    { title: t('action-week', lang), body: week },
+    { title: t('action-wear', lang), body: wear }
+  ];
 }
 
 /* =====================
@@ -207,6 +460,7 @@ const resultLoading = document.getElementById('resultLoading');
 const intro = document.getElementById('quizIntro');
 const quizFlow = document.getElementById('quizFlow');
 const resultBox = document.getElementById('resultBox');
+const langToggle = document.getElementById('langToggle');
 const startBtn = document.getElementById('startQuizBtn');
 const resumeBtn = document.getElementById('resumeQuizBtn');
 const previewBtn = document.getElementById('previewBtn');
@@ -218,6 +472,17 @@ const nextStepBtn = document.getElementById('nextStepBtn');
 const progressLabel = document.getElementById('progressLabel');
 const progressFill = document.getElementById('progressFill');
 const STORAGE_KEY = '__quiz_state_v2__';
+
+if (langToggle){
+  langToggle.addEventListener('click', function(){
+    const next = (langToggle.dataset.lang === 'en') ? 'zh' : 'en';
+    setLang(next);
+    if (resultBox && resultBox.style.display === 'block'){
+      showResult({ rerender: true });
+    }
+  });
+}
+applyLang(resolveLang());
 
 function fireTrack(event, payload){
   try{
@@ -621,276 +886,372 @@ async function issueCoupon(deityCode, amount, quizPayload){
   return j.code;
 }
 
-async function showResult(){
+async function showResult(opts){
+  const rerender = !!(opts && opts.rerender);
   // guard
   if (!state.dow || !state.zod || !state.job || !state.p2 || !state.p3 || !state.p4 || !state.p5 || !state.p6 || !state.p7){
     alert('請完整作答「星期、星座與 7 題」'); return;
   }
   setResultLoading(true);
   try{
-  // logged-in: allow only once per Taiwan day
-  const allow = await checkQuizDailyLimit(true);
-  if (!allow) return;
-  const code = decideWinner(state);
-  const aff  = calcAffinityPercent(state, code);
-  const name = deityName(code);
-  // 取神祇資料
-  let meta = { name: name, img: '', desc: '' };
-  try {
-    const r = await fetch(`${API_BASE}/getDeity?code=${encodeURIComponent(code)}`);
-    if (r.ok) { const j = await r.json(); meta.name = j.name || meta.name; meta.img = j.img || ''; meta.desc = j.desc || ''; }
-  } catch {}
-  // 圖片覆蓋
-  const finalImg = DEITY_IMG_OVERRIDES[code] || meta.img || '';
-  // 顯示圖片
-  const imgEl = document.getElementById('deityImg');
-  if (finalImg) { imgEl.src = finalImg; imgEl.crossOrigin='anonymous'; imgEl.referrerPolicy='no-referrer'; imgEl.style.display = 'block'; }
-  // text（比照 LINE 結果文案的完整度）
-  const jobLabel = QUESTIONS[1].opts[state.job] || '—';
-  const dayName  = DOW[state.dow]?.label || '—';
-  const color    = DOW[state.dow]?.color || '';
-  const tip      = DOW[state.dow]?.tip || '';
-  const zName    = ZODIAC[state.zod]?.name || '—';
-  const element = ZODIAC[state.zod]?.element || '';
-  const elementHint = (function(el){
-    switch(el){
-      case '火': return '行動與突破';
-      case '土': return '穩定與累積';
-      case '風': return '溝通與連結';
-      case '水': return '直覺與感受';
-      default: return '';
+    // logged-in: allow only once per Taiwan day
+    if (!rerender){
+      const allow = await checkQuizDailyLimit(true);
+      if (!allow) return;
     }
-  })(element);
-  const quizProfile = {
-    dow: state.dow,
-    dowLabel: dayName,
-    zod: state.zod,
-    zodLabel: zName,
-    job: state.job,
-    jobLabel,
-    color,
-    traits: [],
-    answers: { p2: state.p2, p3: state.p3, p4: state.p4, p5: state.p5, p6: state.p6, p7: state.p7 },
-    ts: Date.now()
-  };
-  try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Date.now() })); }catch(_){}
-  try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(quizProfile)); }catch(_){}
-  try{ localStorage.setItem('__lastQuizBindPending__', JSON.stringify({ ts: Date.now() })); }catch(_){}
-  // 若已登入，同步到會員檔案
-  try{
-    await fetch('/api/me/profile', {
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      credentials:'include',
-      body: JSON.stringify({ guardian:{ code, name, ts: Date.now() }, quiz: quizProfile })
-    });
-  }catch(_){}
-  const result = [
-    `守護者：${meta.name || name}`,
-    meta.desc ? `指引：${meta.desc.trim()}` : '',
-    `星座：${zName}`,
-    color ? `生日星期：${dayName}（幸運色：${color}）` : `生日星期：${dayName}`,
-    `職業／當前角色：${jobLabel}`,
-    tip ? `守護重點：${tip}` : ''
-  ].filter(Boolean).join('\n\n');
-  document.getElementById('resultText').textContent = result;
-  const resultTitle = document.getElementById('resultTitle');
-  const resultSummary = document.getElementById('resultSummary');
-  if (resultTitle) resultTitle.textContent = `守護者：${meta.name || name}`;
-  if (resultSummary){
-    const summary = meta.desc ? meta.desc.trim() : (tip || '守護神正在為你指引下一步。');
-    resultSummary.textContent = summary;
-  }
-  const traitList = document.getElementById('resultTraits');
-  if (traitList){
-    const guideItems = [];
-    if (tip) guideItems.push(`守護重點：${tip}`);
-    if (color) guideItems.push(`幸運色：${color}`);
-    if (element) guideItems.push(`星座元素：${element}（${elementHint || '平衡能量'}）`);
-    traitList.innerHTML = '';
-    guideItems.slice(0,3).forEach(item=>{
-      const li = document.createElement('li');
-      li.textContent = item;
-      traitList.appendChild(li);
-    });
-  }
-  // affinity bar
-  const bar = document.getElementById('affBar');
-  bar.style.width = aff + '%';
-  document.getElementById('affText').textContent = `${aff}% ｜ ${affinityBrief(aff)}`;
-  // links
-  document.getElementById('deityLink').href = `${DEITY_PAGE}?code=${encodeURIComponent(code)}&api=${encodeURIComponent(API_BASE)}`;
 
-  // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
-  try {
-    const advUrl = `${ADVICE_BASE}/amulet/advice?code=${encodeURIComponent(code)}&job=${encodeURIComponent(state.job)}&dow=${encodeURIComponent(state.dow)}&zod=${encodeURIComponent(state.zod)}`;
-    const advEl = document.getElementById('amuletAdvice');
-    advEl.style.display = 'block';
-    advEl.textContent = '載入中…';
-    const r2 = await fetch(advUrl);
-    if (r2.ok) {
-      const j2 = await r2.json();
-      if (j2?.text) {
-        const cleaned = (j2.text || '').replace(/^👉.*$/gm, '').trim();
-        advEl.textContent = cleaned || '（暫時無法取得建議，稍後再試）';
-      } else {
-        advEl.textContent = '（暫時無法取得建議，稍後再試）';
-      }
-    } else {
-      advEl.textContent = '（暫時無法取得建議，稍後再試）';
-    }
-  } catch (e) {
-    const advEl = document.getElementById('amuletAdvice');
-    advEl.style.display = 'block';
-    advEl.textContent = '（暫時無法取得建議，稍後再試）';
-  }
+    const lang = getLang();
+    const code = decideWinner(state);
+    const score = compileScore(state);
+    const ranked = Object.entries(score).sort((a,b)=> (b[1]-a[1]) || a[0].localeCompare(b[0]));
+    const secondaryCode = (ranked.find(([g])=> g !== code) || [code])[0];
 
-  // 優惠碼：點擊產生並顯示（優先後端發券，失敗則本地臨時券）
-  (function(){
-    const btn = document.getElementById('getCouponBtn');
-    const box = document.getElementById('couponWrap');
-    const copyBtn = document.getElementById('copyCouponBtn');
-    const saveBtn = document.getElementById('saveCouponBtn');
-    const shopBtn = null;
-    async function saveToAccount(codeStr){
-      if (!codeStr) return;
+    const primaryDeity = (typeof window.getDeityById === 'function') ? window.getDeityById(code) : null;
+    const primaryName = deityName(code, lang);
+    const secondaryName = deityName(secondaryCode, lang);
+
+    const dayInfoZh = DOW[state.dow] || {};
+    const dayInfo = getDayInfo(state.dow, lang);
+    const zInfo = getZodiacInfo(state.zod, lang);
+    const jobLabel = QUESTIONS[1].opts[state.job] || '—';
+    const zNameZh = ZODIAC[state.zod]?.name || '—';
+    const zName = zInfo.name || zNameZh;
+    const color = dayInfoZh.color || '';
+
+    const quizProfile = {
+      dow: state.dow,
+      dowLabel: dayInfoZh.label || '',
+      zod: state.zod,
+      zodLabel: zNameZh,
+      job: state.job,
+      jobLabel,
+      color,
+      traits: [],
+      answers: { p2: state.p2, p3: state.p3, p4: state.p4, p5: state.p5, p6: state.p6, p7: state.p7 },
+      ts: Date.now()
+    };
+
+    const storedName = deityName(code, 'zh');
+    if (!rerender){
+      try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name: storedName, ts: Date.now() })); }catch(_){}
+      try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(quizProfile)); }catch(_){}
+      try{ localStorage.setItem('__lastQuizBindPending__', JSON.stringify({ ts: Date.now() })); }catch(_){}
+
+      // 若已登入，同步到會員檔案
       try{
-        const res = await fetch('/api/me/coupons', {
-          method:'POST',
+        await fetch('/api/me/profile', {
+          method:'PATCH',
           headers:{'Content-Type':'application/json'},
           credentials:'include',
-          body: JSON.stringify({ code: codeStr })
+          body: JSON.stringify({ guardian:{ code, name: storedName, ts: Date.now() }, quiz: quizProfile })
         });
-        const data = await res.json().catch(()=>({}));
-        if (res.status === 401){
-          alert('請先登入會員，再儲存到「我的優惠券」。\n將為你導向登入頁。');
-          window.location.href = '/api/auth/google/login?redirect=/quiz';
-          return;
+      }catch(_){}
+    }
+
+    const hookCtx = {
+      goal: getOptionLabel(2, state.p2, lang),
+      blessing: getOptionLabel(3, state.p3, lang),
+      challenge: getOptionLabel(4, state.p4, lang),
+      desc: getOptionLabel(5, state.p5, lang),
+      response: getOptionLabel(6, state.p6, lang),
+      ideal: getOptionLabel(7, state.p7, lang),
+      job: getOptionLabel(1, state.job, lang),
+      zodiac: zName,
+      day: dayInfo.label || '',
+      deity: primaryName
+    };
+
+    const resultTitle = document.getElementById('resultTitle');
+    const resultHook = document.getElementById('resultHook');
+    const resultSummary = document.getElementById('resultSummary');
+
+    if (resultTitle) resultTitle.textContent = lang === 'en' ? `Primary Deity: ${primaryName}` : `主守護神：${primaryName}`;
+    if (resultHook) resultHook.textContent = buildPersonalHook(hookCtx, lang);
+    if (resultSummary){
+      const why = dayInfo.tip || (lang === 'en' ? 'Your answers point to this deity.' : '你的選擇指向這位守護神。');
+      resultSummary.textContent = `${t('result-why-title', lang)}：${why}`;
+    }
+
+    const primarySlot = document.getElementById('primaryDeityProfile');
+    if (primarySlot){
+      const fallback = primaryDeity || { code, name:{ zh: storedName, en: primaryName }, desc:{ zh:'', en:'' }, wear:{} };
+      const html = (typeof window.renderDeityProfile === 'function') ? window.renderDeityProfile(fallback, lang) : '';
+      primarySlot.innerHTML = html || '';
+    }
+
+    const secondarySlot = document.getElementById('secondaryDeityCard');
+    if (secondarySlot){
+      const reasonParts = [getOptionLabel(2, state.p2, lang), getOptionLabel(5, state.p5, lang)].filter(Boolean);
+      const reasonText = reasonParts.length
+        ? (lang === 'en'
+            ? `Also resonates with “${reasonParts.join('” and “')}”, giving ${secondaryName} a strong signal.`
+            : `你在「${reasonParts.join('」與「')}」的選擇也與 ${secondaryName} 相呼應。`)
+        : (lang === 'en' ? `${secondaryName} is your second-closest resonance right now.` : `${secondaryName} 是此刻的第二順位共鳴。`);
+      secondarySlot.innerHTML = `
+        <div class="secondary-body">
+          <div class="secondary-name">${secondaryName}</div>
+          <div class="secondary-reason">${reasonText}</div>
+        </div>
+      `;
+    }
+
+    const aff = calcAffinityPercent(state, code);
+    const bar = document.getElementById('affBar');
+    if (bar) bar.style.width = aff + '%';
+    const affText = document.getElementById('affText');
+    if (affText) affText.textContent = `${aff}% ｜ ${affinityBrief(aff, lang)}`;
+
+    const breakdown = buildScoreBreakdown(code);
+    const affBreakdown = document.getElementById('affBreakdown');
+    if (affBreakdown){
+      affBreakdown.innerHTML = `
+        <div class="row"><span>${t('breakdown-total', lang)}</span><strong>${breakdown.total}</strong></div>
+        <div class="row"><span>${t('breakdown-base', lang)}</span><span>+${breakdown.base}</span></div>
+        <div class="row"><span>${t('breakdown-role', lang)}</span><span>+${breakdown.role}</span></div>
+        <div class="row"><span>${t('breakdown-intent', lang)}</span><span>+${breakdown.intent}</span></div>
+        <div class="row"><span>${t('breakdown-action', lang)}</span><span>+${breakdown.action}</span></div>
+      `;
+    }
+
+    const evidenceList = document.getElementById('evidenceList');
+    if (evidenceList){
+      const evidenceItems = buildEvidence(code, lang, primaryName);
+      evidenceList.innerHTML = evidenceItems.length
+        ? evidenceItems.map(item => `<li>${item}</li>`).join('')
+        : `<li>${lang === 'en' ? 'Your selections consistently point to this deity.' : '你的選擇一致指向這位守護神。'}</li>`;
+    }
+
+    const actionList = document.getElementById('actionList');
+    if (actionList){
+      const actions = buildActionItems(primaryDeity || {}, lang);
+      actionList.innerHTML = actions.map(item => `
+        <div class="action-item">
+          <h4>${item.title}</h4>
+          <p>${item.body}</p>
+        </div>
+      `).join('');
+    }
+
+    let storiesHtml = '';
+    if (typeof window.renderDeityStories === 'function'){
+      storiesHtml = await window.renderDeityStories(code, lang);
+    }
+    const storiesBox = document.getElementById('deityStories');
+    if (storiesBox){
+      storiesBox.innerHTML = storiesHtml;
+    }
+    const userStoriesWrap = document.getElementById('userStoriesWrap');
+    if (userStoriesWrap && typeof window.renderUserStoriesSection === 'function'){
+      userStoriesWrap.innerHTML = window.renderUserStoriesSection(code, lang, { collapsed:true });
+      const list = userStoriesWrap.querySelector('.story-list');
+      if (list) list.innerHTML = storiesHtml;
+    }
+
+    const ctaShop = document.getElementById('ctaShopBtn');
+    const ctaTemple = document.getElementById('ctaTempleBtn');
+    const deityLink = document.getElementById('deityLink');
+    const shopUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.shop_url) || `/shop?deity=${encodeURIComponent(code)}`;
+    const templeUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.templemap_url) || '/templemap';
+    const deityUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.deity_profile_url) || `${DEITY_PAGE}?code=${encodeURIComponent(code)}`;
+
+    if (ctaShop) ctaShop.href = shopUrl;
+    if (ctaTemple) ctaTemple.href = templeUrl;
+    if (deityLink) deityLink.href = deityUrl;
+
+    if (ctaShop && !ctaShop._bound){
+      ctaShop._bound = true;
+      ctaShop.addEventListener('click', () => fireTrack('quiz_cta_shop_click', { primary: code }));
+    }
+    if (ctaTemple && !ctaTemple._bound){
+      ctaTemple._bound = true;
+      ctaTemple.addEventListener('click', () => fireTrack('quiz_cta_temple_click', { primary: code }));
+    }
+
+    // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
+    try {
+      const advUrl = `${ADVICE_BASE}/amulet/advice?code=${encodeURIComponent(code)}&job=${encodeURIComponent(state.job)}&dow=${encodeURIComponent(state.dow)}&zod=${encodeURIComponent(state.zod)}`;
+      const advEl = document.getElementById('amuletAdvice');
+      if (advEl){
+        advEl.style.display = 'block';
+        advEl.textContent = lang === 'en' ? 'Loading...' : '載入中…';
+      }
+      const r2 = await fetch(advUrl);
+      if (r2.ok) {
+        const j2 = await r2.json();
+        if (j2?.text) {
+          const cleaned = (j2.text || '').replace(/^👉.*$/gm, '').trim();
+          if (advEl) advEl.textContent = cleaned || (lang === 'en' ? 'No advice available yet.' : '（暫時無法取得建議，稍後再試）');
+        } else if (advEl) {
+          advEl.textContent = lang === 'en' ? 'No advice available yet.' : '（暫時無法取得建議，稍後再試）';
         }
-        if (!res.ok || !data.ok){
-          throw new Error(data.error || ('HTTP '+res.status));
-        }
-        alert('已存到「我的優惠券」，可在購物車直接套用。');
-      }catch(err){
-        alert('儲存失敗，請稍後再試：' + (err.message||err));
+      } else if (advEl) {
+        advEl.textContent = lang === 'en' ? 'No advice available yet.' : '（暫時無法取得建議，稍後再試）';
+      }
+    } catch (e) {
+      const advEl = document.getElementById('amuletAdvice');
+      if (advEl){
+        advEl.style.display = 'block';
+        advEl.textContent = lang === 'en' ? 'No advice available yet.' : '（暫時無法取得建議，稍後再試）';
       }
     }
 
-    if (btn && !btn._bound){
-      btn._bound = true;
-      btn.addEventListener('click', async ()=>{
-        if (!(await ensureMemberLoginForCoupon())) return;
-        const dateKey = taipeiDateKey(Date.now());
-        const key = `coupon_${code}_${dateKey}`;
-        const box = document.getElementById('couponWrap');
-        let stored = null; try{ stored = JSON.parse(localStorage.getItem(key)||'null'); }catch(_){ stored = null; }
-        // 僅沿用新系統（v2）正式券；舊資料一律重發
-        let coupon = (stored && stored.version === 'v2' && stored.issued) ? stored.code : '';
+    // 優惠碼：點擊產生並顯示（優先後端發券，失敗則本地臨時券）
+    (function(){
+      const btn = document.getElementById('getCouponBtn');
+      const box = document.getElementById('couponWrap');
+      const copyBtn = document.getElementById('copyCouponBtn');
+      const saveBtn = document.getElementById('saveCouponBtn');
+      const shopBtn = null;
+      async function saveToAccount(codeStr){
+        if (!codeStr) return;
         try{
-          if (!coupon){
-            // 單次向後端索取，若守護神代碼不符直接改用本地券碼，避免錯發
-            const real = await issueCoupon(code, 200, quizProfile);
-            if (!real || typeof real !== 'string') throw new Error('NO_CODE');
-            const seg = (real.split('-')[1]||'').toUpperCase();
-            if (seg && seg !== code){
-              console.warn('quiz coupon deity mismatch', { expected: code, got: seg, real });
-            }
-            coupon = real;
-            try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2', dateKey })); }catch(_){ }
-          }
-          // 顯示正式券碼（不再顯示任何臨時券提示）
-          box.style.display = 'block';
-          box.textContent = `您的優惠碼：${coupon}\n此優惠僅適用於「${name}」相關商品\n請在結帳頁輸入此代碼即可折扣`;
-          if (shopBtn){
-            const u = new URL(shopBtn.href, location.origin);
-            u.searchParams.set('coupon', coupon);
-            u.searchParams.set('deity', code);
-            u.searchParams.set('amount', '200');
-            shopBtn.href = u.toString();
-          }
-          if (copyBtn){
-            copyBtn.style.display = 'inline-flex';
-            copyBtn.dataset.code = coupon;
-            if (!copyBtn._bound){
-              copyBtn._bound = true;
-              copyBtn.addEventListener('click', async ()=>{
-                const c = copyBtn.dataset.code || '';
-                try{
-                  await navigator.clipboard.writeText(c);
-                  const old = copyBtn.textContent;
-                  copyBtn.textContent = '已複製';
-                  setTimeout(()=> copyBtn.textContent = old, 1200);
-                }catch(e){
-                  // fallback for older browsers
-                  try{
-                    const ta = document.createElement('textarea');
-                    ta.value = c; document.body.appendChild(ta);
-                    ta.select(); document.execCommand('copy');
-                    document.body.removeChild(ta);
-                  }catch(_){ }
-                  const old = copyBtn.textContent;
-                  copyBtn.textContent = '已複製';
-                  setTimeout(()=> copyBtn.textContent = old, 1200);
-                }
-              });
-            }
-          }
-          if (saveBtn){
-            saveBtn.style.display = 'inline-flex';
-            saveBtn.dataset.code = coupon;
-            if (!saveBtn._bound){
-              saveBtn._bound = true;
-              saveBtn.addEventListener('click', ()=> saveToAccount(saveBtn.dataset.code||'')); 
-            }
-          }
-        }catch(err){
-          if (err && err.code === 'LOGIN_REQUIRED'){
-            alert('請先登入會員才能領取優惠券，將為你導向登入頁。');
+          const res = await fetch('/api/me/coupons', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            credentials:'include',
+            body: JSON.stringify({ code: codeStr })
+          });
+          const data = await res.json().catch(()=>({}));
+          if (res.status === 401){
+            alert(lang === 'en' ? 'Please log in first. Redirecting to sign-in.' : '請先登入會員，再儲存到「我的優惠券」。\\n將為你導向登入頁。');
             window.location.href = '/api/auth/google/login?redirect=/quiz';
             return;
           }
-          if (err && err.code === 'daily_limit'){
-            alert('今天已領取過優惠券，請於台灣時間午夜 12 點後再領取。');
-            return;
+          if (!res.ok || !data.ok){
+            throw new Error(data.error || ('HTTP '+res.status));
           }
-          if (err && err.code === 'quiz_required'){
-            alert('請先完成守護神測驗後再領取優惠券。');
-            return;
-          }
-          alert('目前系統暫時無法發放優惠券，請稍後再試或聯繫客服。');
+          alert(lang === 'en' ? 'Saved to My Coupons.' : '已存到「我的優惠券」，可在購物車直接套用。');
+        }catch(err){
+          alert((lang === 'en' ? 'Save failed: ' : '儲存失敗，請稍後再試：') + (err.message||err));
         }
-      });
+      }
+
+      if (btn && !btn._bound){
+        btn._bound = true;
+        btn.addEventListener('click', async ()=>{
+          if (!(await ensureMemberLoginForCoupon())) return;
+          const dateKey = taipeiDateKey(Date.now());
+          const key = `coupon_${code}_${dateKey}`;
+          const box = document.getElementById('couponWrap');
+          let stored = null; try{ stored = JSON.parse(localStorage.getItem(key)||'null'); }catch(_){ stored = null; }
+          // 僅沿用新系統（v2）正式券；舊資料一律重發
+          let coupon = (stored && stored.version === 'v2' && stored.issued) ? stored.code : '';
+          try{
+            if (!coupon){
+              // 單次向後端索取，若守護神代碼不符直接改用本地券碼，避免錯發
+              const real = await issueCoupon(code, 200, quizProfile);
+              if (!real || typeof real !== 'string') throw new Error('NO_CODE');
+              const seg = (real.split('-')[1]||'').toUpperCase();
+              if (seg && seg !== code){
+                console.warn('quiz coupon deity mismatch', { expected: code, got: seg, real });
+              }
+              coupon = real;
+              try{ localStorage.setItem(key, JSON.stringify({ code: coupon, issued: true, deity: code, version:'v2', dateKey })); }catch(_){ }
+            }
+            // 顯示正式券碼（不再顯示任何臨時券提示）
+            if (box){
+              box.style.display = 'block';
+              box.textContent = lang === 'en'
+                ? `Your coupon: ${coupon}
+Valid only for ${primaryName} related items.
+Enter this code at checkout.`
+                : `您的優惠碼：${coupon}
+此優惠僅適用於「${primaryName}」相關商品
+請在結帳頁輸入此代碼即可折扣`;
+            }
+            if (shopBtn){
+              const u = new URL(shopBtn.href, location.origin);
+              u.searchParams.set('coupon', coupon);
+              u.searchParams.set('deity', code);
+              u.searchParams.set('amount', '200');
+              shopBtn.href = u.toString();
+            }
+            if (copyBtn){
+              copyBtn.style.display = 'inline-flex';
+              copyBtn.dataset.code = coupon;
+              if (!copyBtn._bound){
+                copyBtn._bound = true;
+                copyBtn.addEventListener('click', async ()=>{
+                  const c = copyBtn.dataset.code || '';
+                  try{
+                    await navigator.clipboard.writeText(c);
+                    const old = copyBtn.textContent;
+                    copyBtn.textContent = lang === 'en' ? 'Copied' : '已複製';
+                    setTimeout(()=> copyBtn.textContent = old, 1200);
+                  }catch(e){
+                    // fallback for older browsers
+                    try{
+                      const ta = document.createElement('textarea');
+                      ta.value = c; document.body.appendChild(ta);
+                      ta.select(); document.execCommand('copy');
+                      document.body.removeChild(ta);
+                    }catch(_){ }
+                    const old = copyBtn.textContent;
+                    copyBtn.textContent = lang === 'en' ? 'Copied' : '已複製';
+                    setTimeout(()=> copyBtn.textContent = old, 1200);
+                  }
+                });
+              }
+            }
+            if (saveBtn){
+              saveBtn.style.display = 'inline-flex';
+              saveBtn.dataset.code = coupon;
+              if (!saveBtn._bound){
+                saveBtn._bound = true;
+                saveBtn.addEventListener('click', ()=> saveToAccount(saveBtn.dataset.code||'')); 
+              }
+            }
+          }catch(err){
+            if (err && err.code === 'LOGIN_REQUIRED'){
+              alert(lang === 'en' ? 'Please log in to claim a coupon.' : '請先登入會員才能領取優惠券，將為你導向登入頁。');
+              window.location.href = '/api/auth/google/login?redirect=/quiz';
+              return;
+            }
+            if (err && err.code === 'daily_limit'){
+              alert(lang === 'en' ? 'You already claimed a coupon today. Try again after midnight (Taipei time).' : '今天已領取過優惠券，請於台灣時間午夜 12 點後再領取。');
+              return;
+            }
+            if (err && err.code === 'quiz_required'){
+              alert(lang === 'en' ? 'Finish the quiz first to claim your coupon.' : '請先完成守護神測驗後再領取優惠券。');
+              return;
+            }
+            alert(lang === 'en' ? 'Unable to issue a coupon right now. Please try again later.' : '目前系統暫時無法發放優惠券，請稍後再試或聯繫客服。');
+          }
+        });
+      }
+    })();
+
+    if (quizFlow) quizFlow.hidden = true;
+    if (intro) intro.style.display = 'none';
+    if (resultBox) resultBox.style.display = 'block';
+    if (lineEntry) lineEntry.style.display = 'none';
+    if (!rerender){
+      window.scrollTo({ top: 0, behavior:'smooth' });
+      fireTrack('quiz_complete', { primary: code, secondary: secondaryCode });
+      clearState();
     }
-  })();
+    applyLang(lang);
 
-
-  if (quizFlow) quizFlow.hidden = true;
-  if (intro) intro.style.display = 'none';
-  if (resultBox) resultBox.style.display = 'block';
-  if (lineEntry) lineEntry.style.display = 'none';
-  window.scrollTo({ top: 0, behavior:'smooth' });
-  fireTrack('quiz_complete', { deity: code });
-  clearState();
-
-  // 重新測驗：回到初始狀態
-  try{
-    const reBtn = document.getElementById('retakeBtn');
-    if (reBtn){
-      reBtn.onclick = async (ev)=>{
-        ev.preventDefault();
-        const ok = await checkQuizDailyLimit(true);
-        if (!ok) return;
-        resetQuiz(true);
-        if (resultBox) resultBox.style.display = 'none';
-        if (intro) intro.style.display = '';
-        window.scrollTo({ top: 0, behavior:'smooth' });
-      };
-    }
-  }catch(_){}
+    // 重新測驗：回到初始狀態
+    try{
+      const reBtn = document.getElementById('retakeBtn');
+      if (reBtn){
+        reBtn.onclick = async (ev)=>{
+          ev.preventDefault();
+          const ok = await checkQuizDailyLimit(true);
+          if (!ok) return;
+          resetQuiz(true);
+          if (resultBox) resultBox.style.display = 'none';
+          if (intro) intro.style.display = '';
+          window.scrollTo({ top: 0, behavior:'smooth' });
+        };
+      }
+    }catch(_){}
   } finally {
     setResultLoading(false);
   }
 }
+
 
 (function(){
   const fortuneDialog = document.getElementById('fortuneDialogQuiz');
