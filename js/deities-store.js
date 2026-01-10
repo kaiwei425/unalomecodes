@@ -335,6 +335,66 @@
     ZF:{ zh:'適合經營客源與財運時配戴，提醒以善意與禮貌迎人。', en:'Wear for customer flow and abundance; lead with warmth and service.' }
   };
 
+  const KEYWORDS = {
+    FM:{ zh:['平衡','秩序','貴人'], en:['balance','order','support'] },
+    GA:{ zh:['突破','專注','啟動'], en:['breakthrough','focus','momentum'] },
+    CD:{ zh:['安定','清明','回心'], en:['stability','clarity','grounding'] },
+    KP:{ zh:['人緣','魅力','果斷'], en:['charisma','rapport','decisiveness'] },
+    HP:{ zh:['守護','界線','安全'], en:['protection','boundaries','safety'] },
+    XZ:{ zh:['機會','財流','回饋'], en:['opportunity','money flow','reciprocity'] },
+    WE:{ zh:['洞察','專注','判斷'], en:['insight','focus','discernment'] },
+    HM:{ zh:['勇氣','行動','守信'], en:['courage','action','loyalty'] },
+    RH:{ zh:['轉運','節奏','定心'], en:['shift','rhythm','calm'] },
+    JL:{ zh:['正氣','原則','保護'], en:['integrity','principles','protection'] },
+    ZD:{ zh:['韌性','穩健','累積'], en:['resilience','steadiness','accumulation'] },
+    ZF:{ zh:['溫度','招呼','財緣'], en:['warmth','welcome','abundance'] }
+  };
+
+  const STRENGTHS = {
+    FM:{ zh:['協調人際與角色平衡','讓計畫更有秩序','穩定事業節奏','提升合作默契'], en:['Balance relationships and roles','Bring order to plans','Stabilize work rhythm','Improve collaboration'] },
+    GA:{ zh:['突破卡關並啟動新計畫','提升學習與專注力','強化行動動能','清除拖延與阻礙'], en:['Break through blocks and start new plans','Boost learning focus','Build action momentum','Reduce procrastination and obstacles'] },
+    CD:{ zh:['穩定情緒與節奏','提升專注與清明','適合長期累積','幫助回到內在中心'], en:['Stabilize emotions and rhythm','Increase focus and clarity','Support long-term accumulation','Return to inner center'] },
+    KP:{ zh:['強化人緣與互動','談判溝通更有分寸','提升自信與吸引力','促成合作與連結'], en:['Strengthen rapport and social flow','Negotiation with tact','Boost confidence and charisma','Support partnerships'] },
+    HP:{ zh:['守護出行與日常安全','建立清楚界線','減少外在干擾','帶來安定感'], en:['Protect daily safety and travel','Set clear boundaries','Reduce external interference','Provide steady reassurance'] },
+    XZ:{ zh:['提升客源與機會感','促進財務流動','帶來人脈助力','提醒回饋與互惠'], en:['Increase customer opportunities','Improve cash flow','Attract helpful connections','Encourage reciprocity'] },
+    WE:{ zh:['加強洞察與判斷','提升專注與思考清晰度','看清重點不分心','適合決策期'], en:['Sharpen insight and judgment','Improve focus and clarity','See priorities without distraction','Good for decision periods'] },
+    HM:{ zh:['提升勇氣與執行力','保護關鍵時刻','強化意志力','鼓勵面對挑戰'], en:['Boost courage and execution','Protect key moments','Strengthen willpower','Encourage facing challenges'] },
+    RH:{ zh:['協助度過變局與不確定','穩住心念與節奏','減少焦躁與波動','提醒保持紀律'], en:['Support through change and uncertainty','Steady mind and rhythm','Reduce agitation and swings','Encourage discipline'] },
+    JL:{ zh:['強化正氣與原則感','防小人與是非','提升公信與穩定感','適合職場守護'], en:['Strengthen integrity and principles','Guard against petty conflict','Increase credibility and stability','Support workplace protection'] },
+    ZD:{ zh:['提升韌性與耐力','穩定長期財務與目標','化解急躁','鼓勵穩健累積'], en:['Build resilience and stamina','Stabilize long-term goals and finances','Reduce impatience','Encourage steady accumulation'] },
+    ZF:{ zh:['提升客源與口碑','增加溫度與好感度','促進穩定收入','適合服務與生意'], en:['Improve customer flow and reputation','Increase warmth and likability','Support steady income','Good for service and business'] }
+  };
+
+  const RITUALS = {
+    FM:{ zh:['可供清水或花環，重點在心意', '依四面順時針致意，願望分面清楚', '祈願句以「我會做的行動」收尾', '避免喧嘩或久佔供桌'], en:['Offer water or flowers—sincerity matters most','Greet each face clockwise with clear intentions','End with one action you will take','Avoid loud behavior or blocking the altar'] },
+    GA:{ zh:['可用牛奶、香蕉或甜點作供', '先說阻礙，再說想要的開始', '許願後給自己一個具體行動', '保持耐心與專注'], en:['Offer milk, bananas, or sweets','Name the obstacle, then the new start you want','Commit to one concrete action','Keep patience and focus'] },
+    CD:{ zh:['供花或清水即可，保持安靜', '以「安定與清明」為主題祈願', '當天安排幾分鐘靜坐或深呼吸', '避免情緒化決策'], en:['Offer flowers or water and stay quiet','Pray for stability and clarity','Spend a few minutes in calm breathing','Avoid emotional decisions'] },
+    KP:{ zh:['供花或甜點，表達善意', '祈願強調互惠與正向人緣', '提醒自己說話有分寸', '避免急躁或逞強'], en:['Offer flowers or sweets with goodwill','Focus on reciprocity and healthy rapport','Speak with tact','Avoid impatience or showing off'] },
+    HP:{ zh:['供清水或香即可', '祈願以安全與界線清楚為主', '保持居家或隨身物整潔', '避免口出惡言'], en:['Offer water or incense','Pray for safety and clear boundaries','Keep your space and items tidy','Avoid harsh words'] },
+    XZ:{ zh:['供牛奶或香蕉，表達感謝', '祈願可加入回饋他人的承諾', '完成後做一件小善行', '避免貪心與催促'], en:['Offer milk or bananas with gratitude','Include a promise to give back','Do a small good deed afterward','Avoid greed or rushing'] },
+    WE:{ zh:['找安靜角落合掌即可', '祈願以看清再行動為主', '暫時遠離分心事物', '避免熬夜與過度刺激'], en:['Join palms in a quiet spot','Pray for clarity before action','Step away from distractions','Avoid late nights and excess stimulation'] },
+    HM:{ zh:['出發前簡短祈願', '願望著重勇氣與執行', '提醒自己守信守時', '避免衝動行事'], en:['Say a short prayer before you start','Focus on courage and execution','Keep your word and timing','Avoid impulsive moves'] },
+    RH:{ zh:['可選深色飲品或黑豆供奉', '以穩住心念為主祈願', '在變局期保持作息節奏', '避免投機與誇口'], en:['Offer a dark drink or black beans','Pray for steadiness of mind','Keep a steady routine during change','Avoid speculation or bragging'] },
+    JL:{ zh:['供清水或白花', '祈願以正直與保護為主', '做事留紀錄與流程', '避免口舌是非'], en:['Offer water or white flowers','Pray for integrity and protection','Keep records and process','Avoid gossip and conflict'] },
+    ZD:{ zh:['供花或清水', '祈願以長期目標與耐心為主', '把大目標拆成小步', '避免急功近利'], en:['Offer flowers or water','Pray for patience with long-term goals','Break big goals into small steps','Avoid chasing quick wins'] },
+    ZF:{ zh:['供甜品或花香', '祈願以服務與禮貌為核心', '保持笑容與基本禮節', '避免抱怨與爭執'], en:['Offer sweets or fragrant flowers','Pray for service and courtesy','Keep a warm smile and manners','Avoid complaints and quarrels'] }
+  };
+
+  const LINKS = {
+    FM:{ shop_url:'/shop?deity=FM', templemap_url:'/templemap?deity=FM', deity_profile_url:'/deity?code=FM' },
+    GA:{ shop_url:'/shop?deity=GA', templemap_url:'/templemap?deity=GA', deity_profile_url:'/deity?code=GA' },
+    CD:{ shop_url:'/shop?deity=CD', templemap_url:'/templemap?deity=CD', deity_profile_url:'/deity?code=CD' },
+    KP:{ shop_url:'/shop?deity=KP', templemap_url:'/templemap?deity=KP', deity_profile_url:'/deity?code=KP' },
+    HP:{ shop_url:'/shop?deity=HP', templemap_url:'/templemap?deity=HP', deity_profile_url:'/deity?code=HP' },
+    XZ:{ shop_url:'/shop?deity=XZ', templemap_url:'/templemap?deity=XZ', deity_profile_url:'/deity?code=XZ' },
+    WE:{ shop_url:'/shop?deity=WE', templemap_url:'/templemap?deity=WE', deity_profile_url:'/deity?code=WE' },
+    HM:{ shop_url:'/shop?deity=HM', templemap_url:'/templemap?deity=HM', deity_profile_url:'/deity?code=HM' },
+    RH:{ shop_url:'/shop?deity=RH', templemap_url:'/templemap?deity=RH', deity_profile_url:'/deity?code=RH' },
+    JL:{ shop_url:'/shop?deity=JL', templemap_url:'/templemap?deity=JL', deity_profile_url:'/deity?code=JL' },
+    ZD:{ shop_url:'/shop?deity=ZD', templemap_url:'/templemap?deity=ZD', deity_profile_url:'/deity?code=ZD' },
+    ZF:{ shop_url:'/shop?deity=ZF', templemap_url:'/templemap?deity=ZF', deity_profile_url:'/deity?code=ZF' }
+  };
+
   const DEITY_ORDER = ['FM','GA','CD','KP','HP','XZ','WE','HM','RH','JL','ZD','ZF'];
 
   window.DEITY_DATA = window.DEITY_DATA || {
@@ -345,6 +405,10 @@
     names: NAME_MAP,
     namesEn: NAME_MAP_EN,
     wear: WEAR_GUIDE,
+    keywords: KEYWORDS,
+    strengths: STRENGTHS,
+    ritual: RITUALS,
+    links: LINKS,
     templeGuides: TEMPLE_GUIDES,
     order: DEITY_ORDER
   };

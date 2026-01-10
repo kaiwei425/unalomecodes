@@ -96,12 +96,20 @@
       <div class="result-head">
         <div class="kicker" data-i18n="result-kicker">測驗結果</div>
         <h2 id="resultTitle">你的守護神</h2>
-        <p class="lead" id="resultHook"></p>
-        <p class="muted" id="resultSummary"></p>
       </div>
 
       <div class="result-main">
-        <div id="primaryDeityProfile"></div>
+        <div class="primary-stack">
+          <div class="card hook-card">
+            <p class="lead" id="resultHook"></p>
+            <p class="muted" id="resultSummary"></p>
+          </div>
+          <div id="primaryDeityProfile"></div>
+          <div class="card why-card">
+            <h3 data-i18n="result-why-title">為什麼是祂</h3>
+            <ul class="result-list" id="evidenceList"></ul>
+          </div>
+        </div>
         <div class="result-aside">
           <div class="card affinity-card">
             <div class="affinity-head">
@@ -110,10 +118,6 @@
             </div>
             <div class="bar"><div id="affBar" class="fill"></div></div>
             <div class="affinity-breakdown" id="affBreakdown"></div>
-          </div>
-          <div class="card evidence-card">
-            <h3 data-i18n="result-evidence-title">你這次最關鍵的線索</h3>
-            <ul class="result-list" id="evidenceList"></ul>
           </div>
           <div class="card secondary-card">
             <h3 data-i18n="result-secondary-title">副守護神</h3>
@@ -135,6 +139,25 @@
         </div>
         <div class="action-grid" id="actionList"></div>
         <div class="muted disclaimer" data-i18n="disclaimer">自我覺察與文化體驗建議，不構成保證。</div>
+      </div>
+
+      <div class="card guardian-card">
+        <div class="section-head">
+          <h3 data-i18n="result-card-title">你的守護卡</h3>
+        </div>
+        <div class="guardian-card-body">
+          <div class="guardian-card-preview" id="guardianCardPreview">
+            <div class="guardian-card-brand">unalomecodes</div>
+            <div class="guardian-card-title" id="guardianCardTitle">—</div>
+            <div class="guardian-card-tags" id="guardianCardKeywords"></div>
+            <div class="guardian-card-hook" id="guardianCardHook"></div>
+            <div class="guardian-card-date" id="guardianCardDate">—</div>
+          </div>
+          <div class="guardian-card-actions">
+            <button id="guardianCardDownloadBtn" class="btn btn-primary" type="button" data-i18n="result-card-download">下載卡片</button>
+            <button id="guardianCardCopyBtn" class="btn btn-ghost" type="button" data-i18n="result-card-copy">複製分享文案</button>
+          </div>
+        </div>
       </div>
 
       <div class="card advice-card">
@@ -161,10 +184,12 @@
 
       <div class="card user-stories-card" id="userStoriesWrap"></div>
 
+      <div class="cta-primary cta-main">
+        <a id="ctaShopPrimaryBtn" class="btn btn-primary" href="/shop" data-i18n="quiz-cta-shop-primary">看你的專屬配戴精選</a>
+      </div>
       <div class="cta-primary">
-        <a id="ctaShopBtn" class="btn btn-primary" href="/shop" data-i18n="cta-shop">看你的專屬配戴精選</a>
-        <a id="ctaTempleBtn" class="btn btn-ghost" href="/templemap" data-i18n="cta-temple">去拜更有感的寺廟建議</a>
-        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="cta-deity">看完整神祇介紹</a>
+        <a id="ctaTempleBtn" class="btn btn-ghost" href="/templemap" data-i18n="quiz-cta-temple">去拜更有感的寺廟建議</a>
+        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="quiz-cta-deity">看完整神祇介紹</a>
       </div>
       <div class="cta-secondary">
         <button id="retakeBtn" class="btn btn-ghost" type="button" data-i18n="cta-retake">重新測驗一次</button>

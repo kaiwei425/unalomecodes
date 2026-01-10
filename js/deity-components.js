@@ -21,22 +21,30 @@
     const descZh = (data.desc && data.desc[code]) || '';
     const descEn = (data.descEn && data.descEn[code]) || '';
     const wear = (data.wear && data.wear[code]) || {};
+    const keywords = (data.keywords && data.keywords[code]) || {};
+    const strengths = (data.strengths && data.strengths[code]) || [];
+    const ritual = (data.ritual && data.ritual[code]) || [];
     const image = (data.images && data.images[code]) || '';
     const stories = (data.stories && data.stories[code]) || [];
-    const deityUrl = code ? `/deity?code=${encodeURIComponent(code)}` : '/deity';
-    const shopUrl = code ? `/shop?deity=${encodeURIComponent(code)}` : '/shop';
+    const linkPack = (data.links && data.links[code]) || {};
+    const deityUrl = linkPack.deity_profile_url || (code ? `/deity?code=${encodeURIComponent(code)}` : '/deity');
+    const shopUrl = linkPack.shop_url || (code ? `/shop?deity=${encodeURIComponent(code)}` : '/shop');
+    const templeUrl = linkPack.templemap_url || '/templemap';
     return {
       id: code,
       code,
       name: { zh: nameZh, en: nameEn },
       desc: { zh: descZh, en: descEn },
       wear,
+      keywords,
+      strengths,
+      ritual,
       image,
       stories,
       links: {
         deity_profile_url: deityUrl,
         shop_url: shopUrl,
-        templemap_url: '/templemap'
+        templemap_url: templeUrl
       }
     };
   }

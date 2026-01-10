@@ -101,6 +101,40 @@ const QUESTIONS_EN = {
   7:{ text:'Your ideal life state is?',
       opts:{A:'Keep taking on new challenges',B:'Financial freedom and abundance',C:'Stable, deep relationships',D:'Inner calm and protection',E:'Clear direction and focus'}}
 };
+const DEITY_KEYWORDS = {
+  FM:{ zh:['平衡','秩序','貴人'], en:['balance','order','support'] },
+  GA:{ zh:['突破','專注','行動'], en:['breakthrough','focus','momentum'] },
+  CD:{ zh:['穩定','清明','回心'], en:['stability','clarity','grounding'] },
+  KP:{ zh:['人緣','果斷','魅力'], en:['charisma','decisiveness','people luck'] },
+  HP:{ zh:['守護','界線','安全'], en:['protection','boundaries','safety'] },
+  XZ:{ zh:['機會','財流','回饋'], en:['opportunity','money flow','reciprocity'] },
+  WE:{ zh:['洞察','專注','判斷'], en:['insight','focus','discernment'] },
+  HM:{ zh:['勇氣','行動','忠誠'], en:['courage','action','loyalty'] },
+  RH:{ zh:['轉運','節奏','定心'], en:['shift','rhythm','calm'] },
+  JL:{ zh:['正氣','保護','原則'], en:['integrity','protection','principles'] },
+  ZD:{ zh:['韌性','穩健','累積'], en:['resilience','steadiness','accumulation'] },
+  ZF:{ zh:['招財','溫度','人緣'], en:['abundance','warmth','rapport'] }
+};
+const ANSWER_INSIGHTS = {
+  zh: {
+    1:{ A:'想要掌握主導權與突破現況', B:'需要更清楚的秩序與管理節奏', C:'需要被理解的創意輸出', D:'想要把影響力放大', E:'需要精準與可控的流程', F:'在意陪伴與照顧能量', G:'正處在轉換與不確定', H:'追求穩定與可預期' },
+    2:{ A:'想先打開卡關的路徑', B:'希望財務能穩定擴張', C:'需要更清楚的方向感', D:'渴望安全與被守護', E:'想放下雜念看清自己' },
+    3:{ A:'需要新的出口與選項', B:'想讓資源與好運到來', C:'渴望人脈與支持', D:'需要屏蔽外在干擾', E:'希望內在更專注' },
+    4:{ A:'被機會與阻礙拉扯', B:'財運波動難以掌握', C:'人際反覆消耗', D:'容易受他人能量影響', E:'在取捨之間糾結' },
+    5:{ A:'需要更強的行動推進', B:'在乎互動與人緣', C:'需要清晰判斷', D:'需要穩定與可靠感', E:'想把遠景落地' },
+    6:{ A:'正在修正方法與步伐', B:'需要觀察與冷靜', C:'需要外在支持', D:'先穩住自己的節奏', E:'需要勇氣與正面行動' },
+    7:{ A:'渴望成長與突破', B:'想建立長期富足', C:'想讓關係更穩固', D:'需要內心的安定', E:'想保持清晰方向' }
+  },
+  en: {
+    1:{ A:'taking control and breaking through', B:'needing structure and management rhythm', C:'seeking creative expression that’s understood', D:'wanting more influence and reach', E:'needing precision and controllability', F:'valuing care and support energy', G:'in transition and uncertainty', H:'seeking stability and predictability' },
+    2:{ A:'opening a stuck path', B:'building stable and expanding wealth', C:'finding clear direction', D:'feeling safe and protected', E:'clearing noise and seeing yourself' },
+    3:{ A:'more exits and options', B:'resources and luck arriving', C:'people support and connections', D:'shielding from interference', E:'clear focus and inner quiet' },
+    4:{ A:'pulled between chances and obstacles', B:'wealth that fluctuates', C:'relationship loops repeating', D:'absorbing others’ energy too easily', E:'stuck between gain and loss' },
+    5:{ A:'needing stronger forward drive', B:'valuing rapport and relationships', C:'needing clear judgment', D:'seeking steady reliability', E:'wanting a vision that lands' },
+    6:{ A:'adjusting methods and pace', B:'needing observation and calm', C:'looking for external support', D:'stabilizing before moving', E:'needing courage and direct action' },
+    7:{ A:'growth and breakthroughs', B:'long-term abundance', C:'stable, deep relationships', D:'inner calm and safety', E:'clear direction and focus' }
+  }
+};
 // 問題選項對應加權（每題每選項對應神祇）
 const MAP = {
   1:{ // 職業
@@ -255,9 +289,17 @@ const I18N = {
     'result-amulet-title': '佛牌配戴建議',
     'result-why-title': '為什麼是祂',
     'result-evidence-title': '你這次最關鍵的線索',
+    'result-card-title': '你的守護卡',
+    'result-card-download': '下載卡片',
+    'result-card-copy': '複製分享文案',
+    'result-card-copied': '已複製',
+    'result-card-share': '我的守護神是 {deity}（{keywords}）。{url}',
     'cta-shop': '看你的專屬配戴精選',
     'cta-temple': '去拜更有感的寺廟建議',
     'cta-deity': '看完整神祇介紹',
+    'quiz-cta-shop-primary': '看你的專屬配戴精選',
+    'quiz-cta-temple': '去拜更有感的寺廟建議',
+    'quiz-cta-deity': '看完整神祇介紹',
     'cta-retake': '重新測驗一次',
     'cta-coupon': '點我領取專屬優惠',
     'cta-copy-coupon': '複製優惠碼',
@@ -282,12 +324,12 @@ const I18N = {
     'breakdown-role': '角色線索',
     'breakdown-intent': '意圖線索',
     'breakdown-action': '行動線索',
-    'result-hook-1': '從「{goal}」到「{blessing}」，你現在最需要的是 {deity} 的節奏。',
-    'result-hook-2': '你在「{challenge}」上反覆遇到課題，{deity} 會先讓你穩住方向。',
-    'result-hook-3': '你的生活關鍵字是「{desc}」與「{response}」，{deity} 正好補上這段。',
-    'result-hook-4': '選擇「{ideal}」作為理想狀態，代表你需要更清楚的節奏，{deity} 會帶來對位。',
-    'result-hook-5': '星座是 {zodiac}、生日星期是 {day}，{deity} 會放大你的優勢並補齊盲點。',
-    'result-hook-6': '從「{job}」的角色出發，{deity} 會讓你更容易穩定推進。'
+    'result-hook-1': '在「{intent}」這件事上，你需要 {deity} 帶來的「{k1}」與「{k2}」。',
+    'result-hook-2': '你正面對「{blocker}」，{deity} 的「{k1}」能先穩住你，再用「{k2}」推進。',
+    'result-hook-3': '你的關鍵風格是「{style}」，{deity} 的「{k1}」與「{k2}」正好對位。',
+    'result-hook-4': '當你想要「{intent}」，{deity} 會用「{k1}」與「{k2}」把節奏拉回來。',
+    'result-hook-5': '生日星期是 {day}、星座是 {zodiac}，此刻更需要「{k1}」與「{k2}」的守護。',
+    'result-hook-6': '以「{job}」的角色出發，{deity} 的「{k1}」會成為你的支撐與方向。'
   },
   en: {
     'result-kicker': 'Result',
@@ -298,9 +340,17 @@ const I18N = {
     'result-amulet-title': 'Wearing Tips',
     'result-why-title': 'Why this deity',
     'result-evidence-title': 'Key signals',
+    'result-card-title': 'Your protection card',
+    'result-card-download': 'Download',
+    'result-card-copy': 'Copy text',
+    'result-card-copied': 'Copied',
+    'result-card-share': 'My guardian is {deity} ({keywords}). {url}',
     'cta-shop': 'See your curated picks',
     'cta-temple': 'Visit a matching temple',
     'cta-deity': 'Full deity profile',
+    'quiz-cta-shop-primary': 'See your curated picks',
+    'quiz-cta-temple': 'Visit a matching temple',
+    'quiz-cta-deity': 'Full deity profile',
     'cta-retake': 'Retake the quiz',
     'cta-coupon': 'Get your personal offer',
     'cta-copy-coupon': 'Copy coupon',
@@ -325,12 +375,12 @@ const I18N = {
     'breakdown-role': 'Role signals',
     'breakdown-intent': 'Intent signals',
     'breakdown-action': 'Action signals',
-    'result-hook-1': 'From “{goal}” to “{blessing}”, you’re aligning most with {deity} right now.',
-    'result-hook-2': 'You keep meeting “{challenge}”, so {deity} helps you steady the direction first.',
-    'result-hook-3': 'Your keywords are “{desc}” and “{response}”—{deity} fills the missing piece.',
-    'result-hook-4': 'Choosing “{ideal}” as your ideal state shows what you need now, and {deity} matches that rhythm.',
-    'result-hook-5': 'With {zodiac} and a {day} birthday, {deity} amplifies your strengths and balances blind spots.',
-    'result-hook-6': 'Based on your role in “{job}”, {deity} helps you move with steadier momentum.'
+    'result-hook-1': 'For “{intent}”, you need {deity} to bring “{k1}” and “{k2}” back into rhythm.',
+    'result-hook-2': 'You’re facing “{blocker}”. {deity} steadies you with “{k1}” and moves you forward with “{k2}”.',
+    'result-hook-3': 'Your style is “{style}”, and {deity} answers with “{k1}” and “{k2}”.',
+    'result-hook-4': 'When you want “{intent}”, {deity} anchors you with “{k1}” and “{k2}”.',
+    'result-hook-5': 'With a {day} birthday and {zodiac}, “{k1}” and “{k2}” are your best support now.',
+    'result-hook-6': 'From your role as “{job}”, {deity} brings the “{k1}” you need most.'
   }
 };
 
@@ -405,11 +455,49 @@ function getElementHint(element, lang){
   return ({ 火:'行動與突破', 土:'穩定與累積', 風:'溝通與連結', 水:'直覺與感受' })[element] || '';
 }
 
-function buildPersonalHook(ctx, lang){
+function getDeityKeywords(code, primaryDeity, lang){
+  const key = String(code || '').toUpperCase();
+  const fromObj = primaryDeity && primaryDeity.keywords ? primaryDeity.keywords : null;
+  const direct = fromObj && (lang === 'en' ? fromObj.en : fromObj.zh);
+  const fallbackPack = DEITY_KEYWORDS[key] || {};
+  const fallback = lang === 'en' ? fallbackPack.en : fallbackPack.zh;
+  const list = Array.isArray(direct) && direct.length ? direct : (Array.isArray(fallback) ? fallback : []);
+  return list.filter(Boolean);
+}
+
+function pickKeywordPair(list, lang, seed){
+  const fallback = lang === 'en' ? ['steady', 'clarity'] : ['穩定', '清明'];
+  const pool = (list && list.length) ? list : fallback;
+  const k1 = pool[seed % pool.length] || fallback[0];
+  let k2 = pool[(seed + 1) % pool.length] || fallback[1] || k1;
+  if (k2 === k1){
+    k2 = pool[(seed + 2) % pool.length] || k1;
+  }
+  return [k1, k2];
+}
+
+function getPersonalHook(opts){
+  const lang = opts && opts.lang ? opts.lang : 'zh';
+  const primary = (opts && opts.primaryDeity) || {};
+  const code = String(primary.code || primary.id || '').toUpperCase();
+  const name = deityName(code, lang);
+  const keywords = getDeityKeywords(code, primary, lang);
+  const seed = stableHash(encodeState(state) + ':' + code + ':' + lang);
+  const pair = pickKeywordPair(keywords, lang, seed);
   const dict = I18N[lang] || I18N.zh;
   const templates = [1,2,3,4,5,6].map(i => dict['result-hook-' + i]).filter(Boolean);
-  const seed = stableHash(encodeState(state) + ':' + lang);
   const chosen = templates[seed % templates.length] || templates[0] || '';
+  const ctx = {
+    deity: name,
+    intent: (opts && opts.topIntent) || '',
+    blocker: (opts && opts.topBlocker) || '',
+    style: (opts && opts.style) || '',
+    day: (opts && opts.day) || '',
+    zodiac: (opts && opts.zodiac) || '',
+    job: (opts && opts.job) || '',
+    k1: pair[0],
+    k2: pair[1] || pair[0]
+  };
   return formatTemplate(chosen, ctx);
 }
 
@@ -430,27 +518,55 @@ function buildScoreBreakdown(code){
   return { base, role, intent, action, total: base + role + intent + action };
 }
 
-function buildEvidence(code, lang, deityNameText){
+function getChoiceInsight(num, pick, lang){
+  const pack = ANSWER_INSIGHTS[lang] || ANSWER_INSIGHTS.zh;
+  const table = pack[num] || {};
+  return table[pick] || '';
+}
+
+function formatTrait(list, lang, seed){
+  const pair = pickKeywordPair(list, lang, seed);
+  const a = pair[0] || (lang === 'en' ? 'steady guidance' : '穩定指引');
+  const b = pair[1] || '';
+  if (!b || b === a) return a;
+  return lang === 'en' ? `${a} and ${b}` : `${a}與${b}`;
+}
+
+function buildEvidence(opts){
+  const lang = (opts && opts.lang) || 'zh';
+  const answers = (opts && opts.answers) || {};
+  const primary = (opts && opts.primaryDeity) || {};
+  const code = String(primary.code || primary.id || '').toUpperCase();
+  const keywords = getDeityKeywords(code, primary, lang);
   const items = [];
-  const dayInfo = getDayInfo(state.dow, lang);
-  if ((DOW[state.dow]?.weight || []).includes(code)){
+  const seedBase = stableHash(encodeState(state) + ':evidence:' + code + ':' + lang);
+
+  if (answers.dow && (DOW[answers.dow]?.weight || []).includes(code)){
+    const dayInfo = getDayInfo(answers.dow, lang);
+    const optText = dayInfo.label || (lang === 'en' ? 'Birth weekday' : '出生星期');
+    const insight = dayInfo.tip || (lang === 'en' ? 'your native rhythm' : '你的天生節奏');
+    const trait = formatTrait(keywords, lang, seedBase);
     const text = lang === 'en'
-      ? `Your birth weekday (${dayInfo.label || ''}) directly boosts ${deityNameText}.`
-      : `出生星期（${dayInfo.label || ''}）直接加強了 ${deityNameText}。`;
+      ? `You chose “${optText}” → it shows you're facing “${insight}” → so you need “${trait}”.`
+      : `你選了「${optText}」→ 代表你正在面對「${insight}」→ 所以你需要「${trait}」。`;
     items.push({ weight: 1, text });
   }
+
   for (let i=1;i<=7;i++){
-    const pick = (i === 1) ? state.job : state['p'+i];
+    const pick = (i === 1) ? answers.job : answers['p'+i];
     if (!pick) continue;
     const weight = scoreForQuestion(code, i, pick);
     if (!weight) continue;
     const qText = getQuestionText(i, lang);
-    const optText = getOptionLabel(i, pick, lang);
+    const optText = getOptionLabel(i, pick, lang) || qText;
+    const insight = getChoiceInsight(i, pick, lang) || (lang === 'en' ? 'a clearer next step' : '更明確的下一步');
+    const trait = formatTrait(keywords, lang, seedBase + i);
     const text = lang === 'en'
-      ? `Because you chose “${optText}” for “${qText}”.`
-      : `因為你在「${qText}」選了「${optText}」。`;
+      ? `You chose “${optText}” → it shows you're facing “${insight}” → so you need “${trait}”.`
+      : `你選了「${optText}」→ 代表你正在面對「${insight}」→ 所以你需要「${trait}」。`;
     items.push({ weight, text });
   }
+
   items.sort((a,b)=> b.weight - a.weight);
   return items.slice(0, 3).map(it => it.text);
 }
@@ -470,6 +586,214 @@ function buildActionItems(deity, lang){
   ];
 }
 
+function formatFriendlyDate(lang){
+  const d = new Date();
+  if (lang === 'en'){
+    return d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+  }
+  return d.toLocaleDateString('zh-TW', { year:'numeric', month:'short', day:'numeric' });
+}
+
+function pickPrimaryKeywords(primaryDeity, lang){
+  if (!primaryDeity) return [];
+  const kw = primaryDeity.keywords;
+  let list = [];
+  if (Array.isArray(kw)) list = kw;
+  else if (kw && typeof kw === 'object'){
+    list = (lang === 'en' ? kw.en : kw.zh) || kw.zh || kw.en || [];
+  }
+  if (!Array.isArray(list) || !list.length){
+    list = getDeityKeywords(primaryDeity.code || primaryDeity.id, primaryDeity, lang);
+  }
+  return list.filter(Boolean).slice(0, 3);
+}
+
+function wrapTextLines(ctx, text, maxWidth, lang, maxLines){
+  const raw = String(text || '').trim();
+  if (!raw) return [''];
+  const parts = lang === 'en' ? raw.split(/\s+/) : raw.split('');
+  const lines = [];
+  let line = '';
+  for (let i=0;i<parts.length;i++){
+    const word = parts[i];
+    const next = lang === 'en' ? (line ? line + ' ' + word : word) : (line + word);
+    if (ctx.measureText(next).width <= maxWidth || !line){
+      line = next;
+    }else{
+      lines.push(line);
+      line = word;
+    }
+    if (maxLines && lines.length >= maxLines) break;
+  }
+  if (line && (!maxLines || lines.length < maxLines)) lines.push(line);
+  if (maxLines && lines.length > maxLines){
+    lines.length = maxLines;
+  }
+  if (maxLines && lines.length === maxLines){
+    const last = lines[lines.length - 1];
+    if (last && last.length > 2) lines[lines.length - 1] = last.replace(/\s+$/, '') + '…';
+  }
+  return lines;
+}
+
+function renderGuardianCardPreview(data){
+  const titleEl = document.getElementById('guardianCardTitle');
+  const hookEl = document.getElementById('guardianCardHook');
+  const dateEl = document.getElementById('guardianCardDate');
+  const tagWrap = document.getElementById('guardianCardKeywords');
+  if (titleEl) titleEl.textContent = data.name || '—';
+  if (hookEl) hookEl.textContent = data.hook || '';
+  if (dateEl) dateEl.textContent = data.date || '';
+  if (tagWrap){
+    tagWrap.innerHTML = (data.keywords || []).map(k => `<span class="tag">${k}</span>`).join('');
+  }
+}
+
+function drawGuardianCardToCanvas(data){
+  const width = 960;
+  const height = 560;
+  const scale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  const bg = ctx.createLinearGradient(0, 0, width, height);
+  bg.addColorStop(0, '#f6f4ef');
+  bg.addColorStop(1, '#efe7dc');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  const radius = 22;
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.strokeStyle = 'rgba(179,156,120,0.35)';
+  roundRect(20, 20, width-40, height-40, radius);
+  ctx.fill();
+  ctx.stroke();
+
+  const pad = 48;
+  ctx.fillStyle = '#8a7b65';
+  ctx.font = '600 14px ui-sans-serif, system-ui, -apple-system';
+  ctx.textBaseline = 'top';
+  ctx.fillText(data.brand || 'unalomecodes', pad, pad);
+
+  ctx.textAlign = 'right';
+  ctx.fillText(data.date || '', width - pad, pad);
+  ctx.textAlign = 'left';
+
+  ctx.fillStyle = '#1f2937';
+  ctx.font = '700 32px ui-sans-serif, system-ui, -apple-system';
+  ctx.fillText(data.name || '—', pad, pad + 36);
+
+  const tagY = pad + 84;
+  let x = pad;
+  ctx.font = '600 14px ui-sans-serif, system-ui, -apple-system';
+  (data.keywords || []).forEach(function(tag){
+    const text = String(tag || '');
+    const w = ctx.measureText(text).width + 20;
+    const h = 28;
+    roundRect(x, tagY, w, h, 14);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(179,156,120,0.35)';
+    ctx.stroke();
+    ctx.fillStyle = '#7a6040';
+    ctx.fillText(text, x + 10, tagY + 6);
+    x += w + 10;
+  });
+
+  ctx.fillStyle = '#4b5563';
+  ctx.font = '16px ui-sans-serif, system-ui, -apple-system';
+  const lines = wrapTextLines(ctx, data.hook || '', width - pad*2, data.lang, 4);
+  lines.forEach((line, i) => {
+    ctx.fillText(line, pad, tagY + 48 + i * 26);
+  });
+
+  ctx.fillStyle = '#b08a5a';
+  ctx.font = '600 12px ui-sans-serif, system-ui, -apple-system';
+  ctx.fillText('unalomecodes', pad, height - pad);
+
+  return canvas;
+}
+
+function buildShareText(data){
+  const kw = (data.keywords || []).join(data.lang === 'en' ? ', ' : '、') || (data.lang === 'en' ? 'guardian' : '守護神');
+  return formatTemplate(t('result-card-share', data.lang), { deity: data.name || '', keywords: kw, url: data.url || '' });
+}
+
+function copyTextToClipboard(text){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject)=>{
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', 'true');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      resolve();
+    }catch(err){
+      reject(err);
+    }
+  });
+}
+
+function downloadGuardianCard(){
+  if (!lastGuardianCard) return;
+  const canvas = drawGuardianCardToCanvas(lastGuardianCard);
+  const fileName = `guardian-card-${lastGuardianCard.code || 'guardian'}.png`;
+  if (canvas.toBlob){
+    canvas.toBlob(function(blob){
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=> URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+  }else{
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  fireTrack('quiz_card_download', { primary: lastGuardianCard.code, intent: lastGuardianCard.intent });
+}
+
+function copyGuardianCardShare(){
+  if (!lastGuardianCard) return;
+  const text = buildShareText(lastGuardianCard);
+  copyTextToClipboard(text).then(function(){
+    if (guardianCardCopyBtn){
+      const old = guardianCardCopyBtn.textContent;
+      guardianCardCopyBtn.textContent = t('result-card-copied', lastGuardianCard.lang);
+      setTimeout(()=> { guardianCardCopyBtn.textContent = old; }, 1200);
+    }
+  }).catch(function(){});
+  fireTrack('quiz_share_copy', { primary: lastGuardianCard.code, intent: lastGuardianCard.intent });
+}
+
 /* =====================
    UI 狀態
 ===================== */
@@ -482,6 +806,9 @@ const intro = document.getElementById('quizIntro');
 const quizFlow = document.getElementById('quizFlow');
 const resultBox = document.getElementById('resultBox');
 const langToggle = document.getElementById('langToggle');
+const guardianCardPreview = document.getElementById('guardianCardPreview');
+const guardianCardDownloadBtn = document.getElementById('guardianCardDownloadBtn');
+const guardianCardCopyBtn = document.getElementById('guardianCardCopyBtn');
 const startBtn = document.getElementById('startQuizBtn');
 const resumeBtn = document.getElementById('resumeQuizBtn');
 const previewBtn = document.getElementById('previewBtn');
@@ -493,6 +820,7 @@ const nextStepBtn = document.getElementById('nextStepBtn');
 const progressLabel = document.getElementById('progressLabel');
 const progressFill = document.getElementById('progressFill');
 const STORAGE_KEY = '__quiz_state_v2__';
+let lastGuardianCard = null;
 
 if (langToggle){
   langToggle.addEventListener('click', function(){
@@ -931,6 +1259,7 @@ async function showResult(opts){
     }
 
     const lang = getLang();
+    const langParam = lang === 'en' ? 'en' : 'zh';
     const code = decideWinner(state);
     const score = compileScore(state);
     const ranked = Object.entries(score).sort((a,b)=> (b[1]-a[1]) || a[0].localeCompare(b[0]));
@@ -939,6 +1268,7 @@ async function showResult(opts){
     const primaryDeity = (typeof window.getDeityById === 'function') ? window.getDeityById(code) : null;
     const primaryName = deityName(code, lang);
     const secondaryName = deityName(secondaryCode, lang);
+    const primaryId = (primaryDeity && (primaryDeity.id || primaryDeity.code)) || code;
 
     const dayInfoZh = DOW[state.dow] || {};
     const dayInfo = getDayInfo(state.dow, lang);
@@ -978,28 +1308,32 @@ async function showResult(opts){
       }catch(_){}
     }
 
-    const hookCtx = {
-      goal: getOptionLabel(2, state.p2, lang),
-      blessing: getOptionLabel(3, state.p3, lang),
-      challenge: getOptionLabel(4, state.p4, lang),
-      desc: getOptionLabel(5, state.p5, lang),
-      response: getOptionLabel(6, state.p6, lang),
-      ideal: getOptionLabel(7, state.p7, lang),
-      job: getOptionLabel(1, state.job, lang),
-      zodiac: zName,
-      day: dayInfo.label || '',
-      deity: primaryName
-    };
+    const topIntent = getOptionLabel(2, state.p2, lang) || getQuestionText(2, lang);
+    const topBlocker = getOptionLabel(4, state.p4, lang) || getQuestionText(4, lang);
+    const style = getElementHint(zInfo.element, lang);
+    const intentParam = topIntent || 'general';
 
     const resultTitle = document.getElementById('resultTitle');
     const resultHook = document.getElementById('resultHook');
     const resultSummary = document.getElementById('resultSummary');
 
     if (resultTitle) resultTitle.textContent = lang === 'en' ? `Primary Deity: ${primaryName}` : `主守護神：${primaryName}`;
-    if (resultHook) resultHook.textContent = buildPersonalHook(hookCtx, lang);
+    const personalHook = getPersonalHook({
+      lang,
+      primaryDeity: primaryDeity || { code, name:{ zh: storedName, en: primaryName } },
+      topIntent,
+      topBlocker,
+      style,
+      day: dayInfo.label || '',
+      zodiac: zName,
+      job: getOptionLabel(1, state.job, lang)
+    });
+    if (resultHook){
+      resultHook.textContent = personalHook;
+    }
     if (resultSummary){
-      const why = dayInfo.tip || (lang === 'en' ? 'Your answers point to this deity.' : '你的選擇指向這位守護神。');
-      resultSummary.textContent = `${t('result-why-title', lang)}：${why}`;
+      resultSummary.textContent = '';
+      resultSummary.style.display = 'none';
     }
 
     const primarySlot = document.getElementById('primaryDeityProfile');
@@ -1045,7 +1379,20 @@ async function showResult(opts){
 
     const evidenceList = document.getElementById('evidenceList');
     if (evidenceList){
-      const evidenceItems = buildEvidence(code, lang, primaryName);
+      const evidenceItems = buildEvidence({
+        answers: {
+          dow: state.dow,
+          job: state.job,
+          p2: state.p2,
+          p3: state.p3,
+          p4: state.p4,
+          p5: state.p5,
+          p6: state.p6,
+          p7: state.p7
+        },
+        primaryDeity: primaryDeity || { code, name:{ zh: storedName, en: primaryName } },
+        lang
+      });
       evidenceList.innerHTML = evidenceItems.length
         ? evidenceItems.map(item => `<li>${item}</li>`).join('')
         : `<li>${lang === 'en' ? 'Your selections consistently point to this deity.' : '你的選擇一致指向這位守護神。'}</li>`;
@@ -1060,6 +1407,32 @@ async function showResult(opts){
           <p>${item.body}</p>
         </div>
       `).join('');
+    }
+
+    const keywords = pickPrimaryKeywords(primaryDeity || { code: primaryId }, lang);
+    const shareUrl = `${location.origin}/quiz/?code=${encodeURIComponent(primaryId)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
+    const cardData = {
+      code: primaryId,
+      name: primaryName,
+      keywords,
+      hook: personalHook,
+      date: formatFriendlyDate(lang),
+      brand: 'unalomecodes',
+      lang,
+      intent: intentParam,
+      url: shareUrl
+    };
+    lastGuardianCard = cardData;
+    if (guardianCardPreview){
+      renderGuardianCardPreview(cardData);
+    }
+    if (guardianCardDownloadBtn && !guardianCardDownloadBtn._bound){
+      guardianCardDownloadBtn._bound = true;
+      guardianCardDownloadBtn.addEventListener('click', downloadGuardianCard);
+    }
+    if (guardianCardCopyBtn && !guardianCardCopyBtn._bound){
+      guardianCardCopyBtn._bound = true;
+      guardianCardCopyBtn.addEventListener('click', copyGuardianCardShare);
     }
 
     let storiesHtml = '';
@@ -1077,12 +1450,15 @@ async function showResult(opts){
       if (list) list.innerHTML = storiesHtml;
     }
 
-    const ctaShop = document.getElementById('ctaShopBtn');
+    const ctaShop = document.getElementById('ctaShopPrimaryBtn');
     const ctaTemple = document.getElementById('ctaTempleBtn');
     const deityLink = document.getElementById('deityLink');
-    const shopUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.shop_url) || `/shop?deity=${encodeURIComponent(code)}`;
-    const templeUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.templemap_url) || '/templemap';
-    const deityUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.deity_profile_url) || `${DEITY_PAGE}?code=${encodeURIComponent(code)}`;
+    const shopFallback = `/shop?deity=${encodeURIComponent(primaryId)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
+    const templeFallback = `/templemap?deity=${encodeURIComponent(primaryId)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
+    const deityFallback = `${DEITY_PAGE}?code=${encodeURIComponent(primaryId)}&lang=${encodeURIComponent(langParam)}`;
+    const shopUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.shop_url) || shopFallback;
+    const templeUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.templemap_url) || templeFallback;
+    const deityUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.deity_profile_url) || deityFallback;
 
     if (ctaShop) ctaShop.href = shopUrl;
     if (ctaTemple) ctaTemple.href = templeUrl;
@@ -1090,11 +1466,11 @@ async function showResult(opts){
 
     if (ctaShop && !ctaShop._bound){
       ctaShop._bound = true;
-      ctaShop.addEventListener('click', () => fireTrack('quiz_cta_shop_click', { primary: code }));
+      ctaShop.addEventListener('click', () => fireTrack('quiz_cta_shop_click', { primary: primaryId, intent: intentParam }));
     }
     if (ctaTemple && !ctaTemple._bound){
       ctaTemple._bound = true;
-      ctaTemple.addEventListener('click', () => fireTrack('quiz_cta_temple_click', { primary: code }));
+      ctaTemple.addEventListener('click', () => fireTrack('quiz_cta_temple_click', { primary: primaryId, intent: intentParam }));
     }
 
     // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
