@@ -84,11 +84,11 @@
     </section>
 
     <section class="card line-entry-card" id="lineFortuneEntry" style="display:none">
-      <h2>已完成守護神測驗</h2>
-      <p class="muted">系統已讀取你的守護神紀錄，可直接領取日籤或重新測驗。</p>
+      <h2 data-i18n="line-entry-title">已完成守護神測驗</h2>
+      <p class="muted" data-i18n="line-entry-desc">系統已讀取你的守護神紀錄，可直接領取日籤或重新測驗。</p>
       <div id="lineGuardianBadge" class="guardian-badge" style="display:none;"></div>
       <div class="line-entry-actions">
-        <button type="button" class="btn btn-ghost" id="lineRetakeBtn">重新測驗守護神</button>
+        <button type="button" class="btn btn-ghost" id="lineRetakeBtn" data-i18n="line-entry-retake">重新測驗守護神</button>
       </div>
     </section>
 
@@ -151,11 +151,11 @@
       </div>
 
       <div class="card member-card">
-        <h3>完成後你會獲得</h3>
+        <h3 data-i18n="member-title">完成後你會獲得</h3>
         <ul>
-          <li>你的守護神會顯示在會員中心旁邊，方便隨時查看。</li>
-          <li>每天台灣時間午夜 12 點可領取一次日籤。</li>
-          <li>日籤包含：守護神提醒、今日能量建議、生活小提示與加持方向。</li>
+          <li data-i18n="member-line-1">你的守護神會顯示在會員中心旁邊，方便隨時查看。</li>
+          <li data-i18n="member-line-2">每天台灣時間午夜 12 點可領取一次日籤。</li>
+          <li data-i18n="member-line-3">日籤包含：守護神提醒、今日能量建議、生活小提示與加持方向。</li>
         </ul>
       </div>
 
@@ -203,6 +203,7 @@
   <script src="/js/quiz-index.inline-1.js"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="/js/auth.js?v=20240930"></script>
+  <script src="/js/deities-store.js"></script>
   <script src="/js/deity.inline-1.js"></script>
   <script src="/js/deity-components.js"></script>
   <div id="resultLoading" class="loading-overlay" role="status" aria-live="polite">

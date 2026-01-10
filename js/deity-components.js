@@ -1,8 +1,11 @@
 (function(){
-  const DATA = window.DEITY_DATA || {};
   const SITE_BASE = (function(){ try{ return location.origin; }catch(_){ return ''; }})();
   const API_BASE = (window.DEITY_API_BASE || SITE_BASE || '').replace(/\/$/, '');
   const API = API_BASE.endsWith('/api') ? API_BASE : (API_BASE ? API_BASE + '/api' : '');
+
+  function getData(){
+    return window.DEITY_DATA || {};
+  }
 
   function escapeHtml(s){
     return String(s || '').replace(/[&<>"']/g, function(m){
@@ -11,14 +14,15 @@
   }
 
   function getDeityById(id){
+    const data = getData();
     const code = String(id || '').trim().toUpperCase();
-    const nameZh = (DATA.names && DATA.names[code]) || code || '守護神';
-    const nameEn = (DATA.namesEn && DATA.namesEn[code]) || nameZh;
-    const descZh = (DATA.desc && DATA.desc[code]) || '';
-    const descEn = (DATA.descEn && DATA.descEn[code]) || '';
-    const wear = (DATA.wear && DATA.wear[code]) || {};
-    const image = (DATA.images && DATA.images[code]) || '';
-    const stories = (DATA.stories && DATA.stories[code]) || [];
+    const nameZh = (data.names && data.names[code]) || code || '守護神';
+    const nameEn = (data.namesEn && data.namesEn[code]) || nameZh;
+    const descZh = (data.desc && data.desc[code]) || '';
+    const descEn = (data.descEn && data.descEn[code]) || '';
+    const wear = (data.wear && data.wear[code]) || {};
+    const image = (data.images && data.images[code]) || '';
+    const stories = (data.stories && data.stories[code]) || [];
     const deityUrl = code ? `/deity?code=${encodeURIComponent(code)}` : '/deity';
     const shopUrl = code ? `/shop?deity=${encodeURIComponent(code)}` : '/shop';
     return {
@@ -72,7 +76,8 @@
   }
 
   async function fetchStories(code){
-    const local = Array.isArray(DATA.stories && DATA.stories[code]) ? DATA.stories[code] : [];
+    const data = getData();
+    const local = Array.isArray(data.stories && data.stories[code]) ? data.stories[code] : [];
     if (!API) return local.slice();
     let apiItems = [];
     try{

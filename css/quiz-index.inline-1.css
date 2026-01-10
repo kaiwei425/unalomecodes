@@ -184,7 +184,7 @@
     .result-list{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:6px;}
     .deity-profile{padding:0;overflow:hidden;}
     .deity-profile .imgbox{position:relative;aspect-ratio:16/9;background:var(--surface-soft);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;}
-    .deity-profile .imgbox img{width:100%;height:100%;object-fit:cover;}
+    .deity-profile .imgbox img{width:100%;height:100%;object-fit:contain;}
     .deity-profile .meta{padding:18px 20px 8px;}
     .deity-profile .deity{font-size:22px;font-weight:700;letter-spacing:.01em;}
     .deity-profile .desc{padding:0 20px 20px;color:var(--muted);line-height:1.8;white-space:pre-wrap;}

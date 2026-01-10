@@ -262,6 +262,16 @@ const I18N = {
     'cta-coupon': '點我領取專屬優惠',
     'cta-copy-coupon': '複製優惠碼',
     'cta-save-coupon': '存到我的優惠券',
+    'line-entry-title': '已完成守護神測驗',
+    'line-entry-desc': '系統已讀取你的守護神紀錄，可直接領取日籤或重新測驗。',
+    'line-entry-retake': '重新測驗守護神',
+    'line-entry-guardian-label': '守護神：',
+    'line-entry-guardian-alt': '守護神',
+    'line-entry-claim': '領取日籤',
+    'member-title': '完成後你會獲得',
+    'member-line-1': '你的守護神會顯示在會員中心旁邊，方便隨時查看。',
+    'member-line-2': '每天台灣時間午夜 12 點可領取一次日籤。',
+    'member-line-3': '日籤包含：守護神提醒、今日能量建議、生活小提示與加持方向。',
     'empty-stories': '目前還沒有故事分享。',
     'disclaimer': '自我覺察與文化體驗建議，不構成保證。',
     'action-today': '今天',
@@ -295,6 +305,16 @@ const I18N = {
     'cta-coupon': 'Get your personal offer',
     'cta-copy-coupon': 'Copy coupon',
     'cta-save-coupon': 'Save to my coupons',
+    'line-entry-title': 'Guardian quiz completed',
+    'line-entry-desc': 'We found your guardian record. You can claim today’s fortune or retake the quiz.',
+    'line-entry-retake': 'Retake guardian quiz',
+    'line-entry-guardian-label': 'Guardian: ',
+    'line-entry-guardian-alt': 'Guardian',
+    'line-entry-claim': 'Claim daily fortune',
+    'member-title': 'What you unlock',
+    'member-line-1': 'Your guardian appears next to your member center for quick access.',
+    'member-line-2': 'Claim one daily fortune every day at 12:00 AM (Taipei time).',
+    'member-line-3': 'Daily fortune includes: guardian guidance, today’s energy focus, practical tips, and ritual direction.',
     'empty-stories': 'No stories yet.',
     'disclaimer': 'For reflection and cultural exploration, no guarantees.',
     'action-today': 'Today',
@@ -326,6 +346,7 @@ function applyLang(lang){
     langToggle.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : '切換英文');
     langToggle.dataset.lang = lang;
   }
+  if (lastLineProfile) renderLineBadge(lastLineProfile);
 }
 
 function resolveLang(){
@@ -525,6 +546,7 @@ const lineEntry = document.getElementById('lineFortuneEntry');
 const lineGuardianBadge = document.getElementById('lineGuardianBadge');
 const lineRetakeBtn = document.getElementById('lineRetakeBtn');
 let forceQuiz = false;
+var lastLineProfile = null;
 function isLineClient(){
   return !!(window.liff && window.liff.isInClient && window.liff.isInClient());
 }
@@ -542,20 +564,28 @@ function setQuizVisible(show){
   if (intro) intro.style.display = show ? 'none' : '';
   if (show && lineEntry) lineEntry.style.display = 'none';
 }
+function renderLineBadge(profile){
+  if (!lineGuardianBadge || !profile || !profile.guardian) return;
+  const lang = getLang();
+  const code = String(profile.guardian.code || '').toUpperCase();
+  const nameFromCode = code ? deityName(code, lang) : '';
+  const name = nameFromCode || profile.guardian.name || (lang === 'en' ? 'Guardian' : '守護神');
+  const label = t('line-entry-guardian-label', lang);
+  const claim = t('line-entry-claim', lang);
+  const alt = t('line-entry-guardian-alt', lang);
+  lineGuardianBadge.innerHTML = `<img src="${badgeIcon}" alt="${alt}"><div class="guardian-meta"><strong>${label}${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>${claim}</button></div>`;
+  lineGuardianBadge.style.display = 'flex';
+}
 function showLineEntry(profile){
   if (!lineEntry) return;
+  lastLineProfile = profile || null;
   if (!profile || !profile.guardian || forceQuiz){
     lineEntry.style.display = 'none';
     setQuizVisible(true);
     renderStep();
     return;
   }
-  const code = String(profile.guardian.code || '').toUpperCase();
-  const name = profile.guardian.name || (code ? deityName(code) : '守護神');
-  if (lineGuardianBadge){
-    lineGuardianBadge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><div class="guardian-meta"><strong>守護神：${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>領取日籤</button></div>`;
-    lineGuardianBadge.style.display = 'flex';
-  }
+  renderLineBadge(profile);
   lineEntry.style.display = '';
   if (intro) intro.style.display = 'none';
   setQuizVisible(false);
