@@ -17,10 +17,10 @@
           <img id="brandLogo" src="/img/logo.png" alt="unalomecodes">
         </picture>
       </a>
-      <div class="nav-title">守護神測驗</div>
+      <div class="nav-title" data-i18n="quiz-nav-title">守護神測驗</div>
       <div class="nav-actions">
-        <button type="button" class="btn btn-ghost" data-fortune-btn>領取日籤</button>
-        <a class="btn btn-primary" href="/shop">前往商城</a>
+        <button type="button" class="btn btn-ghost" data-fortune-btn data-i18n="quiz-nav-fortune">領取日籤</button>
+        <a class="btn btn-primary" href="/shop" data-i18n="quiz-nav-shop">前往商城</a>
         <button class="btn btn-ghost lang-toggle" id="langToggle" type="button" aria-label="切換語言">ZH/EN</button>
       </div>
     </div>
@@ -28,45 +28,45 @@
 
   <main class="wrap">
     <section class="card intro-card" id="quizIntro">
-      <span class="kicker">守護神測驗</span>
-      <h1>用測驗找出此刻最適合你的守護神</h1>
-      <p class="lead">1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）</p>
+      <span class="kicker" data-i18n="quiz-intro-kicker">守護神測驗</span>
+      <h1 data-i18n="quiz-intro-title">用測驗找出此刻最適合你的守護神</h1>
+      <p class="lead" data-i18n="quiz-intro-lead">1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）</p>
       <div class="intro-actions">
-        <button class="btn btn-primary" id="startQuizBtn" type="button">開始測驗</button>
-        <button class="btn" id="resumeQuizBtn" type="button" style="display:none;">繼續上次</button>
-        <button class="btn btn-ghost" id="previewBtn" type="button">先看看測驗會問什麼</button>
+        <button class="btn btn-primary" id="startQuizBtn" type="button" data-i18n="quiz-intro-start">開始測驗</button>
+        <button class="btn" id="resumeQuizBtn" type="button" style="display:none;" data-i18n="quiz-intro-resume">繼續上次</button>
+        <button class="btn btn-ghost" id="previewBtn" type="button" data-i18n="quiz-intro-preview">先看看測驗會問什麼</button>
       </div>
       <details class="intro-details" id="quizPreview">
-        <summary>測驗會問什麼</summary>
+        <summary data-i18n="quiz-intro-summary">測驗會問什麼</summary>
         <ul>
-          <li>出生星期與星座（快速定位個人能量）</li>
-          <li>7 題生活與意圖題（推導最合拍的守護神）</li>
-          <li>結果會給你下一步建議（寺廟、商品、內容）</li>
+          <li data-i18n="quiz-intro-item-1">出生星期與星座（快速定位個人能量）</li>
+          <li data-i18n="quiz-intro-item-2">7 題生活與意圖題（推導最合拍的守護神）</li>
+          <li data-i18n="quiz-intro-item-3">結果會給你下一步建議（寺廟、商品、內容）</li>
         </ul>
       </details>
-      <div class="save-hint" id="saveHint" style="display:none;">已自動保存作答</div>
+      <div class="save-hint" id="saveHint" style="display:none;" data-i18n="quiz-save-hint">已自動保存作答</div>
     </section>
 
     <section class="quiz-flow" id="quizFlow" hidden>
       <div class="flow-head">
-        <button type="button" class="btn btn-ghost" id="backBtn">← 上一題</button>
+        <button type="button" class="btn btn-ghost" id="backBtn" data-i18n="quiz-back">← 上一題</button>
         <div class="progress" aria-live="polite">
           <div class="progress-label" id="progressLabel">步驟 1/9</div>
           <div class="progress-bar" aria-hidden="true"><span id="progressFill"></span></div>
         </div>
-        <button type="button" class="btn btn-ghost" id="restartBtn">重新開始</button>
+        <button type="button" class="btn btn-ghost" id="restartBtn" data-i18n="quiz-restart">重新開始</button>
       </div>
 
       <div class="card question-card step-card" id="stepDow">
         <fieldset class="option-fieldset">
-          <legend>你是星期幾出生？</legend>
+          <legend data-i18n="quiz-dow-legend">你是星期幾出生？</legend>
           <div id="dowBox" class="option-grid" role="radiogroup" aria-label="weekday"></div>
         </fieldset>
       </div>
 
       <div class="card question-card step-card" id="stepZod">
         <fieldset class="option-fieldset">
-          <legend>你的星座？</legend>
+          <legend data-i18n="quiz-zod-legend">你的星座？</legend>
           <div id="zodiacBox" class="option-grid" role="radiogroup" aria-label="zodiac"></div>
         </fieldset>
       </div>
@@ -79,7 +79,7 @@
       </div>
 
       <div class="flow-actions">
-        <button id="nextStepBtn" class="btn btn-primary" type="button" disabled>下一步</button>
+        <button id="nextStepBtn" class="btn btn-primary" type="button" disabled data-i18n="quiz-next">下一步</button>
       </div>
     </section>
 

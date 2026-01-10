@@ -294,6 +294,35 @@ const I18N = {
     'result-card-copy': '複製分享文案',
     'result-card-copied': '已複製',
     'result-card-share': '我的守護神是 {deity}（{keywords}）。{url}',
+    'quiz-nav-title': '守護神測驗',
+    'quiz-nav-fortune': '領取日籤',
+    'quiz-nav-shop': '前往商城',
+    'quiz-intro-kicker': '守護神測驗',
+    'quiz-intro-title': '用測驗找出此刻最適合你的守護神',
+    'quiz-intro-lead': '1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）',
+    'quiz-intro-start': '開始測驗',
+    'quiz-intro-resume': '繼續上次',
+    'quiz-intro-preview': '先看看測驗會問什麼',
+    'quiz-intro-summary': '測驗會問什麼',
+    'quiz-intro-item-1': '出生星期與星座（快速定位個人能量）',
+    'quiz-intro-item-2': '7 題生活與意圖題（推導最合拍的守護神）',
+    'quiz-intro-item-3': '結果會給你下一步建議（寺廟、商品、內容）',
+    'quiz-save-hint': '已自動保存作答',
+    'quiz-back': '← 上一題',
+    'quiz-restart': '重新開始',
+    'quiz-next': '下一步',
+    'quiz-dow-legend': '你是星期幾出生？',
+    'quiz-zod-legend': '你的星座？',
+    'quiz-progress': '步驟 {current}/{total}',
+    'quiz-question-progress': '第 {num} 題（剩餘 {remaining} 題）｜{text}',
+    'micro-action-1': '今天可以把「{intent}」拆成一個 15 分鐘的小步驟。',
+    'micro-action-2': '今天先做一個「{k1}」的小整理，讓節奏回來。',
+    'micro-action-3': '今天把「{blocker}」寫成一句話，選擇一個可做的動作。',
+    'micro-action-4': '今天先安排一個 {k1} 的小行動，讓心穩定。',
+    'micro-action-5': '今天用「{k2}」提醒自己，專注一件事就好。',
+    'micro-action-6': '今天只做一個能推進「{intent}」的小決定。',
+    'action-week-fallback': '本週選一個簡單的供花或清水致意，保持節奏即可。',
+    'action-wear-fallback': '在需要穩定時配戴守護神聖物。',
     'cta-shop': '看你的專屬配戴精選',
     'cta-temple': '去拜更有感的寺廟建議',
     'cta-deity': '看完整神祇介紹',
@@ -345,6 +374,35 @@ const I18N = {
     'result-card-copy': 'Copy text',
     'result-card-copied': 'Copied',
     'result-card-share': 'My guardian is {deity} ({keywords}). {url}',
+    'quiz-nav-title': 'Guardian Quiz',
+    'quiz-nav-fortune': 'Daily fortune',
+    'quiz-nav-shop': 'Go to shop',
+    'quiz-intro-kicker': 'Guardian Quiz',
+    'quiz-intro-title': 'Find the guardian that fits you right now',
+    'quiz-intro-lead': 'Finish in 1 minute. You’ll get a deity match and next steps (temple/shop/content).',
+    'quiz-intro-start': 'Start quiz',
+    'quiz-intro-resume': 'Resume',
+    'quiz-intro-preview': 'See what the quiz asks',
+    'quiz-intro-summary': 'What’s included',
+    'quiz-intro-item-1': 'Birth weekday & zodiac (quick energy baseline)',
+    'quiz-intro-item-2': '7 intent & life questions (match your guardian)',
+    'quiz-intro-item-3': 'Results include next steps (temple/shop/content)',
+    'quiz-save-hint': 'Auto-saved',
+    'quiz-back': '← Back',
+    'quiz-restart': 'Restart',
+    'quiz-next': 'Next',
+    'quiz-dow-legend': 'Which weekday were you born?',
+    'quiz-zod-legend': 'Your zodiac sign?',
+    'quiz-progress': 'Step {current}/{total}',
+    'quiz-question-progress': 'Question {num} ({remaining} left) — {text}',
+    'micro-action-1': 'Today, break “{intent}” into one 15‑minute step.',
+    'micro-action-2': 'Today, do a small reset around “{k1}” to regain rhythm.',
+    'micro-action-3': 'Today, name “{blocker}” in one sentence, then take one doable move.',
+    'micro-action-4': 'Today, take one {k1}-focused action to steady yourself.',
+    'micro-action-5': 'Today, use “{k2}” as your reminder—focus on just one thing.',
+    'micro-action-6': 'Today, make one small decision that advances “{intent}”.',
+    'action-week-fallback': 'This week, offer flowers or water as a simple greeting and keep your rhythm.',
+    'action-wear-fallback': 'Wear your deity item when you need steady focus.',
     'cta-shop': 'See your curated picks',
     'cta-temple': 'Visit a matching temple',
     'cta-deity': 'Full deity profile',
@@ -410,6 +468,9 @@ function resolveLang(){
 function setLang(lang){
   try{ localStorage.setItem(LANG_KEY, lang); }catch(_){}
   applyLang(lang);
+  if (quizFlow && !quizFlow.hidden){
+    renderStep();
+  }
 }
 
 function getLang(){
@@ -532,10 +593,31 @@ function formatTrait(list, lang, seed){
   return lang === 'en' ? `${a} and ${b}` : `${a}與${b}`;
 }
 
+function buildMicroAction(opts){
+  const lang = (opts && opts.lang) || 'zh';
+  const primary = (opts && opts.primaryDeity) || {};
+  const code = String(primary.code || primary.id || '').toUpperCase();
+  const keywords = getDeityKeywords(code, primary, lang);
+  const seed = stableHash(encodeState(state) + ':micro:' + (opts && opts.idx || 0) + ':' + code + ':' + lang);
+  const pair = pickKeywordPair(keywords, lang, seed);
+  const dict = I18N[lang] || I18N.zh;
+  const templates = [1,2,3,4,5,6].map(i => dict['micro-action-' + i]).filter(Boolean);
+  const chosen = templates[seed % templates.length] || templates[0] || '';
+  const ctx = {
+    intent: (opts && opts.topIntent) || (lang === 'en' ? 'your focus' : '你的目標'),
+    blocker: (opts && opts.topBlocker) || (lang === 'en' ? 'a stuck point' : '卡關點'),
+    k1: pair[0],
+    k2: pair[1] || pair[0]
+  };
+  return formatTemplate(chosen, ctx);
+}
+
 function buildEvidence(opts){
   const lang = (opts && opts.lang) || 'zh';
   const answers = (opts && opts.answers) || {};
   const primary = (opts && opts.primaryDeity) || {};
+  const topIntent = (opts && opts.topIntent) || '';
+  const topBlocker = (opts && opts.topBlocker) || '';
   const code = String(primary.code || primary.id || '').toUpperCase();
   const keywords = getDeityKeywords(code, primary, lang);
   const items = [];
@@ -546,9 +628,10 @@ function buildEvidence(opts){
     const optText = dayInfo.label || (lang === 'en' ? 'Birth weekday' : '出生星期');
     const insight = dayInfo.tip || (lang === 'en' ? 'your native rhythm' : '你的天生節奏');
     const trait = formatTrait(keywords, lang, seedBase);
+    const micro = buildMicroAction({ lang, topIntent, topBlocker, primaryDeity: primary, idx: items.length });
     const text = lang === 'en'
-      ? `You chose “${optText}” → it shows you're facing “${insight}” → so you need “${trait}”.`
-      : `你選了「${optText}」→ 代表你正在面對「${insight}」→ 所以你需要「${trait}」。`;
+      ? `You chose “${optText}” → it shows you're facing “${insight}” → so you need “${trait}”. ${micro}`
+      : `你選了「${optText}」→ 代表你正在面對「${insight}」→ 所以你需要「${trait}」。${micro}`;
     items.push({ weight: 1, text });
   }
 
@@ -561,9 +644,10 @@ function buildEvidence(opts){
     const optText = getOptionLabel(i, pick, lang) || qText;
     const insight = getChoiceInsight(i, pick, lang) || (lang === 'en' ? 'a clearer next step' : '更明確的下一步');
     const trait = formatTrait(keywords, lang, seedBase + i);
+    const micro = buildMicroAction({ lang, topIntent, topBlocker, primaryDeity: primary, idx: items.length + 1 });
     const text = lang === 'en'
-      ? `You chose “${optText}” → it shows you're facing “${insight}” → so you need “${trait}”.`
-      : `你選了「${optText}」→ 代表你正在面對「${insight}」→ 所以你需要「${trait}」。`;
+      ? `You chose “${optText}” → it shows you're facing “${insight}” → so you need “${trait}”. ${micro}`
+      : `你選了「${optText}」→ 代表你正在面對「${insight}」→ 所以你需要「${trait}」。${micro}`;
     items.push({ weight, text });
   }
 
@@ -571,17 +655,28 @@ function buildEvidence(opts){
   return items.slice(0, 3).map(it => it.text);
 }
 
-function buildActionItems(deity, lang){
-  const dayInfo = getDayInfo(state.dow, lang);
-  const today = dayInfo.tip || (lang === 'en' ? 'Focus on one small step today.' : '今天先完成一件小事。');
-  const weekFocus = getOptionLabel(6, state.p6, lang) || getOptionLabel(7, state.p7, lang);
-  const week = weekFocus
-    ? (lang === 'en' ? `Use “${weekFocus}” as your weekly rhythm and make one concrete move.` : `本週聚焦「${weekFocus}」，安排一件事落地。`)
-    : (lang === 'en' ? 'Set one weekly rhythm and keep it simple.' : '本週設定一個固定節奏並持續。');
-  const wear = (deity && deity.wear && (lang === 'en' ? deity.wear.en : deity.wear.zh)) || (deity && deity.wear && (deity.wear.zh || deity.wear.en)) || (lang === 'en' ? 'Wear your deity item when you need steady focus.' : '在需要穩定時配戴守護神聖物。');
+function pickRitualLine(deity, lang, seed){
+  if (!deity) return '';
+  let list = [];
+  if (Array.isArray(deity.ritual)) list = deity.ritual;
+  else if (deity.ritual && typeof deity.ritual === 'object'){
+    list = (lang === 'en' ? deity.ritual.en : deity.ritual.zh) || deity.ritual.zh || deity.ritual.en || [];
+  }
+  if (!Array.isArray(list) || !list.length) return '';
+  return list[Math.abs(seed) % list.length] || list[0] || '';
+}
+
+function buildActionItems(deity, lang, opts){
+  const topIntent = (opts && opts.topIntent) || '';
+  const topBlocker = (opts && opts.topBlocker) || '';
+  const code = (deity && (deity.code || deity.id)) || '';
+  const today = buildMicroAction({ lang, topIntent, topBlocker, primaryDeity: deity || { code }, idx: 0 });
+  const ritualSeed = stableHash(encodeState(state) + ':ritual:' + String(code || '') + ':' + lang);
+  const ritual = pickRitualLine(deity, lang, ritualSeed) || t('action-week-fallback', lang);
+  const wear = (deity && deity.wear && (lang === 'en' ? deity.wear.en : deity.wear.zh)) || (deity && deity.wear && (deity.wear.zh || deity.wear.en)) || t('action-wear-fallback', lang);
   return [
     { title: t('action-today', lang), body: today },
-    { title: t('action-week', lang), body: week },
+    { title: t('action-week', lang), body: ritual },
     { title: t('action-wear', lang), body: wear }
   ];
 }
@@ -935,7 +1030,13 @@ const qTitle = document.getElementById('qTitle');
 const optsEl  = document.getElementById('opts');
 
 function updateProgress(){
-  if (progressLabel) progressLabel.textContent = `步驟 ${currentStep + 1}/${TOTAL_STEPS}`;
+  if (progressLabel){
+    const lang = getLang();
+    progressLabel.textContent = formatTemplate(t('quiz-progress', lang), {
+      current: currentStep + 1,
+      total: TOTAL_STEPS
+    });
+  }
   if (progressFill){
     const pct = Math.min(100, Math.max(0, ((currentStep + 1) / TOTAL_STEPS) * 100));
     progressFill.style.width = pct + '%';
@@ -949,6 +1050,18 @@ function updateNextState(){
   else if (currentStep === 1) enabled = !!state.zod;
   else enabled = !!state['p' + (currentStep - 1)];
   nextStepBtn.disabled = !enabled;
+}
+
+let autoAdvanceTimer = null;
+function queueAutoAdvance(){
+  if (!nextStepBtn || nextStepBtn.disabled) return;
+  if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
+  autoAdvanceTimer = setTimeout(()=>{
+    if (!nextStepBtn.disabled){
+      nextStep();
+      saveState();
+    }
+  }, 140);
 }
 
 function setBackState(){
@@ -989,8 +1102,10 @@ function bindOptionGroup(container, onSelect){
 
 function renderDow(){
   if (!dowBox) return;
+  const lang = getLang();
+  const src = lang === 'en' ? DOW_EN : DOW;
   dowBox.innerHTML = '';
-  Object.entries(DOW).forEach(([k,v])=>{
+  Object.entries(src).forEach(([k,v])=>{
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'option-card';
@@ -1005,14 +1120,17 @@ function renderDow(){
     setOptionActive(dowBox, val);
     updateNextState();
     saveState();
+    queueAutoAdvance();
   });
   setOptionActive(dowBox, state.dow);
 }
 
 function renderZodiac(){
   if (!zodiacBox) return;
+  const lang = getLang();
+  const src = lang === 'en' ? ZODIAC_EN : ZODIAC;
   zodiacBox.innerHTML = '';
-  Object.entries(ZODIAC).forEach(([k,v])=>{
+  Object.entries(src).forEach(([k,v])=>{
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'option-card';
@@ -1027,14 +1145,17 @@ function renderZodiac(){
     setOptionActive(zodiacBox, val);
     updateNextState();
     saveState();
+    queueAutoAdvance();
   });
   setOptionActive(zodiacBox, state.zod);
 }
 
 function renderQ(qNum){
   currentQuestion = qNum;
-  const q = QUESTIONS[qNum];
-  qTitle.textContent = `第 ${qNum} 題（剩餘 ${Math.max(7-qNum,0)} 題）｜${q.text}`;
+  const lang = getLang();
+  const q = (lang === 'en' ? QUESTIONS_EN : QUESTIONS)[qNum];
+  const remaining = Math.max(7-qNum,0);
+  qTitle.textContent = formatTemplate(t('quiz-question-progress', lang), { num: qNum, remaining, text: q.text });
   optsEl.innerHTML='';
   const isJob = (qNum===1);
   Object.entries(q.opts).forEach(([k,label])=>{
@@ -1053,6 +1174,7 @@ function renderQ(qNum){
     setOptionActive(optsEl, val);
     updateNextState();
     saveState();
+    queueAutoAdvance();
   });
   setOptionActive(optsEl, state['p'+qNum] || '');
 }
@@ -1077,8 +1199,10 @@ function renderStep(){
   const cards = document.querySelectorAll('.step-card');
   cards.forEach(c=> c.style.display='none');
   if (currentStep === 0){
+    renderDow();
     document.getElementById('stepDow').style.display='';
   }else if (currentStep === 1){
+    renderZodiac();
     document.getElementById('stepZod').style.display='';
   }else{
     document.getElementById('quizBox').style.display='';
@@ -1391,6 +1515,8 @@ async function showResult(opts){
           p7: state.p7
         },
         primaryDeity: primaryDeity || { code, name:{ zh: storedName, en: primaryName } },
+        topIntent,
+        topBlocker,
         lang
       });
       evidenceList.innerHTML = evidenceItems.length
@@ -1400,7 +1526,7 @@ async function showResult(opts){
 
     const actionList = document.getElementById('actionList');
     if (actionList){
-      const actions = buildActionItems(primaryDeity || {}, lang);
+      const actions = buildActionItems(primaryDeity || {}, lang, { topIntent, topBlocker });
       actionList.innerHTML = actions.map(item => `
         <div class="action-item">
           <h4>${item.title}</h4>
