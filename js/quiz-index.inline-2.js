@@ -283,6 +283,11 @@ const I18N = {
   zh: {
     'result-kicker': '測驗結果',
     'result-affinity-title': '緣分值',
+    'result-influence-title': '影響來源說明',
+    'result-influence-line-1': '本次結果主要依據你當下的行動選擇與核心意圖。',
+    'result-influence-line-2': '出生能量僅作為背景參考。',
+    'result-influence-line-3': '系統綜合以上因素，找出此刻最適合你的守護神。',
+    'result-influence-summary': '系統判斷摘要',
     'result-secondary-title': '副守護神',
     'result-stories-title': '真實故事',
     'result-actions-title': '接下來怎麼做',
@@ -290,6 +295,7 @@ const I18N = {
     'result-why-title': '為什麼是祂',
     'result-evidence-title': '你這次最關鍵的線索',
     'result-card-title': '你的守護卡',
+    'result-card-note': '這張卡可作為你近期的提醒與行動指引',
     'result-card-download': '下載卡片',
     'result-card-copy': '複製分享文案',
     'result-card-copied': '已複製',
@@ -323,12 +329,12 @@ const I18N = {
     'micro-action-6': '今天只做一個能推進「{intent}」的小決定。',
     'action-week-fallback': '本週選一個簡單的供花或清水致意，保持節奏即可。',
     'action-wear-fallback': '在需要穩定時配戴守護神聖物。',
-    'cta-shop': '看你的專屬配戴精選',
-    'cta-temple': '去拜更有感的寺廟建議',
-    'cta-deity': '看完整神祇介紹',
-    'quiz-cta-shop-primary': '看你的專屬配戴精選',
-    'quiz-cta-temple': '去拜更有感的寺廟建議',
-    'quiz-cta-deity': '看完整神祇介紹',
+    'cta-shop': '查看你的配戴建議',
+    'cta-temple': '前往寺廟地圖',
+    'cta-deity': '查看完整神祇介紹',
+    'quiz-cta-shop-primary': '查看你的配戴建議',
+    'quiz-cta-temple': '前往寺廟地圖',
+    'quiz-cta-deity': '查看完整神祇介紹',
     'cta-retake': '重新測驗一次',
     'cta-coupon': '點我領取專屬優惠',
     'cta-copy-coupon': '複製優惠碼',
@@ -363,6 +369,11 @@ const I18N = {
   en: {
     'result-kicker': 'Result',
     'result-affinity-title': 'Affinity',
+    'result-influence-title': 'How we decided',
+    'result-influence-line-1': 'This result is mainly based on your current choices and core intent.',
+    'result-influence-line-2': 'Birth energy is used only as background context.',
+    'result-influence-line-3': 'We combine these signals to match the deity that fits you now.',
+    'result-influence-summary': 'System summary',
     'result-secondary-title': 'Secondary Deity',
     'result-stories-title': 'True Stories',
     'result-actions-title': 'What to do next',
@@ -370,6 +381,7 @@ const I18N = {
     'result-why-title': 'Why this deity',
     'result-evidence-title': 'Key signals',
     'result-card-title': 'Your protection card',
+    'result-card-note': 'This card serves as a short-term reminder and guide.',
     'result-card-download': 'Download',
     'result-card-copy': 'Copy text',
     'result-card-copied': 'Copied',
@@ -403,12 +415,12 @@ const I18N = {
     'micro-action-6': 'Today, make one small decision that advances “{intent}”.',
     'action-week-fallback': 'This week, offer flowers or water as a simple greeting and keep your rhythm.',
     'action-wear-fallback': 'Wear your deity item when you need steady focus.',
-    'cta-shop': 'See your curated picks',
-    'cta-temple': 'Visit a matching temple',
-    'cta-deity': 'Full deity profile',
-    'quiz-cta-shop-primary': 'See your curated picks',
-    'quiz-cta-temple': 'Visit a matching temple',
-    'quiz-cta-deity': 'Full deity profile',
+    'cta-shop': 'View your wear guidance',
+    'cta-temple': 'Go to temple map',
+    'cta-deity': 'View full deity profile',
+    'quiz-cta-shop-primary': 'View your wear guidance',
+    'quiz-cta-temple': 'Go to temple map',
+    'quiz-cta-deity': 'View full deity profile',
     'cta-retake': 'Retake the quiz',
     'cta-coupon': 'Get your personal offer',
     'cta-copy-coupon': 'Copy coupon',
@@ -560,6 +572,44 @@ function getPersonalHook(opts){
     k2: pair[1] || pair[0]
   };
   return formatTemplate(chosen, ctx);
+}
+
+function getCardRoleLabel(opts){
+  const lang = (opts && opts.lang) || 'zh';
+  const primary = (opts && opts.primaryDeity) || {};
+  const code = String(primary.code || primary.id || '').toUpperCase();
+  const seed = stableHash(encodeState(state) + ':card-role:' + code + ':' + lang);
+  const pool = lang === 'en'
+    ? ['Action guardian', 'Stability anchor', 'Clarity guide', 'Momentum keeper', 'Balance guardian', 'Focus companion']
+    : ['行動型守護', '穩場型指引', '清晰型導航', '節奏型守護', '平衡型守護', '專注型引導'];
+  return pool[seed % pool.length] || pool[0] || '';
+}
+
+function getCardSummary(opts){
+  const lang = (opts && opts.lang) || 'zh';
+  const primary = (opts && opts.primaryDeity) || {};
+  const code = String(primary.code || primary.id || '').toUpperCase();
+  const name = deityName(code, lang);
+  const keywords = getDeityKeywords(code, primary, lang);
+  const seed = stableHash(encodeState(state) + ':card-summary:' + code + ':' + lang);
+  const pair = pickKeywordPair(keywords, lang, seed);
+  const intent = (opts && opts.topIntent) || (lang === 'en' ? 'your focus' : '你的目標');
+  const blocker = (opts && opts.topBlocker) || (lang === 'en' ? 'current friction' : '眼前的卡點');
+  const templates = lang === 'en'
+    ? [
+      'You are in a “{intent}” phase, and {k1} plus {k2} help steady your next steps.',
+      'Right now, “{blocker}” feels loud. {k1} and {k2} bring you back to a clearer lane.',
+      'You’re seeking direction around “{intent}”. {k1} and {k2} keep you focused.',
+      '{deity} fits this moment because you need more {k1} and {k2} as you move forward.'
+    ]
+    : [
+      '你正處在「{intent}」的階段，需要用「{k1}」與「{k2}」把步伐穩住。',
+      '此刻「{blocker}」很明顯，{k1} 與 {k2} 能幫你回到清晰。',
+      '你正在為「{intent}」找方向，{k1} 與 {k2} 讓你更聚焦。',
+      '{deity} 對應此刻，是因為你需要更多「{k1}」與「{k2}」往前走。'
+    ];
+  const chosen = templates[seed % templates.length] || templates[0] || '';
+  return formatTemplate(chosen, { intent, blocker, k1: pair[0], k2: pair[1] || pair[0], deity: name });
 }
 
 function scoreForQuestion(code, num, pick){
@@ -733,11 +783,15 @@ function wrapTextLines(ctx, text, maxWidth, lang, maxLines){
 
 function renderGuardianCardPreview(data){
   const titleEl = document.getElementById('guardianCardTitle');
-  const hookEl = document.getElementById('guardianCardHook');
+  const roleEl = document.getElementById('guardianCardRole');
+  const summaryEl = document.getElementById('guardianCardSummary');
+  const noteEl = document.getElementById('guardianCardNote');
   const dateEl = document.getElementById('guardianCardDate');
   const tagWrap = document.getElementById('guardianCardKeywords');
   if (titleEl) titleEl.textContent = data.name || '—';
-  if (hookEl) hookEl.textContent = data.hook || '';
+  if (roleEl) roleEl.textContent = data.role || '';
+  if (summaryEl) summaryEl.textContent = data.summary || '';
+  if (noteEl) noteEl.textContent = data.note || '';
   if (dateEl) dateEl.textContent = data.date || '';
   if (tagWrap){
     tagWrap.innerHTML = (data.keywords || []).map(k => `<span class="tag">${k}</span>`).join('');
@@ -790,33 +844,56 @@ function drawGuardianCardToCanvas(data){
   ctx.font = '700 32px ui-sans-serif, system-ui, -apple-system';
   ctx.fillText(data.name || '—', pad, pad + 36);
 
-  const tagY = pad + 84;
+  let cursorY = pad + 78;
+  if (data.role){
+    ctx.font = '600 12px ui-sans-serif, system-ui, -apple-system';
+    const roleText = String(data.role || '');
+    const roleW = ctx.measureText(roleText).width + 20;
+    const roleH = 24;
+    roundRect(pad, cursorY, roleW, roleH, 12);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(179,156,120,0.35)';
+    ctx.stroke();
+    ctx.fillStyle = '#7a6040';
+    ctx.fillText(roleText, pad + 10, cursorY + 5);
+    cursorY += roleH + 14;
+  }
+
+  ctx.fillStyle = '#4b5563';
+  ctx.font = '16px ui-sans-serif, system-ui, -apple-system';
+  const summaryLines = wrapTextLines(ctx, data.summary || '', width - pad*2, data.lang, 3);
+  summaryLines.forEach((line, i) => {
+    ctx.fillText(line, pad, cursorY + i * 26);
+  });
+  cursorY += summaryLines.length * 26 + 12;
+
   let x = pad;
   ctx.font = '600 14px ui-sans-serif, system-ui, -apple-system';
   (data.keywords || []).forEach(function(tag){
     const text = String(tag || '');
     const w = ctx.measureText(text).width + 20;
     const h = 28;
-    roundRect(x, tagY, w, h, 14);
+    if (x + w > width - pad){
+      x = pad;
+      cursorY += h + 10;
+    }
+    roundRect(x, cursorY, w, h, 14);
     ctx.fillStyle = '#fff';
     ctx.fill();
     ctx.strokeStyle = 'rgba(179,156,120,0.35)';
     ctx.stroke();
     ctx.fillStyle = '#7a6040';
-    ctx.fillText(text, x + 10, tagY + 6);
+    ctx.fillText(text, x + 10, cursorY + 6);
     x += w + 10;
   });
 
-  ctx.fillStyle = '#4b5563';
-  ctx.font = '16px ui-sans-serif, system-ui, -apple-system';
-  const lines = wrapTextLines(ctx, data.hook || '', width - pad*2, data.lang, 4);
-  lines.forEach((line, i) => {
-    ctx.fillText(line, pad, tagY + 48 + i * 26);
+  ctx.fillStyle = '#8a7b65';
+  ctx.font = '12px ui-sans-serif, system-ui, -apple-system';
+  const noteLines = wrapTextLines(ctx, data.note || '', width - pad*2, data.lang, 2);
+  noteLines.forEach((line, i) => {
+    ctx.fillText(line, pad, height - pad - 18 + i * 16);
   });
-
-  ctx.fillStyle = '#b08a5a';
-  ctx.font = '600 12px ui-sans-serif, system-ui, -apple-system';
-  ctx.fillText('unalomecodes', pad, height - pad);
 
   return canvas;
 }
@@ -881,9 +958,15 @@ function copyGuardianCardShare(){
   const text = buildShareText(lastGuardianCard);
   copyTextToClipboard(text).then(function(){
     if (guardianCardCopyBtn){
-      const old = guardianCardCopyBtn.textContent;
-      guardianCardCopyBtn.textContent = t('result-card-copied', lastGuardianCard.lang);
-      setTimeout(()=> { guardianCardCopyBtn.textContent = old; }, 1200);
+      const labelEl = guardianCardCopyBtn.querySelector('[data-i18n="result-card-copy"]');
+      const old = labelEl ? labelEl.textContent : guardianCardCopyBtn.textContent;
+      if (labelEl){
+        labelEl.textContent = t('result-card-copied', lastGuardianCard.lang);
+        setTimeout(()=> { labelEl.textContent = old; }, 1200);
+      }else{
+        guardianCardCopyBtn.textContent = t('result-card-copied', lastGuardianCard.lang);
+        setTimeout(()=> { guardianCardCopyBtn.textContent = old; }, 1200);
+      }
     }
   }).catch(function(){});
   fireTrack('quiz_share_copy', { primary: lastGuardianCard.code, intent: lastGuardianCard.intent });
@@ -1536,12 +1619,23 @@ async function showResult(opts){
     }
 
     const keywords = pickPrimaryKeywords(primaryDeity || { code: primaryId }, lang);
+    const cardRole = getCardRoleLabel({ lang, primaryDeity: primaryDeity || { code: primaryId } });
+    const cardSummary = getCardSummary({
+      lang,
+      primaryDeity: primaryDeity || { code: primaryId },
+      topIntent,
+      topBlocker
+    });
+    const cardNote = t('result-card-note', lang);
     const shareUrl = `${location.origin}/quiz/?code=${encodeURIComponent(primaryId)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
     const cardData = {
       code: primaryId,
       name: primaryName,
       keywords,
       hook: personalHook,
+      role: cardRole,
+      summary: cardSummary,
+      note: cardNote,
       date: formatFriendlyDate(lang),
       brand: 'unalomecodes',
       lang,

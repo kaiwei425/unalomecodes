@@ -96,6 +96,9 @@
       <div class="result-head">
         <div class="kicker" data-i18n="result-kicker">測驗結果</div>
         <h2 id="resultTitle">你的守護神</h2>
+        <div class="result-head-actions">
+          <button id="retakeBtn" class="btn btn-ghost btn-text" type="button" data-i18n="cta-retake">重新測驗一次</button>
+        </div>
       </div>
 
       <div class="result-main">
@@ -111,13 +114,24 @@
           </div>
         </div>
         <div class="result-aside">
-          <div class="card affinity-card">
-            <div class="affinity-head">
-              <div class="step" data-i18n="result-affinity-title">緣分值</div>
-              <div class="affinity-value" id="affText">—</div>
+          <div class="card influence-card">
+            <div class="section-head">
+              <h3 data-i18n="result-influence-title">影響來源說明</h3>
             </div>
-            <div class="bar"><div id="affBar" class="fill"></div></div>
-            <div class="affinity-breakdown" id="affBreakdown"></div>
+            <div class="influence-body">
+              <p data-i18n="result-influence-line-1">本次結果主要依據你當下的行動選擇與核心意圖。</p>
+              <p data-i18n="result-influence-line-2">出生能量僅作為背景參考。</p>
+              <p data-i18n="result-influence-line-3">系統綜合以上因素，找出此刻最適合你的守護神。</p>
+            </div>
+            <details class="influence-details">
+              <summary data-i18n="result-influence-summary">系統判斷摘要</summary>
+              <div class="affinity-meta">
+                <span class="step" data-i18n="result-affinity-title">緣分值</span>
+                <span class="affinity-value" id="affText">—</span>
+              </div>
+              <div class="bar"><div id="affBar" class="fill"></div></div>
+              <div class="affinity-breakdown" id="affBreakdown"></div>
+            </details>
           </div>
           <div class="card secondary-card">
             <h3 data-i18n="result-secondary-title">副守護神</h3>
@@ -149,13 +163,11 @@
           <div class="guardian-card-preview" id="guardianCardPreview">
             <div class="guardian-card-brand">unalomecodes</div>
             <div class="guardian-card-title" id="guardianCardTitle">—</div>
+            <div class="guardian-card-role" id="guardianCardRole">—</div>
+            <div class="guardian-card-summary" id="guardianCardSummary">—</div>
             <div class="guardian-card-tags" id="guardianCardKeywords"></div>
-            <div class="guardian-card-hook" id="guardianCardHook"></div>
+            <div class="guardian-card-note" id="guardianCardNote" data-i18n="result-card-note">這張卡可作為你近期的提醒與行動指引</div>
             <div class="guardian-card-date" id="guardianCardDate">—</div>
-          </div>
-          <div class="guardian-card-actions">
-            <button id="guardianCardDownloadBtn" class="btn btn-primary" type="button" data-i18n="result-card-download">下載卡片</button>
-            <button id="guardianCardCopyBtn" class="btn btn-ghost" type="button" data-i18n="result-card-copy">複製分享文案</button>
           </div>
         </div>
       </div>
@@ -185,14 +197,21 @@
       <div class="card user-stories-card" id="userStoriesWrap"></div>
 
       <div class="cta-primary cta-main">
-        <a id="ctaShopPrimaryBtn" class="btn btn-primary" href="/shop" data-i18n="quiz-cta-shop-primary">看你的專屬配戴精選</a>
-      </div>
-      <div class="cta-primary">
-        <a id="ctaTempleBtn" class="btn btn-ghost" href="/templemap" data-i18n="quiz-cta-temple">去拜更有感的寺廟建議</a>
-        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost" data-i18n="quiz-cta-deity">看完整神祇介紹</a>
+        <a id="ctaShopPrimaryBtn" class="btn btn-primary btn-cta-main" href="/shop" data-i18n="quiz-cta-shop-primary">查看你的配戴建議</a>
       </div>
       <div class="cta-secondary">
-        <button id="retakeBtn" class="btn btn-ghost" type="button" data-i18n="cta-retake">重新測驗一次</button>
+        <a id="ctaTempleBtn" class="btn btn-ghost btn-cta-secondary" href="/templemap" data-i18n="quiz-cta-temple">前往寺廟地圖</a>
+        <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost btn-cta-secondary" data-i18n="quiz-cta-deity">查看完整神祇介紹</a>
+      </div>
+      <div class="cta-aux">
+        <button id="guardianCardDownloadBtn" class="btn btn-ghost btn-aux" type="button">
+          <span class="btn-icon" aria-hidden="true">⬇</span>
+          <span data-i18n="result-card-download">下載卡片</span>
+        </button>
+        <button id="guardianCardCopyBtn" class="btn btn-ghost btn-aux" type="button">
+          <span class="btn-icon" aria-hidden="true">⧉</span>
+          <span data-i18n="result-card-copy">複製分享文案</span>
+        </button>
       </div>
     </section>
 

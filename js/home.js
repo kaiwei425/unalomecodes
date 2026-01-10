@@ -6,6 +6,8 @@
   var navDrawer = document.getElementById('navDrawer');
   var navCtas = Array.from(document.querySelectorAll('[data-nav-cta]'));
   var langToggle = document.getElementById('langToggle');
+  var heroQuizCta = document.querySelector('[data-hero-quiz-cta]');
+  var heroTempleCta = document.querySelector('[data-hero-temple-cta]');
 
   var LANG_KEY = 'uc_lang';
   var I18N = {
@@ -25,6 +27,9 @@
       'home-hero-kicker': '入口首頁',
       'home-hero-title': '最懂玩泰國的入口',
       'home-hero-subtitle': '懂拜拜、懂美食、懂在地，把泰國整理成你用得上的資訊。',
+      'home-hero-cta-primary': '1 分鐘找到你的守護神',
+      'home-hero-cta-secondary': '探索寺廟地圖',
+      'home-hero-cta-note': '完成後會得到命中指引、行動建議與可下載的守護卡',
       'about-brand': 'unalomecodes | 懂玩泰國',
       'about-nav-temple': '寺廟地圖',
       'about-nav-food': '美食地圖',
@@ -39,6 +44,11 @@
       'about-trust-3-desc': '所有內容與服務資訊均有來源與背景標示，讓每一個選擇建立在理解之上，而不是疑問與不確定。',
       'home-section-title': '入口導覽',
       'home-section-note': '跟我一起探索泰國',
+      'home-entry-quiz-title': '神祇測驗',
+      'home-entry-quiz-desc': '用狀態與生日線索，快速匹配此刻最適合你的守護神',
+      'home-entry-quiz-tag-1': '個人化',
+      'home-entry-quiz-tag-2': '行動建議',
+      'home-entry-quiz-tag-3': '守護卡',
       'home-entry-temple-title': '開運寺廟地圖',
       'home-entry-temple-desc': '精選泰國必拜寺廟，直接找出與您心靈共鳴的地方',
       'home-entry-temple-tag-1': '祈福',
@@ -80,6 +90,9 @@
       'home-hero-kicker': 'Home',
       'home-hero-title': 'Your Gateway to Thailand',
       'home-hero-subtitle': 'Temples, food, and local culture—organized into what you need.',
+      'home-hero-cta-primary': 'Find your deity in 1 minute',
+      'home-hero-cta-secondary': 'Explore the temple map',
+      'home-hero-cta-note': 'You’ll get insights, next-step actions, and a downloadable protection card.',
       'about-brand': 'unalomecodes | Thailand Portal',
       'about-nav-temple': 'Temple Map',
       'about-nav-food': 'Food Map',
@@ -94,6 +107,11 @@
       'about-trust-3-desc': 'All content and service information includes sources and context, so every choice is grounded in understanding rather than uncertainty.',
       'home-section-title': 'Portal Guide',
       'home-section-note': 'Explore Thailand with me',
+      'home-entry-quiz-title': 'Deity Quiz',
+      'home-entry-quiz-desc': 'A quick match based on your current state and birth cues.',
+      'home-entry-quiz-tag-1': 'Personalized',
+      'home-entry-quiz-tag-2': 'Next steps',
+      'home-entry-quiz-tag-3': 'Shareable card',
       'home-entry-temple-title': 'Temple Map',
       'home-entry-temple-desc': 'Curated must-visit temples so you can find places that resonate with you.',
       'home-entry-temple-tag-1': 'Blessing',
@@ -222,6 +240,19 @@
   }
 
   applyLang(resolveLang());
+
+  if (typeof window.track === 'function'){
+    if (heroQuizCta){
+      heroQuizCta.addEventListener('click', function(){
+        window.track('home_quiz_cta_click');
+      });
+    }
+    if (heroTempleCta){
+      heroTempleCta.addEventListener('click', function(){
+        window.track('home_temple_cta_click');
+      });
+    }
+  }
 
   if (window.trackEvent){
     window.trackEvent('home_view', { pageType: 'home' });
