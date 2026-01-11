@@ -389,16 +389,20 @@
       var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
       var date = escapeHtml(formatStoryDate(item.ts));
       var productInfo = item.productName ? '<div class="testimonial-item__hint">' + escapeHtml((document.documentElement.lang === 'en' ? 'Product' : '商品') + '：' + item.productName) + '</div>' : '';
+      var image = item.imageUrl ? '<div class="testimonial-item__media"><img src="' + escapeHtml(item.imageUrl) + '" alt=""></div>' : '';
       return (
         '<article class="testimonial-item">' +
-          '<p class="testimonial-item__quote">' + quote + '</p>' +
-          '<div class="testimonial-item__meta">' +
-            '<strong>' + nick + '</strong>' +
-            '<span>' + date + '</span>' +
-          '</div>' +
-          productInfo +
-          '<div class="testimonial-item__row">' +
-            '<span class="testimonial-item__tag">' + escapeHtml(label) + '</span>' +
+          image +
+          '<div class="testimonial-item__text">' +
+            '<p class="testimonial-item__quote">' + quote + '</p>' +
+            '<div class="testimonial-item__meta">' +
+              '<strong>' + nick + '</strong>' +
+              '<span>' + date + '</span>' +
+            '</div>' +
+            productInfo +
+            '<div class="testimonial-item__row">' +
+              '<span class="testimonial-item__tag">' + escapeHtml(label) + '</span>' +
+            '</div>' +
           '</div>' +
         '</article>'
       );
