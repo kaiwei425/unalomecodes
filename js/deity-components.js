@@ -540,19 +540,21 @@
         ${(function(){
           const flow = buildReturnFlow({ deity, intent: intentParam, lang });
           if (!flow && !showMemoryHint) return '';
-          let html = '<div class="deity-return-cta"><div class="deity-return-flow">';
+          let html = '<div class="deity-return-cta">';
           if (showMemoryHint){
             html += `<div class="deity-memory-hint">${escapeHtml(memoryHintText)}</div>`;
           }
           if (!flow){
-            html += '</div></div>';
+            html += '</div>';
             return html;
           }
-          html += `<div class="return-flow-title">${escapeHtml(flow.title)}</div><div class="return-flow-body">${escapeHtml(flow.body)}</div><div class="return-flow-actions">`;
-          flow.actions.forEach(action => {
-            html += `<a class="return-flow-link" href="${escapeHtml(action.url)}">${escapeHtml(action.label)}</a>`;
-          });
-          html += '</div></div></div>';
+          const text = `${flow.title} ${flow.body}`.trim();
+          html += `<div class="deity-current-state-block"><p class="deity-current-state-text">${escapeHtml(text)}</p>`;
+          if (flow.actions && flow.actions[0]){
+            const ctaLabel = lang === 'en' ? 'Retake to see other guardians' : '重新測驗目前狀態看看其他守護神';
+            html += `<a class="deity-current-state-cta" href="${escapeHtml(flow.actions[0].url)}">${escapeHtml(ctaLabel)}</a>`;
+          }
+          html += '</div></div>';
           return html;
         })()}
       </div>

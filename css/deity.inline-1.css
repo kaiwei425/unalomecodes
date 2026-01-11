@@ -52,6 +52,10 @@
   .deity-return-flow{margin-top:0;padding-top:0;border-top:0;color:#666;}
   .deity-return-cta{margin-top:18px;font-size:13px;}
   .deity-return-cta a{text-decoration:underline;color:#6b7280;}
+  .deity-current-state-block{margin:16px 0 20px;padding-top:12px;border-top:1px dashed rgba(0,0,0,0.08);}
+  .deity-current-state-text{font-size:12px;line-height:1.7;color:rgba(0,0,0,0.45);margin-bottom:8px;}
+  .deity-current-state-cta{font-size:12px;color:#5a6cff;text-decoration:none;}
+  .deity-current-state-cta:hover{text-decoration:underline;}
   .return-flow-title{font-size:13px;font-weight:500;margin-bottom:4px;}
   .return-flow-body{font-size:13px;line-height:1.6;margin-bottom:8px;}
   .return-flow-actions{display:flex;gap:12px;flex-wrap:wrap;}
