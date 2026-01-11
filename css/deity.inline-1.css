@@ -52,3 +52,4 @@
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#051028;border:1px solid rgba(96,165,250,.35);color:#e5e7eb;border-radius:999px;padding:10px 14px;font-size:14px;display:none}
   #shotBox{display:flex;justify-content:center;margin-top:12px;padding:8px}
   #shotBox img{max-width:100%;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:#0b1022}
+  /* C1 placeholder styles */

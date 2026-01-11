@@ -35,6 +35,12 @@
     };
   }
 
+  // C1: placeholder for future deity-specific logic
+  function handleC1Feature(deity, lang){
+    // C1: intentionally no-op for later extension
+    return null;
+  }
+
   function formatTemplate(tpl, ctx){
     if (!tpl) return '';
     return tpl.replace(/\{(\w+)\}/g, function(_, key){
@@ -103,6 +109,7 @@
       : `<div class="deity-placeholder">${escapeHtml(name)}</div>`;
 
     const stateData = buildStateDescriptor(deity, lang);
+    const c1Data = handleC1Feature(deity, lang); // C1: placeholder hook
     return `
       <div class="card deity-profile" data-deity-code="${escapeHtml(deity.code)}">
         <div class="imgbox">${imgHtml}</div>
