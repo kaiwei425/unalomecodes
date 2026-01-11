@@ -387,8 +387,9 @@
     if (!el) return;
     el.textContent = text || '';
   }
-  function renderStoryCards(items, locale){
+  function renderStoryCards(items, locale, tagLabel){
     var hasSanitizer = typeof sanitizeImageUrl === 'function';
+    var defaultTag = locale === 'en' ? 'Customer feedback' : '真實分享';
     return items.map(function(item){
       var quote = escapeHtml(item.msg || '');
       var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
@@ -412,6 +413,7 @@
       var rawImage = item.imageUrl || item.image;
       var safeImage = hasSanitizer ? sanitizeImageUrl(rawImage) : (rawImage || '');
       var image = safeImage ? '<div class="testimonial-item__media"><img src="' + escapeHtml(safeImage) + '" alt="" loading="lazy" decoding="async" fetchpriority="low"></div>' : '';
+      var tagText = tagLabel || defaultTag;
       return (
         '<article class="testimonial-item">' +
           image +
@@ -423,7 +425,7 @@
             '</div>' +
             productInfo +
             '<div class="testimonial-item__row">' +
-              '<span class="testimonial-item__tag">' + escapeHtml(label) + '</span>' +
+              '<span class="testimonial-item__tag">' + escapeHtml(tagText) + '</span>' +
             '</div>' +
           '</div>' +
         '</article>'
@@ -463,20 +465,23 @@
     try{
       var aggregated = [];
       var STORY_CARD_LIMIT = 24;
-      for (var i = 0; i < codes.length; i++){
-        var code = codes[i];
-        if (!code) continue;
-        var fetched = await fetchStoryItems(code);
-        if (fetched.length){
-          aggregated = aggregated.concat(fetched.map(function(item){
-            var base = Object.assign({}, item, { sourceCode: code });
-            if (!base.productName && codeMeta && codeMeta[code]){
-              base.productName = codeMeta[code];
-            }
-            return base;
-          }));
-        }
-      }
+      var fetchPromises = codes.map(async function(code){
+        if (!code) return [];
+        var fetched = [];
+        try{ fetched = await fetchStoryItems(code); }catch(_){}
+        if (!fetched.length) return [];
+        return fetched.map(function(item){
+          var base = Object.assign({}, item, { sourceCode: code });
+          if (!base.productName && codeMeta && codeMeta[code]){
+            base.productName = codeMeta[code];
+          }
+          return base;
+        });
+      });
+      var fetchedSets = await Promise.all(fetchPromises);
+      fetchedSets.forEach(function(batch){
+        aggregated = aggregated.concat(batch);
+      });
       if (!aggregated.length){
         setPanelStatus(status, locale === 'en' ? 'No testimonials yet' : '目前尚無留言');
         setPanelPlaceholder(body, locale === 'en' ? 'Be the first to share your feedback.' : '暫時還沒有分享，歡迎先留下一則好評。');
@@ -491,7 +496,10 @@
       setPanelStatus(status, locale === 'en'
         ? statusCount + overflowSuffix + ' verified stories'
         : statusCount + overflowSuffix + ' 則真實分享');
-      var storyLimit = 4;
+      var visibleBatchSize = 2;
+      var carouselIndex = 0;
+      var rotationTimer = null;
+      var rotationDelay = 8000;
       var expanded = false;
       var storyList = limited.slice();
       var showMoreBtn = panel.querySelector('[data-story-more]');
@@ -500,15 +508,40 @@
         ? { more: 'Show more stories', less: 'Hide stories' }
         : { more: '顯示更多留言', less: '收起留言' };
 
+      function getVisibleBatch(){
+        if (expanded || storyList.length <= visibleBatchSize){
+          return storyList;
+        }
+        var endIndex = carouselIndex + visibleBatchSize;
+        var batch = storyList.slice(carouselIndex, endIndex);
+        if (batch.length < visibleBatchSize){
+          batch = batch.concat(storyList.slice(0, visibleBatchSize - batch.length));
+        }
+        return batch;
+      }
+      function stopRotation(){
+        if (rotationTimer){
+          clearInterval(rotationTimer);
+          rotationTimer = null;
+        }
+      }
+      function startRotation(){
+        stopRotation();
+        if (expanded || storyList.length <= visibleBatchSize) return;
+        rotationTimer = setInterval(function(){
+          carouselIndex = (carouselIndex + visibleBatchSize) % storyList.length;
+          renderVisibleStories();
+        }, rotationDelay);
+      }
       function renderVisibleStories(){
         var isMobile = mql.matches;
-        var toRender = (isMobile && !expanded) ? storyList.slice(0, storyLimit) : storyList;
-        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(toRender, locale) + '</div>';
+        var toRender = expanded ? storyList : getVisibleBatch();
+        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(toRender, locale, label) + '</div>';
         if (showMoreBtn){
-          if (storyList.length <= storyLimit){
+          if (storyList.length <= visibleBatchSize){
             showMoreBtn.style.display = 'none';
           }else{
-            showMoreBtn.style.display = isMobile ? 'inline-flex' : 'none';
+            showMoreBtn.style.display = 'inline-flex';
             showMoreBtn.textContent = expanded ? showMoreCopy.less : showMoreCopy.more;
           }
         }
@@ -516,11 +549,18 @@
       if (showMoreBtn){
         showMoreBtn.addEventListener('click', function(){
           expanded = !expanded;
+          if (!expanded){
+            carouselIndex = 0;
+            startRotation();
+          }else{
+            stopRotation();
+          }
           renderVisibleStories();
         });
       }
       window.addEventListener('resize', renderVisibleStories);
       renderVisibleStories();
+      startRotation();
     }catch(err){
       setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
       setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
