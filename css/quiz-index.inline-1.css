@@ -244,6 +244,9 @@
     .guardian-name-link-wrap{padding:0 16px 4px;}
     .guardian-name-link{color:var(--text);font-weight:700;text-decoration:none;border-bottom:1px solid rgba(0,0,0,0.08);}
     .guardian-card-date{font-size:12px;color:#8a7b65;}
+    .save-state-hint{text-align:center;margin-top:8px;}
+    .save-state-btn{background:none;border:none;padding:4px 8px;font-size:12px;color:#6b7280;cursor:pointer;text-decoration:underline;}
+    .save-state-btn.saved{color:#9ca3af;cursor:default;text-decoration:none;}
     .disclaimer{margin-top:8px;font-size:12px;}
     .advice-card{padding:20px;background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);}
     .advice-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}

@@ -1480,6 +1480,47 @@ async function issueCoupon(deityCode, amount, quizPayload){
   return j.code;
 }
 
+const SAVE_STATE_KEY = '__uc_savedState__';
+
+function getSavedState(){
+  try{
+    const raw = localStorage.getItem(SAVE_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(_){
+    return null;
+  }
+}
+
+function saveCurrentState({ deity, intent, lang }){
+  if (!deity) return;
+  try{
+    localStorage.setItem(SAVE_STATE_KEY, JSON.stringify({
+      deity,
+      intent: intent || '',
+      lang: lang || '',
+      ts: Date.now()
+    }));
+  }catch(_){}
+}
+
+function updateSaveStateButton({ deity, intent, lang }){
+  const btn = document.getElementById('saveStateBtn');
+  if (!btn) return;
+  const saved = getSavedState();
+  const same = saved && saved.deity === deity && saved.intent === intent && saved.lang === lang;
+  const text = same
+    ? (lang === 'en' ? 'Saved' : '已保存')
+    : (lang === 'en' ? 'Save this state' : '保存目前狀態');
+  btn.textContent = text;
+  if (same){
+    btn.classList.add('saved');
+    btn.disabled = true;
+  } else {
+    btn.classList.remove('saved');
+    btn.disabled = false;
+  }
+}
+
 async function showResult(opts){
   const rerender = !!(opts && opts.rerender);
   // guard
@@ -2031,3 +2072,12 @@ Enter this code at checkout.`
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
   }
 })();
+    const saveStateBtn = document.getElementById('saveStateBtn');
+    if (saveStateBtn && !saveStateBtn._bound){
+      saveStateBtn._bound = true;
+      saveStateBtn.addEventListener('click', () => {
+        saveCurrentState({ deity: primaryId, intent: intentParam, lang: langParam });
+        updateSaveStateButton({ deity: primaryId, intent: intentParam, lang: langParam });
+      });
+    }
+    updateSaveStateButton({ deity: primaryId, intent: intentParam, lang: langParam });
