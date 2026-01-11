@@ -384,12 +384,15 @@
     el.textContent = text || '';
   }
   function renderStoryCards(items, label){
+    var hasSanitizer = typeof sanitizeImageUrl === 'function';
     return items.map(function(item){
       var quote = escapeHtml(item.msg || '');
       var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
       var date = escapeHtml(formatStoryDate(item.ts));
       var productInfo = item.productName ? '<div class="testimonial-item__hint">' + escapeHtml((document.documentElement.lang === 'en' ? 'Product' : '商品') + '：' + item.productName) + '</div>' : '';
-      var image = item.imageUrl ? '<div class="testimonial-item__media"><img src="' + escapeHtml(item.imageUrl) + '" alt=""></div>' : '';
+      var rawImage = item.imageUrl || item.image;
+      var safeImage = hasSanitizer ? sanitizeImageUrl(rawImage) : (rawImage || '');
+      var image = safeImage ? '<div class="testimonial-item__media"><img src="' + escapeHtml(safeImage) + '" alt=""></div>' : '';
       return (
         '<article class="testimonial-item">' +
           image +
@@ -434,9 +437,8 @@
     }
     try{
       var aggregated = [];
-      var maxItems = 4;
+      var maxItems = 6;
       for (var i = 0; i < codes.length; i++){
-        if (aggregated.length >= maxItems) break;
         var code = codes[i];
         if (!code) continue;
         var fetched = await fetchStoryItems(code);
