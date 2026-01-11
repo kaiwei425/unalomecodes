@@ -53,7 +53,7 @@
       'home-section-note': '跟我一起探索泰國',
       'home-testimonial-kicker': '信任足跡',
       'home-testimonial-title': '信任見證',
-      'home-testimonial-subtitle': '實體商品與祈福服務的即時回饋，讓你更信任下一步。',
+      'home-testimonial-subtitle': 'unalomecodes 服務即時回饋，讓你更信任下一步。',
       'home-testimonial-product-link': '瀏覽實體商品',
       'home-testimonial-service-link': '了解祈福服務',
       'home-testimonial-cta': '查看更多顧客心得',
@@ -129,7 +129,7 @@
       'home-section-note': 'Explore Thailand with me',
       'home-testimonial-kicker': 'Trust Signals',
       'home-testimonial-title': 'Trust Chronicles',
-      'home-testimonial-subtitle': 'Real feedback on goods and blessings so you can explore with confidence.',
+      'home-testimonial-subtitle': 'Real-time feedback on unalomecodes services so you can explore with confidence.',
       'home-testimonial-product-link': 'Browse physical products',
       'home-testimonial-service-link': 'Explore blessing services',
       'home-testimonial-cta': 'Read more stories',
@@ -460,7 +460,33 @@
       setPanelStatus(status, locale === 'en'
         ? limited.length + ' verified stories'
         : limited.length + ' 則真實分享');
-      body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(limited, label) + '</div>';
+      var storyLimit = 4;
+      var expanded = false;
+      var storyList = limited.slice();
+      var showMoreBtn = panel.querySelector('[data-story-more]');
+      var mql = window.matchMedia('(max-width:720px)');
+
+      function renderVisibleStories(){
+        var isMobile = mql.matches;
+        var toRender = (isMobile && !expanded) ? storyList.slice(0, storyLimit) : storyList;
+        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(toRender, label) + '</div>';
+        if (showMoreBtn){
+          if (storyList.length <= storyLimit){
+            showMoreBtn.style.display = 'none';
+          }else{
+            showMoreBtn.style.display = isMobile ? 'inline-flex' : 'none';
+            showMoreBtn.textContent = expanded ? '收起留言' : '顯示更多留言';
+          }
+        }
+      }
+      if (showMoreBtn){
+        showMoreBtn.addEventListener('click', function(){
+          expanded = !expanded;
+          renderVisibleStories();
+        });
+      }
+      window.addEventListener('resize', renderVisibleStories);
+      renderVisibleStories();
     }catch(err){
       setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
       setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
