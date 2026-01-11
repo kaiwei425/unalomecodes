@@ -283,6 +283,92 @@
       return '';
     }
   }
+  function normalizeStoryCode(raw){
+    try{
+      var val = String(raw || '').trim();
+      return val ? val.toUpperCase() : '';
+    }catch(_){
+      return '';
+    }
+  }
+  function toDeityCode(name){
+    const s = String(name||'').trim();
+    if (!s) return '';
+    const u = s.toUpperCase();
+    if (/^[A-Z]{2}$/.test(u)) return u;
+    if (/四面神|BRAHMA|PHRA\s*PHROM|PHROM|ERAWAN/.test(s)) return 'FM';
+    if (/象神|GANESHA|PHIKANET|PHIKANES|PIKANES/.test(s))   return 'GA';
+    if (/崇迪|SOMDEJ|SOMDET/.test(s))                      return 'CD';
+    if (/坤平|KHUN\s*PHAEN|KHUN\s*PAEN|K\.?P\.?/.test(s))  return 'KP';
+    if (/哈魯曼|H(AN|AR)UMAN/.test(s))                     return 'HM';
+    if (/拉胡|RAHU/.test(s))                                return 'RH';
+    if (/迦樓羅|GARUDA|K(AR|AL)UDA/.test(s))               return 'JL';
+    if (/澤度金|JATUKAM|R(AM|A)MATHEP|ZEDO(G|K)ON|ZEDUKIN/.test(s)) return 'ZD';
+    if (/招財女神|LAKSHMI|LAXSHMI|LAMSI/.test(s))          return 'ZF';
+    if (/五眼四耳|FIVE[\-\s]*EYES|5EYES|FIVEEYES/.test(s)) return 'WE';
+    if (/徐祝|XU\s*ZHU|XUZHU/.test(s))                     return 'XZ';
+    if (/魂魄勇|HUN\s*PO\s*YONG|HPY/.test(s))              return 'HP';
+    return '';
+  }
+  function kvOnlyCode(id){
+    try{
+      return String(id||'').trim().toUpperCase();
+    }catch(_){
+      return '';
+    }
+  }
+  function storyCodeFromProduct(p){
+    if (!p) return '';
+    if (p.deityCode){
+      return normalizeStoryCode(p.deityCode);
+    }
+    if (p.code){
+      var codeField = normalizeStoryCode(p.code);
+      if (codeField) return codeField;
+    }
+    if (p.reviewCode){
+      var reviewField = normalizeStoryCode(p.reviewCode);
+      if (reviewField) return reviewField;
+    }
+    var guess = toDeityCode(p.deity || p.name || '');
+    if (guess) return guess;
+    if (p.id) return kvOnlyCode(p.id);
+    return '';
+  }
+  function storyCodeFromService(s){
+    if (!s) return '';
+    if (s.reviewCode){
+      return normalizeStoryCode(s.reviewCode);
+    }
+    if (s.deityCode){
+      return normalizeStoryCode(s.deityCode);
+    }
+    var guess = toDeityCode(s.deity || s.name || '');
+    if (guess) return guess;
+    if (s.id) return kvOnlyCode(s.id);
+    return '';
+  }
+  async function collectStoryCodes(){
+    var endpoints = [
+      { url:'/api/products?active=true', extractor: storyCodeFromProduct },
+      { url:'/api/service/products?active=true', extractor: storyCodeFromService }
+    ];
+    var unique = new Set();
+    await Promise.all(endpoints.map(async function(entry){
+      try{
+        var res = await fetch(entry.url, { cache:'no-store' });
+        if (!res.ok) return;
+        var json = await res.json().catch(function(){ return null; });
+        if (!json) return;
+        var items = Array.isArray(json.items) ? json.items : [];
+        items.forEach(function(item){
+          var code = entry.extractor(item);
+          if (code) unique.add(code);
+        });
+      }catch(_){}
+    }));
+    return Array.from(unique);
+  }
   async function fetchStoryItems(code){
     if (!code) return [];
     var cacheBust = Date.now();
@@ -326,61 +412,53 @@
     var section = document.querySelector('[data-testimonial-section]');
     if (!section) return;
     var locale = document.documentElement.lang === 'en' ? 'en' : 'zh';
-    var codes = [];
-    if (section.dataset.storyCodes){
-      codes = section.dataset.storyCodes.split(',').map(function(code){ return code.trim(); }).filter(Boolean);
-    }
-    if (!codes.length){
-      if (section.dataset.storyCodePhysical) codes.push(section.dataset.storyCodePhysical.trim());
-      if (section.dataset.storyCodeService) codes.push(section.dataset.storyCodeService.trim());
-      codes = codes.filter(Boolean);
-    }
     var panel = section.querySelector('[data-story-panel]');
     if (!panel) return;
     var body = panel.querySelector('[data-story-body]');
     var status = panel.querySelector('[data-story-status]');
-    var label = panel.dataset.storyLabel || (locale === 'en' ? 'Customer feedback' : '真實分享');
     if (!body){
       return;
     }
-    var loadingText = locale === 'en' ? 'Loading verified feedback…' : '載入真實留言中…';
-    setPanelPlaceholder(body, loadingText);
+    var label = panel.dataset.storyLabel || (locale === 'en' ? 'Customer feedback' : '真實分享');
+    setPanelPlaceholder(body, locale === 'en' ? 'Loading verified feedback…' : '載入真實留言中…');
+    var manualCodes = (section.dataset.storyCodes || '').split(',').map(function(code){ return normalizeStoryCode(code); }).filter(Boolean);
+    var codes = manualCodes.length ? manualCodes : await collectStoryCodes();
     if (!codes.length){
       setPanelStatus(status, locale === 'en' ? 'No code configured' : '尚未設定留言代碼');
       setPanelPlaceholder(body, locale === 'en' ? '請在 data-story-codes 中添加 KV 代碼。' : '請在 data-story-codes 中填入 KV 代碼。');
       return;
     }
-    (async function(){
-      try{
-        var aggregated = [];
-        for (var i = 0; i < codes.length; i++){
-          var code = codes[i];
-          if (!code) continue;
-          var fetched = await fetchStoryItems(code);
-          if (fetched.length){
-            aggregated = aggregated.concat(fetched.map(function(item){
-              return Object.assign({}, item, { sourceCode: code });
-            }));
-          }
+    try{
+      var aggregated = [];
+      var maxItems = 4;
+      for (var i = 0; i < codes.length; i++){
+        if (aggregated.length >= maxItems) break;
+        var code = codes[i];
+        if (!code) continue;
+        var fetched = await fetchStoryItems(code);
+        if (fetched.length){
+          aggregated = aggregated.concat(fetched.map(function(item){
+            return Object.assign({}, item, { sourceCode: code });
+          }));
         }
-        if (!aggregated.length){
-          setPanelStatus(status, locale === 'en' ? 'No testimonials yet' : '目前尚無留言');
-          setPanelPlaceholder(body, locale === 'en' ? 'Be the first to share your feedback.' : '暫時還沒有分享，歡迎先留下一則好評。');
-          return;
-        }
-        aggregated.sort(function(a,b){
-          return (b.ts || 0) - (a.ts || 0);
-        });
-        var limited = aggregated.slice(0, 4);
-        setPanelStatus(status, locale === 'en'
-          ? limited.length + ' verified stories'
-          : limited.length + ' 則真實分享');
-        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(limited, label) + '</div>';
-      }catch(err){
-        setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
-        setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
       }
-    })();
+      if (!aggregated.length){
+        setPanelStatus(status, locale === 'en' ? 'No testimonials yet' : '目前尚無留言');
+        setPanelPlaceholder(body, locale === 'en' ? 'Be the first to share your feedback.' : '暫時還沒有分享，歡迎先留下一則好評。');
+        return;
+      }
+      aggregated.sort(function(a,b){
+        return (b.ts || 0) - (a.ts || 0);
+      });
+      var limited = aggregated.slice(0, maxItems);
+      setPanelStatus(status, locale === 'en'
+        ? limited.length + ' verified stories'
+        : limited.length + ' 則真實分享');
+      body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(limited, label) + '</div>';
+    }catch(err){
+      setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
+      setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
+    }
   }
 
   applyLang(resolveLang());
