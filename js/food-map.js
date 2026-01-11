@@ -2501,7 +2501,10 @@ async function checkAdmin(){
 
 function setLanguage(lang) {
   currentLang = lang;
-  if (btnLang) btnLang.textContent = t('langSwitch');
+  if (btnLang){
+    btnLang.textContent = 'ZH/EN';
+    btnLang.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : 'Switch to English');
+  }
   
   // Update static text
   document.querySelector('h1').textContent = t('title');
