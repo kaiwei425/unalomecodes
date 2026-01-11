@@ -638,6 +638,7 @@ body.nav-open .nav-drawer__panel{
 }
 .testimonial-panel__grid{
   display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:var(--space-3);
 }
 .testimonial-panel__more{
@@ -715,6 +716,7 @@ body.nav-open .nav-drawer__panel{
   border-radius:var(--r-16);
   border:1px solid rgba(0,0,0,0.06);
   box-shadow:var(--shadow-sm);
+  aspect-ratio:1/1;
 }
 .testimonial-item__text{
   flex:1 1 140px;
@@ -797,6 +799,9 @@ body.nav-open .nav-drawer__panel{
   .testimonial-item__media{
     width:100%;
     height:110px;
+  }
+  .testimonial-panel__grid{
+    grid-template-columns:1fr;
   }
 }
 

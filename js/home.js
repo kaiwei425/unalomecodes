@@ -354,6 +354,7 @@
       { url:'/api/service/products?active=true', extractor: storyCodeFromService }
     ];
     var unique = new Set();
+    var codeMeta = {};
     await Promise.all(endpoints.map(async function(entry){
       try{
         var res = await fetch(entry.url, { cache:'no-store' });
@@ -364,10 +365,14 @@
         items.forEach(function(item){
           var code = entry.extractor(item);
           if (code) unique.add(code);
+          if (code && !codeMeta[code]){
+            var label = item.productName || item.product || item.itemName || item.name || item.serviceName || item.title || '';
+            if (label) codeMeta[code] = label;
+          }
         });
       }catch(_){}
     }));
-    return Array.from(unique);
+    return { codes:Array.from(unique), metadata: codeMeta };
   }
   async function fetchStoryItems(code){
     if (!code) return [];
@@ -437,7 +442,13 @@
     var label = panel.dataset.storyLabel || (locale === 'en' ? 'Customer feedback' : '真實分享');
     setPanelPlaceholder(body, locale === 'en' ? 'Loading verified feedback…' : '載入真實留言中…');
     var manualCodes = (section.dataset.storyCodes || '').split(',').map(function(code){ return normalizeStoryCode(code); }).filter(Boolean);
-    var codes = manualCodes.length ? manualCodes : await collectStoryCodes();
+    var codeMeta = {};
+    var codes = manualCodes.length ? manualCodes : [];
+    if (!codes.length){
+      var collected = await collectStoryCodes();
+      codes = collected.codes;
+      codeMeta = collected.metadata;
+    }
     if (!codes.length){
       setPanelStatus(status, locale === 'en' ? 'No code configured' : '尚未設定留言代碼');
       setPanelPlaceholder(body, locale === 'en' ? '請在 data-story-codes 中添加 KV 代碼。' : '請在 data-story-codes 中填入 KV 代碼。');
@@ -452,7 +463,11 @@
         var fetched = await fetchStoryItems(code);
         if (fetched.length){
           aggregated = aggregated.concat(fetched.map(function(item){
-            return Object.assign({}, item, { sourceCode: code });
+            var base = Object.assign({}, item, { sourceCode: code });
+            if (!base.productName && codeMeta && codeMeta[code]){
+              base.productName = codeMeta[code];
+            }
+            return base;
           }));
         }
       }
