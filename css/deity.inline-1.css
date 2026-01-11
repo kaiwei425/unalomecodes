@@ -27,11 +27,20 @@
   .meta{padding:16px 16px 8px}
   .deity{font-size:22px;font-weight:800;letter-spacing:.02em}
   .deity-state{padding:0 16px 12px;color:#94a3b8;font-size:13px;line-height:1.6;}
+  .deity-quiz-context{padding:0 16px 4px;color:#94a3b8;font-size:12px;line-height:1.6;margin-top:4px;margin-bottom:6px;}
   .deity-c1-summary{padding:0 16px 8px;color:#94a3b8;font-size:12px;line-height:1.4;}
   .deity-c1-tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
   .deity-c1-tag{font-size:11px;line-height:1;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,0.05);color:#777;white-space:nowrap;}
   .deity-intent-hint{font-size:12px;color:#aaa;margin:4px 0 8px;}
-  .deity-memory-hint{font-size:12px;color:#999;margin:6px 0 6px;}
+  .deity-memory-hint{font-size:12px;color:#888;line-height:1.6;margin:6px 0 8px;opacity:.9;}
+  .deity-saved-compare{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.05);font-size:12px;line-height:1.6;color:#888;}
+  .deity-saved-compare .compare-title{margin-bottom:4px;opacity:.9;}
+  .deity-saved-compare .compare-row{display:flex;gap:6px;}
+  .deity-saved-compare .label{opacity:.7;}
+  .deity-saved-compare .value{opacity:.95;}
+  .deity-saved-direction{font-size:12px;line-height:1.6;color:#888;margin-top:6px;}
+  .deity-state-narrative{font-size:13px;line-height:1.7;color:#7a7a7a;margin-top:8px;margin-bottom:8px;}
+  .deity-quiet-closure{font-size:12px;line-height:1.6;color:#7a7a7a;opacity:.9;margin:8px 0 0;}
   .deity-next-step{margin-top:16px;padding:12px;border-radius:8px;background:#f6f6f6;}
   .next-step-title{font-size:13px;font-weight:500;margin-bottom:4px;}
   .next-step-body{font-size:13px;line-height:1.6;color:#555;}

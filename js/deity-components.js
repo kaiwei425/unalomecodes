@@ -63,6 +63,128 @@
     });
   }
 
+  function getSavedState(){
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    try{
+      const raw = window.localStorage.getItem('__uc_savedState__');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.deity) return null;
+      return parsed;
+    }catch(_){
+      return null;
+    }
+  }
+
+  function buildSavedStateHint({ currentDeity, lang }){
+    const saved = getSavedState();
+    if (!saved) return '';
+    if (String(saved.deity || '').trim().toUpperCase() === String(currentDeity || '').trim().toUpperCase()){
+      return '';
+    }
+    const textByLang = {
+      zh: '你曾保存過另一個狀態，對應不同的守護神',
+      en: 'You previously saved a different state linked to another guardian'
+    };
+    const div = document.createElement('div');
+    div.className = 'deity-memory-hint';
+    div.textContent = textByLang[lang] || textByLang.en;
+    return div.outerHTML;
+  }
+
+  function buildSavedStateCompare({ currentDeity, lang }){
+    try{
+      if (typeof window === 'undefined' || !window.localStorage) return '';
+      const raw = window.localStorage.getItem('__uc_savedState__');
+      if (!raw) return '';
+      const saved = JSON.parse(raw);
+      if (!saved || !saved.deity) return '';
+      const savedCode = String(saved.deity || '').trim().toUpperCase();
+      const currentCode = String(currentDeity || '').trim().toUpperCase();
+      if (!savedCode || savedCode === currentCode) return '';
+      const isEn = lang === 'en';
+      const title = isEn ? 'You previously saved a different state' : '你曾保存過另一個狀態';
+      const labelSaved = isEn ? 'Saved' : '之前';
+      const labelNow = isEn ? 'Now' : '現在';
+      const esc = s => String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `
+        <div class="deity-saved-compare">
+          <div class="compare-title">${title}</div>
+          <div class="compare-row">
+            <span class="label">${labelSaved}</span>
+            <span class="value">${esc(savedCode)}</span>
+          </div>
+          <div class="compare-row">
+            <span class="label">${labelNow}</span>
+            <span class="value">${esc(currentCode)}</span>
+          </div>
+        </div>
+      `;
+    }catch(_){
+      return '';
+    }
+  }
+
+  function buildSavedStateDirectionHint({ currentDeity, currentIntent, lang }){
+    try{
+      if (typeof window === 'undefined' || !window.localStorage) return '';
+      const raw = window.localStorage.getItem('__uc_savedState__');
+      if (!raw) return '';
+      const saved = JSON.parse(raw);
+      if (!saved || !saved.deity || !saved.intent) return '';
+      const savedCode = String(saved.deity || '').trim().toUpperCase();
+      const currentCode = String(currentDeity || '').trim().toUpperCase();
+      if (!savedCode || savedCode === currentCode) return '';
+      const savedIntent = String(saved.intent || '').trim();
+      const currentIntentText = String(currentIntent || '').trim();
+      if (!savedIntent || !currentIntentText) return '';
+      const sentence = lang === 'en'
+        ? `Your focus appears to shift from “${savedIntent}” to “${currentIntentText}”, suggesting a change in your current phase.`
+        : `你的關注似乎從「${savedIntent}」轉向「${currentIntentText}」，代表你正在經歷不同階段的需求。`;
+      return `<div class="deity-saved-direction">${sentence}</div>`;
+    }catch(_){
+      return '';
+    }
+  }
+
+  function buildQuizContextFlag({ intentParam }){
+    return Boolean(intentParam);
+  }
+
+  function buildQuietClosureHint({ lang }){
+    const text = lang === 'en'
+      ? 'This moment of understanding is complete on its own; there is no rush to move further.'
+      : '此刻的理解已自成一章，暫時停在這裡也同樣踏實。';
+    return `<div class="deity-quiet-closure">${text}</div>`;
+  }
+
+  function buildOneLineStateNarrative({ deity, intent, c1Data, lang }){
+    if (!intent || !c1Data) return '';
+    const keyword = Array.isArray(c1Data.tags) && c1Data.tags[0] ? c1Data.tags[0] : '';
+    const strength = (c1Data.tags && c1Data.tags[1]) || '';
+    if (!keyword && !strength) return '';
+    const clean = text => String(text || '').trim();
+    const sanitizedIntent = clean(intent);
+    const sanitizedKeyword = clean(keyword);
+    const sanitizedStrength = clean(strength);
+    if (!sanitizedIntent) return '';
+    const text = lang === 'en'
+      ? `You are currently in a phase centered on “${sanitizedIntent}”, where understanding yourself through ${sanitizedKeyword || 'focus'} and ${sanitizedStrength || 'awareness'} becomes important.`
+      : `你正處於一個以「${sanitizedIntent}」為核心、需要結合「${sanitizedKeyword || '關注'}」與「${sanitizedStrength || '力量'}」來理解自己的階段。`;
+    return `<div class="deity-state-narrative">${text}</div>`;
+  }
+
+  function buildQuizContextHint({ intent, lang }){
+    if (!intent) return '';
+    const text = lang === 'en'
+      ? `This deity corresponds to the “${String(intent).trim()}” state reflected in your quiz results.`
+      : `這尊神祇是根據你在測驗中呈現的「${String(intent).trim()}」狀態所對應。`;
+    return `<div class="deity-quiz-context">${text}</div>`;
+  }
+
   function buildNextStepSuggestion(opts){
     const deity = opts && opts.deity;
     const intent = (opts && opts.intent) ? String(opts.intent).trim() : '';
@@ -206,6 +328,9 @@
     const intentParam = params ? (params.get('intent') || '') : '';
     const stateData = buildStateDescriptor(deity, lang);
     const c1Data = handleC1Feature(deity, lang, intentParam); // C1: placeholder hook
+    const isQuizContext = (function(){
+      return !!intentParam;
+    })();
     const lastResult = (function(){
       if (typeof window === 'undefined' || !window.localStorage) return null;
       try{
@@ -222,6 +347,8 @@
         ? 'Your last state aligned with a different protector.'
         : '你上一次的狀態，對應的是另一尊守護神。')
       : '';
+    const isQuizContext = buildQuizContextFlag({ intentParam });
+    const quizContextHint = isQuizContext ? buildQuizContextHint({ intent: intentParam, lang }) : '';
     return `
       <div class="card deity-profile" data-deity-code="${escapeHtml(deity.code)}">
         <div class="imgbox">${imgHtml}</div>
@@ -231,6 +358,7 @@
             <span class="deity-code">${escapeHtml(deity.code)}</span>
           </div>
         </div>
+        ${quizContextHint}
         <div class="deity-state">${(function(){
           const templateKey = 'deity-state-template';
           const fallbackKey = 'deity-state-fallback';
@@ -257,11 +385,29 @@
               });
               html += '</div>';
             }
-            if (intentParam){
+            if (intentParam && isQuizContext){
               const hint = lang === 'en'
                 ? `This deity is often chosen for “${intentParam}” states`
                 : `這尊神常在「${intentParam}」狀態被選擇`;
               html += `<div class="deity-intent-hint">${escapeHtml(hint)}</div>`;
+            }
+            const memoryHint = buildSavedStateHint({ currentDeity: deity.code, lang });
+            if (memoryHint){
+              html += memoryHint;
+            }
+            if (isQuizContext){
+              const savedCompare = buildSavedStateCompare({ currentDeity: deity.code, lang });
+              if (savedCompare){
+                html += savedCompare;
+              }
+              const directionHint = buildSavedStateDirectionHint({ currentDeity: deity.code, currentIntent: intentParam, lang });
+              if (directionHint){
+                html += directionHint;
+              }
+              const narrative = buildOneLineStateNarrative({ deity, intent: intentParam, c1Data, lang });
+              if (narrative){
+                html += narrative;
+              }
             }
             const suggestion = buildNextStepSuggestion({
               deity,
@@ -281,6 +427,12 @@
                 html += `<a class="next-step-link" href="${escapeHtml(linkHref)}">${escapeHtml(linkText)}</a>`;
               }
               html += '</div>';
+            }
+            if (isQuizContext){
+              const quietHint = buildQuietClosureHint({ lang });
+              if (quietHint){
+                html += quietHint;
+              }
             }
             return html;
           }

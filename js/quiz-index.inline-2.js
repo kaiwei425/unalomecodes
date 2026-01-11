@@ -818,6 +818,19 @@ function renderGuardianCardPreview(data){
   }
 }
 
+function renderSavedStateEcho({ currentDeity, lang }){
+  const summaryEl = document.getElementById('guardianCardSummary');
+  if (!summaryEl) return;
+  const echo = buildSavedStateEcho({ currentDeity, lang });
+  const existing = summaryEl.parentElement ? summaryEl.parentElement.querySelector('.guardian-saved-echo') : null;
+  if (existing){
+    existing.remove();
+  }
+  if (echo){
+    summaryEl.insertAdjacentHTML('afterend', echo);
+  }
+}
+
 function drawGuardianCardToCanvas(data){
   const width = 960;
   const height = 560;
@@ -1491,6 +1504,19 @@ function getSavedState(){
   }
 }
 
+function buildSavedStateEcho({ currentDeity, lang }){
+  const saved = getSavedState();
+  if (!saved) return '';
+  if (String(saved.deity || '').trim().toUpperCase() === String(currentDeity || '').trim().toUpperCase()){
+    return '';
+  }
+  const textByLang = {
+    zh: '這與你先前保存的狀態不同',
+    en: 'This differs from the state you saved previously'
+  };
+  return `<div class="guardian-saved-echo">${textByLang[lang] || textByLang.en}</div>`;
+}
+
 function saveCurrentState({ deity, intent, lang }){
   if (!deity) return;
   try{
@@ -1733,6 +1759,7 @@ const primaryName = deityName(code, lang);
     }catch(_){}
     if (guardianCardPreview){
       renderGuardianCardPreview(cardData);
+      renderSavedStateEcho({ currentDeity: primaryId, lang });
     }
     if (guardianCardDownloadBtn && !guardianCardDownloadBtn._bound){
       guardianCardDownloadBtn._bound = true;
