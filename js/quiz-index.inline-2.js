@@ -15,6 +15,12 @@ const BRAND_LOGO = '/img/logo.png';
 // Coupon service endpoint
 const COUPON_API = (function(){ try{ return SITE_BASE + '/api/coupons'; }catch(e){ return '/api/coupons'; }})();
 
+function escapeHtml(str){
+  return String(str || '').replace(/[&<>"']/g, function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+  });
+}
+
 /* =====================
    基礎資料（取自 worker.js）
 ===================== */
@@ -1808,6 +1814,16 @@ const primaryName = deityName(code, lang);
       ctaTemple.addEventListener('click', () => fireTrack('quiz_cta_temple_click', { primary: primaryId, intent: intentParam }));
     }
 
+    const saveStateBtn = document.getElementById('saveStateBtn');
+    if (saveStateBtn && !saveStateBtn._bound){
+      saveStateBtn._bound = true;
+      saveStateBtn.addEventListener('click', () => {
+        saveCurrentState({ deity: primaryId, intent: intentParam, lang: langParam });
+        updateSaveStateButton({ deity: primaryId, intent: intentParam, lang: langParam });
+      });
+    }
+    updateSaveStateButton({ deity: primaryId, intent: intentParam, lang: langParam });
+
     // 取得佛牌配戴建議（沿用 LINE Bot 的生成邏輯，由後端提供）
     try {
       const advUrl = `${ADVICE_BASE}/amulet/advice?code=${encodeURIComponent(code)}&job=${encodeURIComponent(state.job)}&dow=${encodeURIComponent(state.dow)}&zod=${encodeURIComponent(state.zod)}`;
@@ -2099,12 +2115,3 @@ Enter this code at checkout.`
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
   }
 })();
-    const saveStateBtn = document.getElementById('saveStateBtn');
-    if (saveStateBtn && !saveStateBtn._bound){
-      saveStateBtn._bound = true;
-      saveStateBtn.addEventListener('click', () => {
-        saveCurrentState({ deity: primaryId, intent: intentParam, lang: langParam });
-        updateSaveStateButton({ deity: primaryId, intent: intentParam, lang: langParam });
-      });
-    }
-    updateSaveStateButton({ deity: primaryId, intent: intentParam, lang: langParam });

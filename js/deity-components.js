@@ -203,6 +203,24 @@
     const userState = getCurrentUserState({ now });
     if (!userState) return null;
     const normalizedCurrentDeity = String(currentDeity || '').trim().toUpperCase();
+    const normalizedPreviousDeity = String(userState.deity || '').trim().toUpperCase();
+    const result = {
+      isSame: normalizedPreviousDeity === normalizedCurrentDeity,
+      source: userState.source,
+      previous: userState,
+      current: {
+        deity: normalizedCurrentDeity,
+        intent: currentIntent ? String(currentIntent).trim() : ''
+      }
+    };
+    return result;
+  }
+
+  function compareWithCurrentState({ currentDeity, currentIntent, now = Date.now() } = {}){
+    if (!currentDeity) return null;
+    const userState = getCurrentUserState({ now });
+    if (!userState) return null;
+    const normalizedCurrentDeity = String(currentDeity || '').trim().toUpperCase();
     const normalizedCurrentIntent = currentIntent ? String(currentIntent).trim() : '';
     const normalizedPreviousDeity = String(userState.deity || '').trim().toUpperCase();
     return {
