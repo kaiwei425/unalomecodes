@@ -389,7 +389,9 @@
       var quote = escapeHtml(item.msg || '');
       var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
       var date = escapeHtml(formatStoryDate(item.ts));
-      var productInfo = item.productName ? '<div class="testimonial-item__hint">' + escapeHtml((document.documentElement.lang === 'en' ? 'Product' : '商品') + '：' + item.productName) + '</div>' : '';
+      var label = document.documentElement.lang === 'en' ? 'Product' : '商品';
+      var productLabel = item.productName || item.product || item.itemName || item.name || '';
+      var productInfo = productLabel ? '<div class="testimonial-item__hint">' + escapeHtml(label + '：' + productLabel) + '</div>' : '';
       var rawImage = item.imageUrl || item.image;
       var safeImage = hasSanitizer ? sanitizeImageUrl(rawImage) : (rawImage || '');
       var image = safeImage ? '<div class="testimonial-item__media"><img src="' + escapeHtml(safeImage) + '" alt=""></div>' : '';
