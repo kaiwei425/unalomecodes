@@ -462,6 +462,48 @@
       setPanelPlaceholder(body, locale === 'en' ? '請在 data-story-codes 中添加 KV 代碼。' : '請在 data-story-codes 中填入 KV 代碼。');
       return;
     }
+    var STORY_CACHE_KEY = 'homeStoryCache';
+    var STORY_CACHE_TTL = 1000 * 60 * 2;
+    function loadStoryCache(){
+      try{
+        var raw = sessionStorage.getItem(STORY_CACHE_KEY);
+        if (!raw) return null;
+        var data = JSON.parse(raw);
+        if (!data || !Array.isArray(data.items)) return null;
+        if (Number.isFinite(data.ts) && (Date.now() - data.ts) <= STORY_CACHE_TTL){
+          return data;
+        }
+        return null;
+      }catch(_){
+        return null;
+      }
+    }
+    function saveStoryCache(items, total){
+      try{
+        sessionStorage.setItem(STORY_CACHE_KEY, JSON.stringify({
+          ts: Date.now(),
+          total: total || items.length,
+          items: items
+        }));
+      }catch(_){}
+    }
+    function renderCachedStories(items, totalCount){
+      if (!items || !items.length) return;
+      var statusCount = items.length;
+      var overflowSuffix = totalCount > items.length ? '+' : '';
+      setPanelStatus(status, locale === 'en'
+        ? statusCount + overflowSuffix + ' verified stories'
+        : statusCount + overflowSuffix + ' 則真實分享');
+      body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(items, locale, label) + '</div>';
+      var showMore = panel.querySelector('[data-story-more]');
+      if (showMore){
+        showMore.style.display = 'none';
+      }
+    }
+    var cached = loadStoryCache();
+    if (cached){
+      renderCachedStories(cached.items, cached.total);
+    }
     try{
       var aggregated = [];
       var STORY_CARD_LIMIT = 24;
@@ -491,6 +533,7 @@
         return (b.ts || 0) - (a.ts || 0);
       });
       var limited = aggregated.slice(0, Math.min(STORY_CARD_LIMIT, aggregated.length));
+      saveStoryCache(limited, aggregated.length);
       var statusCount = limited.length;
       var overflowSuffix = aggregated.length > STORY_CARD_LIMIT ? '+' : '';
       setPanelStatus(status, locale === 'en'
