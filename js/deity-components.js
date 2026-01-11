@@ -454,9 +454,11 @@
                 text = formatTemplate(tpl, stateData);
               }
             }
-            if (!text){
-              text = tState(fallbackKey, lang) || 'Suitable for transitions needing steadier protection.';
-            }
+          if (!text){
+            text = tState(fallbackKey, lang) || (lang === 'en'
+              ? 'Suitable for transitions needing steadier protection.'
+              : '適合在關鍵轉換期尋求更穩定守護的人。');
+          }
             return text;
           })()}</div>
           ${(function(){
@@ -508,6 +510,25 @@
           return `<details class="deity-context-details"><summary>${summaryLabel}</summary>${pieces.join('')}</details>`;
         })()}
         ${(function(){
+          if (!isQuizContext) return '';
+          const paragraphs = [
+            '你目前看到的守護神，',
+            '代表的是你「此刻」最需要被穩定與承接的狀態。',
+            '',
+            '在先前的紀錄中，',
+            '你曾經對應過不同的守護象徵。',
+            '那並不衝突，也不代表錯誤。',
+            '',
+            '人的狀態會隨時間、壓力與選擇而變化，',
+            '守護神的出現，只是對當下階段的一種映照。',
+            '',
+            '這不是唯一的答案，',
+            '而是一個用來理解自己的參考點。'
+          ];
+          const html = paragraphs.map(line => line ? `<p>${escapeHtml(line)}</p>` : '').join('');
+          return `<div class="deity-current-state-block">${html}</div>`;
+        })()}
+        ${(function(){
           let html = '';
           const suggestion = buildNextStepSuggestion({
             deity,
@@ -539,23 +560,9 @@
         <div class="desc">${escapeHtml(desc || '')}</div>
         ${(function(){
           const flow = buildReturnFlow({ deity, intent: intentParam, lang });
-          if (!flow && !showMemoryHint) return '';
-          let html = '<div class="deity-return-cta">';
-          if (showMemoryHint){
-            html += `<div class="deity-memory-hint">${escapeHtml(memoryHintText)}</div>`;
-          }
-          if (!flow){
-            html += '</div>';
-            return html;
-          }
-          const text = `${flow.title} ${flow.body}`.trim();
-          html += `<div class="deity-current-state-block"><p class="deity-current-state-text">${escapeHtml(text)}</p>`;
-          if (flow.actions && flow.actions[0]){
-            const ctaLabel = lang === 'en' ? 'Retake to see other guardians' : '重新測驗目前狀態看看其他守護神';
-            html += `<a class="deity-current-state-cta" href="${escapeHtml(flow.actions[0].url)}">${escapeHtml(ctaLabel)}</a>`;
-          }
-          html += '</div></div>';
-          return html;
+          if (!flow || !flow.actions || !flow.actions.length) return '';
+          const ctaLabel = '重新測驗目前狀態，看看是否出現不同的守護指引';
+          return `<div class="deity-return-cta"><a class="deity-return-cta-link" href="${escapeHtml(flow.actions[0].url)}">${escapeHtml(ctaLabel)}</a></div>`;
         })()}
       </div>
     `;

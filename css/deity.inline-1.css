@@ -28,7 +28,7 @@
   .deity{font-size:22px;font-weight:800;letter-spacing:.02em}
   .deity-state{padding:0 16px 0;color:#6b7280;font-size:13px;line-height:1.6;}
   .deity-quiz-context{padding:0 16px 4px;color:#9ca3af;font-size:12px;line-height:1.6;margin-top:4px;margin-bottom:6px;}
-  .deity-micro-insight{margin:8px 0 14px;}
+  .deity-micro-insight{margin:8px 0 14px;color:#9ca3af;font-size:12px;}
   .deity-c1-summary{padding:0 16px 8px;color:#94a3b8;font-size:12px;line-height:1.4;}
   .deity-c1-tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
   .deity-c1-tag{font-size:11px;line-height:1;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,0.05);color:#777;white-space:nowrap;}
@@ -51,11 +51,9 @@
   .next-step-link{display:inline-block;margin-top:6px;font-size:12px;color:#777;text-decoration:underline;}
   .deity-return-flow{margin-top:0;padding-top:0;border-top:0;color:#666;}
   .deity-return-cta{margin-top:18px;font-size:13px;}
-  .deity-return-cta a{text-decoration:underline;color:#6b7280;}
+  .deity-return-cta-link{text-decoration:underline;color:#6b7280;}
   .deity-current-state-block{margin:16px 0 20px;padding-top:12px;border-top:1px dashed rgba(0,0,0,0.08);}
-  .deity-current-state-text{font-size:12px;line-height:1.7;color:rgba(0,0,0,0.45);margin-bottom:8px;}
-  .deity-current-state-cta{font-size:12px;color:#5a6cff;text-decoration:none;}
-  .deity-current-state-cta:hover{text-decoration:underline;}
+  .deity-current-state-block p{margin:0 0 6px;font-size:12px;line-height:1.7;color:rgba(0,0,0,0.45);}
   .return-flow-title{font-size:13px;font-weight:500;margin-bottom:4px;}
   .return-flow-body{font-size:13px;line-height:1.6;margin-bottom:8px;}
   .return-flow-actions{display:flex;gap:12px;flex-wrap:wrap;}

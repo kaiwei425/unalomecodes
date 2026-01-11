@@ -209,6 +209,27 @@
     .deity-profile .meta{padding:18px 20px 8px;}
     .deity-profile .deity{font-size:22px;font-weight:700;letter-spacing:.01em;}
     .deity-profile .desc{padding:0 20px 20px;color:var(--muted);line-height:1.8;white-space:pre-wrap;}
+    .deity-profile .deity-micro-insight{padding:0 20px 10px;display:grid;gap:4px;}
+    .deity-profile .deity-state{font-size:13px;line-height:1.6;color:var(--text);}
+    .deity-profile .deity-state-narrative{font-size:12px;line-height:1.6;color:var(--muted);}
+    .deity-profile .deity-context-details{margin:8px 20px 12px;}
+    .deity-profile .deity-context-details summary{font-size:12px;color:var(--muted);cursor:pointer;list-style:none;}
+    .deity-profile .deity-context-details summary::-webkit-details-marker{display:none;}
+    .deity-profile .deity-context-details summary::before{content:"▸";display:inline-block;margin-right:6px;color:var(--muted);}
+    .deity-profile .deity-context-details[open] summary::before{content:"▾";}
+    .deity-profile .deity-c1-summary,
+    .deity-profile .deity-intent-hint,
+    .deity-profile .deity-saved-compare,
+    .deity-profile .deity-saved-direction,
+    .deity-profile .deity-state-relation{font-size:12px;line-height:1.7;color:var(--muted);}
+    .deity-profile .deity-c1-tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px;}
+    .deity-profile .deity-c1-tag{font-size:11px;line-height:1;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,0.04);color:var(--muted);}
+    .deity-profile .deity-current-state-block{margin:12px 20px 16px;padding-top:12px;border-top:1px dashed rgba(0,0,0,0.08);}
+    .deity-profile .deity-current-state-block p{margin:0 0 6px;font-size:12px;line-height:1.7;color:rgba(0,0,0,0.45);}
+    .deity-profile .deity-current-state-cta{font-size:12px;color:#5a6cff;text-decoration:none;}
+    .deity-profile .deity-current-state-cta:hover{text-decoration:underline;}
+    .deity-profile .deity-return-cta{margin:8px 20px 0;}
+    .deity-profile .deity-return-cta-link{font-size:12px;color:var(--text);text-decoration:underline;}
     .deity-code{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid rgba(199,164,106,0.4);background:rgba(199,164,106,0.15);color:var(--accent-strong);font-weight:600;}
     .deity-placeholder{padding:20px;color:var(--muted);font-weight:600;}
     .result{
