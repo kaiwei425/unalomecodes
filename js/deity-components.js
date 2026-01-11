@@ -161,6 +161,61 @@
     return `<div class="deity-quiet-closure">${text}</div>`;
   }
 
+  function getCurrentUserState({ now = Date.now() } = {}){
+    try{
+      if (typeof window === 'undefined' || !window.localStorage) return null;
+      const savedRaw = window.localStorage.getItem('__uc_savedState__');
+      if (savedRaw){
+        const saved = JSON.parse(savedRaw);
+        if (saved && saved.deity && saved.intent){
+          return {
+            source: 'saved',
+            deity: String(saved.deity).trim(),
+            intent: String(saved.intent || '').trim(),
+            time: saved.ts || now
+          };
+        }
+      }
+      const lastRaw = window.localStorage.getItem('uc:lastResult');
+      if (lastRaw){
+        const last = JSON.parse(lastRaw);
+        if (last && last.deity){
+          const time = last.ts || last.time || now;
+          const age = now - (Number(time) || now);
+          if (Number.isFinite(age) && age >= 0 && age <= 7 * 24 * 60 * 60 * 1000){
+            return {
+              source: 'recent',
+              deity: String(last.deity).trim(),
+              intent: String(last.intent || last.intentParam || '').trim(),
+              time
+            };
+          }
+        }
+      }
+    }catch(_){
+      return null;
+    }
+    return null;
+  }
+
+  function compareWithCurrentState({ currentDeity, currentIntent, now = Date.now() } = {}){
+    if (!currentDeity) return null;
+    const userState = getCurrentUserState({ now });
+    if (!userState) return null;
+    const normalizedCurrentDeity = String(currentDeity || '').trim().toUpperCase();
+    const normalizedCurrentIntent = currentIntent ? String(currentIntent).trim() : '';
+    const normalizedPreviousDeity = String(userState.deity || '').trim().toUpperCase();
+    return {
+      isSame: normalizedPreviousDeity === normalizedCurrentDeity,
+      source: userState.source,
+      previous: userState,
+      current: {
+        deity: normalizedCurrentDeity,
+        intent: normalizedCurrentIntent
+      }
+    };
+  }
+
   function buildOneLineStateNarrative({ deity, intent, c1Data, lang }){
     if (!intent || !c1Data) return '';
     const keyword = Array.isArray(c1Data.tags) && c1Data.tags[0] ? c1Data.tags[0] : '';
@@ -328,9 +383,6 @@
     const intentParam = params ? (params.get('intent') || '') : '';
     const stateData = buildStateDescriptor(deity, lang);
     const c1Data = handleC1Feature(deity, lang, intentParam); // C1: placeholder hook
-    const isQuizContext = (function(){
-      return !!intentParam;
-    })();
     const lastResult = (function(){
       if (typeof window === 'undefined' || !window.localStorage) return null;
       try{
