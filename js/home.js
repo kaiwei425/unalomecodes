@@ -387,13 +387,14 @@
     if (!el) return;
     el.textContent = text || '';
   }
-  function renderStoryCards(items, label){
+  function renderStoryCards(items, locale){
     var hasSanitizer = typeof sanitizeImageUrl === 'function';
     return items.map(function(item){
       var quote = escapeHtml(item.msg || '');
       var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
       var date = escapeHtml(formatStoryDate(item.ts));
-      var label = document.documentElement.lang === 'en' ? 'Product' : '商品';
+      var productHeading = locale === 'en' ? 'Product' : '商品';
+      var fallbackHeading = locale === 'en' ? 'Code' : '代碼';
       var productLabel = item.productName
         || item.product
         || item.product_title
@@ -401,10 +402,16 @@
         || item.name
         || item.serviceName
         || item.title || '';
-      var productInfo = productLabel ? '<div class="testimonial-item__hint">' + escapeHtml(label + '：' + productLabel) + '</div>' : '';
+      var fallbackCode = item.sourceCode || item.code || item.reviewCode || item.deityCode || '';
+      var productInfo = '';
+      if (productLabel){
+        productInfo = '<div class="testimonial-item__hint">' + escapeHtml(productHeading + '：' + productLabel) + '</div>';
+      }else if (fallbackCode){
+        productInfo = '<div class="testimonial-item__hint">' + escapeHtml(fallbackHeading + '：' + fallbackCode) + '</div>';
+      }
       var rawImage = item.imageUrl || item.image;
       var safeImage = hasSanitizer ? sanitizeImageUrl(rawImage) : (rawImage || '');
-      var image = safeImage ? '<div class="testimonial-item__media"><img src="' + escapeHtml(safeImage) + '" alt=""></div>' : '';
+      var image = safeImage ? '<div class="testimonial-item__media"><img src="' + escapeHtml(safeImage) + '" alt="" loading="lazy" decoding="async" fetchpriority="low"></div>' : '';
       return (
         '<article class="testimonial-item">' +
           image +
@@ -455,7 +462,7 @@
     }
     try{
       var aggregated = [];
-      var maxItems = 6;
+      var STORY_CARD_LIMIT = 24;
       for (var i = 0; i < codes.length; i++){
         var code = codes[i];
         if (!code) continue;
@@ -478,26 +485,31 @@
       aggregated.sort(function(a,b){
         return (b.ts || 0) - (a.ts || 0);
       });
-      var limited = aggregated.slice(0, maxItems);
+      var limited = aggregated.slice(0, Math.min(STORY_CARD_LIMIT, aggregated.length));
+      var statusCount = limited.length;
+      var overflowSuffix = aggregated.length > STORY_CARD_LIMIT ? '+' : '';
       setPanelStatus(status, locale === 'en'
-        ? limited.length + ' verified stories'
-        : limited.length + ' 則真實分享');
+        ? statusCount + overflowSuffix + ' verified stories'
+        : statusCount + overflowSuffix + ' 則真實分享');
       var storyLimit = 4;
       var expanded = false;
       var storyList = limited.slice();
       var showMoreBtn = panel.querySelector('[data-story-more]');
-      var mql = window.matchMedia('(max-width:720px)');
+      var mql = window.matchMedia('(max-width:840px)');
+      var showMoreCopy = locale === 'en'
+        ? { more: 'Show more stories', less: 'Hide stories' }
+        : { more: '顯示更多留言', less: '收起留言' };
 
       function renderVisibleStories(){
         var isMobile = mql.matches;
         var toRender = (isMobile && !expanded) ? storyList.slice(0, storyLimit) : storyList;
-        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(toRender, label) + '</div>';
+        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(toRender, locale) + '</div>';
         if (showMoreBtn){
           if (storyList.length <= storyLimit){
             showMoreBtn.style.display = 'none';
           }else{
             showMoreBtn.style.display = isMobile ? 'inline-flex' : 'none';
-            showMoreBtn.textContent = expanded ? '收起留言' : '顯示更多留言';
+            showMoreBtn.textContent = expanded ? showMoreCopy.less : showMoreCopy.more;
           }
         }
       }
