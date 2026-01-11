@@ -638,8 +638,9 @@ body.nav-open .nav-drawer__panel{
 }
 .testimonial-panel__grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
   gap:var(--space-3);
+  align-content:start;
 }
 .testimonial-panel__more{
   display:flex;
