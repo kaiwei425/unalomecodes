@@ -52,8 +52,10 @@
       'home-section-title': '入口導覽',
       'home-section-note': '跟我一起探索泰國',
       'home-testimonial-kicker': '信任足跡',
-      'home-testimonial-title': '顧客之聲',
+      'home-testimonial-title': '信任見證',
       'home-testimonial-subtitle': '實體商品與祈福服務的即時回饋，讓你更信任下一步。',
+      'home-testimonial-product-link': '瀏覽實體商品',
+      'home-testimonial-service-link': '了解祈福服務',
       'home-testimonial-cta': '查看更多顧客心得',
       'home-entry-quiz-title': '神祇測驗',
       'home-entry-quiz-desc': '用狀態與生日線索，快速匹配此刻最適合你的守護神',
@@ -126,8 +128,10 @@
       'home-section-title': 'Portal Guide',
       'home-section-note': 'Explore Thailand with me',
       'home-testimonial-kicker': 'Trust Signals',
-      'home-testimonial-title': 'Customer Voices',
+      'home-testimonial-title': 'Trust Chronicles',
       'home-testimonial-subtitle': 'Real feedback on goods and blessings so you can explore with confidence.',
+      'home-testimonial-product-link': 'Browse physical products',
+      'home-testimonial-service-link': 'Explore blessing services',
       'home-testimonial-cta': 'Read more stories',
       'home-entry-quiz-title': 'Deity Quiz',
       'home-entry-quiz-desc': 'A quick match based on your current state and birth cues.',
@@ -261,80 +265,105 @@
     });
   }
 
-  function initTestimonialCarousel(){
-    var carousel = document.querySelector('[data-testimonial-carousel]');
-    var dotsContainer = document.querySelector('[data-testimonial-dots]');
-    if (!carousel || !dotsContainer) return;
-    var track = carousel.querySelector('[data-testimonial-track]');
-    if (!track) return;
-    var slides = Array.from(track.children);
-    if (!slides.length) return;
-    var dots = [];
-    var prev = document.querySelector('[data-carousel-prev]');
-    var next = document.querySelector('[data-carousel-next]');
-    var currentIndex = 0;
-    var autoTimer;
-
-    function update(){
-      var width = carousel.offsetWidth;
-      track.style.transform = 'translateX(-' + (currentIndex * width) + 'px)';
-      slides.forEach(function(slide, idx){
-        slide.setAttribute('aria-hidden', idx === currentIndex ? 'false' : 'true');
-      });
-      dots.forEach(function(dot, idx){
-        dot.classList.toggle('is-active', idx === currentIndex);
-      });
-    }
-
-    function goTo(index){
-      currentIndex = (index + slides.length) % slides.length;
-      update();
-    }
-
-    slides.forEach(function(_, idx){
-      var dot = document.createElement('button');
-      dot.type = 'button';
-      dot.className = 'testimonial-dot';
-      dot.setAttribute('aria-label', 'Slide ' + (idx + 1));
-      dot.addEventListener('click', function(){
-        goTo(idx);
-        resetAuto();
-      });
-      dotsContainer.appendChild(dot);
-      dots.push(dot);
+  function escapeHtml(value){
+    return String(value || '').replace(/[&<>"']/g, function(ch){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch];
     });
-
-    if (prev){
-      prev.addEventListener('click', function(){
-        goTo(currentIndex - 1);
-        resetAuto();
-      });
-    }
-    if (next){
-      next.addEventListener('click', function(){
-        goTo(currentIndex + 1);
-        resetAuto();
-      });
-    }
-
-    function startAuto(){
-      autoTimer = setInterval(function(){
-        goTo(currentIndex + 1);
-      }, 6000);
-    }
-
-    function resetAuto(){
-      clearInterval(autoTimer);
-      startAuto();
-    }
-
-    window.addEventListener('resize', update);
-    goTo(0);
-    startAuto();
   }
-  initTestimonialCarousel();
+  function formatStoryDate(timestamp){
+    try{
+      if (!timestamp) return '';
+      var date = new Date(timestamp);
+      return date.toLocaleString(document.documentElement.lang === 'en' ? 'en-US' : 'zh-TW', {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit',
+        hour12:false
+      });
+    }catch(_){
+      return '';
+    }
+  }
+  async function fetchStoryItems(code){
+    if (!code) return [];
+    var cacheBust = Date.now();
+    var res = await fetch('/api/stories?code=' + encodeURIComponent(code) + '&_=' + cacheBust, { cache:'no-store' });
+    if (!res.ok) throw new Error('讀取失敗 (' + res.status + ')');
+    var payload = await res.json().catch(function(){ return {}; });
+    if (!payload || payload.ok === false) throw new Error(payload && payload.error ? payload.error : '讀取失敗');
+    var items = Array.isArray(payload.items) ? payload.items : [];
+    return items.slice(0, 3);
+  }
+  function setPanelStatus(el, text){
+    if (!el) return;
+    el.textContent = text || '';
+  }
+  function renderStoryCards(items, label){
+    return items.map(function(item){
+      var quote = escapeHtml(item.msg || '');
+      var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
+      var date = escapeHtml(formatStoryDate(item.ts));
+      var productInfo = item.productName ? '<div class="testimonial-item__hint">' + escapeHtml((document.documentElement.lang === 'en' ? 'Product' : '商品') + '：' + item.productName) + '</div>' : '';
+      return (
+        '<article class="testimonial-item">' +
+          '<p class="testimonial-item__quote">' + quote + '</p>' +
+          '<div class="testimonial-item__meta">' +
+            '<strong>' + nick + '</strong>' +
+            '<span>' + date + '</span>' +
+          '</div>' +
+          productInfo +
+          '<div class="testimonial-item__row">' +
+            '<span class="testimonial-item__tag">' + escapeHtml(label) + '</span>' +
+          '</div>' +
+        '</article>'
+      );
+    }).join('');
+  }
+  function setPanelPlaceholder(bodyEl, message){
+    if (!bodyEl) return;
+    bodyEl.innerHTML = '<div class="testimonial-panel__placeholder">' + escapeHtml(message) + '</div>';
+  }
+  async function initTestimonialSection(){
+    var section = document.querySelector('[data-testimonial-section]');
+    if (!section) return;
+    var locale = document.documentElement.lang === 'en' ? 'en' : 'zh';
+    var categories = [
+      { type:'physical', label: locale === 'en' ? 'Physical products' : '實體商品', code: section.dataset.storyCodePhysical || '' },
+      { type:'service', label: locale === 'en' ? 'Blessing services' : '祈福服務', code: section.dataset.storyCodeService || '' }
+    ];
+    categories.forEach(function(category){
+      var panel = section.querySelector('[data-story-panel="' + category.type + '"]');
+      if (!panel) return;
+      var body = panel.querySelector('[data-story-body="' + category.type + '"]');
+      var status = panel.querySelector('[data-story-status="' + category.type + '"]');
+      if (!body){
+        return;
+      }
+      setPanelPlaceholder(body, locale === 'en' ? 'Loading verified feedback…' : '載入真實留言中…');
+      (async function(){
+        if (!category.code){
+          setPanelStatus(status, locale === 'en' ? 'No code configured' : '尚未設定留言代碼');
+          setPanelPlaceholder(body, locale === 'en' ? '請在 data-story-code-' + category.type + ' 補上 KV 代碼。' : '請在 data-story-code-' + category.type + ' 填入 KV 代碼。');
+          return;
+        }
+        try{
+          var items = await fetchStoryItems(category.code);
+          if (!items.length){
+            setPanelStatus(status, locale === 'en' ? 'No testimonials yet' : '目前尚無留言');
+            setPanelPlaceholder(body, locale === 'en' ? '歡迎率先留下您的回饋。' : '暫時還沒有分享，歡迎先留下一則好評。');
+            return;
+          }
+          setPanelStatus(status, locale === 'en' ? items.length + ' verified stories' : items.length + ' 則真實分享');
+          body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(items, category.label) + '</div>';
+        }catch(err){
+          setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
+          setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
+        }
+      })();
+    });
+  }
 
   applyLang(resolveLang());
+  initTestimonialSection();
   window.APP_I18N = I18N;
   if (typeof window.track === 'function'){
     if (heroQuizCta){
