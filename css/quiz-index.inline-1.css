@@ -241,6 +241,8 @@
     .guardian-card-tags .tag{padding:4px 10px;border-radius:999px;background:#fff;border:1px solid rgba(179,156,120,.35);font-size:12px;color:#7a6040;}
     .guardian-card-note{font-size:12px;color:#8a7b65;line-height:1.6;}
     .guardian-card-transfer{font-size:11px;color:#94a3b8;line-height:1.4;text-transform:none;}
+    .guardian-name-link-wrap{padding:0 16px 4px;}
+    .guardian-name-link{color:var(--text);font-weight:700;text-decoration:none;border-bottom:1px solid rgba(0,0,0,0.08);}
     .guardian-card-date{font-size:12px;color:#8a7b65;}
     .disclaimer{margin-top:8px;font-size:12px;}
     .advice-card{padding:20px;background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg);}

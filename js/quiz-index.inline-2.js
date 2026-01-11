@@ -1502,7 +1502,7 @@ async function showResult(opts){
     const secondaryCode = (ranked.find(([g])=> g !== code) || [code])[0];
 
     const primaryDeity = (typeof window.getDeityById === 'function') ? window.getDeityById(code) : null;
-    const primaryName = deityName(code, lang);
+const primaryName = deityName(code, lang);
     const secondaryName = deityName(secondaryCode, lang);
     const primaryId = (primaryDeity && (primaryDeity.id || primaryDeity.code)) || code;
 
@@ -1575,8 +1575,10 @@ async function showResult(opts){
     const primarySlot = document.getElementById('primaryDeityProfile');
     if (primarySlot){
       const fallback = primaryDeity || { code, name:{ zh: storedName, en: primaryName }, desc:{ zh:'', en:'' }, wear:{} };
+      const linkHref = `/deity?code=${encodeURIComponent(code)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
+      const linkHtml = `<a class="guardian-name-link" href="${escapeHtml(linkHref)}">${escapeHtml(primaryName)}</a>`;
       const html = (typeof window.renderDeityProfile === 'function') ? window.renderDeityProfile(fallback, lang) : '';
-      primarySlot.innerHTML = html || '';
+      primarySlot.innerHTML = `<div class="guardian-name-link-wrap">${linkHtml}</div>${html || ''}`;
     }
 
     const secondarySlot = document.getElementById('secondaryDeityCard');
@@ -1649,13 +1651,21 @@ async function showResult(opts){
 
     const keywords = pickPrimaryKeywords(primaryDeity || { code: primaryId }, lang);
     const cardRole = getCardRoleLabel({ lang, primaryDeity: primaryDeity || { code: primaryId } });
-    const cardSummary = getCardSummary({
+    let cardSummary = getCardSummary({
       lang,
       primaryDeity: primaryDeity || { code: primaryId },
       topIntent,
       topBlocker
     });
     const cardNote = t('result-card-note', lang);
+    const intentHintLine = topIntent
+      ? (lang === 'en'
+        ? `This aligns with your strongest “${topIntent}” signal in the quiz.`
+        : `這與你剛剛測驗中最強的「${topIntent}」狀態一致。`)
+      : '';
+    if (intentHintLine){
+      cardSummary = `${cardSummary} ${intentHintLine}`.trim();
+    }
     const shareUrl = `${location.origin}/quiz/?code=${encodeURIComponent(primaryId)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
     const cardData = {
       code: primaryId,
@@ -1673,6 +1683,13 @@ async function showResult(opts){
       url: shareUrl
     };
     lastGuardianCard = cardData;
+    try{
+      localStorage.setItem('uc:lastResult', JSON.stringify({
+        deity: primaryId,
+        intent: intentParam,
+        ts: Date.now()
+      }));
+    }catch(_){}
     if (guardianCardPreview){
       renderGuardianCardPreview(cardData);
     }
