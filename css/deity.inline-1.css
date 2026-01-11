@@ -54,6 +54,10 @@
   .deity-return-cta-link{text-decoration:underline;color:#6b7280;}
   .deity-current-state-block{margin:16px 0 20px;padding-top:12px;border-top:1px dashed rgba(0,0,0,0.08);}
   .deity-current-state-block p{margin:0 0 6px;font-size:12px;line-height:1.7;color:rgba(0,0,0,0.45);}
+  .deity-state-relationship{font-size:12px;line-height:1.6;color:rgba(0,0,0,0.45);margin:12px 0 4px;}
+  .deity-state-confirmation{font-size:12px;line-height:1.6;color:rgba(0,0,0,0.45);margin:8px 0 6px;}
+  .deity-state-stability{font-size:12px;line-height:1.6;color:rgba(0,0,0,0.45);margin:8px 0 12px;}
+  .deity-state-continuity{font-size:12px;line-height:1.6;color:rgba(0,0,0,0.45);margin:6px 0 10px;}
   .return-flow-title{font-size:13px;font-weight:500;margin-bottom:4px;}
   .return-flow-body{font-size:13px;line-height:1.6;margin-bottom:8px;}
   .return-flow-actions{display:flex;gap:12px;flex-wrap:wrap;}

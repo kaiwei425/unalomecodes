@@ -216,6 +216,53 @@
     return result;
   }
 
+function buildUserStateContext({ currentDeity, currentIntent, now = Date.now() } = {}){
+    if (!currentDeity) return null;
+    try{
+      if (typeof window === 'undefined' || !window.localStorage) return null;
+    }catch(_){
+      return null;
+    }
+    const userState = getCurrentUserState({ now });
+    if (!userState) return null;
+    const normalizedCurrentDeity = String(currentDeity || '').trim().toUpperCase();
+    const normalizedCurrentIntent = currentIntent ? String(currentIntent).trim() : null;
+    const normalizedPreviousDeity = String(userState.deity || '').trim().toUpperCase();
+    const normalizedPreviousIntent = userState.intent ? String(userState.intent).trim() : null;
+    return {
+      hasHistory: true,
+      source: userState.source,
+      previous: {
+        deity: normalizedPreviousDeity,
+        intent: normalizedPreviousIntent,
+        time: userState.time || now
+      },
+      current: {
+        deity: normalizedCurrentDeity,
+        intent: normalizedCurrentIntent
+      },
+      isSameDeity: normalizedPreviousDeity === normalizedCurrentDeity,
+      isSameIntent: normalizedPreviousIntent && normalizedCurrentIntent
+        ? normalizedPreviousIntent === normalizedCurrentIntent
+        : false
+    };
+  }
+
+  function buildStateContinuityHint({ currentDeity, currentIntent, lang, now, isQuizContext }){
+    if (!isQuizContext) return '';
+    const context = buildUserStateContext({ currentDeity, currentIntent, now });
+    if (!context || !context.hasHistory) return '';
+    const { isSameDeity, isSameIntent } = context;
+    const text = (isSameDeity && isSameIntent)
+      ? (lang === 'en'
+        ? 'Your current state aligns with your previously saved state.'
+        : '你目前的狀態，與先前保存的狀態一致。')
+      : (lang === 'en'
+        ? 'Your current state differs from your previously saved state.'
+        : '你目前的狀態，與先前保存的狀態有所不同。');
+    return `<div class="deity-state-continuity">${escapeHtml(text)}</div>`;
+  }
+
   function buildStateRelationNarrative({ stateCompare, lang }){
     if (!stateCompare || stateCompare.isSame) return '';
     const sourceLabel = stateCompare.source === 'saved'
@@ -225,6 +272,34 @@
       ? `This deity differs from your ${sourceLabel.en}, offering another perspective on where you are now.`
       : `這尊神與你「${sourceLabel.zh}」不同，代表你正在觀看新的狀態面向。`;
     return `<div class="deity-state-relation">${sentence}</div>`;
+  }
+
+  function buildStateStabilityHint({ lang }){
+    if (!lang) return '';
+    const text = lang === 'zh'
+      ? '此刻的狀態是可以被暫時停留與理解的，不需要立即做出改變。'
+      : 'This state can be paused and understood for now. No immediate change is required.';
+    return `<div class="deity-state-stability">${escapeHtml(text)}</div>`;
+  }
+
+  function buildStateConfirmationHint({ currentDeity, currentIntent, lang, now, isQuizContext }){
+    if (!isQuizContext) return '';
+    const context = buildUserStateContext({ currentDeity, currentIntent, now });
+    if (!context || context.isSameDeity) return '';
+    const text = lang === 'zh'
+      ? '這代表你目前關注的狀態，已與先前保存的狀態不同。'
+      : 'This reflects a state different from what you previously saved.';
+    return `<div class="deity-state-confirmation">${escapeHtml(text)}</div>`;
+  }
+
+  function buildStateRelationshipNarrative({ currentDeity, currentIntent, lang, now }){
+    const comparison = compareWithCurrentState({ currentDeity, currentIntent, now });
+    if (!comparison || comparison.isSame) return '';
+    if (lang !== 'en' && lang !== 'zh') return '';
+    const text = lang === 'en'
+      ? 'The guardian state appearing this time differs from your previous one. It does not replace it, but reflects a shift in what currently holds your focus.'
+      : '這一次出現的守護狀態，與你先前所處的狀態不同。它並非取代，而是反映你當下關注的重心已產生變化。';
+    return `<div class="deity-state-relationship">${text}</div>`;
   }
 
   function compareWithCurrentState({ currentDeity, currentIntent, now = Date.now() } = {}){
@@ -527,6 +602,40 @@
           ];
           const html = paragraphs.map(line => line ? `<p>${escapeHtml(line)}</p>` : '').join('');
           return `<div class="deity-current-state-block">${html}</div>`;
+        })()}
+        ${(function(){
+          if (!isQuizContext) return '';
+          const relationship = buildStateRelationshipNarrative({
+            currentDeity: deity.code,
+            currentIntent: intentParam,
+            lang,
+            now: Date.now()
+          });
+          return relationship || '';
+        })()}
+        ${(function(){
+          if (!isQuizContext) return '';
+          return buildStateConfirmationHint({
+            currentDeity: deity.code,
+            currentIntent: intentParam,
+            lang,
+            now: Date.now(),
+            isQuizContext
+          }) || '';
+        })()}
+        ${(function(){
+          if (!isQuizContext) return '';
+          return buildStateStabilityHint({ lang }) || '';
+        })()}
+        ${(function(){
+          if (!isQuizContext) return '';
+          return buildStateContinuityHint({
+            currentDeity: deity.code,
+            currentIntent: intentParam,
+            lang,
+            now: Date.now(),
+            isQuizContext
+          }) || '';
         })()}
         ${(function(){
           let html = '';
