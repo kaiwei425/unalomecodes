@@ -35,10 +35,24 @@
     };
   }
 
-  // C1: placeholder for future deity-specific logic
+  // C1: derive status analysis data without affecting UI
   function handleC1Feature(deity, lang){
-    // C1: intentionally no-op for later extension
-    return null;
+    // C1: ensure keywords/strengths exist
+    if (!deity) return null;
+    const kw = getLocaleArray(deity.keywords, lang);
+    const st = getLocaleArray(deity.strengths, lang);
+    if (!kw.length && !st.length) return null;
+    const tags = [];
+    kw.slice(0, 3).forEach(k => { if (k) tags.push(String(k)); });
+    st.slice(0, 2).forEach(s => { if (s && tags.length < 3) tags.push(String(s)); });
+    const summary = lang === 'en'
+      ? `Suitable when facing ${kw.slice(0,3).join(' / ') || 'shifts'}, especially for ${st[0] || 'steady focus'}.`
+      : `適合在「${kw.slice(0,3).join('／') || '變動'}」時參拜，特別有助於「${st[0] || '穩定力量'}」。`;
+    return {
+      tags,
+      summary,
+      source: 'keywords+strengths'
+    };
   }
 
   function formatTemplate(tpl, ctx){
@@ -134,6 +148,13 @@
           }
           return text;
         })()}</div>
+        ${(function(){
+          // C1 summary hint (data-only)
+          if (c1Data && c1Data.summary){
+            return `<div class="deity-c1-summary">${escapeHtml(c1Data.summary)}</div>`;
+          }
+          return '';
+        })()}
         <div class="desc">${escapeHtml(desc || '')}</div>
       </div>
     `;
