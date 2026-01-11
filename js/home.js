@@ -390,7 +390,13 @@
       var nick = escapeHtml(item.nick || (document.documentElement.lang === 'en' ? 'Anonymous' : '匿名'));
       var date = escapeHtml(formatStoryDate(item.ts));
       var label = document.documentElement.lang === 'en' ? 'Product' : '商品';
-      var productLabel = item.productName || item.product || item.itemName || item.name || '';
+      var productLabel = item.productName
+        || item.product
+        || item.product_title
+        || item.itemName
+        || item.name
+        || item.serviceName
+        || item.title || '';
       var productInfo = productLabel ? '<div class="testimonial-item__hint">' + escapeHtml(label + '：' + productLabel) + '</div>' : '';
       var rawImage = item.imageUrl || item.image;
       var safeImage = hasSanitizer ? sanitizeImageUrl(rawImage) : (rawImage || '');
