@@ -326,40 +326,61 @@
     var section = document.querySelector('[data-testimonial-section]');
     if (!section) return;
     var locale = document.documentElement.lang === 'en' ? 'en' : 'zh';
-    var categories = [
-      { type:'physical', label: locale === 'en' ? 'Physical products' : '實體商品', code: section.dataset.storyCodePhysical || '' },
-      { type:'service', label: locale === 'en' ? 'Blessing services' : '祈福服務', code: section.dataset.storyCodeService || '' }
-    ];
-    categories.forEach(function(category){
-      var panel = section.querySelector('[data-story-panel="' + category.type + '"]');
-      if (!panel) return;
-      var body = panel.querySelector('[data-story-body="' + category.type + '"]');
-      var status = panel.querySelector('[data-story-status="' + category.type + '"]');
-      if (!body){
-        return;
-      }
-      setPanelPlaceholder(body, locale === 'en' ? 'Loading verified feedback…' : '載入真實留言中…');
-      (async function(){
-        if (!category.code){
-          setPanelStatus(status, locale === 'en' ? 'No code configured' : '尚未設定留言代碼');
-          setPanelPlaceholder(body, locale === 'en' ? '請在 data-story-code-' + category.type + ' 補上 KV 代碼。' : '請在 data-story-code-' + category.type + ' 填入 KV 代碼。');
+    var codes = [];
+    if (section.dataset.storyCodes){
+      codes = section.dataset.storyCodes.split(',').map(function(code){ return code.trim(); }).filter(Boolean);
+    }
+    if (!codes.length){
+      if (section.dataset.storyCodePhysical) codes.push(section.dataset.storyCodePhysical.trim());
+      if (section.dataset.storyCodeService) codes.push(section.dataset.storyCodeService.trim());
+      codes = codes.filter(Boolean);
+    }
+    var panel = section.querySelector('[data-story-panel]');
+    if (!panel) return;
+    var body = panel.querySelector('[data-story-body]');
+    var status = panel.querySelector('[data-story-status]');
+    var label = panel.dataset.storyLabel || (locale === 'en' ? 'Customer feedback' : '真實分享');
+    if (!body){
+      return;
+    }
+    var loadingText = locale === 'en' ? 'Loading verified feedback…' : '載入真實留言中…';
+    setPanelPlaceholder(body, loadingText);
+    if (!codes.length){
+      setPanelStatus(status, locale === 'en' ? 'No code configured' : '尚未設定留言代碼');
+      setPanelPlaceholder(body, locale === 'en' ? '請在 data-story-codes 中添加 KV 代碼。' : '請在 data-story-codes 中填入 KV 代碼。');
+      return;
+    }
+    (async function(){
+      try{
+        var aggregated = [];
+        for (var i = 0; i < codes.length; i++){
+          var code = codes[i];
+          if (!code) continue;
+          var fetched = await fetchStoryItems(code);
+          if (fetched.length){
+            aggregated = aggregated.concat(fetched.map(function(item){
+              return Object.assign({}, item, { sourceCode: code });
+            }));
+          }
+        }
+        if (!aggregated.length){
+          setPanelStatus(status, locale === 'en' ? 'No testimonials yet' : '目前尚無留言');
+          setPanelPlaceholder(body, locale === 'en' ? 'Be the first to share your feedback.' : '暫時還沒有分享，歡迎先留下一則好評。');
           return;
         }
-        try{
-          var items = await fetchStoryItems(category.code);
-          if (!items.length){
-            setPanelStatus(status, locale === 'en' ? 'No testimonials yet' : '目前尚無留言');
-            setPanelPlaceholder(body, locale === 'en' ? '歡迎率先留下您的回饋。' : '暫時還沒有分享，歡迎先留下一則好評。');
-            return;
-          }
-          setPanelStatus(status, locale === 'en' ? items.length + ' verified stories' : items.length + ' 則真實分享');
-          body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(items, category.label) + '</div>';
-        }catch(err){
-          setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
-          setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
-        }
-      })();
-    });
+        aggregated.sort(function(a,b){
+          return (b.ts || 0) - (a.ts || 0);
+        });
+        var limited = aggregated.slice(0, 4);
+        setPanelStatus(status, locale === 'en'
+          ? limited.length + ' verified stories'
+          : limited.length + ' 則真實分享');
+        body.innerHTML = '<div class="testimonial-panel__grid">' + renderStoryCards(limited, label) + '</div>';
+      }catch(err){
+        setPanelStatus(status, locale === 'en' ? 'Failed to load' : '讀取失敗');
+        setPanelPlaceholder(body, (err && err.message) ? err.message : (locale === 'en' ? 'Unable to load testimonials.' : '無法載入留言。'));
+      }
+    })();
   }
 
   applyLang(resolveLang());
