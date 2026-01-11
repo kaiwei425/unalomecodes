@@ -30,12 +30,22 @@
       'home-hero-cta-primary': '1 分鐘找到你的守護神',
       'home-hero-cta-secondary': '探索寺廟地圖',
       'home-hero-cta-note': '完成後會得到命中指引、行動建議與可下載的守護卡',
+      'home-methodology-label': '方法論',
+      'home-methodology-line': 'Unalomecodes 是一套把你的狀態，對位到適合行動與守護的方式',
+      'home-methodology-steps': '看懂狀態 → 找到對位 → 採取行動',
+      'deity-state-template': '適合正在「{k1}、{k2}」階段的人，尤其當你需要更穩的「{s1}」時',
+      'deity-state-fallback': '適合在關鍵轉換期尋求更穩定守護的人',
       'about-brand': 'unalomecodes | 懂玩泰國',
       'about-nav-temple': '寺廟地圖',
       'about-nav-food': '美食地圖',
       'about-nav-shop': '商城',
       'about-hero-title': '關於 unalomecodes',
       'about-hero-desc': '我們專注在泰國旅遊 × 信仰 × 在地文化的入口整理，讓你先理解、再探索。',
+      'about-method-line-1': '不是占卜，也不替你做決定。',
+      'about-method-line-2': '我們關心的是你此刻的狀態與可行動的方向。',
+      'about-method-line-3': '透過狀態對位守護，讓行動更有節奏與依據。',
+      'about-method-steps': '看懂狀態 → 找到對位 → 採取行動',
+      'about-method-line-4': '守護不是依賴，而是一種更清晰的自我選擇。',
       'about-trust-1-title': '在地整理',
       'about-trust-1-desc': '把寺廟、在地美食與路線脈絡整理成清晰可用的探索體系，讓每一次旅程不再碎片，而是有脈絡、有方向的在地體驗。',
       'about-trust-2-title': '品牌立場',
@@ -93,12 +103,22 @@
       'home-hero-cta-primary': 'Find your deity in 1 minute',
       'home-hero-cta-secondary': 'Explore the temple map',
       'home-hero-cta-note': 'You’ll get insights, next-step actions, and a downloadable protection card.',
+      'home-methodology-label': 'Method',
+      'home-methodology-line': 'Unalomecodes is a way to match your current state with the right actions and protection',
+      'home-methodology-steps': 'Understand → Match → Take action',
+      'deity-state-template': 'Best for phases of “{k1}, {k2}”, especially when you need steadier “{s1}”.',
+      'deity-state-fallback': 'A good fit when you’re in a transition and want steadier protection.',
       'about-brand': 'unalomecodes | Thailand Portal',
       'about-nav-temple': 'Temple Map',
       'about-nav-food': 'Food Map',
       'about-nav-shop': 'Shop',
       'about-hero-title': 'About unalomecodes',
       'about-hero-desc': 'We curate Thailand travel, belief, and local culture into a clear starting point.',
+      'about-method-line-1': 'It’s not fortune-telling, and it doesn’t decide for you.',
+      'about-method-line-2': 'We care about your current state and the actions you can take now.',
+      'about-method-line-3': 'By matching your state with the right protection, your actions gain rhythm and clarity.',
+      'about-method-steps': 'Understand → Match → Take action',
+      'about-method-line-4': 'Protection isn’t dependence; it’s a clearer way to choose.',
       'about-trust-1-title': 'Local Context',
       'about-trust-1-desc': 'We connect temples, local food, and route context into a clear exploration system so every trip feels coherent and directional.',
       'about-trust-2-title': 'Brand Stance',
@@ -240,7 +260,7 @@
   }
 
   applyLang(resolveLang());
-
+  window.APP_I18N = I18N;
   if (typeof window.track === 'function'){
     if (heroQuizCta){
       heroQuizCta.addEventListener('click', function(){

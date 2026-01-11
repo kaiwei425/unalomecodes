@@ -295,11 +295,16 @@ const I18N = {
     'result-why-title': '為什麼是祂',
     'result-evidence-title': '你這次最關鍵的線索',
     'result-card-title': '你的守護卡',
+    'result-card-share-hint': '分享給朋友，看看你們的守護是否互補',
     'result-card-note': '這張卡可作為你近期的提醒與行動指引',
     'result-card-download': '下載卡片',
     'result-card-copy': '複製分享文案',
     'result-card-copied': '已複製',
     'result-card-share': '我的守護神是 {deity}（{keywords}）。{url}',
+    'result-card-transfer-line': '這張卡代表我現在最需要的守護',
+    'share-text-line-1': '我現在的狀態是【{role}】',
+    'share-text-line-2': '這個測驗告訴我，我需要的是【{deity}】的守護',
+    'share-text-line-cta': '👉 用 1 分鐘看看你的守護是誰',
     'quiz-nav-title': '守護神測驗',
     'quiz-nav-fortune': '領取日籤',
     'quiz-nav-shop': '前往商城',
@@ -313,6 +318,9 @@ const I18N = {
     'quiz-intro-item-1': '出生星期與星座（快速定位個人能量）',
     'quiz-intro-item-2': '7 題生活與意圖題（推導最合拍的守護神）',
     'quiz-intro-item-3': '結果會給你下一步建議（寺廟、商品、內容）',
+    'quiz-method-line-1': '1 分鐘完成測驗',
+    'quiz-method-line-2': '我們會依你的當下狀態與選擇，匹配最適合你的守護',
+    'quiz-method-line-3': '結果包含命中指引、行動建議與可下載的守護卡',
     'quiz-save-hint': '已自動保存作答',
     'quiz-back': '← 上一題',
     'quiz-restart': '重新開始',
@@ -329,10 +337,10 @@ const I18N = {
     'micro-action-6': '今天只做一個能推進「{intent}」的小決定。',
     'action-week-fallback': '本週選一個簡單的供花或清水致意，保持節奏即可。',
     'action-wear-fallback': '在需要穩定時配戴守護神聖物。',
-    'cta-shop': '查看你的配戴建議',
+    'cta-shop': '查看你的行動與配戴建議',
     'cta-temple': '前往寺廟地圖',
     'cta-deity': '查看完整神祇介紹',
-    'quiz-cta-shop-primary': '查看你的配戴建議',
+    'quiz-cta-shop-primary': '查看你的行動與配戴建議',
     'quiz-cta-temple': '前往寺廟地圖',
     'quiz-cta-deity': '查看完整神祇介紹',
     'cta-retake': '重新測驗一次',
@@ -351,6 +359,7 @@ const I18N = {
     'member-line-3': '日籤包含：守護神提醒、今日能量建議、生活小提示與加持方向。',
     'empty-stories': '目前還沒有故事分享。',
     'disclaimer': '自我覺察與文化體驗建議，不構成保證。',
+    'result-card-share-hint': '這不是占卜結果，而是一張描述你此刻狀態的守護卡',
     'action-today': '今天',
     'action-week': '本週',
     'action-wear': '配戴建議',
@@ -381,11 +390,16 @@ const I18N = {
     'result-why-title': 'Why this deity',
     'result-evidence-title': 'Key signals',
     'result-card-title': 'Your protection card',
+    'result-card-share-hint': 'Share it and see how your protections differ.',
     'result-card-note': 'This card serves as a short-term reminder and guide.',
     'result-card-download': 'Download',
     'result-card-copy': 'Copy text',
     'result-card-copied': 'Copied',
     'result-card-share': 'My guardian is {deity} ({keywords}). {url}',
+    'result-card-transfer-line': 'This card reflects the protection I need right now',
+    'share-text-line-1': 'I’m currently in a {role} phase',
+    'share-text-line-2': 'This quiz matched me with {deity}',
+    'share-text-line-cta': '👉 See your protection in 1 minute',
     'quiz-nav-title': 'Guardian Quiz',
     'quiz-nav-fortune': 'Daily fortune',
     'quiz-nav-shop': 'Go to shop',
@@ -399,6 +413,9 @@ const I18N = {
     'quiz-intro-item-1': 'Birth weekday & zodiac (quick energy baseline)',
     'quiz-intro-item-2': '7 intent & life questions (match your guardian)',
     'quiz-intro-item-3': 'Results include next steps (temple/shop/content)',
+    'quiz-method-line-1': 'A 1-minute quiz based on your current state and choices',
+    'quiz-method-line-2': 'You’ll get insights, next steps, and a downloadable protection card',
+    'quiz-method-line-3': 'Results include targeted insights, next steps, and a shareable protection card',
     'quiz-save-hint': 'Auto-saved',
     'quiz-back': '← Back',
     'quiz-restart': 'Restart',
@@ -415,10 +432,10 @@ const I18N = {
     'micro-action-6': 'Today, make one small decision that advances “{intent}”.',
     'action-week-fallback': 'This week, offer flowers or water as a simple greeting and keep your rhythm.',
     'action-wear-fallback': 'Wear your deity item when you need steady focus.',
-    'cta-shop': 'View your wear guidance',
+    'cta-shop': 'See your recommended actions & picks',
     'cta-temple': 'Go to temple map',
     'cta-deity': 'View full deity profile',
-    'quiz-cta-shop-primary': 'View your wear guidance',
+    'quiz-cta-shop-primary': 'See your recommended actions & picks',
     'quiz-cta-temple': 'Go to temple map',
     'quiz-cta-deity': 'View full deity profile',
     'cta-retake': 'Retake the quiz',
@@ -437,6 +454,7 @@ const I18N = {
     'member-line-3': 'Daily fortune includes: guardian guidance, today’s energy focus, practical tips, and ritual direction.',
     'empty-stories': 'No stories yet.',
     'disclaimer': 'For reflection and cultural exploration, no guarantees.',
+    'result-card-share-hint': 'This isn’t a fortune — it’s a snapshot of your current state',
     'action-today': 'Today',
     'action-week': 'This week',
     'action-wear': 'Wearing tip',
@@ -786,12 +804,14 @@ function renderGuardianCardPreview(data){
   const roleEl = document.getElementById('guardianCardRole');
   const summaryEl = document.getElementById('guardianCardSummary');
   const noteEl = document.getElementById('guardianCardNote');
+  const transferEl = document.getElementById('guardianCardTransfer');
   const dateEl = document.getElementById('guardianCardDate');
   const tagWrap = document.getElementById('guardianCardKeywords');
   if (titleEl) titleEl.textContent = data.name || '—';
   if (roleEl) roleEl.textContent = data.role || '';
   if (summaryEl) summaryEl.textContent = data.summary || '';
   if (noteEl) noteEl.textContent = data.note || '';
+  if (transferEl) transferEl.textContent = data.transfer || '';
   if (dateEl) dateEl.textContent = data.date || '';
   if (tagWrap){
     tagWrap.innerHTML = (data.keywords || []).map(k => `<span class="tag">${k}</span>`).join('');
@@ -892,15 +912,23 @@ function drawGuardianCardToCanvas(data){
   ctx.font = '12px ui-sans-serif, system-ui, -apple-system';
   const noteLines = wrapTextLines(ctx, data.note || '', width - pad*2, data.lang, 2);
   noteLines.forEach((line, i) => {
-    ctx.fillText(line, pad, height - pad - 18 + i * 16);
+    ctx.fillText(line, pad, height - pad - 34 + i * 16);
+  });
+  const transferLines = wrapTextLines(ctx, data.transfer || '', width - pad*2, data.lang, 2);
+  transferLines.forEach((line, i) => {
+    ctx.fillText(line, pad, height - pad - 6 + i * 14);
   });
 
   return canvas;
 }
 
 function buildShareText(data){
-  const kw = (data.keywords || []).join(data.lang === 'en' ? ', ' : '、') || (data.lang === 'en' ? 'guardian' : '守護神');
-  return formatTemplate(t('result-card-share', data.lang), { deity: data.name || '', keywords: kw, url: data.url || '' });
+  const lang = data.lang || 'zh';
+  const line1 = formatTemplate(t('share-text-line-1', lang), { role: data.role || '' });
+  const line2 = formatTemplate(t('share-text-line-2', lang), { deity: data.name || '' });
+  const line3 = t('share-text-line-cta', lang) || '';
+  const url = data.url || '';
+  return [line1, line2, line3, url].filter(Boolean).join('\n');
 }
 
 function copyTextToClipboard(text){
@@ -1009,7 +1037,8 @@ if (langToggle){
     }
   });
 }
-applyLang(resolveLang());
+  applyLang(resolveLang());
+  window.APP_I18N = I18N;
 
 function fireTrack(event, payload){
   try{
@@ -1636,6 +1665,7 @@ async function showResult(opts){
       role: cardRole,
       summary: cardSummary,
       note: cardNote,
+      transfer: t('result-card-transfer-line', lang),
       date: formatFriendlyDate(lang),
       brand: 'unalomecodes',
       lang,

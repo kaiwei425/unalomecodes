@@ -13,6 +13,49 @@
     });
   }
 
+  function getLocaleArray(value, lang){
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'object'){
+      const candidate = (lang === 'en' ? value.en : value.zh) || value.zh || value.en;
+      return Array.isArray(candidate) ? candidate : [];
+    }
+    return [];
+  }
+
+  function buildStateDescriptor(deity, lang){
+    if (!deity) return '';
+    const keywords = getLocaleArray(deity.keywords, lang);
+    const strengths = getLocaleArray(deity.strengths, lang);
+    if (!keywords.length && !strengths.length) return null;
+    return {
+      k1: keywords[0] || keywords[1] || '',
+      k2: keywords[1] || keywords[0] || '',
+      s1: strengths[0] || strengths[1] || ''
+    };
+  }
+
+  function formatTemplate(tpl, ctx){
+    if (!tpl) return '';
+    return tpl.replace(/\{(\w+)\}/g, function(_, key){
+      if (!ctx) return '';
+      return escapeHtml(ctx[key] || '');
+    });
+  }
+
+  function getLangDict(lang){
+    if (!window.APP_I18N) return {};
+    return window.APP_I18N[lang] || window.APP_I18N.zh || {};
+  }
+
+  function tState(key, lang){
+    if (!key) return '';
+    const dict = getLangDict(lang);
+    if (dict && dict[key]) return dict[key];
+    const fallbackDict = getLangDict('zh');
+    return (fallbackDict && fallbackDict[key]) || '';
+  }
+
   function getDeityById(id){
     const data = getData();
     const code = String(id || '').trim().toUpperCase();
@@ -59,6 +102,7 @@
       ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" referrerpolicy="no-referrer">`
       : `<div class="deity-placeholder">${escapeHtml(name)}</div>`;
 
+    const stateData = buildStateDescriptor(deity, lang);
     return `
       <div class="card deity-profile" data-deity-code="${escapeHtml(deity.code)}">
         <div class="imgbox">${imgHtml}</div>
@@ -68,6 +112,21 @@
             <span class="deity-code">${escapeHtml(deity.code)}</span>
           </div>
         </div>
+        <div class="deity-state">${(function(){
+          const templateKey = 'deity-state-template';
+          const fallbackKey = 'deity-state-fallback';
+          let text = '';
+          if (stateData && stateData.k1 && stateData.s1){
+            const tpl = tState(templateKey, lang);
+            if (tpl){
+              text = formatTemplate(tpl, stateData);
+            }
+          }
+          if (!text){
+            text = tState(fallbackKey, lang) || 'Suitable for transitions needing steadier protection.';
+          }
+          return text;
+        })()}</div>
         <div class="desc">${escapeHtml(desc || '')}</div>
       </div>
     `;

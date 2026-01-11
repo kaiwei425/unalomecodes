@@ -31,6 +31,11 @@
       <span class="kicker" data-i18n="quiz-intro-kicker">守護神測驗</span>
       <h1 data-i18n="quiz-intro-title">用測驗找出此刻最適合你的守護神</h1>
       <p class="lead" data-i18n="quiz-intro-lead">1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）</p>
+      <div class="quiz-methodology">
+        <p data-i18n="quiz-method-line-1">1 分鐘完成測驗</p>
+        <p data-i18n="quiz-method-line-2">我們會依你的當下狀態與選擇，匹配最適合你的守護</p>
+        <p data-i18n="quiz-method-line-3">結果包含命中指引、行動建議與可下載的守護卡</p>
+      </div>
       <div class="intro-actions">
         <button class="btn btn-primary" id="startQuizBtn" type="button" data-i18n="quiz-intro-start">開始測驗</button>
         <button class="btn" id="resumeQuizBtn" type="button" style="display:none;" data-i18n="quiz-intro-resume">繼續上次</button>
@@ -160,17 +165,18 @@
           <h3 data-i18n="result-card-title">你的守護卡</h3>
         </div>
         <div class="guardian-card-body">
-          <div class="guardian-card-preview" id="guardianCardPreview">
-            <div class="guardian-card-brand">unalomecodes</div>
-            <div class="guardian-card-title" id="guardianCardTitle">—</div>
-            <div class="guardian-card-role" id="guardianCardRole">—</div>
-            <div class="guardian-card-summary" id="guardianCardSummary">—</div>
-            <div class="guardian-card-tags" id="guardianCardKeywords"></div>
-            <div class="guardian-card-note" id="guardianCardNote" data-i18n="result-card-note">這張卡可作為你近期的提醒與行動指引</div>
-            <div class="guardian-card-date" id="guardianCardDate">—</div>
-          </div>
+        <div class="guardian-card-preview" id="guardianCardPreview">
+          <div class="guardian-card-brand">unalomecodes</div>
+          <div class="guardian-card-title" id="guardianCardTitle">—</div>
+          <div class="guardian-card-role" id="guardianCardRole">—</div>
+          <div class="guardian-card-summary" id="guardianCardSummary">—</div>
+          <div class="guardian-card-tags" id="guardianCardKeywords"></div>
+          <div class="guardian-card-note" id="guardianCardNote" data-i18n="result-card-note">這張卡可作為你近期的提醒與行動指引</div>
+          <div class="guardian-card-transfer" id="guardianCardTransfer" data-i18n="result-card-transfer-line">這張卡代表我現在最需要的守護</div>
+          <div class="guardian-card-date" id="guardianCardDate">—</div>
         </div>
       </div>
+    </div>
 
       <div class="card advice-card">
         <div class="advice-head">
@@ -203,6 +209,7 @@
         <a id="ctaTempleBtn" class="btn btn-ghost btn-cta-secondary" href="/templemap" data-i18n="quiz-cta-temple">前往寺廟地圖</a>
         <a id="deityLink" target="_blank" rel="noopener" class="btn btn-ghost btn-cta-secondary" data-i18n="quiz-cta-deity">查看完整神祇介紹</a>
       </div>
+      <div class="guardian-share-hint" data-i18n="result-card-share-hint">分享給朋友，看看你們的守護是否互補</div>
       <div class="cta-aux">
         <button id="guardianCardDownloadBtn" class="btn btn-ghost btn-aux" type="button">
           <span class="btn-icon" aria-hidden="true">⬇</span>
