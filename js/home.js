@@ -188,8 +188,7 @@
     var stored = '';
     try{ stored = localStorage.getItem(LANG_KEY) || ''; }catch(_){}
     if (stored === 'zh' || stored === 'en') return stored;
-    var browser = (navigator.language || '').toLowerCase();
-    return browser.startsWith('en') ? 'en' : 'zh';
+    return 'zh';
   }
 
   function setLang(lang){

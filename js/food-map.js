@@ -24,14 +24,10 @@ document.addEventListener('DOMContentLoaded', function() {
     btnBackToTop.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   
-  const langDropdown = document.getElementById('langDropdown');
-  if (langDropdown) {
-    langDropdown.querySelectorAll('[data-lang]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const nextLang = btn.getAttribute('data-lang') || 'zh';
-        setLanguage(nextLang);
-        langDropdown.classList.remove('active');
-      });
+  if (btnLang){
+    btnLang.addEventListener('click', () => {
+      const nextLang = currentLang === 'en' ? 'zh' : 'en';
+      setLanguage(nextLang);
     });
   }
 
@@ -2505,14 +2501,7 @@ async function checkAdmin(){
 
 function setLanguage(lang) {
   currentLang = lang;
-  if (btnLang) btnLang.textContent = `${t('langSwitch')} ▾`;
-  const langDropdown = document.getElementById('langDropdown');
-  if (langDropdown) {
-    const zhBtn = langDropdown.querySelector('[data-lang="zh"]');
-    const enBtn = langDropdown.querySelector('[data-lang="en"]');
-    if (zhBtn) zhBtn.textContent = t('langZh');
-    if (enBtn) enBtn.textContent = t('langEn');
-  }
+  if (btnLang) btnLang.textContent = t('langSwitch');
   
   // Update static text
   document.querySelector('h1').textContent = t('title');
