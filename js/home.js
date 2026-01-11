@@ -51,6 +51,10 @@
       'about-trust-3-desc': '所有內容與服務資訊均有來源與背景標示，讓每一個選擇建立在理解之上，而不是疑問與不確定。',
       'home-section-title': '入口導覽',
       'home-section-note': '跟我一起探索泰國',
+      'home-testimonial-kicker': '信任足跡',
+      'home-testimonial-title': '顧客之聲',
+      'home-testimonial-subtitle': '實體商品與祈福服務的即時回饋，讓你更信任下一步。',
+      'home-testimonial-cta': '查看更多顧客心得',
       'home-entry-quiz-title': '神祇測驗',
       'home-entry-quiz-desc': '用狀態與生日線索，快速匹配此刻最適合你的守護神',
       'home-entry-quiz-tag-1': '個人化',
@@ -121,6 +125,10 @@
       'about-trust-3-desc': 'All content and service information includes sources and context, so every choice is grounded in understanding rather than uncertainty.',
       'home-section-title': 'Portal Guide',
       'home-section-note': 'Explore Thailand with me',
+      'home-testimonial-kicker': 'Trust Signals',
+      'home-testimonial-title': 'Customer Voices',
+      'home-testimonial-subtitle': 'Real feedback on goods and blessings so you can explore with confidence.',
+      'home-testimonial-cta': 'Read more stories',
       'home-entry-quiz-title': 'Deity Quiz',
       'home-entry-quiz-desc': 'A quick match based on your current state and birth cues.',
       'home-entry-quiz-tag-1': 'Personalized',
@@ -252,6 +260,79 @@
       setLang(next);
     });
   }
+
+  function initTestimonialCarousel(){
+    var carousel = document.querySelector('[data-testimonial-carousel]');
+    var dotsContainer = document.querySelector('[data-testimonial-dots]');
+    if (!carousel || !dotsContainer) return;
+    var track = carousel.querySelector('[data-testimonial-track]');
+    if (!track) return;
+    var slides = Array.from(track.children);
+    if (!slides.length) return;
+    var dots = [];
+    var prev = document.querySelector('[data-carousel-prev]');
+    var next = document.querySelector('[data-carousel-next]');
+    var currentIndex = 0;
+    var autoTimer;
+
+    function update(){
+      var width = carousel.offsetWidth;
+      track.style.transform = 'translateX(-' + (currentIndex * width) + 'px)';
+      slides.forEach(function(slide, idx){
+        slide.setAttribute('aria-hidden', idx === currentIndex ? 'false' : 'true');
+      });
+      dots.forEach(function(dot, idx){
+        dot.classList.toggle('is-active', idx === currentIndex);
+      });
+    }
+
+    function goTo(index){
+      currentIndex = (index + slides.length) % slides.length;
+      update();
+    }
+
+    slides.forEach(function(_, idx){
+      var dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'testimonial-dot';
+      dot.setAttribute('aria-label', 'Slide ' + (idx + 1));
+      dot.addEventListener('click', function(){
+        goTo(idx);
+        resetAuto();
+      });
+      dotsContainer.appendChild(dot);
+      dots.push(dot);
+    });
+
+    if (prev){
+      prev.addEventListener('click', function(){
+        goTo(currentIndex - 1);
+        resetAuto();
+      });
+    }
+    if (next){
+      next.addEventListener('click', function(){
+        goTo(currentIndex + 1);
+        resetAuto();
+      });
+    }
+
+    function startAuto(){
+      autoTimer = setInterval(function(){
+        goTo(currentIndex + 1);
+      }, 6000);
+    }
+
+    function resetAuto(){
+      clearInterval(autoTimer);
+      startAuto();
+    }
+
+    window.addEventListener('resize', update);
+    goTo(0);
+    startAuto();
+  }
+  initTestimonialCarousel();
 
   applyLang(resolveLang());
   window.APP_I18N = I18N;
