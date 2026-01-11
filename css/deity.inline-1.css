@@ -26,8 +26,9 @@
   .imgbox img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
   .meta{padding:16px 16px 8px}
   .deity{font-size:22px;font-weight:800;letter-spacing:.02em}
-  .deity-state{padding:0 16px 12px;color:#94a3b8;font-size:13px;line-height:1.6;}
-  .deity-quiz-context{padding:0 16px 4px;color:#94a3b8;font-size:12px;line-height:1.6;margin-top:4px;margin-bottom:6px;}
+  .deity-state{padding:0 16px 0;color:#6b7280;font-size:13px;line-height:1.6;}
+  .deity-quiz-context{padding:0 16px 4px;color:#9ca3af;font-size:12px;line-height:1.6;margin-top:4px;margin-bottom:6px;}
+  .deity-micro-insight{margin:8px 0 14px;}
   .deity-c1-summary{padding:0 16px 8px;color:#94a3b8;font-size:12px;line-height:1.4;}
   .deity-c1-tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
   .deity-c1-tag{font-size:11px;line-height:1;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,0.05);color:#777;white-space:nowrap;}
@@ -39,13 +40,18 @@
   .deity-saved-compare .label{opacity:.7;}
   .deity-saved-compare .value{opacity:.95;}
   .deity-saved-direction{font-size:12px;line-height:1.6;color:#888;margin-top:6px;}
-  .deity-state-narrative{font-size:13px;line-height:1.7;color:#7a7a7a;margin-top:8px;margin-bottom:8px;}
+  .deity-state-narrative{font-size:12px;line-height:1.6;color:#9ca3af;margin-top:4px;}
+  .deity-context-details{margin:10px 0 16px;}
+  .deity-context-details summary{font-size:12px;color:#9ca3af;cursor:pointer;}
+  .deity-state-relation{font-size:12px;line-height:1.6;color:#8b94a5;margin-top:8px;margin-bottom:6px;opacity:.9;}
   .deity-quiet-closure{font-size:12px;line-height:1.6;color:#7a7a7a;opacity:.9;margin:8px 0 0;}
   .deity-next-step{margin-top:16px;padding:12px;border-radius:8px;background:#f6f6f6;}
   .next-step-title{font-size:13px;font-weight:500;margin-bottom:4px;}
   .next-step-body{font-size:13px;line-height:1.6;color:#555;}
   .next-step-link{display:inline-block;margin-top:6px;font-size:12px;color:#777;text-decoration:underline;}
-  .deity-return-flow{margin-top:32px;padding-top:20px;border-top:1px solid #eee;color:#666;}
+  .deity-return-flow{margin-top:0;padding-top:0;border-top:0;color:#666;}
+  .deity-return-cta{margin-top:18px;font-size:13px;}
+  .deity-return-cta a{text-decoration:underline;color:#6b7280;}
   .return-flow-title{font-size:13px;font-weight:500;margin-bottom:4px;}
   .return-flow-body{font-size:13px;line-height:1.6;margin-bottom:8px;}
   .return-flow-actions{display:flex;gap:12px;flex-wrap:wrap;}

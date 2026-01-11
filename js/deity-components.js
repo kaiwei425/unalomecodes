@@ -216,6 +216,17 @@
     return result;
   }
 
+  function buildStateRelationNarrative({ stateCompare, lang }){
+    if (!stateCompare || stateCompare.isSame) return '';
+    const sourceLabel = stateCompare.source === 'saved'
+      ? { zh: '先前保存的狀態', en: 'previously saved state' }
+      : { zh: '最近一次測驗的狀態', en: 'most recent quiz state' };
+    const sentence = lang === 'en'
+      ? `This deity differs from your ${sourceLabel.en}, offering another perspective on where you are now.`
+      : `這尊神與你「${sourceLabel.zh}」不同，代表你正在觀看新的狀態面向。`;
+    return `<div class="deity-state-relation">${sentence}</div>`;
+  }
+
   function compareWithCurrentState({ currentDeity, currentIntent, now = Date.now() } = {}){
     if (!currentDeity) return null;
     const userState = getCurrentUserState({ now });
@@ -419,6 +430,9 @@
       : '';
     const isQuizContext = buildQuizContextFlag({ intentParam });
     const quizContextHint = isQuizContext ? buildQuizContextHint({ intent: intentParam, lang }) : '';
+    const stateCompare = isQuizContext
+      ? compareWithCurrentState({ currentDeity: deity.code, currentIntent: intentParam, now: Date.now() })
+      : null;
     return `
       <div class="card deity-profile" data-deity-code="${escapeHtml(deity.code)}">
         <div class="imgbox">${imgHtml}</div>
@@ -429,22 +443,30 @@
           </div>
         </div>
         ${quizContextHint}
-        <div class="deity-state">${(function(){
-          const templateKey = 'deity-state-template';
-          const fallbackKey = 'deity-state-fallback';
-          let text = '';
-          if (stateData && stateData.k1 && stateData.s1){
-            const tpl = tState(templateKey, lang);
-            if (tpl){
-              text = formatTemplate(tpl, stateData);
+        <div class="deity-micro-insight">
+          <div class="deity-state">${(function(){
+            const templateKey = 'deity-state-template';
+            const fallbackKey = 'deity-state-fallback';
+            let text = '';
+            if (stateData && stateData.k1 && stateData.s1){
+              const tpl = tState(templateKey, lang);
+              if (tpl){
+                text = formatTemplate(tpl, stateData);
+              }
             }
-          }
-          if (!text){
-            text = tState(fallbackKey, lang) || 'Suitable for transitions needing steadier protection.';
-          }
-          return text;
-        })()}</div>
+            if (!text){
+              text = tState(fallbackKey, lang) || 'Suitable for transitions needing steadier protection.';
+            }
+            return text;
+          })()}</div>
+          ${(function(){
+            if (!isQuizContext) return '';
+            const narrative = buildOneLineStateNarrative({ deity, intent: intentParam, c1Data, lang });
+            return narrative || '';
+          })()}
+        </div>
         ${(function(){
+          const pieces = [];
           if (c1Data && c1Data.summary){
             let html = `<div class="deity-c1-summary">${escapeHtml(c1Data.summary)}</div>`;
             const tags = Array.isArray(c1Data.tags) ? c1Data.tags.slice(0,3) : [];
@@ -455,76 +477,82 @@
               });
               html += '</div>';
             }
-            if (intentParam && isQuizContext){
-              const hint = lang === 'en'
-                ? `This deity is often chosen for “${intentParam}” states`
-                : `這尊神常在「${intentParam}」狀態被選擇`;
-              html += `<div class="deity-intent-hint">${escapeHtml(hint)}</div>`;
-            }
-            const memoryHint = buildSavedStateHint({ currentDeity: deity.code, lang });
-            if (memoryHint){
-              html += memoryHint;
-            }
-            if (isQuizContext){
-              const savedCompare = buildSavedStateCompare({ currentDeity: deity.code, lang });
-              if (savedCompare){
-                html += savedCompare;
-              }
-              const directionHint = buildSavedStateDirectionHint({ currentDeity: deity.code, currentIntent: intentParam, lang });
-              if (directionHint){
-                html += directionHint;
-              }
-              const narrative = buildOneLineStateNarrative({ deity, intent: intentParam, c1Data, lang });
-              if (narrative){
-                html += narrative;
-              }
-            }
-            const suggestion = buildNextStepSuggestion({
-              deity,
-              intent: intentParam,
-              c1Data,
-              lang
-            });
-            if (suggestion){
-              const linkHref = suggestion.actionUrl
-                ? `${suggestion.actionUrl}${suggestion.actionUrl.includes('?') ? '&' : '?'}intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(lang)}`
-                : '';
-              html += `<div class="deity-next-step"><div class="next-step-title">${escapeHtml(suggestion.title)}</div><div class="next-step-body">${escapeHtml(suggestion.body)}</div>`;
-              if (linkHref){
-                const linkText = lang === 'en'
-                  ? (suggestion.actionType === 'wear' ? 'View wear guidance' : 'Go to temple map')
-                  : (suggestion.actionType === 'wear' ? '查看配戴建議' : '前往寺廟地圖');
-                html += `<a class="next-step-link" href="${escapeHtml(linkHref)}">${escapeHtml(linkText)}</a>`;
-              }
-              html += '</div>';
-            }
-            if (isQuizContext){
-              const quietHint = buildQuietClosureHint({ lang });
-              if (quietHint){
-                html += quietHint;
-              }
-            }
-            return html;
+            pieces.push(html);
           }
-          return '';
+          if (intentParam && isQuizContext){
+            const hint = lang === 'en'
+              ? `This deity is often chosen for “${intentParam}” states`
+              : `這尊神常在「${intentParam}」狀態被選擇`;
+            pieces.push(`<div class="deity-intent-hint">${escapeHtml(hint)}</div>`);
+          }
+          const memoryHint = buildSavedStateHint({ currentDeity: deity.code, lang });
+          if (memoryHint){
+            pieces.push(memoryHint);
+          }
+          if (isQuizContext){
+            const savedCompare = buildSavedStateCompare({ currentDeity: deity.code, lang });
+            if (savedCompare){
+              pieces.push(savedCompare);
+            }
+            const directionHint = buildSavedStateDirectionHint({ currentDeity: deity.code, currentIntent: intentParam, lang });
+            if (directionHint){
+              pieces.push(directionHint);
+            }
+            const relation = buildStateRelationNarrative({ stateCompare, lang });
+            if (relation){
+              pieces.push(relation);
+            }
+          }
+          if (!pieces.length) return '';
+          const summaryLabel = lang === 'en' ? 'More context' : '更多狀態脈絡';
+          return `<details class="deity-context-details"><summary>${summaryLabel}</summary>${pieces.join('')}</details>`;
+        })()}
+        ${(function(){
+          let html = '';
+          const suggestion = buildNextStepSuggestion({
+            deity,
+            intent: intentParam,
+            c1Data,
+            lang
+          });
+          if (suggestion){
+            const linkHref = suggestion.actionUrl
+              ? `${suggestion.actionUrl}${suggestion.actionUrl.includes('?') ? '&' : '?'}intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(lang)}`
+              : '';
+            html += `<div class="deity-next-step"><div class="next-step-title">${escapeHtml(suggestion.title)}</div><div class="next-step-body">${escapeHtml(suggestion.body)}</div>`;
+            if (linkHref){
+              const linkText = lang === 'en'
+                ? (suggestion.actionType === 'wear' ? 'View wear guidance' : 'Go to temple map')
+                : (suggestion.actionType === 'wear' ? '查看配戴建議' : '前往寺廟地圖');
+              html += `<a class="next-step-link" href="${escapeHtml(linkHref)}">${escapeHtml(linkText)}</a>`;
+            }
+            html += '</div>';
+          }
+          if (isQuizContext){
+            const quietHint = buildQuietClosureHint({ lang });
+            if (quietHint){
+              html += quietHint;
+            }
+          }
+          return html;
         })()}
         <div class="desc">${escapeHtml(desc || '')}</div>
         ${(function(){
           const flow = buildReturnFlow({ deity, intent: intentParam, lang });
           if (!flow && !showMemoryHint) return '';
-          let html = '<div class="deity-return-flow">';
+          let html = '<div class="deity-return-cta"><div class="deity-return-flow">';
           if (showMemoryHint){
             html += `<div class="deity-memory-hint">${escapeHtml(memoryHintText)}</div>`;
           }
           if (!flow){
-            html += '</div>';
+            html += '</div></div>';
             return html;
           }
           html += `<div class="return-flow-title">${escapeHtml(flow.title)}</div><div class="return-flow-body">${escapeHtml(flow.body)}</div><div class="return-flow-actions">`;
           flow.actions.forEach(action => {
             html += `<a class="return-flow-link" href="${escapeHtml(action.url)}">${escapeHtml(action.label)}</a>`;
           });
-          html += '</div></div>';
+          html += '</div></div></div>';
           return html;
         })()}
       </div>
