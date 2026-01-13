@@ -23,17 +23,6 @@
         <button class="btn btn-ghost lang-toggle" id="langToggle" type="button" aria-label="切換語言">ZH/EN</button>
       </div>
     </div>
-    <div id="resultDailyModal" class="hero-modal" hidden>
-      <div class="hero-modal__content">
-        <h3>每日運勢</h3>
-        <p class="hero-modal__intro">請先登入後再領取每日運勢。</p>
-        <p class="hero-modal__hint">登入後即可將守護神徽章鎖定於會員中心，日常提醒會同步推送。</p>
-        <div class="hero-modal__actions">
-          <button id="resultDailyConfirm" class="btn btn-primary" type="button">登入會員</button>
-          <button id="resultDailyCancel" class="btn btn-ghost" type="button" data-result-modal-close>再想想</button>
-        </div>
-      </div>
-    </div>
   </header>
 
   <main class="wrap">
@@ -118,7 +107,7 @@
       </div>
       <div class="result-member-hint" id="membershipPrompt" hidden>
         <p>登入會員後，你的守護神徽章會顯示首頁及會員中心，每日都能領取查看當日運勢，台灣時間午夜 12 點會自動刷新。</p>
-        <button id="membershipFortuneBtn" class="btn btn-primary btn-sm" type="button">領取日籤</button>
+        <button id="membershipFortuneBtn" class="btn btn-primary btn-sm" type="button" data-fortune-btn>領取日籤</button>
       </div>
 
       <div class="result-main">

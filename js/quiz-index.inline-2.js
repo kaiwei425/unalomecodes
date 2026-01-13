@@ -1272,10 +1272,6 @@ const lineGuardianBadge = document.getElementById('lineGuardianBadge');
 const lineRetakeBtn = document.getElementById('lineRetakeBtn');
 const retakeCooldown = document.getElementById('retakeCooldown');
 const membershipPrompt = document.getElementById('membershipPrompt');
-const membershipFortuneBtn = document.getElementById('membershipFortuneBtn');
-const resultDailyModal = document.getElementById('resultDailyModal');
-const resultDailyConfirm = document.getElementById('resultDailyConfirm');
-const resultDailyCancel = document.getElementById('resultDailyCancel');
 let forceQuiz = false;
 var lastLineProfile = null;
 function isLineClient(){
@@ -1335,46 +1331,7 @@ if (lineRetakeBtn){
   });
 }
 
-function showResultDailyModal(){
-  if (!resultDailyModal) return;
-  resultDailyModal.hidden = false;
-  resultDailyModal.classList.add('is-visible');
-}
-
-function hideResultDailyModal(){
-  if (!resultDailyModal) return;
-  resultDailyModal.hidden = true;
-  resultDailyModal.classList.remove('is-visible');
-}
-
-function handleResultFortuneLogin(){
-  backupQuizCache();
-  if (window.authState && typeof window.authState.login === 'function'){
-    window.authState.login();
-    return;
-  }
-  window.location.href = '/account';
-}
-
-if (membershipFortuneBtn){
-  membershipFortuneBtn.addEventListener('click', showResultDailyModal);
-}
-if (resultDailyModal){
-  resultDailyModal.addEventListener('click', (ev)=>{
-    if (ev.target === resultDailyModal || ev.target.hasAttribute('data-result-modal-close')){
-      hideResultDailyModal();
-    }
-  });
-}
-if (resultDailyConfirm){
-  resultDailyConfirm.addEventListener('click', ()=>{
-    hideResultDailyModal();
-    window.location.href = '/api/auth/google/login?redirect=/account';
-  });
-}
-if (resultDailyCancel){
-  resultDailyCancel.addEventListener('click', hideResultDailyModal);
-}
+const FORTUNE_AUTO_KEY = '__quizOpenFortune__';
 
 const dowBox = document.getElementById('dowBox');
 const zodiacBox = document.getElementById('zodiacBox');
@@ -2328,7 +2285,7 @@ Enter this code at checkout.`
       const res = await fetch('/api/fortune', { cache:'no-store', credentials:'include' });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || !data || data.ok === false){
-        if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取日籤。');
+        if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取每日運勢。');
         throw new Error((data && data.error) || '取得日籤失敗');
       }
       renderFortune(data.fortune || null);
@@ -2340,12 +2297,25 @@ Enter this code at checkout.`
     const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
     if (!loggedIn){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
-        window.authState.promptLogin('請先登入後再領取日籤。');
+        backupQuizCache();
+        try{ sessionStorage.setItem(FORTUNE_AUTO_KEY, '1'); }catch(_){}
+        window.authState.promptLogin('請先登入後再領取每日運勢。');
+        return;
       }
+      window.location.href = '/api/auth/google/login?redirect=/quiz';
       return;
     }
     showDialog(fortuneDialog);
     await fetchFortune();
+  }
+  function tryAutoOpenFortune(){
+    try{
+      const pending = sessionStorage.getItem(FORTUNE_AUTO_KEY) === '1';
+      const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
+      if (!pending || !loggedIn) return;
+      sessionStorage.removeItem(FORTUNE_AUTO_KEY);
+      openFortuneDialog();
+    }catch(_){}
   }
   document.addEventListener('click', ev=>{
     const btn = ev.target.closest('[data-fortune-btn]');
@@ -2355,5 +2325,12 @@ Enter this code at checkout.`
   });
   if (fortuneClose){
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
+  }
+  if (window.authState && typeof window.authState.onProfile === 'function'){
+    window.authState.onProfile(profile=>{
+      if (profile) setTimeout(tryAutoOpenFortune, 50);
+    });
+  }else{
+    setTimeout(tryAutoOpenFortune, 150);
   }
 })();
