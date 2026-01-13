@@ -447,6 +447,112 @@ body.nav-open .nav-drawer__panel{
   background:#fff;
   color:#0f172a;
 }
+.fortune-dialog{
+  border:none;
+  border-radius:18px;
+  padding:0;
+  max-width:560px;
+  width:92%;
+  background:#fff;
+  color:#0f172a;
+  box-shadow:0 30px 70px rgba(0,0,0,.35);
+}
+.fortune-shell{
+  padding:20px;
+  display:grid;
+  gap:16px;
+  background:#fff;
+  border-radius:18px;
+  border:1px solid rgba(148,163,184,.25);
+}
+.fortune-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.fortune-title{
+  font-size:18px;
+  font-weight:700;
+}
+.fortune-date{
+  font-size:12px;
+  color:#6b7280;
+}
+.fortune-close{
+  border:none;
+  background:#f1f5f9;
+  color:#0f172a;
+  border-radius:999px;
+  width:28px;
+  height:28px;
+  cursor:pointer;
+}
+.fortune-loading{
+  padding:16px;
+  border-radius:14px;
+  border:1px dashed rgba(148,163,184,.4);
+  background:#f8fafc;
+  color:#64748b;
+  font-size:13px;
+  text-align:center;
+}
+.fortune-error{
+  padding:12px;
+  border-radius:12px;
+  background:#fef2f2;
+  border:1px solid rgba(239,68,68,.2);
+  color:#991b1b;
+  font-size:13px;
+}
+.fortune-card{
+  padding:16px;
+  border-radius:16px;
+  background:#f8fafc;
+  border:1px solid rgba(148,163,184,.25);
+}
+.fortune-stars{
+  font-size:16px;
+  letter-spacing:2px;
+  color:#b45309;
+  margin-bottom:6px;
+}
+.fortune-summary{
+  font-size:16px;
+  font-weight:600;
+  color:#0f172a;
+  margin-bottom:10px;
+}
+.fortune-section{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(148,163,184,.25);
+}
+.fortune-label{
+  font-size:12px;
+  letter-spacing:1px;
+  color:#6b7280;
+  margin-bottom:6px;
+}
+.fortune-text{
+  font-size:14px;
+  line-height:1.7;
+  color:#0f172a;
+}
+.fortune-meta{
+  margin-top:12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  font-size:11px;
+  color:#6b7280;
+}
+.fortune-meta span{
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.25);
+  background:#f8fafc;
+}
 .hero-guardian-badge{
   position:relative;
   display:flex;

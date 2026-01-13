@@ -129,6 +129,34 @@
           </div>
         </div>
       </div>
+      <dialog id="fortuneDialogHome" class="fortune-dialog">
+        <div class="fortune-shell">
+          <div class="fortune-head">
+            <div>
+              <div class="fortune-title">今日專屬日籤</div>
+              <div class="fortune-date" id="fortuneDateHome">—</div>
+            </div>
+            <button type="button" class="fortune-close" id="fortuneCloseHome">✕</button>
+          </div>
+          <div class="fortune-body">
+            <div id="fortuneLoadingHome" class="fortune-loading">正在翻牌中…</div>
+            <div id="fortuneErrorHome" class="fortune-error" style="display:none;"></div>
+            <div id="fortuneCardHome" class="fortune-card" style="display:none;">
+              <div class="fortune-stars" id="fortuneStarsHome"></div>
+              <div class="fortune-summary" id="fortuneSummaryHome"></div>
+              <div class="fortune-section">
+                <div class="fortune-label">生活小建議</div>
+                <div class="fortune-text" id="fortuneAdviceHome"></div>
+              </div>
+              <div class="fortune-section">
+                <div class="fortune-label" id="fortuneRitualLabelHome">守護神想對你說</div>
+                <div class="fortune-text" id="fortuneRitualHome"></div>
+              </div>
+              <div class="fortune-meta" id="fortuneMetaHome"></div>
+            </div>
+          </div>
+        </div>
+      </dialog>
 
       <section class="section testimonial-section" aria-labelledby="testimonialTitle"
         data-testimonial-section

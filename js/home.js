@@ -641,6 +641,18 @@
   const dailyModal = document.getElementById('dailyFortuneModal');
   const dailyConfirm = document.getElementById('dailyFortuneConfirm');
   const dailyCancel = document.getElementById('dailyFortuneCancel');
+  const fortuneDialog = document.getElementById('fortuneDialogHome');
+  const fortuneClose = document.getElementById('fortuneCloseHome');
+  const fortuneLoading = document.getElementById('fortuneLoadingHome');
+  const fortuneError = document.getElementById('fortuneErrorHome');
+  const fortuneCard = document.getElementById('fortuneCardHome');
+  const fortuneDate = document.getElementById('fortuneDateHome');
+  const fortuneStars = document.getElementById('fortuneStarsHome');
+  const fortuneSummary = document.getElementById('fortuneSummaryHome');
+  const fortuneAdvice = document.getElementById('fortuneAdviceHome');
+  const fortuneRitual = document.getElementById('fortuneRitualHome');
+  const fortuneMeta = document.getElementById('fortuneMetaHome');
+  const fortuneRitualLabel = document.getElementById('fortuneRitualLabelHome');
 
   const GUARDIAN_NAME_MAP = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
 
@@ -851,16 +863,16 @@
     const guardian = getActiveGuardian();
     const code = guardian ? String(guardian.code || guardian.id || '').toUpperCase() : '';
     if (type === 'daily'){
-      markDailyFortuneSeen();
       const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
         ? window.authState.isLoggedIn()
         : false;
       if (!loggedIn){
+        markDailyFortuneSeen();
         showDailyModal();
         return;
       }
-      try{ sessionStorage.setItem('__quizOpenFortune__', '1'); }catch(_){}
-      window.location.href = '/quiz/';
+      markDailyFortuneSeen();
+      openFortuneDialog();
       return;
     }
     if (type === 'retake'){
@@ -890,6 +902,90 @@
     if (!dailyModal) return;
     dailyModal.hidden = true;
     dailyModal.classList.remove('is-visible');
+  }
+
+  function showDialog(dialogEl){
+    if (!dialogEl) return;
+    if (typeof dialogEl.showModal === 'function'){
+      if (!dialogEl.open) dialogEl.showModal();
+      return;
+    }
+    dialogEl.hidden = false;
+    dialogEl.setAttribute('open', '');
+  }
+
+  function closeDialog(dialogEl){
+    if (!dialogEl) return;
+    if (typeof dialogEl.close === 'function' && dialogEl.open){
+      dialogEl.close();
+      return;
+    }
+    dialogEl.hidden = true;
+    dialogEl.removeAttribute('open');
+  }
+
+  function setFortuneLoading(){
+    if (fortuneLoading) fortuneLoading.style.display = '';
+    if (fortuneError) fortuneError.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = 'none';
+  }
+
+  function setFortuneError(message){
+    if (fortuneError){
+      fortuneError.textContent = message || '暫時無法取得日籤，請稍後再試。';
+      fortuneError.style.display = '';
+    }
+    if (fortuneLoading) fortuneLoading.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = 'none';
+  }
+
+  function renderFortune(fortune){
+    if (!fortune) return;
+    if (fortuneDate) fortuneDate.textContent = fortune.date || '';
+    if (fortuneStars){
+      const stars = fortune.stars || '';
+      fortuneStars.textContent = stars;
+      fortuneStars.style.display = stars ? '' : 'none';
+    }
+    if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
+    if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
+    if (fortuneMeta){
+      const meta = fortune.meta || {};
+      const tags = [];
+      if (meta.guardianName) tags.push(meta.guardianName);
+      if (meta.element) tags.push(meta.element);
+      if (meta.focus) tags.push(meta.focus);
+      fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+    }
+    if (fortuneRitualLabel){
+      const gName = (fortune.meta && fortune.meta.guardianName) || '';
+      fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
+    }
+    if (fortuneLoading) fortuneLoading.style.display = 'none';
+    if (fortuneError) fortuneError.style.display = 'none';
+    if (fortuneCard) fortuneCard.style.display = '';
+  }
+
+  async function fetchFortune(){
+    try{
+      setFortuneLoading();
+      const res = await fetch('/api/fortune', { cache:'no-store', credentials:'include' });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok){
+        if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取每日運勢。');
+        throw new Error((data && data.error) || '取得日籤失敗');
+      }
+      renderFortune(data.fortune || null);
+    }catch(err){
+      setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
+    }
+  }
+
+  function openFortuneDialog(){
+    if (!fortuneDialog) return;
+    showDialog(fortuneDialog);
+    fetchFortune();
   }
 
   if (heroBadge){
@@ -944,6 +1040,10 @@
     dailyCancel.addEventListener('click', hideDailyModal);
   }
 
+  if (fortuneClose){
+    fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
+  }
+
   restoreHeroQuizCacheFromBackup();
   const initialProfile = getAuthProfile();
   if (initialProfile) syncLocalFromProfile(initialProfile);
@@ -957,8 +1057,7 @@
       const pending = sessionStorage.getItem('__homeFortunePending__');
       if (pending && window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()){
         try{ sessionStorage.removeItem('__homeFortunePending__'); }catch(_){}
-        try{ sessionStorage.setItem('__quizOpenFortune__', '1'); }catch(_){}
-        window.location.href = '/quiz/';
+        openFortuneDialog();
       }
     });
   }
