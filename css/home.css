@@ -389,6 +389,123 @@ body.nav-open .nav-drawer__panel{
   color:var(--text-muted);
   line-height:1.6;
 }
+.hero-guardian-badge{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#0f172a,#111827);
+  border:1px solid rgba(148,163,184,0.35);
+  color:#e2e8f0;
+  box-shadow:0 12px 24px rgba(15,23,42,0.25);
+  cursor:pointer;
+  user-select:none;
+}
+.hero-guardian-badge img{
+  width:28px;
+  height:28px;
+  object-fit:contain;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+.guardian-meta{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  font-size:12px;
+}
+.guardian-meta strong{
+  font-size:13px;
+  font-weight:700;
+  color:#f8fafc;
+}
+.guardian-sub{
+  font-size:11px;
+  color:#94a3b8;
+}
+.guardian-alert{
+  position:absolute;
+  top:-4px;
+  right:-4px;
+  min-width:18px;
+  height:18px;
+  padding:0 4px;
+  border-radius:999px;
+  background:#ef4444;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #111827;
+  line-height:1;
+}
+.guardian-menu{
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  min-width:170px;
+  display:none;
+  flex-direction:column;
+  gap:4px;
+  padding:6px;
+  border-radius:12px;
+  background:#0b1022;
+  border:1px solid rgba(148,163,184,.25);
+  box-shadow:0 18px 36px rgba(0,0,0,.35);
+  z-index:30;
+}
+.guardian-menu.guardian-menu--open{
+  display:flex;
+}
+.guardian-menu a,
+.guardian-menu button{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  padding:8px 10px;
+  border-radius:10px;
+  background:transparent;
+  border:0;
+  color:#e2e8f0;
+  font-size:12px;
+  font-weight:700;
+  text-decoration:none;
+  text-align:left;
+  cursor:pointer;
+}
+.guardian-menu a:hover,
+.guardian-menu button:hover{
+  background:rgba(148,163,184,.12);
+}
+.guardian-menu-badge{
+  margin-left:auto;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#ef4444;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+}
+@media(max-width:560px){
+  .hero-guardian-badge{
+    justify-content:center;
+    text-align:center;
+    margin:6px auto 0;
+  }
+  .guardian-meta{
+    align-items:center;
+  }
+}
 .hero-primary-cta{
   display:inline-flex;
   align-items:center;
