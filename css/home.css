@@ -496,9 +496,6 @@ body.nav-open .nav-drawer__panel{
   justify-content:center;
   line-height:1;
 }
-.guardian-menu button[data-hero-guardian-action="daily"] .guardian-menu-badge{
-  display:flex;
-}
 @media(max-width:560px){
   .hero-guardian-badge{
     justify-content:center;

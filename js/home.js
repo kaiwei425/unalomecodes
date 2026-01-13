@@ -634,6 +634,8 @@
   const heroBadge = document.getElementById('heroGuardianBadge');
   const heroBadgeMenu = heroBadge ? heroBadge.querySelector('[data-hero-guardian-menu]') : null;
   const heroBadgeLabel = heroBadge ? heroBadge.querySelector('[data-hero-guardian-label]') : null;
+  const heroDailyAction = heroBadge ? heroBadge.querySelector('[data-hero-guardian-action="daily"]') : null;
+  const heroDailyBadge = heroDailyAction ? heroDailyAction.querySelector('.guardian-menu-badge') : null;
   const heroCTA = document.querySelector('[data-hero-quiz-cta]');
   const heroNote = document.querySelector('.hero-cta__note');
   const dailyModal = document.getElementById('dailyFortuneModal');
@@ -651,6 +653,39 @@
     }
   }
 
+  function todayKey(){
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  const FORTUNE_BADGE_KEY = '__heroDailyFortuneSeen__';
+
+  function markDailyFortuneSeen(){
+    try{
+      localStorage.setItem(FORTUNE_BADGE_KEY, todayKey());
+    }catch(_){}
+    updateDailyBadgeIndicator();
+  }
+
+  function shouldShowFortuneBadge(){
+    if (!heroBadge || heroBadge.hidden) return false;
+    const guardian = readStoredGuardian();
+    if (!guardian) return false;
+    if (!guardian.code && !guardian.name) return false;
+    try{
+      const seen = localStorage.getItem(FORTUNE_BADGE_KEY);
+      return seen !== todayKey();
+    }catch(_){ return true; }
+  }
+
+  function updateDailyBadgeIndicator(){
+    if (!heroDailyBadge) return;
+    heroDailyBadge.style.display = shouldShowFortuneBadge() ? 'flex' : 'none';
+  }
+
   function formatGuardianName(guardian){
     if (!guardian) return '';
     const code = String(guardian.code || guardian.id || '').toUpperCase();
@@ -663,6 +698,7 @@
     if (!heroBadge || !heroCTA) return;
     const guardian = readStoredGuardian();
     if (!guardian) return;
+    if (!guardian.code && !guardian.name) return;
     heroBadge.hidden = false;
     heroCTA.style.display = 'none';
     if (heroNote) heroNote.style.display = 'none';
@@ -671,6 +707,7 @@
     heroBadge.dataset.guardianCode = String(guardian.code || guardian.id || '').toUpperCase();
     heroBadge.setAttribute('aria-expanded','false');
     if (heroBadgeMenu) heroBadgeMenu.setAttribute('aria-hidden','true');
+    updateDailyBadgeIndicator();
   }
 
   function hideHeroBadge(){
@@ -684,6 +721,7 @@
     if (heroNote){
       heroNote.style.display = '';
     }
+    updateDailyBadgeIndicator();
   }
 
   function toggleHeroVisibility(){
@@ -721,6 +759,7 @@
     const guardian = readStoredGuardian();
     const code = guardian ? String(guardian.code || guardian.id || '').toUpperCase() : '';
     if (type === 'daily'){
+      markDailyFortuneSeen();
       showDailyModal();
       return;
     }
@@ -801,4 +840,5 @@
   }
 
   toggleHeroVisibility();
+  updateDailyBadgeIndicator();
 })();
