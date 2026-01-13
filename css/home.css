@@ -429,6 +429,24 @@ body.nav-open .nav-drawer__panel{
   justify-content:center;
   gap:10px;
 }
+.hero-modal .btn{
+  min-width:120px;
+  border-radius:999px;
+  padding:10px 18px;
+  font-weight:700;
+  text-transform:none;
+}
+.hero-modal .btn-primary{
+  background:linear-gradient(135deg,#1f2937,#0f172a);
+  color:#fff;
+  border:none;
+  box-shadow:0 10px 20px rgba(15,23,42,0.25);
+}
+.hero-modal .btn-ghost{
+  border:1px solid rgba(15,23,42,0.2);
+  background:#fff;
+  color:#0f172a;
+}
 .hero-guardian-badge{
   position:relative;
   display:flex;
