@@ -1245,7 +1245,9 @@ restoreQuizCacheFromBackup();
 function shouldShowStoredResult(){
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
-  return !!guardian && isProfileComplete(profile);
+  if (!guardian || !profile || !isProfileComplete(profile)) return false;
+  const ts = guardian.ts || profile.ts || 0;
+  return isSameTaipeiDay(ts, Date.now());
 }
 
 function initStoredResult(){
@@ -1367,7 +1369,7 @@ if (resultDailyModal){
 if (resultDailyConfirm){
   resultDailyConfirm.addEventListener('click', ()=>{
     hideResultDailyModal();
-    handleResultFortuneLogin();
+    window.location.href = '/api/auth/google/login?redirect=/account';
   });
 }
 if (resultDailyCancel){
@@ -1633,7 +1635,9 @@ document.addEventListener('keydown', (ev)=>{
 });
 
 const saved = loadState();
-if (saved && saved.state){
+if (shouldShowStoredResult()){
+  clearState();
+} else if (saved && saved.state){
   const hasProgress = Object.values(saved.state).some(val=>!!val);
   if (hasProgress){
     Object.assign(state, saved.state);

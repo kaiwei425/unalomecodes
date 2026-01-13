@@ -694,6 +694,8 @@
     const guardian = readStoredGuardian();
     const profile = readStoredQuizProfile();
     if (!guardian || !profile) return false;
+    const code = String(guardian.code || guardian.id || '').toUpperCase();
+    if (!code || !GUARDIAN_NAME_MAP[code]) return false;
     if (!profile.dow || !profile.zod || !profile.job) return false;
     const answers = profile.answers || {};
     const required = ['p2','p3','p4','p5','p6','p7'];
