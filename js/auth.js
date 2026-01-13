@@ -233,56 +233,27 @@
       return;
     }
     const local = readLocalQuizPayload();
+    if (local && local.guardian){
+      bindingGuardian = true;
+      try{
+        await fetch('/api/me/profile', {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({
+            guardian: local.guardian,
+            quiz: local.quiz || undefined
+          })
+        });
+        clearLocalQuizCache();
+        await refreshProfile();
+      }catch(_){}
+      bindingGuardian = false;
+      return;
+    }
     if (profile.guardian){
-      if (!local || !local.guardian){
-        writeLocalFromProfile(profile);
-        return;
-      }
-      const localTs = parseGuardianTs(local.guardian.ts);
-      const profileTs = parseGuardianTs(profile.guardian.ts);
-      if (localTs && (!profileTs || localTs > profileTs)){
-        bindingGuardian = true;
-        try{
-          await fetch('/api/me/profile', {
-            method:'PATCH',
-            headers:{'Content-Type':'application/json'},
-            credentials:'include',
-            body: JSON.stringify({
-              guardian: local.guardian,
-              quiz: local.quiz || undefined
-            })
-          });
-          clearQuizBindPending();
-          await refreshProfile();
-        }catch(_){}
-        bindingGuardian = false;
-        return;
-      }
       writeLocalFromProfile(profile);
-      return;
     }
-    if (!local || !local.guardian) return;
-    const guardianName = local.guardian.name || local.guardian.code || '守護神';
-    const shouldBind = window.confirm(`您剛才的測驗結果為守護神 ${guardianName}，是否要自動帶入此帳號？`);
-    if (!shouldBind){
-      clearLocalQuizCache();
-      return;
-    }
-    bindingGuardian = true;
-    try{
-      await fetch('/api/me/profile', {
-        method:'PATCH',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body: JSON.stringify({
-          guardian: local.guardian,
-          quiz: local.quiz || undefined
-        })
-      });
-      clearLocalQuizCache();
-      await refreshProfile();
-    }catch(_){}
-    bindingGuardian = false;
   }
 
   async function refreshProfile(){
