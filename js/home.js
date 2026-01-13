@@ -707,11 +707,15 @@
     const name = String(profile.guardian.name || '').trim();
     const tsValue = profile.guardian.ts ? Date.parse(profile.guardian.ts) : NaN;
     const ts = Number.isNaN(tsValue) ? (profile.guardian.ts || Date.now()) : tsValue;
-    try{
-      localStorage.setItem(QUIZ_GUARDIAN_KEY, JSON.stringify({ code, name, ts }));
-    }catch(_){}
-    if (profile.quiz){
-      try{ localStorage.setItem(QUIZ_PROFILE_KEY, JSON.stringify(profile.quiz)); }catch(_){}
+    const existing = readStoredGuardian();
+    const existingTs = existing ? toTimestamp(existing.ts) : 0;
+    if (!existingTs || ts >= existingTs){
+      try{
+        localStorage.setItem(QUIZ_GUARDIAN_KEY, JSON.stringify({ code, name, ts }));
+      }catch(_){}
+      if (profile.quiz){
+        try{ localStorage.setItem(QUIZ_PROFILE_KEY, JSON.stringify(profile.quiz)); }catch(_){}
+      }
     }
   }
 

@@ -160,6 +160,9 @@
       localStorage.removeItem(QUIZ_BIND_KEY);
     }catch(_){}
   }
+  function clearQuizBindPending(){
+    try{ localStorage.removeItem(QUIZ_BIND_KEY); }catch(_){}
+  }
   function readQuizBindPendingTs(){
     try{
       const raw = localStorage.getItem(QUIZ_BIND_KEY);
@@ -203,13 +206,61 @@
     if (!guardian) return null;
     return { guardian, quiz };
   }
+  function writeLocalFromProfile(profile){
+    if (!profile || !profile.guardian) return;
+    const code = String(profile.guardian.code || '').trim().toUpperCase();
+    if (!code) return;
+    const name = String(profile.guardian.name || '').trim();
+    const ts = profile.guardian.ts ? Date.parse(profile.guardian.ts) : Date.now();
+    try{
+      localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Number.isNaN(ts) ? Date.now() : ts }));
+    }catch(_){}
+    if (profile.quiz){
+      try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(profile.quiz)); }catch(_){}
+    }
+    clearQuizBindPending();
+  }
+  function parseGuardianTs(value){
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
   async function bindLocalGuardianIfNeeded(profile){
     if (bindingGuardian) return;
-    if (!profile || profile.guardian){
-      if (profile && profile.guardian) clearLocalQuizCache();
+    if (!profile){
       return;
     }
     const local = readLocalQuizPayload();
+    if (profile.guardian){
+      if (!local || !local.guardian){
+        writeLocalFromProfile(profile);
+        return;
+      }
+      const localTs = parseGuardianTs(local.guardian.ts);
+      const profileTs = parseGuardianTs(profile.guardian.ts);
+      if (localTs && (!profileTs || localTs > profileTs)){
+        bindingGuardian = true;
+        try{
+          await fetch('/api/me/profile', {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            credentials:'include',
+            body: JSON.stringify({
+              guardian: local.guardian,
+              quiz: local.quiz || undefined
+            })
+          });
+          clearQuizBindPending();
+          await refreshProfile();
+        }catch(_){}
+        bindingGuardian = false;
+        return;
+      }
+      writeLocalFromProfile(profile);
+      return;
+    }
     if (!local || !local.guardian) return;
     const guardianName = local.guardian.name || local.guardian.code || '守護神';
     const shouldBind = window.confirm(`您剛才的測驗結果為守護神 ${guardianName}，是否要自動帶入此帳號？`);
