@@ -1167,6 +1167,21 @@ function loadStoredQuizProfile(){
   }
 }
 
+function isSameTaipeiDay(tsA, tsB){
+  if (!tsA || !tsB) return false;
+  const keyA = taipeiDateKey(tsA);
+  const keyB = taipeiDateKey(tsB);
+  return keyA === keyB;
+}
+
+function shouldShowStoredResult(){
+  const guardian = loadStoredGuardian();
+  const profile = loadStoredQuizProfile();
+  if (!guardian || !profile) return false;
+  const ts = guardian.ts || profile.ts || 0;
+  return isSameTaipeiDay(ts, Date.now());
+}
+
 function initStoredResult(){
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
@@ -1449,6 +1464,10 @@ initStoredResult();
 
 if (startBtn){
   startBtn.addEventListener('click', ()=>{
+    if (shouldShowStoredResult()){
+      initStoredResult();
+      return;
+    }
     resetQuiz(false);
     fireTrack('quiz_start');
   });
