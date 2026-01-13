@@ -3,266 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Unalome Codes 的全新 Deity Quiz，結合泰國穆特魯神學、Maha Taksa 星象學與心理原型。">
-  <title>Unalome Codes Deity Quiz｜神祇親和力重設</title>
+  <meta name="description" content="依據泰國 Maha Taksa 星象與穆特魯神祇邏輯的 Deity Quiz 最小可運版本。">
+  <title>Unalome Codes Deity Quiz</title>
   <link rel="stylesheet" href="/css/deityquiz.css">
 </head>
-<body class="deity-quiz-page">
-  <header class="hero">
-    <div class="hero__content">
-      <p class="hero__kicker">Unalome Codes 測驗重構協議</p>
-      <h1>以泰國穆特魯神學與 Maha Taksa 星象學重構的「神祇親和力評估體系」</h1>
-      <p class="hero__lede">
-        全新改版的測驗不再止於星座對應或心理測驗，而是依據泰國三元信仰結構、16 位核心神祇與三角測量算法，
-        從命盤、業力缺口與心理原型三面鑑別出最適切的本命神祇（Ishta-Devata）。
-      </p>
-      <div class="hero__actions">
-        <a class="btn btn-primary" href="#quizSimulator">立即模擬作答</a>
-        <a class="btn btn-outline" href="#prescription">查看 Sacred Contract 範例</a>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <section class="section pillar" id="theology">
-      <div class="section__header">
-        <p class="kicker">第一部分｜泰國神祇信仰的神學與人類學基石</p>
-        <h2>信仰是一套能量共鳴與社會心理適應機制</h2>
-        <p>
-          穆特魯（Mutelu）融合上座部佛教、婆羅門教與泛靈信仰。測驗設計需同時觀照三層信仰層面，並以「波羅蜜」與「補運」的概念診斷用戶缺失的能量場。
-        </p>
-      </div>
-      <div class="pillar__grid">
-        <article>
-          <h3>核心層｜佛教</h3>
-          <p>提供道德基礎與涅槃目標。神祇多為護法或天人，主要掃除修行障礙。</p>
-        </article>
-        <article>
-          <h3>儀式層｜婆羅門教</h3>
-          <p>保持宇宙秩序與階級典禮，印度神祇在泰式儀式中被重新詮釋成泰式守護者。</p>
-        </article>
-        <article>
-          <h3>基礎層｜泛靈信仰</h3>
-          <p>祂們處理土地、財富、活力與日常願望，是最貼近信眾的神祇。</p>
-        </article>
-        <article>
-          <h3>補運機制</h3>
-          <p>三角測量算法以「命運資本」、「業力缺口」與「心理共鳴」作為定位，引導用戶對接能平衡火、水、風等元素的神祇。</p>
-        </article>
-      </div>
+<body>
+  <main id="dqApp" class="dq-app">
+    <section class="dq-step dq-step--birth" id="dqStepBirth">
+      <p class="dq-kicker">Step 0：出生資料</p>
+      <h1>提供生日與時間，啟動 Maha Taksa 錨定</h1>
+      <label class="dq-label" for="birthDate">出生日期（必填）</label>
+      <input id="birthDate" type="date" required aria-required="true">
+      <label class="dq-label" for="birthTime">出生時間（選填，空值視為 12:00）</label>
+      <input id="birthTime" type="time">
+      <button id="dqStartBtn" class="dq-btn" type="button">下一步：開始問卷</button>
+      <p id="dqStep0Error" class="dq-error" aria-live="polite"></p>
     </section>
 
-    <section class="section deities" id="deityLibrary">
-      <div class="section__header">
-        <p class="kicker">第二部分｜16 位核心神祇選定與神學側寫</p>
-        <h2>橫跨創世、財富、守護、轉運、愛與大地等六大向度</h2>
-        <p>每位神祇代表一種心理原型與星象能量，對應信眾不同的命盤與生命課題。</p>
+    <section class="dq-step dq-step--question" id="dqStepQuestion" hidden>
+      <div class="dq-step-header">
+        <span id="dqStepLabel"></span>
+        <span id="dqProgressLabel"></span>
       </div>
-      <div class="deities__grid">
-        <article>
-          <h3>創世與智慧</h3>
-          <p><strong>Phra Phrom</strong>：四面梵天，全方位命運建築師；<strong>Phra Pikanet</strong>：障礙粉碎者與考試神；<strong>Phra Saraswati</strong>：智慧、純淨與音樂。</p>
-        </article>
-        <article>
-          <h3>財富與繁榮</h3>
-          <p><strong>Phra Mae Lakshmi</strong>：高級財富與真愛；<strong>Mae Nang Kwak</strong>：招客人緣與現金流；<strong>Phra Sivali</strong>：人緣財、順遂、平安。</p>
-        </article>
-        <article>
-          <h3>守護與權力</h3>
-          <p><strong>Thao Wessuwan</strong>：夜叉王、守財與驅魔；<strong>Phra Narai</strong>：長期維護與秩序；<strong>Phaya Khrut</strong>：金翅鳥、法律與洗冤。</p>
-        </article>
-        <article>
-          <h3>轉運與偏財</h3>
-          <p><strong>Phra Rahu</strong>：吞噬霉運、黑夜力量；<strong>Phaya Naga</strong>：地下財與直覺；<strong>Phra Ketu</strong>：第六感與海外科技。</p>
-        </article>
-        <article>
-          <h3>愛與毀滅</h3>
-          <p><strong>Trimurti</strong>：愛的三位一體；<strong>Phra Isuan</strong>：毀滅與轉化；</p>
-        </article>
-        <article>
-          <h3>大地與根基</h3>
-          <p><strong>Phra Mae Thorani</strong>：見證功德、土地穩固。</p>
-        </article>
-      </div>
-      <div class="deities__callout">
-        <p>我們依據廟宇香火資料、流行趨勢與「穆特魯」信仰強度，將信徒會遇到的疑難與願望，映射到這 16 位神祇身上，形成最全方位的結果庫。</p>
-      </div>
+      <h2 id="dqQuestionPrompt"></h2>
+      <div id="dqQuestionOptions" class="dq-options"></div>
     </section>
 
-    <section class="section algorithm" id="algorithm">
-      <div class="section__header">
-        <p class="kicker">第三部分｜星象與算法引擎 Maha Taksa</p>
-        <h2>命盤＋業力＋心理三角測量，權重 30%/50%/20%</h2>
-      </div>
-      <div class="algorithm__grid">
-        <article>
-          <h3>N：Natal Score（出生曜象）</h3>
-          <p>占星組會依據泰國曆（早上 6:00 起始）換算「出生日曜」，再對應守護神與行星能量，作為命盤錨定分數。</p>
-        </article>
-        <article>
-          <h3>K：Karmic Void（業力缺口）</h3>
-          <p>透過題目找出用戶生命中的「陰影」，例如匱乏、孤獨、阻滯或恐懼，進而計算神祇補運需求。</p>
-        </article>
-        <article>
-          <h3>P：Personality（心理原型）</h3>
-          <p>採用原型心理學評估人格動力，讓神祇的性格與用戶拒斥度最低，形成人神共鳴。</p>
-        </article>
-      </div>
-      <div class="algorithm__weights">
-        <div>
-          <span class="weight-label">N</span>
-          <p>出生曜象：30%</p>
-        </div>
-        <div>
-          <span class="weight-label">K</span>
-          <p>業力缺口：50%</p>
-        </div>
-        <div>
-          <span class="weight-label">P</span>
-          <p>心理原型：20%</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section quiz" id="quizSimulator">
-      <div class="section__header">
-        <p class="kicker">第四部分｜診斷算法與題目設計</p>
-        <h2>每階段題目皆有分數值加乘，非線性選擇題</h2>
-        <p>你可立即體驗三角測量法，系統將即時顯示最合緣神祇。</p>
-      </div>
-      <div class="quiz__grid">
-        <article class="quiz-card">
-          <h3>第一階段：業力診斷</h3>
-          <p>以陰影與力量需求找出缺乏的波羅蜜。</p>
-          <div class="quiz-options">
-            <button data-stage="karmic" data-label="匱乏陰影" data-scores="Phra Sivali:5,Phra Mae Thorani:5,Mae Nang Kwak:3">A. 匱乏陰影</button>
-            <button data-stage="karmic" data-label="孤獨陰影" data-scores="Trimurti:5,Phra Mae Lakshmi:5">B. 孤獨陰影</button>
-            <button data-stage="karmic" data-label="阻滯陰影" data-scores="Phra Pikanet:5,Phra Phrom:3">C. 阻滯陰影</button>
-            <button data-stage="karmic" data-label="恐懼陰影" data-scores="Thao Wessuwan:5,Phaya Khrut:5,Phra Rahu:4">D. 恐懼陰影</button>
-            <button data-stage="karmic" data-label="迷茫陰影" data-scores="Phra Phrom:5,Phra In:3">E. 迷茫陰影</button>
-          </div>
-          <div class="quiz-options">
-            <button data-stage="karmic" data-label="權威力量" data-scores="Phaya Khrut:5,Thao Wessuwan:4">A. 權威與壓制</button>
-            <button data-stage="karmic" data-label="魅力吸引" data-scores="Phra Mae Lakshmi:5,Mae Nang Kwak:5">B. 魅力與吸引</button>
-            <button data-stage="karmic" data-label="直覺運氣" data-scores="Phra Rahu:5,Phaya Naga:5">C. 直覺與運氣</button>
-            <button data-stage="karmic" data-label="智慧與平靜" data-scores="Phra Sivali:5,Phra Saraswati:5">D. 智慧與平靜</button>
-            <button data-stage="karmic" data-label="重生轉化" data-scores="Phra Isuan:5">E. 重生與轉化</button>
-          </div>
-        </article>
-
-        <article class="quiz-card">
-          <h3>第二階段：心理原型共鳴</h3>
-          <p>確認性格與神祇性格不衝突。</p>
-          <div class="quiz-options">
-            <button data-stage="psychological" data-label="正面迎擊" data-scores="Thao Wessuwan:5,Phaya Khrut:4,Phra Isuan:3">A. 正面迎擊</button>
-            <button data-stage="psychological" data-label="圓滑周旋" data-scores="Phra Mae Lakshmi:5,Mae Nang Kwak:4,Phra In:3">B. 圓滑周旋</button>
-            <button data-stage="psychological" data-label="智取繞道" data-scores="Phra Pikanet:5,Phra Rahu:3">C. 智取繞道</button>
-            <button data-stage="psychological" data-label="忍耐等待" data-scores="Phaya Naga:5">D. 忍耐等待</button>
-            <button data-stage="psychological" data-label="尋求仲裁" data-scores="Phra Phrom:5,Phra Narai:4">E. 尋求仲裁</button>
-            <button data-stage="psychological" data-label="調停後盾" data-scores="Phra In:5">F. 調停後盾</button>
-          </div>
-        </article>
-
-        <article class="quiz-card quiz-card--natal">
-          <h3>第三階段：星象錨定（Natal Anchor）</h3>
-          <p>根據出生曜日自動加分，系統內建 Maha Taksa 晶格。</p>
-          <label for="natalDay" class="muted">選擇你出生的曜日（支援 6:00 開始的新泰曆禮節）</label>
-          <select id="natalDay">
-            <option value="">尚未選擇</option>
-            <option value="Sunday">星期日｜太陽 → Garuda +10 / Vishnu +5</option>
-            <option value="Monday">星期一｜月亮 → Mae Lakshmi +10 / Nang Kwak +5</option>
-            <option value="Tuesday">星期二｜火星 → Wessuwan +10 / Pikanet +5</option>
-            <option value="WednesdayDay">星期三白天｜水星 → Pikanet +10 / Indra +5</option>
-            <option value="WednesdayNight">星期三晚上｜拉胡 → Rahu +10 / Naga +5</option>
-            <option value="Thursday">星期四｜木星 → Phra Phrom +10 / Phra Sivali +5</option>
-            <option value="Friday">星期五｜金星 → Mae Lakshmi +10 / Trimurti +5</option>
-            <option value="Saturday">星期六｜土星 → Naga +10 / Phra Isuan +5</option>
-          </select>
-        </article>
-      </div>
-      <div class="quiz__result" id="quizResult">
-        <p class="kicker">雄心勃勃的 Sacred Contract</p>
-        <h3 id="topDeity">尚未選擇神祇</h3>
-        <p id="deityTagline">完成上述題目後，系統將即時推薦最契合的神祇。</p>
-        <div class="quiz__summary">
-          <div>
-            <span>首席神祇</span>
-            <strong id="primaryDeity">—</strong>
-          </div>
-          <div>
-            <span>次要神祇</span>
-            <strong id="secondaryDeity">—</strong>
-          </div>
-          <div>
-            <span>得分差距</span>
-            <strong id="scoreGap">—</strong>
-          </div>
-        </div>
-        <ul class="quiz__breakdown" id="breakdownList"></ul>
-      </div>
-    </section>
-
-    <section class="section prescription" id="prescription">
-      <div class="section__header">
-        <p class="kicker">第五部分｜結果呈現與 Sacred Contract</p>
-        <h2>提供神學診斷、供奉指南與禁忌</h2>
-      </div>
-      <div class="prescription__grid">
-        <article>
-          <h3>緣分診斷（The Why）</h3>
-          <p>根據本命曜象與業力題目，解釋為何該神祇會在此刻與你共鳴，以及你擁有的內在能量缺口。</p>
-        </article>
-        <article>
-          <h3>供奉指南（The How）</h3>
-          <p>具體儀式：時辰、方位、供品、咒語（如 Ka Tha Suriya Buppha 及 Ka Tha Jantra Buppha），並提供線上咒語音譯與音頻指引。</p>
-        </article>
-        <article>
-          <h3>禁忌（The Taboo）</h3>
-          <p>例如：拉胡信徒需避免背後說人壞話或佩戴太陽神飾品，否則霉運會加倍反噬。</p>
-        </article>
-      </div>
-      <div class="prescription__contract">
-        <h3>Sacred Contract 範本</h3>
-        <p class="lead">「你屬於週三夜晚、直覺敏銳但危機頻仍。拉胡天神會吞噬霉運，轉化為偏財與直覺力量。」</p>
-        <ol>
-          <li><strong>建議供奉時間：</strong>每週三晚上 20:00 - 23:00，面向西北方。</li>
-          <li><strong>專屬供品（黑煞供）：</strong>黑咖啡、黑涼粉、黑豆與黑糯米等共 8～12 件。</li>
-          <li><strong>禁忌：</strong>拒絕背後說人壞話，保持對盟友忠誠、遠離太陽光明系法器。</li>
-          <li><strong>下一步：</strong>可啟動線上 Ka Bon 儀式並記錄在會員中心。</li>
-        </ol>
-      </div>
-    </section>
-
-    <section class="section implementation" id="implementation">
-      <div class="section__header">
-        <p class="kicker">第六部分｜實施建議與 Faith-Tech 結論</p>
-        <h2>把儀式感與科技感融合</h2>
-        <p>搭配兩個核心元件。</p>
-      </div>
-      <div class="implementation__grid">
-        <article>
-          <h3>出生時間校正器</h3>
-          <p>自動將公曆轉為泰曆，考慮起日 6:00 與節氣變化，輸出可被 Maha Taksa 引擎直接消化的數值。</p>
-        </article>
-        <article>
-          <h3>AR 供奉預覽</h3>
-          <p>透過手機鏡頭即時預覽神壇配置與方位，增加使用者在家供奉的儀式感。</p>
-        </article>
-        <article>
-          <h3>在線還願（Ka Bon）</h3>
-          <p>串接泰國廟宇（如 Wat Srisathong）提供代為還願與奉獻的服務，同步寫入 Sacred Contract。</p>
-        </article>
-      </div>
-      <p class="implementation__conclusion">
-        綜合 Maha Taksa 星象學、心理原型與神學層次，這套測驗不僅告訴你「你是誰」，更提供「解決目前困境」的神聖處方。這正是泰國穆特魯文化的實踐精神。
-      </p>
+    <section class="dq-step dq-step--result" id="dqStepResult" hidden>
+      <p class="dq-kicker">結果</p>
+      <h2>神祇親和力診斷</h2>
+      <p id="dqResultPrimary">你的主守護神：—</p>
+      <p id="dqResultSecondary">你的輔助守護神：—</p>
+      <p id="dqResultSummary" class="dq-summary"></p>
+      <section class="dq-evidence" id="dqEvidence" hidden>
+        <h3>影響來源（Evidence）</h3>
+        <div id="dqEvidenceList"></div>
+      </section>
+      <button id="dqResetBtn" class="dq-btn dq-btn--ghost" type="button">重新測驗</button>
     </section>
   </main>
 
-  <footer class="footer">
-    <p>© Unalome Codes · 以泰國信仰深度打造的 Faith-Tech 測驗體驗</p>
-  </footer>
-
-  <script src="/js/deityquiz.js" defer></script>
+  <script src="/js/dq-data.js"></script>
+  <script src="/js/dq-astro.js"></script>
+  <script src="/js/dq-questions.js"></script>
+  <script src="/js/dq-scoring.js"></script>
+  <script src="/js/dq-sacred-contract.js"></script>
+  <script src="/js/dq-render.js"></script>
 </body>
 </html>
