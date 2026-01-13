@@ -222,11 +222,15 @@
     .hook-card .lead{margin:0;font-size:18px;line-height:1.7;color:var(--text);}
     .hook-card .muted{margin:8px 0 0;font-size:14px;line-height:1.6;}
     .why-card h3{margin:0 0 10px;font-size:16px;}
-    .influence-body{display:grid;gap:8px;color:var(--muted);font-size:14px;line-height:1.7;}
-    .influence-body p{margin:0;}
-    .influence-details{margin-top:12px;border-radius:14px;border:1px dashed var(--line);padding:12px;background:var(--surface-soft);}
-    .influence-details summary{cursor:pointer;font-weight:600;color:var(--text);list-style:none;}
-    .influence-details summary::-webkit-details-marker{display:none;}
+    .influence-simple{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      font-size:18px;
+      font-weight:700;
+      color:var(--text);
+    }
     .affinity-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;}
     .affinity-value{font-size:16px;font-weight:600;color:var(--text);}
     .affinity-breakdown{display:grid;gap:8px;margin-top:12px;font-size:13px;color:var(--muted);}

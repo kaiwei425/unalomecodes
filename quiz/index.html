@@ -107,7 +107,7 @@
         </div>
       </div>
       <div class="result-member-hint" id="membershipPrompt" hidden>
-        <p>登入會員後，你的守護神徽章會顯示在會員中心，並可於台灣時間午夜 12 點領取今日日籤。</p>
+        <p>登入會員後，你的守護神徽章會顯示首頁及會員中心，每日都能領取查看當日運勢，台灣時間午夜 12 點會自動刷新。</p>
         <a href="/api/auth/google/login?redirect=/quiz" class="btn btn-primary btn-sm">登入會員</a>
       </div>
 
@@ -124,25 +124,12 @@
           </div>
         </div>
         <div class="result-aside">
-          <div class="card influence-card">
-            <div class="section-head">
-              <h3 data-i18n="result-influence-title">影響來源說明</h3>
-            </div>
-            <div class="influence-body">
-              <p data-i18n="result-influence-line-1">本次結果主要依據你當下的行動選擇與核心意圖。</p>
-              <p data-i18n="result-influence-line-2">出生能量僅作為背景參考。</p>
-              <p data-i18n="result-influence-line-3">系統綜合以上因素，找出此刻最適合你的守護神。</p>
-            </div>
-            <details class="influence-details">
-              <summary data-i18n="result-influence-summary">系統判斷摘要</summary>
-              <div class="affinity-meta">
-                <span class="step" data-i18n="result-affinity-title">緣分值</span>
-                <span class="affinity-value" id="affText">—</span>
-              </div>
-              <div class="bar"><div id="affBar" class="fill"></div></div>
-              <div class="affinity-breakdown" id="affBreakdown"></div>
-            </details>
-          </div>
+      <div class="card influence-card">
+        <div class="influence-simple">
+          <span class="step">緣分值</span>
+          <strong id="affText">—</strong>
+        </div>
+      </div>
           <div class="card secondary-card">
             <h3 data-i18n="result-secondary-title">副守護神</h3>
             <div id="secondaryDeityCard"></div>
