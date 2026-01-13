@@ -4,6 +4,7 @@
   const profileListeners = [];
   const adminListeners = [];
   const loginUrl = '/api/auth/google/login';
+  const googlePrompt = 'select_account';
   const lineLoginUrl = '/api/auth/line/login';
   const lineLoginEnabled = typeof window.LINE_LOGIN_ENABLED === 'boolean'
     ? window.LINE_LOGIN_ENABLED
@@ -562,9 +563,9 @@
     try{
       const path = window.location.pathname + window.location.search + window.location.hash;
       const redirectParam = encodeURIComponent(path || '/shop');
-      window.location.href = `${loginUrl}?redirect=${redirectParam}`;
+      window.location.href = `${loginUrl}?redirect=${redirectParam}&prompt=${googlePrompt}`;
     }catch(_){
-      window.location.href = `${loginUrl}?redirect=%2Fshop`;
+      window.location.href = `${loginUrl}?redirect=%2Fshop&prompt=${googlePrompt}`;
     }
   }
 

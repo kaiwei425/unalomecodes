@@ -1662,7 +1662,7 @@ async function ensureMemberLoginForCoupon(){
     if (res.ok) return true;
   }catch(_){}
   alert('請先登入會員才能領取優惠券，將為你導向登入頁。');
-  window.location.href = '/api/auth/google/login?redirect=/quiz';
+  window.location.href = '/api/auth/google/login?redirect=/quiz&prompt=select_account';
   return false;
 }
 async function issueCoupon(deityCode, amount, quizPayload){
@@ -2070,7 +2070,7 @@ const primaryName = deityName(code, lang);
           const data = await res.json().catch(()=>({}));
           if (res.status === 401){
             alert(lang === 'en' ? 'Please log in first. Redirecting to sign-in.' : '請先登入會員，再儲存到「我的優惠券」。\\n將為你導向登入頁。');
-            window.location.href = '/api/auth/google/login?redirect=/quiz';
+            window.location.href = '/api/auth/google/login?redirect=/quiz&prompt=select_account';
             return;
           }
           if (!res.ok || !data.ok){
@@ -2160,7 +2160,7 @@ Enter this code at checkout.`
           }catch(err){
             if (err && err.code === 'LOGIN_REQUIRED'){
               alert(lang === 'en' ? 'Please log in to claim a coupon.' : '請先登入會員才能領取優惠券，將為你導向登入頁。');
-              window.location.href = '/api/auth/google/login?redirect=/quiz';
+              window.location.href = '/api/auth/google/login?redirect=/quiz&prompt=select_account';
               return;
             }
             if (err && err.code === 'daily_limit'){
@@ -2314,7 +2314,7 @@ Enter this code at checkout.`
         window.authState.promptLogin('請先登入後再領取每日運勢。');
         return;
       }
-      window.location.href = '/api/auth/google/login?redirect=/quiz';
+      window.location.href = '/api/auth/google/login?redirect=/quiz&prompt=select_account';
       return;
     }
     showDialog(fortuneDialog);
