@@ -461,6 +461,9 @@ body.nav-open .nav-drawer__panel{
   cursor:pointer;
   user-select:none;
 }
+.guardian-badge[hidden]{
+  display:none !important;
+}
 .hero-guardian-badge img{
   width:28px;
   height:28px;

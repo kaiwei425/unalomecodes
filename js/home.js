@@ -713,13 +713,26 @@
     return heroBadge ? (document.documentElement.lang === 'en' ? 'Guardian' : '守護神') : '守護神';
   }
 
+  function setHeroCtaVisible(show){
+    if (!heroCTA) return;
+    heroCTA.hidden = !show;
+    heroCTA.style.display = show ? '' : 'none';
+  }
+
+  function setHeroBadgeVisible(show){
+    if (!heroBadge) return;
+    heroBadge.hidden = !show;
+    heroBadge.style.display = show ? 'flex' : 'none';
+  }
+
   function showHeroBadge(){
     if (!heroBadge || !heroCTA) return;
     const guardian = readStoredGuardian();
     if (!guardian) return;
     if (!guardian.code && !guardian.name) return;
-    heroBadge.hidden = false;
-    heroCTA.style.display = 'none';
+    if (!hasStoredQuizResult()) return;
+    setHeroBadgeVisible(true);
+    setHeroCtaVisible(false);
     if (heroNote) heroNote.style.display = 'none';
     const name = formatGuardianName(guardian);
     if (heroBadgeLabel) heroBadgeLabel.textContent = `守護神：${name}`;
@@ -730,13 +743,9 @@
   }
 
   function hideHeroBadge(){
-    if (heroBadge){
-      heroBadge.hidden = true;
-      closeHeroMenu();
-    }
-    if (heroCTA){
-      heroCTA.style.display = '';
-    }
+    if (heroBadge) closeHeroMenu();
+    setHeroBadgeVisible(false);
+    setHeroCtaVisible(true);
     if (heroNote){
       heroNote.style.display = '';
     }
@@ -851,7 +860,11 @@
 
   if (dailyConfirm){
     dailyConfirm.addEventListener('click', ()=>{
-      window.location.href = '/api/auth/google/login?redirect=/quiz';
+      if (window.authState && typeof window.authState.login === 'function'){
+        window.authState.login();
+        return;
+      }
+      window.location.href = '/account';
     });
   }
   if (dailyCancel){
