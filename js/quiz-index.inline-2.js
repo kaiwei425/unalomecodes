@@ -313,7 +313,7 @@ const I18N = {
     'share-text-line-cta': '👉 用 1 分鐘看看你的守護是誰',
     'quiz-nav-title': '守護神測驗',
     'quiz-nav-fortune': '領取日籤',
-    'quiz-nav-shop': '前往商城',
+    'quiz-nav-home': '回到入口',
     'quiz-intro-kicker': '守護神測驗',
     'quiz-intro-title': '用測驗找出此刻最適合你的守護神',
     'quiz-intro-lead': '1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）',
@@ -408,7 +408,7 @@ const I18N = {
     'share-text-line-cta': '👉 See your protection in 1 minute',
     'quiz-nav-title': 'Guardian Quiz',
     'quiz-nav-fortune': 'Daily fortune',
-    'quiz-nav-shop': 'Go to shop',
+    'quiz-nav-home': 'Back to portal',
     'quiz-intro-kicker': 'Guardian Quiz',
     'quiz-intro-title': 'Find the guardian that fits you right now',
     'quiz-intro-lead': 'Finish in 1 minute. You’ll get a deity match and next steps (temple/shop/content).',
@@ -1194,18 +1194,24 @@ function isSameTaipeiDay(tsA, tsB){
   return keyA === keyB;
 }
 
+function isProfileComplete(profile){
+  if (!profile) return false;
+  if (!profile.dow || !profile.zod || !profile.job) return false;
+  const answers = profile.answers || {};
+  const required = ['p2','p3','p4','p5','p6','p7'];
+  return required.every(key => Boolean(answers[key]));
+}
+
 function shouldShowStoredResult(){
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
-  if (!guardian || !profile) return false;
-  const ts = guardian.ts || profile.ts || 0;
-  return isSameTaipeiDay(ts, Date.now());
+  return !!guardian && isProfileComplete(profile);
 }
 
 function initStoredResult(){
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
-  if (!guardian || !profile) return;
+  if (!guardian || !profile || !isProfileComplete(profile)) return;
   state.dow = profile.dow || state.dow;
   state.zod = profile.zod || state.zod;
   state.job = profile.job || state.job;
