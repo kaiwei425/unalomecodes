@@ -1916,7 +1916,13 @@ const primaryName = deityName(code, lang);
     const templeUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.templemap_url) || templeFallback;
     const deityUrl = (primaryDeity && primaryDeity.links && primaryDeity.links.deity_profile_url) || deityFallback;
 
-    if (ctaShop) ctaShop.href = shopUrl;
+    if (ctaShop){
+      const shopLabel = lang === 'en'
+        ? `View ${primaryName} relic`
+        : `查看${primaryName}聖物`;
+      ctaShop.textContent = shopLabel;
+      ctaShop.href = shopUrl;
+    }
     if (ctaTemple) ctaTemple.href = templeUrl;
     if (deityLink) deityLink.href = deityUrl;
 
