@@ -665,8 +665,11 @@
   function hasStoredQuizResult(){
     const profile = readStoredQuizProfile();
     if (!profile) return false;
-    const hasAnswers = profile.answers && Object.keys(profile.answers).length;
-    return !!(profile.dow && profile.zod && profile.job && hasAnswers);
+    if (!profile.dow || !profile.zod || !profile.job) return false;
+    const answers = profile.answers || {};
+    const required = ['p2','p3','p4','p5','p6','p7'];
+    const hasAllAnswers = required.every(key => Boolean(answers[key]));
+    return hasAllAnswers;
   }
 
   function todayKey(){
