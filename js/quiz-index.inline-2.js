@@ -313,7 +313,7 @@ const I18N = {
     'share-text-line-cta': '👉 用 1 分鐘看看你的守護是誰',
     'quiz-nav-title': '守護神測驗',
     'quiz-nav-fortune': '領取日籤',
-    'quiz-nav-home': '回到入口',
+    'quiz-nav-home': '返回首頁',
     'quiz-intro-kicker': '守護神測驗',
     'quiz-intro-title': '用測驗找出此刻最適合你的守護神',
     'quiz-intro-lead': '1 分鐘完成，結果會推薦神祇與下一步（寺廟/商品/內容）',
@@ -1230,6 +1230,10 @@ const lineGuardianBadge = document.getElementById('lineGuardianBadge');
 const lineRetakeBtn = document.getElementById('lineRetakeBtn');
 const retakeCooldown = document.getElementById('retakeCooldown');
 const membershipPrompt = document.getElementById('membershipPrompt');
+const membershipFortuneBtn = document.getElementById('membershipFortuneBtn');
+const resultDailyModal = document.getElementById('resultDailyModal');
+const resultDailyConfirm = document.getElementById('resultDailyConfirm');
+const resultDailyCancel = document.getElementById('resultDailyCancel');
 let forceQuiz = false;
 var lastLineProfile = null;
 function isLineClient(){
@@ -1287,6 +1291,46 @@ if (lineRetakeBtn){
     setQuizVisible(true);
     renderStep();
   });
+}
+
+function showResultDailyModal(){
+  if (!resultDailyModal) return;
+  resultDailyModal.hidden = false;
+  resultDailyModal.classList.add('is-visible');
+}
+
+function hideResultDailyModal(){
+  if (!resultDailyModal) return;
+  resultDailyModal.hidden = true;
+  resultDailyModal.classList.remove('is-visible');
+}
+
+function handleResultFortuneLogin(){
+  if (window.authState && typeof window.authState.login === 'function'){
+    window.authState.login();
+    return;
+  }
+  window.location.href = '/account';
+}
+
+if (membershipFortuneBtn){
+  membershipFortuneBtn.addEventListener('click', showResultDailyModal);
+}
+if (resultDailyModal){
+  resultDailyModal.addEventListener('click', (ev)=>{
+    if (ev.target === resultDailyModal || ev.target.hasAttribute('data-result-modal-close')){
+      hideResultDailyModal();
+    }
+  });
+}
+if (resultDailyConfirm){
+  resultDailyConfirm.addEventListener('click', ()=>{
+    hideResultDailyModal();
+    handleResultFortuneLogin();
+  });
+}
+if (resultDailyCancel){
+  resultDailyCancel.addEventListener('click', hideResultDailyModal);
 }
 
 const dowBox = document.getElementById('dowBox');

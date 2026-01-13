@@ -222,6 +222,14 @@
     .hook-card .lead{margin:0;font-size:18px;line-height:1.7;color:var(--text);}
     .hook-card .muted{margin:8px 0 0;font-size:14px;line-height:1.6;}
     .why-card h3{margin:0 0 10px;font-size:16px;}
+    .influence-card{
+      padding:20px;
+      border-radius:18px;
+      margin-bottom:16px;
+      background:#fff;
+      border:1px solid var(--line);
+      box-shadow:var(--shadow-sm);
+    }
     .influence-simple{
       display:flex;
       align-items:center;
@@ -230,15 +238,21 @@
       font-size:18px;
       font-weight:700;
       color:var(--text);
+      margin-bottom:12px;
     }
-    .affinity-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;}
-    .affinity-value{font-size:16px;font-weight:600;color:var(--text);}
-    .affinity-breakdown{display:grid;gap:8px;margin-top:12px;font-size:13px;color:var(--muted);}
-    .affinity-breakdown .row{justify-content:space-between;}
+    .affinity-bar{
+      height:8px;
+      border-radius:999px;
+      background:#eee;
+      overflow:hidden;
+    }
+    .affinity-bar .fill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,#c7a46a,#9f7930);
+      transition:width .2s ease;
+    }
     .step{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
-    .bar{height:8px;border-radius:999px;background:#eee;overflow:hidden;}
-    .fill{height:100%;width:0%;background:linear-gradient(90deg,#c7a46a,#9f7930);}
-    .note{font-size:12px;color:var(--muted);}
     .result-list{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:8px;}
     .result-list li{line-height:1.75;}
     .deity-profile{padding:0;overflow:hidden;}
@@ -348,6 +362,64 @@
     .fortune-text{font-size:14px;line-height:1.7;color:var(--text);}
     .fortune-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--muted);}
     .fortune-meta span{padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface-soft);}
+    .hero-modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(15,23,42,.6);
+      z-index:40;
+    }
+    .hero-modal.is-visible{
+      display:flex;
+    }
+    .hero-modal__content{
+      background:#fff;
+      padding:24px;
+      border-radius:16px;
+      max-width:320px;
+      text-align:center;
+      box-shadow:0 20px 40px rgba(15,23,42,.25);
+    }
+    .hero-modal__content h3{
+      margin-top:0;
+      margin-bottom:12px;
+      font-size:20px;
+    }
+    .hero-modal__intro{
+      margin:0 0 8px;
+      color:#0f172a;
+      line-height:1.6;
+    }
+    .hero-modal__hint{
+      margin:0 0 18px;
+      font-size:14px;
+      color:#475569;
+    }
+    .hero-modal__actions{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+    }
+    .hero-modal .btn{
+      min-width:120px;
+      border-radius:999px;
+      padding:10px 18px;
+      font-weight:700;
+      text-transform:none;
+    }
+    .hero-modal .btn-primary{
+      background:linear-gradient(135deg,#1f2937,#0f172a);
+      color:#fff;
+      border:none;
+      box-shadow:0 10px 20px rgba(15,23,42,0.25);
+    }
+    .hero-modal .btn-ghost{
+      border:1px solid rgba(15,23,42,0.2);
+      background:#fff;
+      color:#0f172a;
+    }
     @media(max-width:860px){
       .flow-head{grid-template-columns:1fr;justify-items:start;}
       .flow-head .btn{width:100%;}
