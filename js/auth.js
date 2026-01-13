@@ -158,6 +158,8 @@
     try{
       localStorage.removeItem('__lastQuizGuardian__');
       localStorage.removeItem('__lastQuizProfile__');
+      localStorage.removeItem('__lastQuizGuardianBackup__');
+      localStorage.removeItem('__lastQuizProfileBackup__');
       localStorage.removeItem(QUIZ_BIND_KEY);
     }catch(_){}
   }
@@ -213,11 +215,18 @@
     if (!code) return;
     const name = String(profile.guardian.name || '').trim();
     const ts = profile.guardian.ts ? Date.parse(profile.guardian.ts) : Date.now();
+    const safeTs = Number.isNaN(ts) ? Date.now() : ts;
     try{
-      localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name, ts: Number.isNaN(ts) ? Date.now() : ts }));
+      const guardianPayload = JSON.stringify({ code, name, ts: safeTs });
+      localStorage.setItem('__lastQuizGuardian__', guardianPayload);
+      localStorage.setItem('__lastQuizGuardianBackup__', guardianPayload);
     }catch(_){}
     if (profile.quiz){
-      try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(profile.quiz)); }catch(_){}
+      try{
+        const quizPayload = JSON.stringify(profile.quiz);
+        localStorage.setItem('__lastQuizProfile__', quizPayload);
+        localStorage.setItem('__lastQuizProfileBackup__', quizPayload);
+      }catch(_){}
     }
     clearQuizBindPending();
   }

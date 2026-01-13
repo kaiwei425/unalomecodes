@@ -21,7 +21,8 @@ const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
 const SERVICE_ORDER_ID_PREFIX = 'SV';
 const SERVICE_ORDER_ID_LEN = 10;
-const FORTUNE_FORMAT_VERSION = 5;
+const LEGACY_FORTUNE_FORMAT_VERSION = 5;
+const FORTUNE_FORMAT_VERSION = '2.0.0';
 const FORTUNE_STATS_PREFIX = 'FORTUNE_STATS:';
 const FORTUNE_STATS_SEEN_PREFIX = 'FORTUNE_STATS:SEEN:';
 const RATE_LIMIT_CACHE = new Map();
@@ -2276,6 +2277,152 @@ function thaiDayColor(dow){
   const map = ['紅','黃','粉紅','綠','橘','藍','紫'];
   return map[dow] || '';
 }
+const PHUM_ORDER = ['BORIWAN','AYU','DECH','SRI','MULA','UTSAHA','MONTRI','KALAKINI'];
+const TAKSA_MAP = {
+  SUN:[1,2,3,4,7,5,8,6],
+  MON:[2,3,4,7,5,8,6,1],
+  TUE:[3,4,7,5,8,6,1,2],
+  WED:[4,7,5,8,6,1,2,3],
+  THU:[5,8,6,1,2,3,4,7],
+  FRI:[6,1,2,3,4,7,5,8],
+  SAT:[7,5,8,6,1,2,3,4],
+  WED_NIGHT:[8,6,1,2,3,4,7,5]
+};
+const WEEKDAY_KEYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const DAY_COLOR = {
+  SUN:'Red',
+  MON:'Yellow',
+  TUE:'Pink',
+  WED:'Green/Grey',
+  THU:'Orange',
+  FRI:'Blue',
+  SAT:'Purple',
+  WED_NIGHT:'Green/Grey'
+};
+const YAM_SLOTS = {
+  MORNING:{ start:'06:01', end:'08:24' },
+  LATE_MORNING:{ start:'08:25', end:'10:48' },
+  MIDDAY:{ start:'10:49', end:'13:12' },
+  AFTERNOON:{ start:'13:13', end:'15:36' },
+  EVENING:{ start:'15:37', end:'18:00' }
+};
+const YAM_TABLE = {
+  SUN:{ MORNING:'BEST', LATE_MORNING:'GOOD', MIDDAY:'CAUTION', AFTERNOON:'FORBIDDEN', EVENING:'GOOD' },
+  MON:{ MORNING:'GOOD', LATE_MORNING:'BEST', MIDDAY:'CAUTION', AFTERNOON:'GOOD', EVENING:'FORBIDDEN' },
+  TUE:{ MORNING:'CAUTION', LATE_MORNING:'GOOD', MIDDAY:'BEST', AFTERNOON:'FORBIDDEN', EVENING:'GOOD' },
+  WED:{ MORNING:'GOOD', LATE_MORNING:'CAUTION', MIDDAY:'GOOD', AFTERNOON:'BEST', EVENING:'FORBIDDEN' },
+  THU:{ MORNING:'BEST', LATE_MORNING:'GOOD', MIDDAY:'FORBIDDEN', AFTERNOON:'GOOD', EVENING:'CAUTION' },
+  FRI:{ MORNING:'GOOD', LATE_MORNING:'BEST', MIDDAY:'CAUTION', AFTERNOON:'GOOD', EVENING:'FORBIDDEN' },
+  SAT:{ MORNING:'CAUTION', LATE_MORNING:'GOOD', MIDDAY:'BEST', AFTERNOON:'FORBIDDEN', EVENING:'GOOD' }
+};
+const PHUM_LABEL = {
+  BORIWAN:'บริวาร (Boriwan)',
+  AYU:'อายุ (Ayu)',
+  DECH:'เดช (Dech)',
+  SRI:'ศรี (Sri)',
+  MULA:'มูละ (Mula)',
+  UTSAHA:'อุตสาหะ (Utsaha)',
+  MONTRI:'มนตรี (Montri)',
+  KALAKINI:'กาลกิณี (Kalakini)'
+};
+const MANTRA_LIST = [
+  'นะโมเมตตา สุขัง',
+  'โอม นะ โม พุท ธา ยะ',
+  'นะโม พุท ธา ยะ',
+  'โอม สุขะโต'
+];
+function getDayPlanetNo(weekdayKey){
+  const key = String(weekdayKey || '').toUpperCase();
+  if (key === 'SUN') return 1;
+  if (key === 'MON') return 2;
+  if (key === 'TUE') return 3;
+  if (key === 'WED') return 4;
+  if (key === 'THU') return 5;
+  if (key === 'FRI') return 6;
+  if (key === 'SAT') return 7;
+  if (key === 'WED_NIGHT') return 8;
+  return 0;
+}
+function getMahaTaksa(birthDayKey, todayWeekdayKey){
+  const birthKey = String(birthDayKey || '').toUpperCase();
+  const todayKey = String(todayWeekdayKey || '').toUpperCase();
+  const dayPlanetNo = getDayPlanetNo(todayKey);
+  const row = TAKSA_MAP[birthKey];
+  const idx = row ? row.indexOf(dayPlanetNo) : -1;
+  const phum = idx >= 0 ? PHUM_ORDER[idx] : '';
+  return {
+    birthDayKey: birthKey,
+    todayWeekdayKey: todayKey,
+    dayPlanetNo,
+    phum,
+    isWarning: phum === 'KALAKINI'
+  };
+}
+function getThaiDayColor(todayWeekdayKey){
+  const key = String(todayWeekdayKey || '').toUpperCase();
+  return DAY_COLOR[key] || '';
+}
+function getYamUbakong(todayWeekdayKey){
+  const key = String(todayWeekdayKey || '').toUpperCase();
+  const table = YAM_TABLE[key] || {};
+  const slots = Object.keys(YAM_SLOTS).map(slotKey=>{
+    const time = YAM_SLOTS[slotKey];
+    return {
+      slot: slotKey,
+      start: time.start,
+      end: time.end,
+      level: table[slotKey] || 'GOOD'
+    };
+  });
+  let best = slots.filter(s=> s.level === 'BEST');
+  if (!best.length) best = slots.filter(s=> s.level === 'GOOD');
+  const good = slots.filter(s=> s.level === 'GOOD');
+  const forbidden = slots.filter(s=> s.level === 'FORBIDDEN');
+  return {
+    slots,
+    best,
+    good,
+    forbidden: forbidden.length ? [forbidden[0]] : []
+  };
+}
+function toWeekdayKey(dowIndex){
+  // JS Date.getDay(): 0=Sunday..6=Saturday
+  if (Number.isInteger(dowIndex)){
+    if (dowIndex >= 0 && dowIndex <= 6) return WEEKDAY_KEYS[dowIndex] || '';
+    if (dowIndex >= 1 && dowIndex <= 7) return WEEKDAY_KEYS[(dowIndex - 1) % 7] || '';
+  }
+  return '';
+}
+function toBirthWeekdayKey(quiz){
+  const raw = String(quiz?.dow || '').trim();
+  if (!raw) return '';
+  const map = { Sun:'SUN', Mon:'MON', Tue:'TUE', Wed:'WED', Thu:'THU', Fri:'FRI', Sat:'SAT' };
+  const key = map[raw] || map[raw.slice(0,3)];
+  return key || raw.toUpperCase();
+}
+function deriveTabooColor(birthDayKey){
+  const key = String(birthDayKey || '').toUpperCase();
+  const row = TAKSA_MAP[key];
+  if (!row) return '';
+  const kalIndex = PHUM_ORDER.indexOf('KALAKINI');
+  const kalStar = row[kalIndex];
+  if (kalStar === 8) return 'Green/Grey';
+  if (kalStar >= 1 && kalStar <= 7){
+    const weekdayKey = WEEKDAY_KEYS[kalStar - 1];
+    return DAY_COLOR[weekdayKey] || '';
+  }
+  return '';
+}
+function buildLuckyNumbers(seedStr){
+  const base = fnv1aHash(seedStr);
+  const first = (base % 99) + 1;
+  const second = (fnv1aHash(seedStr + ':b') % 99) + 1;
+  if (second === first){
+    const third = (fnv1aHash(seedStr + ':c') % 99) + 1;
+    return [first, third === first ? ((third % 99) + 1) : third];
+  }
+  return [first, second];
+}
 const ICHING_NAMES = [
   '乾為天','坤為地','水雷屯','山水蒙','水天需','天水訟','地水師','水地比',
   '風天小畜','天澤履','地天泰','天地否','天火同人','火天大有','地山謙','雷地豫',
@@ -2300,6 +2447,20 @@ const GUARDIAN_MESSAGES = {
   ZD:'先整理財務與節奏，穩定就是最好的好運。',
   ZF:'對自己溫柔一點，人緣與幸福自然靠近。'
 };
+const GUARDIAN_TONE = {
+  FM:'穩重、全局感',
+  GA:'開路、果斷',
+  CD:'安定、踏實',
+  KP:'親和、柔中帶剛',
+  HP:'守護、堅定',
+  XZ:'冷靜、洞察',
+  WE:'穩定、守護',
+  HM:'鼓舞、行動派',
+  RH:'切割雜訊、果敢',
+  JL:'權威、效率',
+  ZD:'務實、保守',
+  ZF:'溫柔、關係導向'
+};
 function textSimilarity(a, b){
   const norm = (s)=> String(s||'').replace(/\s+/g,'').toLowerCase();
   const aa = norm(a);
@@ -2318,7 +2479,19 @@ function textSimilarity(a, b){
   const union = g1.size + g2.size - inter;
   return union ? inter / union : 0;
 }
+function normalizeTaskText(text){
+  return String(text || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
 function isTooSimilar(fortune, history){
+  const task = normalizeTaskText(fortune?.action?.task || '');
+  if (!task) return false;
+  for (const h of history){
+    if (!h || !h.action || !h.action.task) continue;
+    if (normalizeTaskText(h.action.task) === task) return true;
+  }
+  return false;
+}
+function isTooSimilarLegacy(fortune, history){
   const summary = fortune?.summary || '';
   const advice = fortune?.advice || '';
   for (const h of history){
@@ -2356,6 +2529,103 @@ function normalizeAdviceWithLine(advice, line){
   if (!line) return cleaned;
   if (!cleaned) return line;
   return `${line}${cleaned}`;
+}
+const TASK_POOL = {
+  BORIWAN:[
+    '整理今天要用的 3 件物品，並把桌面清空一半。',
+    '傳一則簡短訊息給重要合作方，確認下一步時間。',
+    '把手機通知關閉 15 分鐘，專心完成一件小事。'
+  ],
+  AYU:[
+    '喝一杯溫水，並做 3 次緩慢伸展。',
+    '把今天的行程分成「必做」與「可延後」兩欄。',
+    '設定 15 分鐘計時，把一件待辦完成到 80%。'
+  ],
+  DECH:[
+    '把一件卡關的事寫成 3 個可執行步驟。',
+    '清理信箱或聊天列表中 5 個無用對話。',
+    '挑一件你一直拖著的小事，現在就做完。'
+  ],
+  SRI:[
+    '把今天要說的重要內容寫成 3 行重點。',
+    '回覆一位你欠的訊息，給出清楚回應。',
+    '整理一張你常用的文件或檔案夾。'
+  ],
+  MULA:[
+    '查看帳戶或錢包，記下今天必支出項目。',
+    '整理房間的一個角落，丟掉 3 件不需要的物品。',
+    '把明天的第一件事寫在便利貼上。'
+  ],
+  UTSAHA:[
+    '設定 15 分鐘深度工作，把最重要的段落完成。',
+    '列出今天能完成的 2 件小成果並打勾。',
+    '把待辦事項重新排序，只保留前三件。'
+  ],
+  MONTRI:[
+    '請求一位朋友或同事給你 1 個具體建議。',
+    '把需要協調的事項寫成一句話發出去。',
+    '整理 3 個你今天可以請教的問題。'
+  ],
+  KALAKINI:[
+    '把一件容易出錯的事延後，先處理低風險任務。',
+    '停止一件會分散注意力的習慣（例如開太多分頁）。',
+    '把今天的決策列成利弊清單，暫不拍板。'
+  ]
+};
+function pickTaskByPhum(phum, seed, avoidTasks){
+  const list = TASK_POOL[phum] || TASK_POOL.MULA;
+  const avoid = new Set((avoidTasks || []).map(normalizeTaskText).filter(Boolean));
+  for (let i=0;i<list.length;i++){
+    const task = list[(seed + i) % list.length];
+    if (!avoid.has(normalizeTaskText(task))) return task;
+  }
+  return list[0] || '';
+}
+function ensurePhumSummary(summary, phum){
+  const label = PHUM_LABEL[phum] || phum || '—';
+  const prefix = `今天是 ${label} 日，`;
+  if (!summary) return prefix;
+  if (summary.includes(label)) return summary;
+  return `${prefix}${summary}`;
+}
+function buildTimingFromYam(yam){
+  const best = Array.isArray(yam?.best) ? yam.best.map(s=>({ start:s.start, end:s.end, level:s.level })) : [];
+  const avoid = Array.isArray(yam?.forbidden) ? yam.forbidden.map(s=>({ start:s.start, end:s.end, level:s.level })) : [];
+  return { best, avoid };
+}
+function buildLocalFortuneV2(ctx, seed, avoidTasks){
+  const phum = ctx.thaiTaksa?.phum || '';
+  const summaryParts = [
+    '重點在把節奏拉回正軌，不求一次到位。',
+    '先處理能掌控的事，情緒會穩下來。',
+    '把複雜的事情拆小，今天會更順。'
+  ];
+  const adviceParts = [
+    '以「完成度」取代「完美度」。',
+    '先把最重要的事做完，再談優化。',
+    '用 15 分鐘清理干擾源，效率會提升。'
+  ];
+  const ritualBase = GUARDIAN_MESSAGES[ctx.guardianCode] || '把注意力放回當下，今天會更穩。';
+  const task = pickTaskByPhum(phum, seed + 11, avoidTasks);
+  const starText = buildStarText(seed);
+  const summary = ensurePhumSummary(pickBySeed(summaryParts, seed + 3), phum);
+  const advice = pickBySeed(adviceParts, seed + 17);
+  const mantra = pickBySeed(MANTRA_LIST, seed + 23);
+  return {
+    date: ctx.dateText,
+    stars: starText,
+    summary,
+    advice,
+    ritual: ritualBase,
+    mantra,
+    action: {
+      task,
+      why: '用小步驟完成可驗證的行動，讓局勢回到可控範圍。'
+    },
+    core: ctx.thaiTaksa || {},
+    timing: buildTimingFromYam(ctx.yam),
+    lucky: ctx.lucky || {}
+  };
 }
 function buildLocalFortune(ctx, seed){
   const advices = [
@@ -2412,6 +2682,32 @@ function normalizeSummaryStars(summary){
   const clean = text.replace(/^[★☆⭐🌟\uFE0F\s]+/g, '').trim();
   return clean;
 }
+function normalizeFortunePayloadV2(obj, ctx){
+  if (!obj || typeof obj !== 'object') return null;
+  const out = {};
+  out.date = String(obj.date || ctx.dateText || '').trim();
+  out.summary = String(obj.summary || '').trim();
+  out.advice = String(obj.advice || '').trim();
+  out.ritual = String(obj.ritual || '').trim();
+  out.mantra = String(obj.mantra || '').trim();
+  if (obj.action && typeof obj.action === 'object'){
+    out.action = {
+      task: String(obj.action.task || '').trim(),
+      why: String(obj.action.why || obj.action.reason || '').trim()
+    };
+  } else {
+    out.action = { task:'', why:'' };
+  }
+  out.core = ctx.thaiTaksa || {};
+  out.timing = buildTimingFromYam(ctx.yam);
+  out.lucky = ctx.lucky || {};
+  if (out.summary){
+    out.summary = ensurePhumSummary(out.summary, out.core.phum);
+  }
+  if (!out.summary || !out.advice || !out.ritual || !out.action.task) return null;
+  if (!out.lucky || !Array.isArray(out.lucky.numbers)) return null;
+  return out;
+}
 function normalizeFortunePayload(obj, ctx){
   if (!obj || typeof obj !== 'object') return null;
   const out = {};
@@ -2435,6 +2731,37 @@ function sanitizeRitual(text, ctx){
   }
   return raw;
 }
+function isFortuneV2Enabled(env, memberId){
+  if (!env || !memberId) return false;
+  if (String(env.FORTUNE_V2 || '') === '1') return true;
+  const whitelist = String(env.FORTUNE_V2_WHITELIST || '').split(',').map(s=>s.trim()).filter(Boolean);
+  if (whitelist.length && whitelist.includes(String(memberId))) return true;
+  const percentRaw = Number(env.FORTUNE_V2_PERCENT || 0);
+  const percent = Number.isFinite(percentRaw) ? Math.max(0, Math.min(100, percentRaw)) : 0;
+  if (percent <= 0) return false;
+  const bucket = fnv1aHash(String(memberId)) % 100;
+  return bucket < percent;
+}
+function runFortuneTests(){
+  const taksa = getMahaTaksa('TUE', 'FRI');
+  console.assert(taksa.phum === 'UTSAHA', 'getMahaTaksa TUE/FRI should be UTSAHA');
+  const yam = getYamUbakong('SUN');
+  console.assert(Array.isArray(yam.best) && Array.isArray(yam.forbidden), 'getYamUbakong returns best/forbidden arrays');
+  const ts = Date.UTC(2026, 0, 14, 0, 0, 0);
+  const dow = taipeiDateParts(ts).dow;
+  console.assert(toWeekdayKey(dow) === 'WED', 'toWeekdayKey should map 2026-01-14 to WED');
+  const ctx = {
+    dateText: '',
+    guardianCode: 'WE',
+    thaiTaksa: { phum:'MULA' },
+    yam: { best:[], forbidden:[], slots:[] },
+    lucky: { dayColor:'Red', tabooColor:'', numbers:[11,22] },
+    meta: {}
+  };
+  const first = buildLocalFortuneV2(ctx, 7, []);
+  const second = buildLocalFortuneV2(ctx, 7, [first.action.task]);
+  console.assert(first.action.task !== second.action.task, 'buildLocalFortune should avoid repeated task');
+}
 function parseJsonFromText(text){
   if (!text) return null;
   try{ return JSON.parse(text); }catch(_){}
@@ -2442,14 +2769,14 @@ function parseJsonFromText(text){
   if (!m) return null;
   try{ return JSON.parse(m[0]); }catch(_){ return null; }
 }
-async function callOpenAIFortune(env, prompt, seed){
+async function callOpenAIFortune(env, prompt, seed, systemPrompt){
   const apiKey = env.OPENAI_API_KEY || env.OPENAI_KEY || '';
   if (!apiKey) return null;
   const model = env.OPENAI_MODEL || 'gpt-4o-mini';
   const payload = {
     model,
     messages: [
-      { role:'system', content:'你是資深命理顧問，請以繁體中文輸出。只回傳 JSON，不要任何多餘文字。' },
+      { role:'system', content: systemPrompt || '你是資深命理顧問，請以繁體中文輸出。只回傳 JSON，不要任何多餘文字。' },
       { role:'user', content: prompt }
     ],
     temperature: 0.85,
@@ -3613,12 +3940,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (redirectRaw && redirectRaw.startsWith('/') && !redirectRaw.startsWith('//')) {
       redirectPath = redirectRaw;
     }
+    const prompt = url.searchParams.get('prompt') || 'select_account';
     const params = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       redirect_uri: `${origin}/api/auth/google/callback`,
       response_type: 'code',
       scope: 'openid email profile',
-      state
+      state,
+      prompt
     });
     const headers = new Headers({
       Location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
@@ -4604,16 +4933,18 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return new Response(JSON.stringify({ ok:false, error:'FORTUNES KV not bound' }), { status:500, headers });
     }
     const todayKey = taipeiDateKey();
+    const useV2 = isFortuneV2Enabled(env, record.id);
+    const targetVersion = useV2 ? FORTUNE_FORMAT_VERSION : String(LEGACY_FORTUNE_FORMAT_VERSION);
     const cacheKey = `FORTUNE:${record.id}:${todayKey}`;
     try{
       const cached = await env.FORTUNES.get(cacheKey);
       if (cached){
         let parsed = null;
         try{ parsed = JSON.parse(cached); }catch(_){ parsed = null; }
-        const cachedCode = String(parsed?.fortune?.meta?.guardianCode || '').toUpperCase();
+        const cachedCode = String(parsed?.fortune?.meta?.guardianCode || parsed?.meta?.guardianCode || '').toUpperCase();
         const currentCode = String(record?.guardian?.code || '').toUpperCase();
-        const cachedVersion = Number(parsed?.version || 0);
-        if (cachedCode && currentCode && cachedCode === currentCode && cachedVersion === FORTUNE_FORMAT_VERSION){
+        const cachedVersion = String(parsed?.version || '');
+        if (cachedCode && currentCode && cachedCode === currentCode && cachedVersion === targetVersion){
           await recordFortuneStat(env, todayKey, record.id);
           return new Response(cached, { status:200, headers });
         }
@@ -4635,7 +4966,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const moon = moonPhaseInfo(Date.now());
     const ichSeed = fnv1aHash(`${todayKey}`);
     const iching = ICHING_NAMES[ichSeed % ICHING_NAMES.length];
-    const thaiColor = thaiDayColor(parts.dow);
     const buddhistYear = parts.year + 543;
     const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
     const meta = {
@@ -4645,7 +4975,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       moonPhase: moon.name,
       iching,
       todayDow: ['日','一','二','三','四','五','六'][parts.dow] || '',
-      thaiDayColor: thaiColor,
+      thaiDayColor: thaiDayColor(parts.dow),
       buddhistYear,
       guardianName: guardian.name || guardian.code || '守護神',
       guardianCode: String(guardian.code || '').toUpperCase()
@@ -4657,6 +4987,40 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       quiz,
       meta
     };
+    let taksa = null;
+    let yam = null;
+    let dayColor = '';
+    let tabooColor = '';
+    let luckyNumbers = [];
+    const todayWeekdayKey = toWeekdayKey(parts.dow);
+    const birthWeekdayKey = toBirthWeekdayKey(quiz);
+    if (useV2){
+      taksa = getMahaTaksa(birthWeekdayKey, todayWeekdayKey);
+      yam = getYamUbakong(todayWeekdayKey);
+      dayColor = getThaiDayColor(todayWeekdayKey);
+      tabooColor = deriveTabooColor(birthWeekdayKey);
+      const seedStr = [
+        record.id,
+        todayKey,
+        guardian.code || '',
+        quiz.dow || '',
+        quiz.zod || '',
+        quiz.job || '',
+        (quiz.answers && Object.values(quiz.answers).join('')) || ''
+      ].join('|');
+      const seed = fnv1aHash(seedStr);
+      luckyNumbers = buildLuckyNumbers(`${seedStr}|${seed}`);
+      ctx.thaiTaksa = taksa;
+      ctx.yam = yam;
+      ctx.lucky = { dayColor, tabooColor, numbers: luckyNumbers };
+      ctx.meta = {
+        ...meta,
+        thaiDayColor: dayColor,
+        thaiTaksa: taksa,
+        yam,
+        lucky: { dayColor, tabooColor, numbers: luckyNumbers }
+      };
+    }
     const history = [];
     for (let i=1;i<=7;i++){
       const dk = taipeiDateKey(Date.now() - i * 86400000);
@@ -4683,65 +5047,143 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const starText = buildStarText(seed);
     const avoidSummaries = history.map(h=>h.summary).filter(Boolean).slice(0, 5);
     const avoidAdvice = history.map(h=>h.advice).filter(Boolean).slice(0, 5);
-    const prompt = [
-      `今天日期：${dateText}（台灣時間）`,
-      `當日天象：月相 ${moon.name}，易經 ${iching}`,
-      `泰國元素：今日星期色 ${thaiColor || '—'}，佛曆 ${buddhistYear} 年`,
-      `使用者資料：守護神 ${ctx.guardianName}（${ctx.guardianCode}）`,
-      `出生星期：${quiz.dowLabel || quiz.dow || '—'}${quiz.color ? `（幸運色：${quiz.color}）` : ''}`,
-      `使用者星座：${userZodiac || '—'}${userZodiacElement ? `（${userZodiacElement}象）` : ''}`,
-      `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
-      `個人性格關鍵詞：${traitList.join('、') || '—'}`,
-      `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
-      `summary 用 2~3 句描述感情/人際、工作/學習、財運，語氣像每日運勢解析。`,
-      `advice 為生活小建議（1~2 句），請不要再寫「今日運勢偏向...」這句，系統會自動加在前面。`,
-      `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
-      `只使用以上提供的天象/日期/泰國元素資訊，不要捏造其他星體或數據。`,
-      avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
-      avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : ''
-    ].filter(Boolean).join('\n');
-    let fortune = normalizeFortunePayload(await callOpenAIFortune(env, prompt, seed), ctx);
-    let source = fortune ? 'openai' : 'local';
-    if (fortune && isTooSimilar(fortune, history)){
-      const promptAlt = prompt + '\n請換一組新的角度與語彙，避免雷同。';
-      const alt = normalizeFortunePayload(await callOpenAIFortune(env, promptAlt, seed + 1), ctx);
-      if (alt && !isTooSimilar(alt, history)){
-        fortune = alt;
-        source = 'openai';
-      }else{
+    const avoidTasks = history.map(h=>h.action && h.action.task).filter(Boolean).slice(0, 5);
+    let fortune = null;
+    let source = 'local';
+    let payloadVersion = targetVersion;
+    let payloadMeta = null;
+
+    if (useV2){
+      const taksaLabel = PHUM_LABEL[taksa.phum] || taksa.phum || '—';
+      const timingBest = (yam.best || []).map(s=>({ start:s.start, end:s.end, level:s.level }));
+      const timingAvoid = (yam.forbidden || []).map(s=>({ start:s.start, end:s.end, level:s.level }));
+      const guardianTone = GUARDIAN_TONE[ctx.guardianCode] || '穩定、行動導向';
+      const schema = `{"summary":"","advice":"","ritual":"","mantra":"","action":{"task":"","why":""},"core":{"phum":"","dayPlanetNo":0,"birthDayKey":"","todayWeekdayKey":"","isWarning":false},"timing":{"best":[{"start":"","end":"","level":""}],"avoid":[{"start":"","end":"","level":""}]},"lucky":{"color":"","tabooColor":"","numbers":[0,0]}}`;
+      const prompt = [
+        `今天日期：${dateText}（台灣時間）`,
+        `當日天象：月相 ${moon.name}，易經 ${iching}`,
+        `泰國骨架：Maha Taksa 今日宮位 ${taksa.phum}（${taksaLabel}），dayPlanetNo=${taksa.dayPlanetNo}，isWarning=${taksa.isWarning}`,
+        `Yam Ubakong 時段：best=${JSON.stringify(timingBest)}，avoid=${JSON.stringify(timingAvoid)}`,
+        `幸運色：${ctx.lucky.dayColor || '—'}，tabooColor：${ctx.lucky.tabooColor || '—'}，幸運數字：${ctx.lucky.numbers.join(', ')}`,
+        `守護神：${ctx.guardianName}（${ctx.guardianCode}），語氣基調：${guardianTone}`,
+        `出生星期：${quiz.dowLabel || quiz.dow || '—'}`,
+        `使用者星座：${userZodiac || '—'}${userZodiacElement ? `（${userZodiacElement}象）` : ''}`,
+        `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
+        `個人性格關鍵詞：${traitList.join('、') || '—'}`,
+        `可用短咒語清單（擇一）：${MANTRA_LIST.join(' / ')}`,
+        `規則：只回傳 JSON，欄位必須符合 schema，禁止新增欄位；不得使用模糊巴納姆語句。`,
+        `summary 第一個句子必須點名「今天是 ${taksaLabel} 日」，不可改寫骨架事實。`,
+        `core/timing/lucky 必須與輸入骨架一致，不可改寫；若不一致視為無效輸出。`,
+        `action.task 必須 15 分鐘內可完成、可打勾驗證，且不可與 avoidTasks 重複。`,
+        `timing.best / timing.avoid 必須使用上述 Yam 時段，不可自造。`,
+        `lucky.color 與 lucky.numbers 必須等於以上骨架值，不可自造。`,
+        `ritual 必須是微儀式，不可強迫、不危險、不含醫療或法律斷言。`,
+        avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
+        avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : '',
+        avoidTasks.length ? `avoidTasks：${avoidTasks.join(' / ')}` : '',
+        `JSON schema：${schema}`
+      ].filter(Boolean).join('\n');
+      const systemPrompt = '你是泰國 Maha Taksa + Mutelu 的祭司。請以繁體中文撰寫，嚴格遵守骨架事實與 JSON schema。';
+      fortune = normalizeFortunePayloadV2(await callOpenAIFortune(env, prompt, seed, systemPrompt), ctx);
+      source = fortune ? 'openai' : 'local';
+      if (fortune && isTooSimilar(fortune, history)){
+        const promptAlt = prompt + '\naction.task 與 avoidTasks 重複，請更換成新的可勾選任務，其餘骨架保持不變。';
+        const alt = normalizeFortunePayloadV2(await callOpenAIFortune(env, promptAlt, seed + 1, systemPrompt), ctx);
+        if (alt && !isTooSimilar(alt, history)){
+          fortune = alt;
+          source = 'openai';
+        }else{
+          fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks);
+          source = 'local';
+        }
+      }
+      if (!fortune){
+        fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks);
+        source = 'local';
+      }
+      if (fortune && fortune.summary){
+        fortune.summary = normalizeSummaryStars(fortune.summary);
+      }
+      if (fortune && !fortune.summary){
+        const fallback = buildLocalFortuneV2(ctx, seed + 53, avoidTasks);
+        fortune.summary = fallback.summary || '';
+      }
+      if (fortune && !fortune.stars){
+        fortune.stars = starText;
+      }
+      if (fortune && adviceLine && adviceLine.line){
+        fortune.advice = normalizeAdviceWithLine(fortune.advice || '', adviceLine.line);
+      }
+      if (fortune && fortune.ritual){
+        fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
+      }
+      if (isTooSimilar(fortune, history)){
+        fortune = buildLocalFortuneV2(ctx, seed + 37, avoidTasks);
+        source = 'local';
+      }
+      payloadMeta = ctx.meta;
+    }else{
+      const prompt = [
+        `今天日期：${dateText}（台灣時間）`,
+        `當日天象：月相 ${moon.name}，易經 ${iching}`,
+        `泰國元素：今日星期色 ${meta.thaiDayColor || '—'}，佛曆 ${buddhistYear} 年`,
+        `使用者資料：守護神 ${ctx.guardianName}（${ctx.guardianCode}）`,
+        `出生星期：${quiz.dowLabel || quiz.dow || '—'}${quiz.color ? `（幸運色：${quiz.color}）` : ''}`,
+        `使用者星座：${userZodiac || '—'}${userZodiacElement ? `（${userZodiacElement}象）` : ''}`,
+        `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
+        `個人性格關鍵詞：${traitList.join('、') || '—'}`,
+        `請輸出 JSON：{"date":"","summary":"","advice":"","ritual":""}`,
+        `summary 用 2~3 句描述感情/人際、工作/學習、財運，語氣像每日運勢解析。`,
+        `advice 為生活小建議（1~2 句），請不要再寫「今日運勢偏向...」這句，系統會自動加在前面。`,
+        `ritual 是「守護神想對你說」的鼓勵或實用金句（1~2 句），避免提到點香、蠟燭、供品。`,
+        `只使用以上提供的天象/日期/泰國元素資訊，不要捏造其他星體或數據。`,
+        avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
+        avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : ''
+      ].filter(Boolean).join('\n');
+      fortune = normalizeFortunePayload(await callOpenAIFortune(env, prompt, seed), ctx);
+      source = fortune ? 'openai' : 'local';
+      if (fortune && isTooSimilarLegacy(fortune, history)){
+        const promptAlt = prompt + '\n請換一組新的角度與語彙，避免雷同。';
+        const alt = normalizeFortunePayload(await callOpenAIFortune(env, promptAlt, seed + 1), ctx);
+        if (alt && !isTooSimilarLegacy(alt, history)){
+          fortune = alt;
+          source = 'openai';
+        }else{
+          fortune = buildLocalFortune(ctx, seed + 17);
+          source = 'local';
+        }
+      }
+      if (!fortune){
         fortune = buildLocalFortune(ctx, seed + 17);
         source = 'local';
       }
-    }
-    if (!fortune){
-      fortune = buildLocalFortune(ctx, seed + 17);
-      source = 'local';
-    }
-    if (fortune && fortune.summary){
-      fortune.summary = normalizeSummaryStars(fortune.summary);
-    }
-    if (fortune && !fortune.summary){
-      const fallback = buildLocalFortune(ctx, seed + 53);
-      fortune.summary = fallback.summary || '';
-    }
-    if (fortune && !fortune.stars){
-      fortune.stars = starText;
-    }
-    if (fortune && adviceLine && adviceLine.line){
-      fortune.advice = normalizeAdviceWithLine(fortune.advice || '', adviceLine.line);
-    }
-    if (fortune && fortune.ritual){
-      fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
-    }
-    if (isTooSimilar(fortune, history)){
-      fortune = buildLocalFortune(ctx, seed + 37);
-      source = 'local';
+      if (fortune && fortune.summary){
+        fortune.summary = normalizeSummaryStars(fortune.summary);
+      }
+      if (fortune && !fortune.summary){
+        const fallback = buildLocalFortune(ctx, seed + 53);
+        fortune.summary = fallback.summary || '';
+      }
+      if (fortune && !fortune.stars){
+        fortune.stars = starText;
+      }
+      if (fortune && adviceLine && adviceLine.line){
+        fortune.advice = normalizeAdviceWithLine(fortune.advice || '', adviceLine.line);
+      }
+      if (fortune && fortune.ritual){
+        fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
+      }
+      if (isTooSimilarLegacy(fortune, history)){
+        fortune = buildLocalFortune(ctx, seed + 37);
+        source = 'local';
+      }
     }
     const payload = {
       ok:true,
       fortune,
+      meta: payloadMeta || undefined,
       dateKey: todayKey,
-      version: FORTUNE_FORMAT_VERSION,
+      version: payloadVersion,
       source,
       createdAt: new Date().toISOString()
     };

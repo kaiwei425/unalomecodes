@@ -1133,7 +1133,7 @@
       if (window.authState && typeof window.authState.login === 'function'){
         window.authState.login();
       }else{
-        window.location.href = '/api/auth/google/login';
+        window.location.href = '/api/auth/google/login?prompt=select_account';
       }
       return;
     }
@@ -1927,7 +1927,7 @@
           window.authState.promptLogin('請先登入後再送出匯款資料。');
         }else{
           alert('請先登入後再送出匯款資料。');
-          window.location.href = '/api/auth/google/login';
+          window.location.href = '/api/auth/google/login?prompt=select_account';
         }
         if (submitTip) submitTip.classList.remove('show');
         return;

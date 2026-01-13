@@ -789,7 +789,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           auth.promptLogin('請先登入後再送出訂單。');
         }else{
           alert('請先登入後再送出訂單。');
-          window.location.href = '/api/auth/google/login';
+          window.location.href = '/api/auth/google/login?prompt=select_account';
         }
         return;
       }
