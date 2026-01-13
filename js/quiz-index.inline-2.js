@@ -1243,6 +1243,7 @@ function isProfileComplete(profile){
 restoreQuizCacheFromBackup();
 
 function shouldShowStoredResult(){
+  if (forceQuiz) return false;
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
   if (!guardian || !profile || !isProfileComplete(profile)) return false;
@@ -1251,6 +1252,7 @@ function shouldShowStoredResult(){
 }
 
 function initStoredResult(){
+  if (forceQuiz) return;
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
   if (!guardian || !profile || !isProfileComplete(profile)) return;
@@ -1273,6 +1275,10 @@ const lineRetakeBtn = document.getElementById('lineRetakeBtn');
 const retakeCooldown = document.getElementById('retakeCooldown');
 const membershipPrompt = document.getElementById('membershipPrompt');
 let forceQuiz = false;
+try{
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('retake') === '1') forceQuiz = true;
+}catch(_){}
 var lastLineProfile = null;
 function isLineClient(){
   return !!(window.liff && window.liff.isInClient && window.liff.isInClient());
@@ -1533,7 +1539,11 @@ function nextStep(){
 renderDow();
 renderZodiac();
 renderStep();
-initStoredResult();
+if (forceQuiz){
+  resetQuiz(false);
+}else{
+  initStoredResult();
+}
 
 if (startBtn){
   startBtn.addEventListener('click', ()=>{
@@ -1606,14 +1616,16 @@ if (shouldShowStoredResult()){
 }
 if (window.authState && typeof window.authState.onProfile === 'function'){
   window.authState.onProfile(profile=>{
+    if (shouldShowStoredResult()){
+      initStoredResult();
+      return;
+    }
     if (isLineClient() && profile && profile.guardian && profile.quiz){
       showLineEntry(profile);
     }else{
-      if (!forceQuiz){
-        if (lineEntry) lineEntry.style.display = 'none';
-        setQuizVisible(true);
-        renderStep();
-      }
+      if (lineEntry) lineEntry.style.display = 'none';
+      setQuizVisible(true);
+      renderStep();
     }
   });
 }

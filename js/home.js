@@ -721,6 +721,19 @@
     return toDay(tsA) === toDay(tsB);
   }
 
+  function toTimestamp(value){
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  function getLastQuizTimestamp(){
+    const guardian = getActiveGuardian();
+    const profile = getActiveQuizProfile();
+    return toTimestamp((guardian && guardian.ts) || (profile && profile.ts) || 0);
+  }
+
   function restoreHeroQuizCacheFromBackup(){
     try{
       if (!localStorage.getItem(QUIZ_GUARDIAN_KEY)){
@@ -876,6 +889,15 @@
       return;
     }
     if (type === 'retake'){
+      const lastTs = getLastQuizTimestamp();
+      if (lastTs && isSameTaipeiDay(lastTs, Date.now())){
+        alert('今日已完成測驗，請於台灣時間午夜 12 點後再重新測驗。');
+        return;
+      }
+      window.location.href = '/quiz/?retake=1';
+      return;
+    }
+    if (type === 'result'){
       window.location.href = '/quiz/';
       return;
     }
