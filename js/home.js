@@ -667,6 +667,42 @@
   const QUIZ_GUARDIAN_BACKUP = '__lastQuizGuardianBackup__';
   const QUIZ_PROFILE_BACKUP = '__lastQuizProfileBackup__';
 
+  function getAuthProfile(){
+    if (!window.authState || typeof window.authState.getProfile !== 'function') return null;
+    return window.authState.getProfile();
+  }
+
+  function getActiveGuardian(){
+    const profile = getAuthProfile();
+    if (profile && profile.guardian){
+      return profile.guardian;
+    }
+    return readStoredGuardian();
+  }
+
+  function getActiveQuizProfile(){
+    const profile = getAuthProfile();
+    if (profile && profile.quiz){
+      return profile.quiz;
+    }
+    return readStoredQuizProfile();
+  }
+
+  function syncLocalFromProfile(profile){
+    if (!profile || !profile.guardian) return;
+    const code = String(profile.guardian.code || '').trim().toUpperCase();
+    if (!code) return;
+    const name = String(profile.guardian.name || '').trim();
+    const tsValue = profile.guardian.ts ? Date.parse(profile.guardian.ts) : NaN;
+    const ts = Number.isNaN(tsValue) ? (profile.guardian.ts || Date.now()) : tsValue;
+    try{
+      localStorage.setItem(QUIZ_GUARDIAN_KEY, JSON.stringify({ code, name, ts }));
+    }catch(_){}
+    if (profile.quiz){
+      try{ localStorage.setItem(QUIZ_PROFILE_KEY, JSON.stringify(profile.quiz)); }catch(_){}
+    }
+  }
+
   function isSameTaipeiDay(tsA, tsB){
     if (!tsA || !tsB) return false;
     const toDay = d=> (new Date(d + 8 * 3600000)).toISOString().slice(0,10);
@@ -691,17 +727,11 @@
   }
 
   function shouldShowHeroBadge(){
-    const guardian = readStoredGuardian();
-    const profile = readStoredQuizProfile();
-    if (!guardian || !profile) return false;
+    const guardian = getActiveGuardian();
+    if (!guardian) return false;
     const code = String(guardian.code || guardian.id || '').toUpperCase();
-    if (!code || !GUARDIAN_NAME_MAP[code]) return false;
-    if (!profile.dow || !profile.zod || !profile.job) return false;
-    const answers = profile.answers || {};
-    const required = ['p2','p3','p4','p5','p6','p7'];
-    if (!required.every(key => Boolean(answers[key]))) return false;
-    const ts = guardian.ts || profile.ts || 0;
-    return isSameTaipeiDay(ts, Date.now());
+    const name = String(guardian.name || '').trim();
+    return Boolean(code || name);
   }
 
   function todayKey(){
@@ -723,7 +753,7 @@
 
   function shouldShowFortuneBadge(){
     if (!heroBadge || heroBadge.hidden) return false;
-    const guardian = readStoredGuardian();
+    const guardian = getActiveGuardian();
     if (!guardian) return false;
     if (!guardian.code && !guardian.name) return false;
     try{
@@ -734,7 +764,12 @@
 
   function updateDailyBadgeIndicator(){
     if (!heroDailyBadge) return;
-    heroDailyBadge.style.display = shouldShowFortuneBadge() ? 'flex' : 'none';
+    const show = shouldShowFortuneBadge();
+    heroDailyBadge.style.display = show ? 'flex' : 'none';
+    const heroAlert = heroBadge ? heroBadge.querySelector('[data-hero-guardian-alert]') : null;
+    if (heroAlert){
+      heroAlert.style.display = show ? 'flex' : 'none';
+    }
   }
 
   function formatGuardianName(guardian){
@@ -763,6 +798,7 @@
     setHeroBadgeVisible(true);
     setHeroCtaVisible(false);
     if (heroNote) heroNote.style.display = 'none';
+    const guardian = getActiveGuardian();
     const name = formatGuardianName(guardian);
     if (heroBadgeLabel) heroBadgeLabel.textContent = `守護神：${name}`;
     heroBadge.dataset.guardianCode = String(guardian.code || guardian.id || '').toUpperCase();
@@ -812,11 +848,19 @@
   }
 
   function handleHeroAction(type){
-    const guardian = readStoredGuardian();
+    const guardian = getActiveGuardian();
     const code = guardian ? String(guardian.code || guardian.id || '').toUpperCase() : '';
     if (type === 'daily'){
       markDailyFortuneSeen();
-      showDailyModal();
+      const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+        ? window.authState.isLoggedIn()
+        : false;
+      if (!loggedIn){
+        showDailyModal();
+        return;
+      }
+      try{ sessionStorage.setItem('__quizOpenFortune__', '1'); }catch(_){}
+      window.location.href = '/quiz/';
       return;
     }
     if (type === 'retake'){
@@ -889,6 +933,7 @@
   if (dailyConfirm){
     dailyConfirm.addEventListener('click', ()=>{
       if (window.authState && typeof window.authState.login === 'function'){
+        try{ sessionStorage.setItem('__homeFortunePending__', '1'); }catch(_){}
         window.authState.login();
         return;
       }
@@ -900,6 +945,21 @@
   }
 
   restoreHeroQuizCacheFromBackup();
+  const initialProfile = getAuthProfile();
+  if (initialProfile) syncLocalFromProfile(initialProfile);
   toggleHeroVisibility();
   updateDailyBadgeIndicator();
+  if (window.authState && typeof window.authState.onProfile === 'function'){
+    window.authState.onProfile((profile)=>{
+      if (profile) syncLocalFromProfile(profile);
+      toggleHeroVisibility();
+      updateDailyBadgeIndicator();
+      const pending = sessionStorage.getItem('__homeFortunePending__');
+      if (pending && window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()){
+        try{ sessionStorage.removeItem('__homeFortunePending__'); }catch(_){}
+        try{ sessionStorage.setItem('__quizOpenFortune__', '1'); }catch(_){}
+        window.location.href = '/quiz/';
+      }
+    });
+  }
 })();
