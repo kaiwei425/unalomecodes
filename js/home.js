@@ -662,14 +662,44 @@
     }
   }
 
-  function hasStoredQuizResult(){
+  const QUIZ_GUARDIAN_KEY = '__lastQuizGuardian__';
+  const QUIZ_PROFILE_KEY = '__lastQuizProfile__';
+  const QUIZ_GUARDIAN_BACKUP = '__lastQuizGuardianBackup__';
+  const QUIZ_PROFILE_BACKUP = '__lastQuizProfileBackup__';
+
+  function isSameTaipeiDay(tsA, tsB){
+    if (!tsA || !tsB) return false;
+    const toDay = d=> (new Date(d + 8 * 3600000)).toISOString().slice(0,10);
+    return toDay(tsA) === toDay(tsB);
+  }
+
+  function restoreHeroQuizCacheFromBackup(){
+    try{
+      if (!localStorage.getItem(QUIZ_GUARDIAN_KEY)){
+        const guardianBackup = localStorage.getItem(QUIZ_GUARDIAN_BACKUP);
+        if (guardianBackup){
+          localStorage.setItem(QUIZ_GUARDIAN_KEY, guardianBackup);
+        }
+      }
+      if (!localStorage.getItem(QUIZ_PROFILE_KEY)){
+        const profileBackup = localStorage.getItem(QUIZ_PROFILE_BACKUP);
+        if (profileBackup){
+          localStorage.setItem(QUIZ_PROFILE_KEY, profileBackup);
+        }
+      }
+    }catch(_){}
+  }
+
+  function shouldShowHeroBadge(){
+    const guardian = readStoredGuardian();
     const profile = readStoredQuizProfile();
-    if (!profile) return false;
+    if (!guardian || !profile) return false;
     if (!profile.dow || !profile.zod || !profile.job) return false;
     const answers = profile.answers || {};
     const required = ['p2','p3','p4','p5','p6','p7'];
-    const hasAllAnswers = required.every(key => Boolean(answers[key]));
-    return hasAllAnswers;
+    if (!required.every(key => Boolean(answers[key]))) return false;
+    const ts = guardian.ts || profile.ts || 0;
+    return isSameTaipeiDay(ts, Date.now());
   }
 
   function todayKey(){
@@ -727,10 +757,7 @@
 
   function showHeroBadge(){
     if (!heroBadge || !heroCTA) return;
-    const guardian = readStoredGuardian();
-    if (!guardian) return;
-    if (!guardian.code && !guardian.name) return;
-    if (!hasStoredQuizResult()) return;
+    if (!shouldShowHeroBadge()) return;
     setHeroBadgeVisible(true);
     setHeroCtaVisible(false);
     if (heroNote) heroNote.style.display = 'none';
@@ -753,8 +780,7 @@
   }
 
   function toggleHeroVisibility(){
-    const guardian = readStoredGuardian();
-    if (guardian && hasStoredQuizResult()){
+    if (shouldShowHeroBadge()){
       showHeroBadge();
     }else{
       hideHeroBadge();
@@ -871,6 +897,7 @@
     dailyCancel.addEventListener('click', hideDailyModal);
   }
 
+  restoreHeroQuizCacheFromBackup();
   toggleHeroVisibility();
   updateDailyBadgeIndicator();
 })();

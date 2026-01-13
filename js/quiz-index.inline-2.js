@@ -1187,11 +1187,49 @@ function loadStoredQuizProfile(){
   }
 }
 
+const QUIZ_GUARDIAN_KEY = '__lastQuizGuardian__';
+const QUIZ_PROFILE_KEY = '__lastQuizProfile__';
+const QUIZ_GUARDIAN_BACKUP = '__lastQuizGuardianBackup__';
+const QUIZ_PROFILE_BACKUP = '__lastQuizProfileBackup__';
+
 function isSameTaipeiDay(tsA, tsB){
   if (!tsA || !tsB) return false;
   const keyA = taipeiDateKey(tsA);
   const keyB = taipeiDateKey(tsB);
   return keyA === keyB;
+}
+
+function restoreQuizCacheFromBackup(){
+  try{
+    if (!localStorage.getItem(QUIZ_GUARDIAN_KEY)){
+      const guardianBackup = localStorage.getItem(QUIZ_GUARDIAN_BACKUP);
+      if (guardianBackup){
+        localStorage.setItem(QUIZ_GUARDIAN_KEY, guardianBackup);
+      }
+    }
+    if (!localStorage.getItem(QUIZ_PROFILE_KEY)){
+      const profileBackup = localStorage.getItem(QUIZ_PROFILE_BACKUP);
+      if (profileBackup){
+        localStorage.setItem(QUIZ_PROFILE_KEY, profileBackup);
+      }
+    }
+  }catch(_){}
+}
+
+function backupQuizCache(){
+  try{
+    const guardian = localStorage.getItem(QUIZ_GUARDIAN_KEY);
+    const profile = localStorage.getItem(QUIZ_PROFILE_KEY);
+    if (guardian) localStorage.setItem(QUIZ_GUARDIAN_BACKUP, guardian);
+    if (profile) localStorage.setItem(QUIZ_PROFILE_BACKUP, profile);
+  }catch(_){}
+}
+
+function clearQuizBackup(){
+  try{
+    localStorage.removeItem(QUIZ_GUARDIAN_BACKUP);
+    localStorage.removeItem(QUIZ_PROFILE_BACKUP);
+  }catch(_){}
 }
 
 function isProfileComplete(profile){
@@ -1201,6 +1239,8 @@ function isProfileComplete(profile){
   const required = ['p2','p3','p4','p5','p6','p7'];
   return required.every(key => Boolean(answers[key]));
 }
+
+restoreQuizCacheFromBackup();
 
 function shouldShowStoredResult(){
   const guardian = loadStoredGuardian();
@@ -1306,6 +1346,7 @@ function hideResultDailyModal(){
 }
 
 function handleResultFortuneLogin(){
+  backupQuizCache();
   if (window.authState && typeof window.authState.login === 'function'){
     window.authState.login();
     return;
@@ -1790,6 +1831,7 @@ const primaryName = deityName(code, lang);
       try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name: storedName, ts: Date.now() })); }catch(_){}
       try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(quizProfile)); }catch(_){}
       try{ localStorage.setItem('__lastQuizBindPending__', JSON.stringify({ ts: Date.now() })); }catch(_){}
+      clearQuizBackup();
 
       // 若已登入，同步到會員檔案
       try{
