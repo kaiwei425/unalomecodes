@@ -103,7 +103,12 @@
         <h2 id="resultTitle">你的守護神</h2>
         <div class="result-head-actions">
           <button id="retakeBtn" class="btn btn-ghost btn-text" type="button" data-i18n="cta-retake">重新測驗一次</button>
+          <span id="retakeCooldown" class="retake-cooldown"></span>
         </div>
+      </div>
+      <div class="result-member-hint" id="membershipPrompt" hidden>
+        <p>登入會員後，你的守護神徽章會顯示在會員中心，並可於台灣時間午夜 12 點領取今日日籤。</p>
+        <a href="/api/auth/google/login?redirect=/quiz" class="btn btn-primary btn-sm">登入會員</a>
       </div>
 
       <div class="result-main">

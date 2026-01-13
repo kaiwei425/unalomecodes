@@ -1096,9 +1096,99 @@ function setResultLoading(on){
   if (!resultLoading) return;
   resultLoading.style.display = on ? 'flex' : 'none';
 }
+let lastQuizTimestamp = null;
+let retakeTimer = null;
+
+function getTaipeiMidnightTimestamp(baseTs){
+  const offset = 8 * 3600000;
+  const adjusted = new Date((baseTs || Date.now()) + offset);
+  const target = Date.UTC(
+    adjusted.getUTCFullYear(),
+    adjusted.getUTCMonth(),
+    adjusted.getUTCDate() + 1,
+    0, 0, 0
+  );
+  return target - offset;
+}
+
+function clearRetakeTimer(){
+  if (retakeTimer){
+    clearInterval(retakeTimer);
+    retakeTimer = null;
+  }
+}
+
+function updateRetakeCountdown(baseTs){
+  if (!retakeCooldown) return;
+  clearRetakeTimer();
+  if (!baseTs){
+    retakeCooldown.textContent = '';
+    retakeCooldown.style.display = 'none';
+    return;
+  }
+  const refresh = ()=>{
+    const target = getTaipeiMidnightTimestamp(baseTs);
+    const diff = target - Date.now();
+    if (diff <= 0){
+      retakeCooldown.textContent = '';
+      retakeCooldown.style.display = 'none';
+      clearRetakeTimer();
+      return;
+    }
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    retakeCooldown.textContent = `重新測驗倒數 ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+    retakeCooldown.style.display = 'inline-flex';
+  };
+  refresh();
+  retakeTimer = setInterval(refresh, 60000);
+}
+
+function renderMembershipHint(){
+  if (!membershipPrompt) return;
+  membershipPrompt.hidden = false;
+}
+
+function loadStoredGuardian(){
+  try{
+    const raw = localStorage.getItem('__lastQuizGuardian__');
+    return raw ? JSON.parse(raw) : null;
+  }catch(_){
+    return null;
+  }
+}
+
+function loadStoredQuizProfile(){
+  try{
+    const raw = localStorage.getItem('__lastQuizProfile__');
+    return raw ? JSON.parse(raw) : null;
+  }catch(_){
+    return null;
+  }
+}
+
+function initStoredResult(){
+  const guardian = loadStoredGuardian();
+  const profile = loadStoredQuizProfile();
+  if (!guardian || !profile) return;
+  state.dow = profile.dow || state.dow;
+  state.zod = profile.zod || state.zod;
+  state.job = profile.job || state.job;
+  const answers = profile.answers || {};
+  Object.keys(answers).forEach((key)=>{
+    if (key in state) state[key] = answers[key];
+  });
+  lastQuizTimestamp = guardian.ts || profile.ts || Date.now();
+  setQuizVisible(false);
+  if (intro) intro.style.display = 'none';
+  if (quizFlow) quizFlow.hidden = true;
+  showResult({ rerender:true });
+}
 const lineEntry = document.getElementById('lineFortuneEntry');
 const lineGuardianBadge = document.getElementById('lineGuardianBadge');
 const lineRetakeBtn = document.getElementById('lineRetakeBtn');
+const retakeCooldown = document.getElementById('retakeCooldown');
+const membershipPrompt = document.getElementById('membershipPrompt');
 let forceQuiz = false;
 var lastLineProfile = null;
 function isLineClient(){
@@ -1355,6 +1445,7 @@ function nextStep(){
 renderDow();
 renderZodiac();
 renderStep();
+initStoredResult();
 
 if (startBtn){
   startBtn.addEventListener('click', ()=>{
@@ -1988,6 +2079,14 @@ Enter this code at checkout.`
       clearState();
     }
     applyLang(lang);
+
+    if (!rerender){
+      lastQuizTimestamp = Date.now();
+    } else if (!lastQuizTimestamp){
+      lastQuizTimestamp = Date.now();
+    }
+    updateRetakeCountdown(lastQuizTimestamp);
+    renderMembershipHint();
 
     // 重新測驗：回到初始狀態
     try{
