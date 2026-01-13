@@ -1144,6 +1144,26 @@ function updateRetakeCountdown(baseTs){
   retakeTimer = setInterval(refresh, 60000);
 }
 
+function isRetakeLocked(){
+  if (!lastQuizTimestamp) return false;
+  return Date.now() < getTaipeiMidnightTimestamp(lastQuizTimestamp);
+}
+
+function formatNextRetakeTime(){
+  if (!lastQuizTimestamp) return '台灣時間午夜 12 點';
+  const nextTs = getTaipeiMidnightTimestamp(lastQuizTimestamp);
+  const formatter = new Intl.DateTimeFormat('zh-TW',{
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  return formatter.format(new Date(nextTs));
+}
+
 function renderMembershipHint(){
   if (!membershipPrompt) return;
   membershipPrompt.hidden = false;
@@ -1899,13 +1919,6 @@ const primaryName = deityName(code, lang);
     if (storiesBox){
       storiesBox.innerHTML = storiesHtml;
     }
-    const userStoriesWrap = document.getElementById('userStoriesWrap');
-    if (userStoriesWrap && typeof window.renderUserStoriesSection === 'function'){
-      userStoriesWrap.innerHTML = window.renderUserStoriesSection(code, lang, { collapsed:true });
-      const list = userStoriesWrap.querySelector('.story-list');
-      if (list) list.innerHTML = storiesHtml;
-    }
-
     const ctaShop = document.getElementById('ctaShopPrimaryBtn');
     const ctaTemple = document.getElementById('ctaTempleBtn');
     const deityLink = document.getElementById('deityLink');
@@ -2124,6 +2137,10 @@ Enter this code at checkout.`
       if (reBtn){
         reBtn.onclick = async (ev)=>{
           ev.preventDefault();
+          if (isRetakeLocked()){
+            alert(`請於 ${formatNextRetakeTime()} 後再重新測驗。`);
+            return;
+          }
           const ok = await checkQuizDailyLimit(true);
           if (!ok) return;
           resetQuiz(true);
