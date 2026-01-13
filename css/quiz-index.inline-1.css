@@ -108,6 +108,7 @@
     .intro-details ul{margin:10px 0 0 18px;padding:0;}
     .save-hint{margin-top:14px;font-size:12px;color:var(--muted);}
     .quiz-flow{display:grid;gap:16px;}
+    .quiz-flow--hidden{display:none!important;}
     .flow-head{
       display:grid;
       grid-template-columns:auto 1fr auto;

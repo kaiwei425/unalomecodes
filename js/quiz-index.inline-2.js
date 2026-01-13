@@ -1219,7 +1219,10 @@ function setQuizVisible(show){
     const el = document.getElementById(id);
     if (el) el.style.display = show ? '' : 'none';
   });
-  if (quizFlow) quizFlow.hidden = !show;
+  if (quizFlow){
+    quizFlow.hidden = !show;
+    quizFlow.classList.toggle('quiz-flow--hidden', !show);
+  }
   if (intro) intro.style.display = show ? 'none' : '';
   if (show && lineEntry) lineEntry.style.display = 'none';
 }
@@ -1669,6 +1672,8 @@ async function showResult(opts){
   if (!state.dow || !state.zod || !state.job || !state.p2 || !state.p3 || !state.p4 || !state.p5 || !state.p6 || !state.p7){
     alert('請完整作答「星期、星座與 7 題」'); return;
   }
+  setQuizVisible(false);
+  if (intro) intro.style.display = 'none';
   setResultLoading(true);
   try{
     // logged-in: allow only once per Taiwan day

@@ -294,7 +294,7 @@ body.nav-open .nav-drawer__panel{
   border-radius:var(--r-16);
   background:linear-gradient(140deg, rgba(255,255,255,0.9), rgba(247,245,241,0.9));
   border:1px solid var(--line);
-  overflow:hidden;
+  overflow:visible;
 }
 .hero-shell::before{
   content:"";
@@ -495,6 +495,9 @@ body.nav-open .nav-drawer__panel{
   align-items:center;
   justify-content:center;
   line-height:1;
+}
+.guardian-menu button[data-hero-guardian-action="daily"] .guardian-menu-badge{
+  display:flex;
 }
 @media(max-width:560px){
   .hero-guardian-badge{
