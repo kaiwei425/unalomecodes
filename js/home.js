@@ -653,6 +653,22 @@
     }
   }
 
+  function readStoredQuizProfile(){
+    try{
+      const raw = localStorage.getItem('__lastQuizProfile__');
+      return raw ? JSON.parse(raw) : null;
+    }catch(_){
+      return null;
+    }
+  }
+
+  function hasStoredQuizResult(){
+    const profile = readStoredQuizProfile();
+    if (!profile) return false;
+    const hasAnswers = profile.answers && Object.keys(profile.answers).length;
+    return !!(profile.dow && profile.zod && profile.job && hasAnswers);
+  }
+
   function todayKey(){
     const now = new Date();
     const year = now.getFullYear();
@@ -726,7 +742,7 @@
 
   function toggleHeroVisibility(){
     const guardian = readStoredGuardian();
-    if (guardian){
+    if (guardian && hasStoredQuizResult()){
       showHeroBadge();
     }else{
       hideHeroBadge();
