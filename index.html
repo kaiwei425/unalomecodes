@@ -93,6 +93,23 @@
             <div class="hero-cta">
               <div class="hero-cta__actions">
                 <a class="hero-cta__primary" href="/quiz/" data-i18n="home-hero-cta-primary" data-hero-quiz-cta>1 分鐘找到你的守護神</a>
+                <div id="heroGuardianBadge" class="guardian-badge hero-guardian-badge" hidden role="button" aria-haspopup="menu" aria-expanded="false">
+                  <span class="guardian-alert" data-hero-guardian-alert aria-hidden="true">1</span>
+                  <img src="/img/guardian-emblem.png" alt="守護神徽章">
+                  <div class="guardian-meta">
+                    <strong data-hero-guardian-label>守護神：未知</strong>
+                    <span class="guardian-sub">點擊徽章開啟選單</span>
+                  </div>
+                  <div class="guardian-menu" data-hero-guardian-menu role="menu" aria-hidden="true">
+                    <button type="button" data-hero-guardian-action="daily">
+                      <span>每日運勢</span>
+                      <span class="guardian-menu-badge" data-hero-guardian-menu-badge aria-hidden="true">1</span>
+                    </button>
+                    <button type="button" data-hero-guardian-action="retake">重新測驗</button>
+                    <a href="#" data-hero-guardian-action="intro">守護神介紹</a>
+                    <button type="button" data-hero-guardian-action="recommend">推薦商品</button>
+                  </div>
+                </div>
                 <a class="hero-cta__secondary" href="/templemap" data-i18n="home-hero-cta-secondary" data-hero-temple-cta>探索寺廟地圖</a>
               </div>
               <p class="hero-cta__note" data-i18n="home-hero-cta-note">完成後會得到命中指引、行動建議與可下載的守護卡</p>
@@ -101,6 +118,16 @@
           </div>
         </div>
       </section>
+      <div id="dailyFortuneModal" class="hero-modal" hidden>
+        <div class="hero-modal__content">
+          <h3>每日運勢</h3>
+          <p>請先登入會員才能領取每日運勢，並將你的守護神徽章顯示於會員中心。</p>
+          <div class="hero-modal__actions">
+            <button id="dailyFortuneConfirm" class="btn btn-primary btn-sm" type="button">登入會員</button>
+            <button id="dailyFortuneCancel" class="btn btn-ghost btn-sm" type="button" data-hero-modal-close>再想想</button>
+          </div>
+        </div>
+      </div>
 
       <section class="section testimonial-section" aria-labelledby="testimonialTitle"
         data-testimonial-section

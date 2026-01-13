@@ -629,4 +629,176 @@
   if (window.trackEvent){
     window.trackEvent('home_view', { pageType: 'home' });
   }
+
+  /* hero guardian badge */
+  const heroBadge = document.getElementById('heroGuardianBadge');
+  const heroBadgeMenu = heroBadge ? heroBadge.querySelector('[data-hero-guardian-menu]') : null;
+  const heroBadgeLabel = heroBadge ? heroBadge.querySelector('[data-hero-guardian-label]') : null;
+  const heroCTA = document.querySelector('[data-hero-quiz-cta]');
+  const heroNote = document.querySelector('.hero-cta__note');
+  const dailyModal = document.getElementById('dailyFortuneModal');
+  const dailyConfirm = document.getElementById('dailyFortuneConfirm');
+  const dailyCancel = document.getElementById('dailyFortuneCancel');
+
+  const GUARDIAN_NAME_MAP = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
+
+  function readStoredGuardian(){
+    try{
+      const raw = localStorage.getItem('__lastQuizGuardian__');
+      return raw ? JSON.parse(raw) : null;
+    }catch(_){
+      return null;
+    }
+  }
+
+  function formatGuardianName(guardian){
+    if (!guardian) return '';
+    const code = String(guardian.code || guardian.id || '').toUpperCase();
+    if (code && GUARDIAN_NAME_MAP[code]) return GUARDIAN_NAME_MAP[code];
+    if (guardian.name) return guardian.name;
+    return heroBadge ? (document.documentElement.lang === 'en' ? 'Guardian' : '守護神') : '守護神';
+  }
+
+  function showHeroBadge(){
+    if (!heroBadge || !heroCTA) return;
+    const guardian = readStoredGuardian();
+    if (!guardian) return;
+    heroBadge.hidden = false;
+    heroCTA.style.display = 'none';
+    if (heroNote) heroNote.style.display = 'none';
+    const name = formatGuardianName(guardian);
+    if (heroBadgeLabel) heroBadgeLabel.textContent = `守護神：${name}`;
+    heroBadge.dataset.guardianCode = String(guardian.code || guardian.id || '').toUpperCase();
+    heroBadge.setAttribute('aria-expanded','false');
+    if (heroBadgeMenu) heroBadgeMenu.setAttribute('aria-hidden','true');
+  }
+
+  function hideHeroBadge(){
+    if (heroBadge){
+      heroBadge.hidden = true;
+      closeHeroMenu();
+    }
+    if (heroCTA){
+      heroCTA.style.display = '';
+    }
+    if (heroNote){
+      heroNote.style.display = '';
+    }
+  }
+
+  function toggleHeroVisibility(){
+    const guardian = readStoredGuardian();
+    if (guardian){
+      showHeroBadge();
+    }else{
+      hideHeroBadge();
+    }
+  }
+
+  let heroMenuOpen = false;
+  function openHeroMenu(){
+    if (!heroBadge || !heroBadgeMenu) return;
+    heroMenuOpen = true;
+    heroBadge.setAttribute('aria-expanded','true');
+    heroBadgeMenu.classList.add('guardian-menu--open');
+    heroBadgeMenu.setAttribute('aria-hidden','false');
+  }
+
+  function closeHeroMenu(){
+    if (!heroBadge || !heroBadgeMenu) return;
+    heroMenuOpen = false;
+    heroBadge.setAttribute('aria-expanded','false');
+    heroBadgeMenu.classList.remove('guardian-menu--open');
+    heroBadgeMenu.setAttribute('aria-hidden','true');
+  }
+
+  function toggleHeroMenu(){
+    if (heroMenuOpen) closeHeroMenu();
+    else openHeroMenu();
+  }
+
+  function handleHeroAction(type){
+    const guardian = readStoredGuardian();
+    const code = guardian ? String(guardian.code || guardian.id || '').toUpperCase() : '';
+    if (type === 'daily'){
+      showDailyModal();
+      return;
+    }
+    if (type === 'retake'){
+      window.location.href = '/quiz/';
+      return;
+    }
+    if (type === 'intro'){
+      if (code){
+        window.location.href = `/deity?code=${encodeURIComponent(code)}`;
+        return;
+      }
+      window.location.href = '/quiz/';
+      return;
+    }
+    if (type === 'recommend'){
+      window.location.href = '/shop/';
+    }
+  }
+
+  function showDailyModal(){
+    if (!dailyModal) return;
+    dailyModal.hidden = false;
+    dailyModal.classList.add('is-visible');
+  }
+
+  function hideDailyModal(){
+    if (!dailyModal) return;
+    dailyModal.hidden = true;
+    dailyModal.classList.remove('is-visible');
+  }
+
+  if (heroBadge){
+    heroBadge.addEventListener('click', (ev)=>{
+      const actionEl = ev.target.closest('[data-hero-guardian-action]');
+      if (actionEl){
+        ev.stopPropagation();
+        const type = actionEl.getAttribute('data-hero-guardian-action');
+        closeHeroMenu();
+        handleHeroAction(type);
+        return;
+      }
+      if (ev.target.closest('[data-hero-guardian-menu]')) return;
+      toggleHeroMenu();
+    });
+    heroBadge.addEventListener('keydown', (ev)=>{
+      if (ev.key === 'Enter' || ev.key === ' '){
+        ev.preventDefault();
+        toggleHeroMenu();
+      }
+      if (ev.key === 'Escape'){
+        closeHeroMenu();
+      }
+    });
+  }
+
+  document.addEventListener('click', (ev)=>{
+    if (!heroBadge) return;
+    if (heroBadge.contains(ev.target)) return;
+    closeHeroMenu();
+  });
+
+  if (dailyModal){
+    dailyModal.addEventListener('click', (ev)=>{
+      if (ev.target === dailyModal || ev.target.hasAttribute('data-hero-modal-close')){
+        hideDailyModal();
+      }
+    });
+  }
+
+  if (dailyConfirm){
+    dailyConfirm.addEventListener('click', ()=>{
+      window.location.href = '/api/auth/google/login?redirect=/quiz';
+    });
+  }
+  if (dailyCancel){
+    dailyCancel.addEventListener('click', hideDailyModal);
+  }
+
+  toggleHeroVisibility();
 })();
