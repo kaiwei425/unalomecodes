@@ -67,6 +67,8 @@
   let midnightTimer = null;
   const FORTUNE_KEY = '__fortune_last_date__';
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
+  const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
+  const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   const PHUM_FEEDBACK = {
     AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
@@ -143,6 +145,52 @@
     const next = !isTaskDone(dateKey, task);
     setTaskDone(dateKey, task, next);
     return next;
+  }
+  function getYesterdayKey(dateKey){
+    const key = normalizeDateKey(dateKey);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+    const [y,m,d] = key.split('-').map(n=> Number(n));
+    const ts = Date.UTC(y, m - 1, d) - 86400000;
+    return new Date(ts).toISOString().slice(0,10);
+  }
+  function getStreakState(){
+    let count = 0;
+    let last = '';
+    try{
+      count = Number(localStorage.getItem(STREAK_COUNT_KEY) || 0) || 0;
+      last = String(localStorage.getItem(STREAK_LAST_KEY) || '');
+    }catch(_){}
+    return { count, last };
+  }
+  function setStreakState(count, last){
+    try{
+      localStorage.setItem(STREAK_COUNT_KEY, String(count));
+      localStorage.setItem(STREAK_LAST_KEY, String(last || ''));
+    }catch(_){}
+  }
+  function updateStreakOnComplete(dateKey){
+    const key = normalizeDateKey(dateKey);
+    if (!key) return 0;
+    const { count, last } = getStreakState();
+    if (last === key) return count;
+    const yesterday = getYesterdayKey(key);
+    const next = last === yesterday ? count + 1 : 1;
+    setStreakState(next, key);
+    return next;
+  }
+  function renderStreak(dateKey, done){
+    if (!fortuneTaskStreak) return;
+    if (!done){
+      fortuneTaskStreak.style.display = 'none';
+      return;
+    }
+    const { count } = getStreakState();
+    if (!count){
+      fortuneTaskStreak.style.display = 'none';
+      return;
+    }
+    fortuneTaskStreak.textContent = `🔥 已連續完成 ${count} 天`;
+    fortuneTaskStreak.style.display = '';
   }
   function isTodayKey(dateKey){
     const today = getTaipeiDateKey(new Date());
