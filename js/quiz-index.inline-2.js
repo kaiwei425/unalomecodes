@@ -2324,6 +2324,7 @@ Enter this code at checkout.`
   const fortuneTaskText = document.getElementById('fortuneTaskTextQuiz');
   const fortuneTaskToggle = document.getElementById('fortuneTaskToggleQuiz');
   const fortuneTaskStreak = document.getElementById('fortuneTaskStreakQuiz');
+  const fortuneTaskFeedback = document.getElementById('fortuneTaskFeedbackQuiz');
   const fortuneRitual = document.getElementById('fortuneRitualQuiz');
   const fortuneMeta = document.getElementById('fortuneMetaQuiz');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabelQuiz');
@@ -2477,9 +2478,15 @@ Enter this code at checkout.`
     fortuneTaskToggle.setAttribute('aria-pressed', done ? 'true' : 'false');
     fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
     renderStreak(dateKey, done);
+    if (done) renderTaskFeedback(fortune, data);
+    else if (fortuneTaskFeedback){
+      fortuneTaskFeedback.style.display = 'none';
+      fortuneTaskFeedback.innerHTML = '';
+    }
   }
-function renderFortune(fortune, meta, data){
+  function renderFortune(fortune, meta, data){
     if (!fortune) return;
+    lastFortunePayload = data || lastFortunePayload;
     if (fortuneDate) fortuneDate.textContent = fortune.date || '';
     if (fortuneStars){
       const stars = fortune.stars || '';
@@ -2625,6 +2632,12 @@ function renderFortune(fortune, meta, data){
         updateStreakOnComplete(dateKey);
       }
       renderStreak(dateKey, next);
+      if (next){
+        renderTaskFeedback(lastFortunePayload && lastFortunePayload.fortune, lastFortunePayload);
+      }else if (fortuneTaskFeedback){
+        fortuneTaskFeedback.style.display = 'none';
+        fortuneTaskFeedback.innerHTML = '';
+      }
     });
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
@@ -2635,3 +2648,40 @@ function renderFortune(fortune, meta, data){
     setTimeout(tryAutoOpenFortune, 150);
   }
 })();
+  const PHUM_FEEDBACK = {
+    AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
+    DECH:{ title:'行動到位', body:'Dech 日主打行動與決斷。你完成這一步，能把卡關點推進。' },
+    SRI:{ title:'順流啟動', body:'Sri 日偏向順流與收穫。這個小步驟會讓機會更容易到位。' },
+    MULA:{ title:'根基穩固', body:'Mula 日重點在根基與秩序。你先完成這件事，整體會更穩。' },
+    UTSAHA:{ title:'推進有力', body:'Utsaha 日強調推進與執行。這個任務能讓進度往前走。' },
+    MONTRI:{ title:'協調順暢', body:'Montri 日聚焦協調與支援。你完成這一步，溝通會更順。' },
+    BORIWAN:{ title:'節奏整理', body:'Boriwan 日著重安排與分配。完成這件事有助於聚焦。' },
+    KALAKINI:{ title:'避險成功', body:'Kalakini 日重點是降低風險與誤判。你完成這步，等於先把地雷排掉。' }
+  };
+  function renderTaskFeedback(fortune, data){
+    if (!fortuneTaskFeedback) return;
+    const phum = fortune && fortune.core ? fortune.core.phum : '';
+    const base = PHUM_FEEDBACK[phum];
+    if (!base){
+      fortuneTaskFeedback.style.display = 'none';
+      fortuneTaskFeedback.innerHTML = '';
+      return;
+    }
+    let body = base.body;
+    const signals = (data && data.meta && (data.meta.userSignals || data.meta.signals)) || null;
+    const focus = signals && Array.isArray(signals.focus) ? signals.focus[0] : '';
+    const job = signals && signals.job ? String(signals.job) : '';
+    if (focus){
+      body = `${body} 尤其在「${focus}」上，先做可控的小步驟會更順。`;
+    }else if (job){
+      body = `${body} 對${job}來說，先完成可驗證的小步驟會更有效。`;
+    }
+    fortuneTaskFeedback.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = base.title;
+    const br = document.createElement('br');
+    const span = document.createElement('span');
+    span.textContent = body;
+    fortuneTaskFeedback.append(strong, br, span);
+    fortuneTaskFeedback.style.display = '';
+  }

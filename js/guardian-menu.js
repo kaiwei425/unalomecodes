@@ -74,44 +74,120 @@
     return `<div class="fortune-history-preview">${short}</div>`;
   }
 
+  const PHUM_LABEL = {
+    BORIWAN:'Boriwan',
+    AYU:'Ayu',
+    DECH:'Dech',
+    SRI:'Sri',
+    MULA:'Mula',
+    UTSAHA:'Utsaha',
+    MONTRI:'Montri',
+    KALAKINI:'Kalakini'
+  };
+  function fnv1aHash(str){
+    let hash = 2166136261;
+    const text = String(str || '');
+    for (let i=0;i<text.length;i++){
+      hash ^= text.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return hash >>> 0;
+  }
+  function getTaskDoneKey(dateKey, task){
+    const hash = fnv1aHash(String(task || '').trim());
+    return `FORTUNE_TASK_DONE:${dateKey}:${hash}`;
+  }
+  function isTaskDone(dateKey, task){
+    if (!dateKey || !task) return false;
+    try{
+      return localStorage.getItem(getTaskDoneKey(dateKey, task)) === '1';
+    }catch(_){
+      return false;
+    }
+  }
+  function resolveHistoryDateKey(item){
+    if (!item) return '';
+    if (item.dateKey) return String(item.dateKey || '');
+    const fortune = item.fortune || {};
+    if (fortune.dateKey) return String(fortune.dateKey || '');
+    if (fortune.date) return String(fortune.date || '').replace(/\s+/g,'');
+    return '';
+  }
   function renderHistory(listEl, history){
     if (!listEl) return;
+    listEl.textContent = '';
     if (!Array.isArray(history) || !history.length){
-      listEl.innerHTML = '<div class="fortune-history-empty">尚未領取任何日籤。</div>';
+      const empty = document.createElement('div');
+      empty.className = 'fortune-history-empty';
+      empty.textContent = '尚未領取任何日籤。';
+      listEl.appendChild(empty);
       return;
     }
-    listEl.innerHTML = history.map(item=>{
-      const dateKey = item.dateKey || '';
-      const fortune = item.fortune || null;
-      const core = fortune && fortune.core && fortune.core.phum ? fortune.core.phum : '';
-      const summary = fortune && fortune.summary ? fortune.summary : '';
-      const status = getHistoryStatus(item);
-      const headText = [dateKey, core || '—', status].filter(Boolean).join(' · ');
-      if (!fortune){
-        return `
-          <details class="fortune-history-item">
-            <summary>${headText}</summary>
-            <div class="fortune-history-body">尚未領取</div>
-          </details>
-        `;
+    history.forEach(item=>{
+      const fortune = item && item.fortune ? item.fortune : null;
+      const dateKey = resolveHistoryDateKey(item);
+      const phum = fortune && fortune.core ? fortune.core.phum : '';
+      const phumLabel = phum ? (PHUM_LABEL[phum] ? `${phum} · ${PHUM_LABEL[phum]}` : phum) : '—';
+      const task = fortune && fortune.action ? String(fortune.action.task || '').trim() : '';
+      const done = task ? isTaskDone(dateKey, task) : false;
+      const status = !fortune ? '— 尚未領取' : (done ? '✔︎ 已完成' : '☐ 未完成');
+      const card = document.createElement('details');
+      card.className = 'fortune-history-card';
+
+      const summary = document.createElement('summary');
+      summary.className = 'fortune-history-summary';
+      const left = document.createElement('div');
+      left.className = 'fortune-history-left';
+      const dateEl = document.createElement('div');
+      dateEl.className = 'fortune-history-date';
+      dateEl.textContent = dateKey || '—';
+      const phumEl = document.createElement('div');
+      phumEl.className = 'fortune-history-phum';
+      phumEl.textContent = phumLabel;
+      left.append(dateEl, phumEl);
+      const badge = document.createElement('span');
+      badge.className = 'fortune-history-badge';
+      badge.textContent = status;
+      if (status.includes('已完成')) badge.classList.add('is-done');
+      else if (status.includes('未完成')) badge.classList.add('is-pending');
+      else badge.classList.add('is-missing');
+      summary.append(left, badge);
+
+      const body = document.createElement('div');
+      body.className = 'fortune-history-body';
+      if (task){
+        const taskEl = document.createElement('div');
+        taskEl.className = 'fortune-history-task';
+        taskEl.textContent = task;
+        body.appendChild(taskEl);
       }
-      const actionTask = fortune.action && fortune.action.task ? fortune.action.task : '';
-      const ritual = fortune.ritual || '';
-      const advice = fortune.advice || '';
-      const preview = getHistoryPreview(summary);
-      return `
-        <details class="fortune-history-item">
-          <summary>${headText}</summary>
-          <div class="fortune-history-body">
-            <div class="fortune-history-row"><strong>摘要：</strong>${summary || '—'}</div>
-            <div class="fortune-history-row"><strong>建議：</strong>${advice || '—'}</div>
-            <div class="fortune-history-row"><strong>今日任務：</strong>${actionTask || '—'}</div>
-            <div class="fortune-history-row"><strong>守護神語：</strong>${ritual || '—'}</div>
-            ${preview}
-          </div>
-        </details>
-      `;
-    }).join('');
+      if (fortune){
+        const summaryRow = document.createElement('div');
+        summaryRow.className = 'fortune-history-row';
+        summaryRow.textContent = `摘要：${fortune.summary || '—'}`;
+        const adviceRow = document.createElement('div');
+        adviceRow.className = 'fortune-history-row';
+        adviceRow.textContent = `建議：${fortune.advice || '—'}`;
+        const ritualRow = document.createElement('div');
+        ritualRow.className = 'fortune-history-row';
+        ritualRow.textContent = `守護神語：${fortune.ritual || '—'}`;
+        body.append(summaryRow, adviceRow, ritualRow);
+        if (fortune.mantra){
+          const mantraRow = document.createElement('div');
+          mantraRow.className = 'fortune-history-row';
+          mantraRow.textContent = `咒語：${fortune.mantra}`;
+          body.appendChild(mantraRow);
+        }
+      }else{
+        const emptyRow = document.createElement('div');
+        emptyRow.className = 'fortune-history-row';
+        emptyRow.textContent = '尚未領取';
+        body.appendChild(emptyRow);
+      }
+
+      card.append(summary, body);
+      listEl.appendChild(card);
+    });
   }
 
   function bindHistoryDialog(opts){

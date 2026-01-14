@@ -611,6 +611,16 @@ body.nav-open .nav-drawer__panel{
   color:#f97316;
   font-weight:600;
 }
+.fortune-task-feedback{
+  margin-top:8px;
+  font-size:12px;
+  line-height:1.6;
+  color:#475569;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#f8fafc;
+  border:1px solid rgba(148,163,184,.25);
+}
 .hero-guardian-badge{
   position:relative;
   display:flex;

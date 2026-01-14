@@ -41,6 +41,11 @@
   const fortuneSummary = document.getElementById('fortuneSummary');
   const fortuneYam = fortuneDialog ? fortuneDialog.querySelector('[data-yam-container]') : null;
   const fortuneAdvice = document.getElementById('fortuneAdvice');
+  const fortuneTaskWrap = document.getElementById('fortuneTaskWrapShop');
+  const fortuneTaskText = document.getElementById('fortuneTaskTextShop');
+  const fortuneTaskToggle = document.getElementById('fortuneTaskToggleShop');
+  const fortuneTaskStreak = document.getElementById('fortuneTaskStreakShop');
+  const fortuneTaskFeedback = document.getElementById('fortuneTaskFeedbackShop');
   const fortuneRitual = document.getElementById('fortuneRitual');
   const fortuneMeta = document.getElementById('fortuneMeta');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabel');
@@ -54,6 +59,7 @@
   const historyError = document.getElementById('fortuneHistoryError');
   const SHOP_FORTUNE_PENDING = '__shopFortunePending__';
   let lastFortune = null;
+  let lastFortunePayload = null;
   let lastGuardianName = '';
   let lastGuardianCode = '';
   let recommendRetry = 0;
@@ -61,6 +67,16 @@
   let midnightTimer = null;
   const FORTUNE_KEY = '__fortune_last_date__';
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
+  const PHUM_FEEDBACK = {
+    AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
+    DECH:{ title:'行動到位', body:'Dech 日主打行動與決斷。你完成這一步，能把卡關點推進。' },
+    SRI:{ title:'順流啟動', body:'Sri 日偏向順流與收穫。這個小步驟會讓機會更容易到位。' },
+    MULA:{ title:'根基穩固', body:'Mula 日重點在根基與秩序。你先完成這件事，整體會更穩。' },
+    UTSAHA:{ title:'推進有力', body:'Utsaha 日強調推進與執行。這個任務能讓進度往前走。' },
+    MONTRI:{ title:'協調順暢', body:'Montri 日聚焦協調與支援。你完成這一步，溝通會更順。' },
+    BORIWAN:{ title:'節奏整理', body:'Boriwan 日著重安排與分配。完成這件事有助於聚焦。' },
+    KALAKINI:{ title:'避險成功', body:'Kalakini 日重點是降低風險與誤判。你完成這步，等於先把地雷排掉。' }
+  };
   const badgeIcon = (function(){
     if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
     return '/img/guardian-emblem.png'; // 請將圖檔放在此路徑
@@ -227,6 +243,7 @@
   function renderFortune(fortune, data){
     if (!fortune) return;
     lastFortune = fortune;
+    lastFortunePayload = data || lastFortunePayload;
     if (fortuneDate) fortuneDate.textContent = fortune.date || '';
     if (fortuneStars){
       const stars = fortune.stars || '';
@@ -240,6 +257,27 @@
     }else if (fortuneYam){
       fortuneYam.style.display = 'none';
       fortuneYam.innerHTML = '';
+    }
+    if (fortuneTaskWrap && fortuneTaskText && fortuneTaskToggle){
+      const task = fortune && fortune.action ? String(fortune.action.task || '').trim() : '';
+      if (!task){
+        fortuneTaskWrap.style.display = 'none';
+      }else{
+        const dateKey = resolveDateKey(data, fortune);
+        const done = isTaskDone(dateKey, task);
+        fortuneTaskText.textContent = task;
+        fortuneTaskWrap.style.display = '';
+        fortuneTaskWrap.dataset.dateKey = dateKey;
+        fortuneTaskWrap.dataset.task = task;
+        fortuneTaskToggle.setAttribute('aria-pressed', done ? 'true' : 'false');
+        fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
+        renderStreak(dateKey, done);
+        if (done) renderTaskFeedback(fortune, data);
+        else if (fortuneTaskFeedback){
+          fortuneTaskFeedback.style.display = 'none';
+          fortuneTaskFeedback.innerHTML = '';
+        }
+      }
     }
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
     if (fortuneMeta){
@@ -264,6 +302,33 @@
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneError) fortuneError.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = '';
+  }
+  function renderTaskFeedback(fortune, data){
+    if (!fortuneTaskFeedback) return;
+    const phum = fortune && fortune.core ? fortune.core.phum : '';
+    const base = PHUM_FEEDBACK[phum];
+    if (!base){
+      fortuneTaskFeedback.style.display = 'none';
+      fortuneTaskFeedback.innerHTML = '';
+      return;
+    }
+    let body = base.body;
+    const signals = (data && data.meta && (data.meta.userSignals || data.meta.signals)) || null;
+    const focus = signals && Array.isArray(signals.focus) ? signals.focus[0] : '';
+    const job = signals && signals.job ? String(signals.job) : '';
+    if (focus){
+      body = `${body} 尤其在「${focus}」上，先做可控的小步驟會更順。`;
+    }else if (job){
+      body = `${body} 對${job}來說，先完成可驗證的小步驟會更有效。`;
+    }
+    fortuneTaskFeedback.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = base.title;
+    const br = document.createElement('br');
+    const span = document.createElement('span');
+    span.textContent = body;
+    fortuneTaskFeedback.append(strong, br, span);
+    fortuneTaskFeedback.style.display = '';
   }
   async function fetchFortune(){
     setFortuneLoading();
@@ -683,5 +748,28 @@
   }
   if (fortuneShareBtn){
     fortuneShareBtn.addEventListener('click', shareFortuneImage);
+  }
+  if (fortuneDialog){
+    fortuneDialog.addEventListener('click', (ev)=>{
+      const toggleBtn = ev.target.closest('.fortune-task-toggle');
+      if (!toggleBtn) return;
+      const wrap = ev.target.closest('.fortune-task');
+      const dateKey = wrap && wrap.dataset ? String(wrap.dataset.dateKey || '') : '';
+      const task = wrap && wrap.dataset ? String(wrap.dataset.task || '') : '';
+      if (!dateKey || !task) return;
+      const next = toggleTaskDone(dateKey, task);
+      toggleBtn.setAttribute('aria-pressed', next ? 'true' : 'false');
+      toggleBtn.textContent = next ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
+      if (next){
+        updateStreakOnComplete(dateKey);
+      }
+      renderStreak(dateKey, next);
+      if (next){
+        renderTaskFeedback(lastFortune, lastFortunePayload);
+      }else if (fortuneTaskFeedback){
+        fortuneTaskFeedback.style.display = 'none';
+        fortuneTaskFeedback.innerHTML = '';
+      }
+    });
   }
 })();

@@ -2424,55 +2424,394 @@ function normalizeAdviceWithLine(advice, line){
   return `${line}${cleaned}`;
 }
 const TASK_POOL = {
-  BORIWAN:[
-    '整理今天要用的 3 件物品，並把桌面清空一半。',
-    '傳一則簡短訊息給重要合作方，確認下一步時間。',
-    '把手機通知關閉 15 分鐘，專心完成一件小事。'
-  ],
-  AYU:[
-    '喝一杯溫水，並做 3 次緩慢伸展。',
-    '把今天的行程分成「必做」與「可延後」兩欄。',
-    '設定 15 分鐘計時，把一件待辦完成到 80%。'
-  ],
-  DECH:[
-    '把一件卡關的事寫成 3 個可執行步驟。',
-    '清理信箱或聊天列表中 5 個無用對話。',
-    '挑一件你一直拖著的小事，現在就做完。'
-  ],
-  SRI:[
-    '把今天要說的重要內容寫成 3 行重點。',
-    '回覆一位你欠的訊息，給出清楚回應。',
-    '整理一張你常用的文件或檔案夾。'
-  ],
-  MULA:[
-    '查看帳戶或錢包，記下今天必支出項目。',
-    '整理房間的一個角落，丟掉 3 件不需要的物品。',
-    '把明天的第一件事寫在便利貼上。'
-  ],
-  UTSAHA:[
-    '設定 15 分鐘深度工作，把最重要的段落完成。',
-    '列出今天能完成的 2 件小成果並打勾。',
-    '把待辦事項重新排序，只保留前三件。'
-  ],
-  MONTRI:[
-    '請求一位朋友或同事給你 1 個具體建議。',
-    '把需要協調的事項寫成一句話發出去。',
-    '整理 3 個你今天可以請教的問題。'
-  ],
-  KALAKINI:[
-    '把一件容易出錯的事延後，先處理低風險任務。',
-    '停止一件會分散注意力的習慣（例如開太多分頁）。',
-    '把今天的決策列成利弊清單，暫不拍板。'
-  ]
-};
-function pickTaskByPhum(phum, seed, avoidTasks){
-  const list = TASK_POOL[phum] || TASK_POOL.MULA;
-  const avoid = new Set((avoidTasks || []).map(normalizeTaskText).filter(Boolean));
-  for (let i=0;i<list.length;i++){
-    const task = list[(seed + i) % list.length];
-    if (!avoid.has(normalizeTaskText(task))) return task;
+  BORIWAN:{
+    work:[
+      '整理 3 份今天要用的文件並命名清楚。',
+      '列出今天最重要的 2 個合作事項並標記負責人。'
+    ],
+    love:[
+      '寫下 1 句你想對對方說的肯定話。',
+      '回覆一則訊息，清楚說出你的期待。'
+    ],
+    money:[
+      '記下今天的 3 筆固定支出並核對金額。',
+      '整理一張常用帳戶的收支項目。'
+    ],
+    health:[
+      '做 3 次深呼吸，放慢節奏再開始工作。',
+      '喝一杯溫水，並做 3 次伸展。'
+    ],
+    social:[
+      '傳一則訊息確認一個合作時間。',
+      '整理你今天需要聯絡的 3 個人名單。'
+    ],
+    study:[
+      '整理 3 個今天要看的重點並做記號。',
+      '花 10 分鐘複習一頁筆記並寫下 1 行摘要。'
+    ]
+  },
+  AYU:{
+    work:[
+      '把今日待辦分成「必做」與「可延後」兩欄。',
+      '設定 15 分鐘計時，先完成一件小工作。',
+      '把今天最重要的一件事寫成 1 句行動。',
+      '整理桌面檔案 3 個，避免分心。',
+      '把會議/回覆清單縮成 3 件內。',
+      '關閉 2 個干擾通知並設定 15 分鐘專注。'
+    ],
+    love:[
+      '安排 10 分鐘安靜對話，先聽再說。',
+      '寫下你今天想維持的相處節奏。'
+    ],
+    money:[
+      '檢查今天是否有延遲付款項目並標記。',
+      '整理一筆你近期可延後的支出。',
+      '記下今天一筆可省下的支出項目。',
+      '檢查一筆固定扣款的日期與金額。',
+      '把今天的購物清單縮成 3 樣內。',
+      '確認一筆帳單金額是否正確。'
+    ],
+    health:[
+      '做 3 組緩慢伸展，讓身體回到節奏。',
+      '把今天的水量分成 3 次提醒。',
+      '做 5 次深呼吸並放慢步調。',
+      '站起來走動 5 分鐘，放鬆肩頸。',
+      '把手機放遠 10 分鐘，讓眼睛休息。',
+      '寫下今天要避免的 1 個不良姿勢。'
+    ],
+    social:[
+      '回覆一則關心訊息，避免延遲。',
+      '整理今天需要回覆的 3 則訊息。'
+    ],
+    study:[
+      '設定 15 分鐘專注學習並寫下 1 行重點。',
+      '把今天的學習目標縮成 2 個小點。'
+    ]
+  },
+  DECH:{
+    work:[
+      '把一件卡關事項寫成 3 個步驟。',
+      '刪除 5 封不重要郵件並清空收件匣一角。',
+      '把今天最難的一件事拆成 2 個小步驟。',
+      '完成一個你一直拖延的小工作項目。',
+      '把一份待提交的內容先完成 80%。',
+      '關閉一個干擾視窗並專心處理 15 分鐘。'
+    ],
+    love:[
+      '寫下你想要的界線與底線各 1 句。',
+      '把一件想說清楚的事用 3 行表達。'
+    ],
+    money:[
+      '列出一筆可立即改善的支出。',
+      '為一項付款設定提醒並記錄金額。'
+    ],
+    health:[
+      '整理一項會讓你壓力大的小習慣並暫停。',
+      '用 10 分鐘走動或伸展降低緊繃感。'
+    ],
+    social:[
+      '直接回覆一位你需要面對的人，避免拖延。',
+      '刪除 3 個無效群組或靜音一個干擾來源。',
+      '把需要協調的事項用一句話清楚說明。',
+      '回覆一則重要訊息並確認下一步。',
+      '整理今天要聯絡的 2 位對象。',
+      '停止一段無效對話，把重點寫清楚。'
+    ],
+    study:[
+      '挑一個問題寫下 3 個解法。',
+      '完成一個你一直拖延的小練習。'
+    ]
+  },
+  SRI:{
+    work:[
+      '把今天要說的重要內容寫成 3 行重點。',
+      '整理一份你要提交的文件並補齊標題。'
+    ],
+    love:[
+      '寫下你對關係的 1 個具體期望。',
+      '用一句話肯定對方的努力。',
+      '回覆一則訊息並加上一句感謝。',
+      '寫下你希望對方理解的 1 句話。',
+      '主動提出一件可一起完成的小事。',
+      '把一個誤會點用一句話說清楚。'
+    ],
+    money:[
+      '檢查一筆收入來源並記錄日期。',
+      '整理一項你想增加的收入方向。',
+      '對照一筆帳單，確認是否有重複扣款。',
+      '整理一張常用付款方式的限額。',
+      '記下本週可優化的 1 個支出項目。',
+      '把今天的收支寫成 2 行摘要。'
+    ],
+    health:[
+      '安排 10 分鐘陽光或戶外呼吸。',
+      '把今天的作息提醒寫在便利貼。'
+    ],
+    social:[
+      '約定一個簡短會面時間並確認地點。',
+      '回覆一位重要對象並保持禮貌。'
+    ],
+    study:[
+      '整理一頁筆記並加上 3 個關鍵詞。',
+      '用 10 分鐘重讀一段重要內容。'
+    ]
+  },
+  MULA:{
+    work:[
+      '整理工作檔案夾，刪除 3 個無用檔。',
+      '把明天的第一件事寫在便條紙上。'
+    ],
+    love:[
+      '寫下一句你希望被理解的話。',
+      '在訊息中補充一個你在意的小細節。'
+    ],
+    money:[
+      '記下今天的必支出項目與金額。',
+      '檢查一張帳單的到期日。'
+    ],
+    health:[
+      '整理一個讓你放鬆的角落。',
+      '做 5 分鐘伸展或輕微走動。'
+    ],
+    social:[
+      '整理聯絡人清單，標記 2 個需要回覆的對象。',
+      '關閉一個容易分心的通知。'
+    ],
+    study:[
+      '整理今天學到的 3 個重點。',
+      '把一頁筆記重新抄寫清楚。'
+    ]
+  },
+  UTSAHA:{
+    work:[
+      '設定 15 分鐘深度工作，完成一段核心內容。',
+      '列出今天能完成的 2 件小成果並打勾。'
+    ],
+    love:[
+      '主動提出一件你願意做的實際行動。',
+      '用一句話確認今天的相處安排。'
+    ],
+    money:[
+      '完成一筆必要付款，避免拖延。',
+      '整理一項收入目標並寫下下一步。'
+    ],
+    health:[
+      '完成 10 分鐘活動，讓身體動起來。',
+      '把今天要避免的飲食寫下來。'
+    ],
+    social:[
+      '約定一個 10 分鐘的簡短會議或通話。',
+      '主動回覆一則重要訊息並確認細節。'
+    ],
+    study:[
+      '安排 15 分鐘專注學習並做 3 個重點筆記。',
+      '完成一個練習題並核對答案。'
+    ]
+  },
+  MONTRI:{
+    work:[
+      '請求一位同事給你 1 個具體建議。',
+      '把需要協調的事項寫成一句話發出去。'
+    ],
+    love:[
+      '向對方請教一個你不確定的問題。',
+      '整理一個你想確認的共識點。'
+    ],
+    money:[
+      '詢問一筆支出的必要性，做簡單評估。',
+      '整理今天想避免的衝動購物項目。'
+    ],
+    health:[
+      '請教一個健康相關的小習慣並記錄。',
+      '把你需要被提醒的作息寫下來。'
+    ],
+    social:[
+      '請一位朋友協助確認今天的安排。',
+      '把協調需求寫成 1 句清楚訊息。'
+    ],
+    study:[
+      '請教一個學習卡點並記錄答案。',
+      '整理 3 個你今天需要釐清的問題。'
+    ]
+  },
+  KALAKINI:{
+    work:[
+      '把一件高風險決定延後，先完成低風險任務。',
+      '將今天的工作拆成最小步驟，只做第一步。',
+      '先完成一件不需協調他人的小任務。',
+      '把今天要避免的 2 件事寫下來。',
+      '暫停一個可能出錯的操作，先檢查清單。',
+      '把重要工作留到確認後再執行。'
+    ],
+    love:[
+      '避免爭辯，先寫下你想說的重點再決定是否傳。',
+      '把需要說明的事暫緩，先釐清自己的想法。'
+    ],
+    money:[
+      '避免立即付款或投資，先列出利弊清單。',
+      '延後一筆非必要消費，改成記帳。',
+      '檢查一筆大額支出是否真的必要。',
+      '暫停一筆自動扣款，先確認用途。',
+      '今天只做記帳，不做新增消費決定。',
+      '把一筆支出延後 24 小時再決定。'
+    ],
+    health:[
+      '避開高強度活動，改成 10 分鐘伸展。',
+      '今天先睡前提早 15 分鐘，減少身體負擔。'
+    ],
+    social:[
+      '避免正面衝突，先整理你要說的 3 點。',
+      '暫停一個會引起爭議的對話。',
+      '今天不談爭議話題，只做必要回覆。',
+      '先整理訊息再回，避免情緒用詞。',
+      '把溝通改成書面一句話確認。',
+      '延後需要對峙的溝通，先確認資訊。'
+    ],
+    study:[
+      '避免同時學太多，先整理一個核心重點。',
+      '先做複習，不進行新的高難度內容。'
+    ]
   }
-  return list[0] || '';
+};
+function normalizeBucket(focus){
+  const text = String(focus || '').trim();
+  if (text === '感情') return 'love';
+  if (text === '財運') return 'money';
+  if (text === '健康') return 'health';
+  if (text === '人際') return 'social';
+  if (text === '學業') return 'study';
+  return 'work';
+}
+function classifyJobLabel(raw){
+  const text = String(raw || '').trim();
+  if (!text) return '其他';
+  if (/工程|程式|開發|IT|軟體/i.test(text)) return '工程師';
+  if (/設計|視覺|美術|UI|UX/i.test(text)) return '設計';
+  if (/行銷|市場|廣告|品牌/i.test(text)) return '行銷';
+  if (/學生|研究生|博士|碩士/i.test(text)) return '學生';
+  if (/自由|接案|SOHO|Freelance/i.test(text)) return '自由業';
+  if (/管理|主管|經理|PM|負責人/i.test(text)) return '管理';
+  return '其他';
+}
+const STOPWORDS = [
+  '壓力大','拖延','容易分心','焦慮','想要穩定','需要聚焦','社交疲乏','想突破',
+  '工作','感情','財運','健康','人際','學業'
+];
+function extractQuizKeywords(quiz){
+  const results = [];
+  const pushTokens = (value)=>{
+    if (!value) return;
+    if (Array.isArray(value)){
+      value.forEach(v=> pushTokens(v));
+      return;
+    }
+    const text = String(value || '').trim();
+    if (!text) return;
+    text.split(/[，,\/\s|]+/).forEach(token=>{
+      const t = String(token || '').trim();
+      if (t) results.push(t);
+    });
+  };
+  pushTokens(quiz?.keywords);
+  pushTokens(quiz?.kws);
+  pushTokens(quiz?.tags);
+  const answers = quiz?.answers || {};
+  ['p2','p3','p4','p5','p6','p7'].forEach(k=>{
+    pushTokens(answers[k]);
+  });
+  pushTokens(quiz?.jobLabel);
+  pushTokens(quiz?.zodLabel);
+  return results;
+}
+function isConcreteKeyword(word){
+  const text = String(word || '').trim();
+  if (!text) return false;
+  if (STOPWORDS.includes(text)) return false;
+  const ascii = /[A-Za-z]/.test(text);
+  return ascii ? text.length >= 4 : text.length >= 2;
+}
+function buildUserSignals(quiz){
+  const jobLabel = String(quiz?.jobLabel || quiz?.job || '').trim();
+  const answers = quiz?.answers || {};
+  const answersKey = ['p2','p3','p4','p5','p6','p7'].map(k=>answers[k] || '').join('|');
+  const hashBase = fnv1aHash(`${answersKey}|${jobLabel}|${quiz?.zodLabel || ''}`);
+  const focusPool = ['工作','感情','財運','健康','人際','學業'];
+  const focus = [];
+  if (/學生/i.test(jobLabel)) focus.push('學業');
+  if (/業務|銷售|客服|公關|人資|HR/i.test(jobLabel)) focus.push('人際');
+  if (/財務|會計|投資|金融/i.test(jobLabel)) focus.push('財運');
+  if (/醫|護理|健身|教練/i.test(jobLabel)) focus.push('健康');
+  if (!focus.length){
+    focus.push(focusPool[hashBase % focusPool.length]);
+  }
+  if (focus.length < 2){
+    const second = focusPool[(hashBase >> 3) % focusPool.length];
+    if (second && second !== focus[0]) focus.push(second);
+  }
+  const traitsBase = Array.isArray(quiz?.traits) ? quiz.traits.map(s=>String(s||'').trim()).filter(Boolean) : [];
+  const traitPool = ['容易分心','壓力大','拖延','社交疲乏','想突破','需要聚焦','容易焦慮','想要穩定'];
+  const traits = traitsBase.slice(0, 3);
+  let seed = hashBase;
+  while (traits.length < 3){
+    const idx = seed % traitPool.length;
+    const t = traitPool[idx];
+    if (t && !traits.includes(t)) traits.push(t);
+    seed = (seed >> 1) + 7;
+  }
+  const stylePool = ['行動派','謹慎派','感性派','理性派'];
+  const style = stylePool[(hashBase >> 6) % stylePool.length] || '理性派';
+  const rawKeywords = extractQuizKeywords(quiz);
+  const filtered = rawKeywords.map(s=>String(s||'').trim()).filter(isConcreteKeyword);
+  const deduped = [];
+  filtered.forEach(k=>{
+    if (!deduped.includes(k)) deduped.push(k);
+  });
+  let keywords = deduped.slice(0, 5);
+  if (!keywords.length){
+    const fallback = traitsBase.filter(isConcreteKeyword);
+    keywords = fallback.slice(0, 5);
+  }
+  return {
+    job: classifyJobLabel(jobLabel),
+    focus: focus.slice(0, 2),
+    traits: traits.slice(0, 3),
+    style,
+    keywords
+  };
+}
+function pickPersonalTask({ phum, signals, seed, avoidTasks }){
+  const bucket = normalizeBucket((signals && signals.focus && signals.focus[0]) || '');
+  const pool = (TASK_POOL[phum] && TASK_POOL[phum][bucket]) || (TASK_POOL[phum] && TASK_POOL[phum].work) || TASK_POOL.MULA.work;
+  const avoid = new Set((avoidTasks || []).map(normalizeTaskText).filter(Boolean));
+  for (let i=0;i<pool.length;i++){
+    const task = pool[(seed + i) % pool.length];
+    if (!avoid.has(normalizeTaskText(task))){
+      const label = PHUM_LABEL[phum] || phum || '—';
+      const focusLabel = (signals && signals.focus && signals.focus[0]) ? signals.focus[0] : '工作';
+      return {
+        task,
+        why: `今天是 ${label} 日，先把與${focusLabel}相關的可控小事完成。`
+      };
+    }
+  }
+  const fallback = pool[0] || '';
+  return { task: fallback, why: '先完成一件可控的小步驟，讓節奏回正。' };
+}
+function adviceMatchesSignals(advice, signals){
+  const text = String(advice || '').trim();
+  if (!text) return false;
+  const keywords = (signals && signals.keywords) ? signals.keywords : [];
+  if (keywords.length){
+    const concrete = keywords.filter(isConcreteKeyword);
+    if (concrete.length){
+      return concrete.some(k=> k && text.includes(k));
+    }
+  }
+  const focus = (signals && signals.focus) ? signals.focus : [];
+  if (focus.some(f=> f && text.includes(f))) return true;
+  const job = (signals && signals.job) ? String(signals.job || '') : '';
+  if (job && text.includes(job)) return true;
+  return false;
 }
 function ensurePhumSummary(summary, phum){
   const label = PHUM_LABEL[phum] || phum || '—';
@@ -2486,7 +2825,7 @@ function buildTimingFromYam(yam){
   const avoid = Array.isArray(yam?.forbidden) ? yam.forbidden.map(s=>({ start:s.start, end:s.end, level:s.level })) : [];
   return { best, avoid };
 }
-function buildLocalFortuneV2(ctx, seed, avoidTasks){
+function buildLocalFortuneV2(ctx, seed, avoidTasks, signals){
   const phum = ctx.thaiTaksa?.phum || '';
   const summaryParts = [
     '重點在把節奏拉回正軌，不求一次到位。',
@@ -2499,10 +2838,22 @@ function buildLocalFortuneV2(ctx, seed, avoidTasks){
     '用 15 分鐘清理干擾源，效率會提升。'
   ];
   const ritualBase = GUARDIAN_MESSAGES[ctx.guardianCode] || '把注意力放回當下，今天會更穩。';
-  const task = pickTaskByPhum(phum, seed + 11, avoidTasks);
+  const userSignals = signals || ctx.userSignals || {};
+  const personal = pickPersonalTask({ phum, signals: userSignals, seed: seed + 11, avoidTasks });
+  const task = personal.task;
   const starText = buildStarText(seed);
   const summary = ensurePhumSummary(pickBySeed(summaryParts, seed + 3), phum);
-  const advice = pickBySeed(adviceParts, seed + 17);
+  const keyword = (userSignals.keywords && userSignals.keywords[0]) || '';
+  const focusLabel = (userSignals.focus && userSignals.focus[0]) || '';
+  const jobLabel = userSignals.job || '';
+  let advice = pickBySeed(adviceParts, seed + 17);
+  if (keyword){
+    advice = `${keyword}會是你今天的關鍵。${advice}`;
+  }else if (focusLabel){
+    advice = `把注意力先放回${focusLabel}，${advice}`;
+  }else if (jobLabel){
+    advice = `${jobLabel}的節奏要先穩住，${advice}`;
+  }
   const mantra = pickBySeed(MANTRA_LIST, seed + 23);
   return {
     date: ctx.dateText,
@@ -2513,7 +2864,7 @@ function buildLocalFortuneV2(ctx, seed, avoidTasks){
     mantra,
     action: {
       task,
-      why: '用小步驟完成可驗證的行動，讓局勢回到可控範圍。'
+      why: personal.why || '用小步驟完成可驗證的行動，讓局勢回到可控範圍。'
     },
     core: ctx.thaiTaksa || {},
     timing: buildTimingFromYam(ctx.yam),
@@ -2594,9 +2945,16 @@ function normalizeFortunePayloadV2(obj, ctx){
   out.core = ctx.thaiTaksa || {};
   out.timing = buildTimingFromYam(ctx.yam);
   out.lucky = ctx.lucky || {};
+  if (ctx.personalTask && ctx.personalTask.task){
+    out.action.task = ctx.personalTask.task;
+    if (!out.action.why){
+      out.action.why = ctx.personalTask.why || '';
+    }
+  }
   if (out.summary){
     out.summary = ensurePhumSummary(out.summary, out.core.phum);
   }
+  if (!adviceMatchesSignals(out.advice, ctx.userSignals || {})) return null;
   if (!out.summary || !out.advice || !out.ritual || !out.action.task) return null;
   if (!out.lucky || !Array.isArray(out.lucky.numbers)) return null;
   return out;
@@ -2640,8 +2998,8 @@ function runFortuneTests(){
     lucky: { dayColor:'Red', tabooColor:'', numbers:[11,22] },
     meta: {}
   };
-  const first = buildLocalFortuneV2(ctx, 7, []);
-  const second = buildLocalFortuneV2(ctx, 7, [first.action.task]);
+  const first = buildLocalFortuneV2(ctx, 7, [], buildUserSignals(ctx.quiz || {}));
+  const second = buildLocalFortuneV2(ctx, 7, [first.action.task], buildUserSignals(ctx.quiz || {}));
   console.assert(first.action.task !== second.action.task, 'buildLocalFortune should avoid repeated task');
 }
 function parseJsonFromText(text){
@@ -4849,6 +5207,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const iching = ICHING_NAMES[ichSeed % ICHING_NAMES.length];
     const buddhistYear = parts.year + 543;
     const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
+    const signals = buildUserSignals(quiz);
+    const personalTask = pickPersonalTask({
+      phum: taksa.phum,
+      signals,
+      seed,
+      avoidTasks
+    });
     const todayWeekdayKey = toWeekdayKey(parts.dow);
     const birthWeekdayKey = toBirthWeekdayKey(quiz);
     const taksa = getMahaTaksa(birthWeekdayKey, todayWeekdayKey);
@@ -4927,14 +5292,20 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       `使用者星座：${userZodiac || '—'}${userZodiacElement ? `（${userZodiacElement}象）` : ''}`,
       `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
       `個人性格關鍵詞：${traitList.join('、') || '—'}`,
+      `使用者訊號：${JSON.stringify(signals)}`,
       `可用短咒語清單（擇一）：${MANTRA_LIST.join(' / ')}`,
       `規則：只回傳 JSON，欄位必須符合 schema，禁止新增欄位；不得使用模糊巴納姆語句。`,
       `summary 第一個句子必須點名「今天是 ${taksaLabel} 日」，不可改寫骨架事實。`,
       `core/timing/lucky 必須與輸入骨架一致，不可改寫；若不一致視為無效輸出。`,
+      `action.task 必須完全等於「${personalTask.task}」，不得改寫或換詞。`,
       `action.task 必須 15 分鐘內可完成、可打勾驗證，且不可與 avoidTasks 重複。`,
+      `action.why 必須對應 ${taksa.phum} 與 ${signals.focus.join('、') || '工作'}。`,
       `timing.best / timing.avoid 必須使用上述 Yam 時段，不可自造。`,
       `lucky.color 與 lucky.numbers 必須等於以上骨架值，不可自造。`,
       `ritual 必須是微儀式，不可強迫、不危險、不含醫療或法律斷言。`,
+      signals.keywords && signals.keywords.length
+        ? `advice 必須包含下列任一關鍵詞：${signals.keywords.join('、')}`
+        : `advice 必須提到工作類型或關注領域（${signals.job} / ${signals.focus.join('、') || '工作'}）`,
       avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
       avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : '',
       avoidTasks.length ? `avoidTasks：${avoidTasks.join(' / ')}` : '',
@@ -4942,35 +5313,44 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     ].filter(Boolean).join('\n');
     const systemPrompt = '你是泰國 Maha Taksa + Mutelu 的祭司。請以繁體中文撰寫，嚴格遵守骨架事實與 JSON schema。';
 
+    ctx.userSignals = signals;
+    ctx.personalTask = personalTask;
     if (!forceLocal){
       fortune = normalizeFortunePayloadV2(await callOpenAIFortune(env, prompt, seed, systemPrompt), ctx);
       source = fortune ? 'openai' : 'local';
     }
     if (fortune && isTooSimilar(fortune, history)){
       if (!forceLocal){
-        const promptAlt = prompt + '\naction.task 與 avoidTasks 重複，請更換成新的可勾選任務，其餘骨架保持不變。';
-        const alt = normalizeFortunePayloadV2(await callOpenAIFortune(env, promptAlt, seed + 1, systemPrompt), ctx);
+        const personalAlt = pickPersonalTask({
+          phum: taksa.phum,
+          signals,
+          seed: seed + 1,
+          avoidTasks
+        });
+        const promptAlt = prompt + `\naction.task 與 avoidTasks 重複，請更換成新的可勾選任務，且必須等於「${personalAlt.task}」。其餘骨架保持不變。`;
+        const altCtx = Object.assign({}, ctx, { personalTask: personalAlt });
+        const alt = normalizeFortunePayloadV2(await callOpenAIFortune(env, promptAlt, seed + 1, systemPrompt), altCtx);
         if (alt && !isTooSimilar(alt, history)){
           fortune = alt;
           source = 'openai';
         }else{
-          fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks);
+          fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks, signals);
           source = 'local';
         }
       }else{
-        fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks);
+        fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks, signals);
         source = 'local';
       }
     }
     if (!fortune){
-      fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks);
+      fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks, signals);
       source = 'local';
     }
     if (fortune && fortune.summary){
       fortune.summary = normalizeSummaryStars(fortune.summary);
     }
     if (fortune && !fortune.summary){
-      const fallback = buildLocalFortuneV2(ctx, seed + 53, avoidTasks);
+      const fallback = buildLocalFortuneV2(ctx, seed + 53, avoidTasks, signals);
       fortune.summary = fallback.summary || '';
     }
     if (fortune && !fortune.stars){
@@ -4983,7 +5363,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       fortune.ritual = sanitizeRitual(fortune.ritual, ctx);
     }
     if (isTooSimilar(fortune, history)){
-      fortune = buildLocalFortuneV2(ctx, seed + 37, avoidTasks);
+      fortune = buildLocalFortuneV2(ctx, seed + 37, avoidTasks, signals);
       source = 'local';
     }
     const payload = {
