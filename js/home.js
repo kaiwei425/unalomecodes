@@ -670,6 +670,7 @@
   const fortuneRitual = document.getElementById('fortuneRitualHome');
   const fortuneMeta = document.getElementById('fortuneMetaHome');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabelHome');
+  const FORTUNE_CACHE_KEY = '__fortune_payload__';
   let fortuneShareBtn = null;
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
@@ -725,6 +726,37 @@
     const m = String(d.getMonth() + 1).padStart(2,'0');
     const day = String(d.getDate()).padStart(2,'0');
     return `${y}-${m}-${day}`;
+  }
+  function getCurrentGuardianCode(){
+    const guardian = getActiveGuardian();
+    if (guardian && (guardian.code || guardian.id)){
+      return String(guardian.code || guardian.id || '').toUpperCase();
+    }
+    const code = heroBadge && heroBadge.dataset ? heroBadge.dataset.guardianCode : '';
+    return String(code || '').toUpperCase();
+  }
+  function readFortuneCache(){
+    try{
+      const raw = localStorage.getItem(FORTUNE_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const dateKey = String(parsed && parsed.dateKey || '');
+      const today = getLocalDateKey();
+      if (!dateKey || dateKey !== today) return null;
+      const cachedCode = String(parsed && parsed.meta && parsed.meta.guardianCode || '').toUpperCase();
+      const currentCode = getCurrentGuardianCode();
+      if (cachedCode && currentCode && cachedCode !== currentCode) return null;
+      if (!parsed || !parsed.fortune) return null;
+      return parsed;
+    }catch(_){
+      return null;
+    }
+  }
+  function writeFortuneCache(payload){
+    if (!payload || !payload.fortune) return;
+    try{
+      localStorage.setItem(FORTUNE_CACHE_KEY, JSON.stringify(payload));
+    }catch(_){}
   }
   function isTodayKey(dateKey){
     const key = normalizeDateKey(dateKey);
@@ -1329,6 +1361,7 @@
         throw new Error((data && data.error) || '取得日籤失敗');
       }
       renderFortune(data.fortune || null, data.meta || null, data || null);
+      writeFortuneCache(data || null);
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
     }
@@ -1345,6 +1378,12 @@
           alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
           return;
         }
+      }
+      const cached = readFortuneCache();
+      if (cached){
+        renderFortune(cached.fortune, cached.meta || null, cached);
+        showDialog(fortuneDialog);
+        return;
       }
       showDialog(fortuneDialog);
       await fetchFortune();

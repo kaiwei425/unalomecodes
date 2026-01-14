@@ -69,6 +69,7 @@
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
   const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
+  const FORTUNE_CACHE_KEY = '__fortune_payload__';
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   const PHUM_FEEDBACK = {
     AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
@@ -196,6 +197,35 @@
     const today = getTaipeiDateKey(new Date());
     if (!today) return false;
     return normalizeDateKey(dateKey) === today;
+  }
+  function getCurrentGuardianCode(){
+    const g = readGuardian();
+    if (g && (g.code || g.id)) return String(g.code || g.id || '').toUpperCase();
+    const code = badge && badge.dataset ? badge.dataset.guardianCode : '';
+    return String(code || '').toUpperCase();
+  }
+  function readFortuneCache(){
+    try{
+      const raw = localStorage.getItem(FORTUNE_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const dateKey = String(parsed && parsed.dateKey || '');
+      const today = getTaipeiDateKey(new Date());
+      if (!dateKey || dateKey !== today) return null;
+      const cachedCode = String(parsed && parsed.meta && parsed.meta.guardianCode || '').toUpperCase();
+      const currentCode = getCurrentGuardianCode();
+      if (cachedCode && currentCode && cachedCode !== currentCode) return null;
+      if (!parsed || !parsed.fortune) return null;
+      return parsed;
+    }catch(_){
+      return null;
+    }
+  }
+  function writeFortuneCache(payload){
+    if (!payload || !payload.fortune) return;
+    try{
+      localStorage.setItem(FORTUNE_CACHE_KEY, JSON.stringify(payload));
+    }catch(_){}
   }
   function readFortuneKey(){
     try{
@@ -442,6 +472,7 @@
       const fortune = data.fortune || null;
       renderFortune(fortune, data && data.meta ? data.meta : null, data || null);
       if (fortune) markFortuneClaimed();
+      writeFortuneCache(data || null);
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
     }
@@ -466,6 +497,13 @@
           alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
           return;
         }
+      }
+      const cached = readFortuneCache();
+      if (cached){
+        renderFortune(cached.fortune, cached.meta || null, cached);
+        markFortuneClaimed();
+        showDialog(fortuneDialog);
+        return;
       }
       showDialog(fortuneDialog);
       await fetchFortune();

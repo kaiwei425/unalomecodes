@@ -2328,6 +2328,7 @@ Enter this code at checkout.`
   const fortuneRitual = document.getElementById('fortuneRitualQuiz');
   const fortuneMeta = document.getElementById('fortuneMetaQuiz');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabelQuiz');
+  const FORTUNE_CACHE_KEY = '__fortune_payload__';
   let fortuneShareBtn = null;
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
@@ -2383,6 +2384,37 @@ Enter this code at checkout.`
     const m = String(d.getMonth() + 1).padStart(2,'0');
     const day = String(d.getDate()).padStart(2,'0');
     return `${y}-${m}-${day}`;
+  }
+  function getCurrentGuardianCode(){
+    if (window.authState && typeof window.authState.getProfile === 'function'){
+      const p = window.authState.getProfile();
+      const g = p && p.guardian ? p.guardian : null;
+      if (g && (g.code || g.id)) return String(g.code || g.id || '').toUpperCase();
+    }
+    return '';
+  }
+  function readFortuneCache(){
+    try{
+      const raw = localStorage.getItem(FORTUNE_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const dateKey = String(parsed && parsed.dateKey || '');
+      const today = getLocalDateKey();
+      if (!dateKey || dateKey !== today) return null;
+      const cachedCode = String(parsed && parsed.meta && parsed.meta.guardianCode || '').toUpperCase();
+      const currentCode = getCurrentGuardianCode();
+      if (cachedCode && currentCode && cachedCode !== currentCode) return null;
+      if (!parsed || !parsed.fortune) return null;
+      return parsed;
+    }catch(_){
+      return null;
+    }
+  }
+  function writeFortuneCache(payload){
+    if (!payload || !payload.fortune) return;
+    try{
+      localStorage.setItem(FORTUNE_CACHE_KEY, JSON.stringify(payload));
+    }catch(_){}
   }
   function isTodayKey(dateKey){
     const key = normalizeDateKey(dateKey);
@@ -2643,6 +2675,7 @@ Enter this code at checkout.`
         throw new Error((data && data.error) || '取得日籤失敗');
       }
       renderFortune(data.fortune || null, data.meta || null, data || null);
+      writeFortuneCache(data || null);
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
     }
@@ -2658,6 +2691,12 @@ Enter this code at checkout.`
         return;
       }
       window.location.href = '/api/auth/google/login?redirect=/quiz&prompt=select_account';
+      return;
+    }
+    const cached = readFortuneCache();
+    if (cached){
+      renderFortune(cached.fortune, cached.meta || null, cached);
+      showDialog(fortuneDialog);
       return;
     }
     showDialog(fortuneDialog);
