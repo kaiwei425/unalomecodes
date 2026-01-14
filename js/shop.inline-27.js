@@ -49,7 +49,13 @@
   const fortuneRitual = document.getElementById('fortuneRitual');
   const fortuneMeta = document.getElementById('fortuneMeta');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabel');
-  const fortuneShareBtn = document.getElementById('fortuneShareBtn');
+  const fortuneExplain = document.getElementById('fortuneExplainShop');
+  const fortuneExplainToggle = document.getElementById('fortuneExplainToggleShop');
+  const fortuneExplainBody = document.getElementById('fortuneExplainBodyShop');
+  const fortuneExplainTitle = document.getElementById('fortuneExplainTitleShop');
+  const fortuneExplainDesc = document.getElementById('fortuneExplainDescShop');
+  const fortuneExplainHow = document.getElementById('fortuneExplainHowShop');
+  let fortuneShareBtn = null;
   const recommendDialog = document.getElementById('guardianRecommendDialog');
   const recommendClose = document.getElementById('guardianRecommendClose');
   const recommendName = document.getElementById('guardianRecommendName');
@@ -80,6 +86,48 @@
     MONTRI:{ title:'協調順暢', body:'Montri 日聚焦協調與支援。你完成這一步，溝通會更順。' },
     BORIWAN:{ title:'節奏整理', body:'Boriwan 日著重安排與分配。完成這件事有助於聚焦。' },
     KALAKINI:{ title:'避險成功', body:'Kalakini 日重點是降低風險與誤判。你完成這步，等於先把地雷排掉。' }
+  };
+  const TAKSA_EXPLAIN = {
+    AYU: {
+      title: "為什麼今天是 Ayu（日）？",
+      description: "Ayu（壽）日在泰國 Maha Taksa 命理中，代表的是身心節奏、續航力與穩定狀態。當你的出生日與今天的星期形成 Ayu 組合時，命理上不適合急推結果，而適合先把節奏調回正軌。",
+      howToUse: "今天只要完成一件「讓你恢復節奏的小事」（例如整理環境、減少干擾），就是在順著運勢走。"
+    },
+    SRI: {
+      title: "為什麼今天是 Sri（日）？",
+      description: "Sri（日）代表財運、吸引力與順流。這一天適合讓好事自然發生，而不是用力推進。",
+      howToUse: "今天適合曝光、分享、談錢或接受他人的善意。"
+    },
+    DECH: {
+      title: "為什麼今天是 Dech（日）？",
+      description: "Dech（日）象徵權力、行動與決斷力。這一天適合主動出擊。",
+      howToUse: "今天適合做決定、談判或推動卡關的事情。"
+    },
+    KALAKINI: {
+      title: "為什麼今天是 Kalakini（日）？",
+      description: "Kalakini（日）代表阻礙與雜訊。不是倒楣，而是提醒你避開衝突。",
+      howToUse: "今天不宜硬碰硬，適合保守行事或做轉運、清理型行動。"
+    },
+    BORIWAN: {
+      title: "為什麼今天是 Boriwan（日）？",
+      description: "Boriwan（日）代表整合、協調與資源調度。這一天適合安排與分配，讓事情更有秩序。",
+      howToUse: "今天適合整理手邊資源、分配工作或調整行程。"
+    },
+    MULA: {
+      title: "為什麼今天是 Mula（日）？",
+      description: "Mula（日）象徵根基、土地與安全感。這一天適合把基礎打穩，而不是冒進。",
+      howToUse: "今天適合補洞、整理基礎、處理需要長期堆疊的事。"
+    },
+    UTSAHA: {
+      title: "為什麼今天是 Utsaha（日）？",
+      description: "Utsaha（日）代表努力與推進。這一天適合用穩定的步驟把事情往前推。",
+      howToUse: "今天適合把一件事情推到下一個可見的里程碑。"
+    },
+    MONTRI: {
+      title: "為什麼今天是 Montri（日）？",
+      description: "Montri（日）代表幫助、支持與貴人運。這一天適合合作、請求資源或建立信任。",
+      howToUse: "今天適合聯絡重要的人、協調資源或請求協助。"
+    }
   };
   const badgeIcon = (function(){
     if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
@@ -368,6 +416,22 @@
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = 'none';
   }
+  function renderExplain(fortune){
+    if (!fortuneExplain || !fortuneExplainToggle || !fortuneExplainBody) return;
+    const phum = fortune && fortune.core ? fortune.core.phum : '';
+    const explain = phum ? TAKSA_EXPLAIN[phum] : null;
+    if (!explain){
+      fortuneExplain.style.display = 'none';
+      return;
+    }
+    fortuneExplain.style.display = '';
+    fortuneExplainToggle.textContent = `📖 為什麼今天是 ${phum} 日？`;
+    if (fortuneExplainTitle) fortuneExplainTitle.textContent = explain.title;
+    if (fortuneExplainDesc) fortuneExplainDesc.textContent = explain.description;
+    if (fortuneExplainHow) fortuneExplainHow.textContent = explain.howToUse;
+    fortuneExplainBody.hidden = true;
+    fortuneExplainToggle.setAttribute('aria-expanded', 'false');
+  }
   function renderFortune(fortune, meta, data){
     if (!fortune) return;
     lastFortune = fortune;
@@ -379,6 +443,7 @@
       fortuneStars.style.display = stars ? '' : 'none';
     }
     if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
+    renderExplain(fortune);
     if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
     if (fortuneYam && window.YamUbakongUI){
       window.YamUbakongUI.renderYamUbakong({ containerEl: fortuneYam, payload: data || {} });
@@ -413,15 +478,9 @@
     if (fortuneMeta){
       const payloadMeta = meta || (data && data.meta) || fortune.meta || {};
       const tags = [];
-      if (payloadMeta.userZodiac){
-        const zodiacLabel = payloadMeta.userZodiacElement ? `${payloadMeta.userZodiac}（${payloadMeta.userZodiacElement}象）` : payloadMeta.userZodiac;
-        tags.push(`星座 ${zodiacLabel}`);
-      }
-      if (payloadMeta.moonPhase) tags.push(`月相 ${payloadMeta.moonPhase}`);
-      if (payloadMeta.iching) tags.push(`易經 ${payloadMeta.iching}`);
-      if (payloadMeta.todayDow) tags.push(`今日星期${payloadMeta.todayDow}`);
-      if (payloadMeta.thaiDayColor) tags.push(`泰國星期色 ${payloadMeta.thaiDayColor}`);
-      if (payloadMeta.buddhistYear) tags.push(`佛曆 ${payloadMeta.buddhistYear}`);
+      if (payloadMeta.guardianName) tags.push(payloadMeta.guardianName);
+      if (payloadMeta.element) tags.push(payloadMeta.element);
+      if (payloadMeta.focus) tags.push(payloadMeta.focus);
       fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
     }
     if (fortuneRitualLabel){
@@ -429,6 +488,7 @@
       lastGuardianName = gName || lastGuardianName;
       fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
     }
+    ensureShareButton();
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneError) fortuneError.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = '';
@@ -696,6 +756,20 @@
       }
     }
   }
+  function ensureShareButton(){
+    if (!fortuneCard) return;
+    if (!fortuneShareBtn){
+      fortuneShareBtn = fortuneCard.querySelector('.fortune-share-btn');
+    }
+    if (!fortuneShareBtn){
+      fortuneShareBtn = document.createElement('button');
+      fortuneShareBtn.type = 'button';
+      fortuneShareBtn.className = 'fortune-share-btn';
+      fortuneShareBtn.textContent = '自動截圖分享';
+      fortuneCard.appendChild(fortuneShareBtn);
+      fortuneShareBtn.addEventListener('click', shareFortuneImage);
+    }
+  }
   function readGuardian(){
     try{
       const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
@@ -884,8 +958,12 @@
       errorEl: historyError
     });
   }
-  if (fortuneShareBtn){
-    fortuneShareBtn.addEventListener('click', shareFortuneImage);
+  if (fortuneExplainToggle && fortuneExplainBody){
+    fortuneExplainToggle.addEventListener('click', ()=>{
+      const expanded = fortuneExplainToggle.getAttribute('aria-expanded') === 'true';
+      fortuneExplainToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      fortuneExplainBody.hidden = expanded;
+    });
   }
   if (fortuneDialog){
     fortuneDialog.addEventListener('click', (ev)=>{
