@@ -66,6 +66,7 @@
   let currentRecommendItems = [];
   let midnightTimer = null;
   const FORTUNE_KEY = '__fortune_last_date__';
+  const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
   const PHUM_FEEDBACK = {
     AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
@@ -99,6 +100,18 @@
       return '';
     }
   }
+  function fnv1aHash(str){
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++){
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function simpleHash(str){
+    return fnv1aHash(String(str || '')).toString(16);
+  }
   function normalizeDateKey(dateKey){
     if (!dateKey) return '';
     return String(dateKey).trim().replace(/\//g, '-');
@@ -108,6 +121,28 @@
     if (fortune && fortune.dateKey) return String(fortune.dateKey || '').replace(/\s+/g,'');
     if (fortune && fortune.date) return String(fortune.date || '').replace(/\s+/g,'');
     return '';
+  }
+  function getTaskDoneKey(dateKey, task){
+    if (!dateKey || !task) return '';
+    return `${TASK_KEY_PREFIX}:${dateKey}:${simpleHash(task)}`;
+  }
+  function isTaskDone(dateKey, task){
+    const key = getTaskDoneKey(dateKey, task);
+    if (!key) return false;
+    try{ return localStorage.getItem(key) === '1'; }catch(_){ return false; }
+  }
+  function setTaskDone(dateKey, task, done){
+    const key = getTaskDoneKey(dateKey, task);
+    if (!key) return;
+    try{
+      if (done) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+    }catch(_){}
+  }
+  function toggleTaskDone(dateKey, task){
+    const next = !isTaskDone(dateKey, task);
+    setTaskDone(dateKey, task, next);
+    return next;
   }
   function isTodayKey(dateKey){
     const today = getTaipeiDateKey(new Date());
