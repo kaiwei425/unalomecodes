@@ -133,6 +133,14 @@
       const status = !fortune ? '— 尚未領取' : (done ? '✔︎ 已完成' : '☐ 未完成');
       const card = document.createElement('details');
       card.className = 'fortune-history-card';
+      card.dataset.dateKey = dateKey || '';
+      card.dataset.phum = phum || '';
+      card.dataset.status = status || '';
+      card.dataset.task = task || '';
+      card.dataset.summary = fortune && fortune.summary ? String(fortune.summary) : '';
+      card.dataset.advice = fortune && fortune.advice ? String(fortune.advice) : '';
+      card.dataset.ritual = fortune && fortune.ritual ? String(fortune.ritual) : '';
+      card.dataset.mantra = fortune && fortune.mantra ? String(fortune.mantra) : '';
 
       const summary = document.createElement('summary');
       summary.className = 'fortune-history-summary';
@@ -178,6 +186,15 @@
           mantraRow.textContent = `咒語：${fortune.mantra}`;
           body.appendChild(mantraRow);
         }
+        const actions = document.createElement('div');
+        actions.className = 'fortune-history-actions';
+        const shareBtn = document.createElement('button');
+        shareBtn.type = 'button';
+        shareBtn.className = 'fortune-history-share';
+        shareBtn.dataset.share = '1';
+        shareBtn.textContent = '分享 PNG';
+        actions.appendChild(shareBtn);
+        body.appendChild(actions);
       }else{
         const emptyRow = document.createElement('div');
         emptyRow.className = 'fortune-history-row';
@@ -188,6 +205,160 @@
       card.append(summary, body);
       listEl.appendChild(card);
     });
+  }
+
+  function resolveBrandLogoURL(){
+    const iconLink = document.querySelector('link[rel="icon"]');
+    if (iconLink && iconLink.getAttribute('href')){
+      try{
+        return new URL(iconLink.getAttribute('href'), location.origin).href;
+      }catch(_){}
+    }
+    const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    if (appleIcon && appleIcon.getAttribute('href')){
+      try{
+        return new URL(appleIcon.getAttribute('href'), location.origin).href;
+      }catch(_){}
+    }
+    const logoImg = document.querySelector('img[alt*="Unalome" i], img[id*="logo" i], img[class*="logo" i]');
+    if (logoImg && logoImg.getAttribute('src')){
+      try{
+        return new URL(logoImg.getAttribute('src'), location.origin).href;
+      }catch(_){}
+    }
+    return new URL('/favicon.ico', location.origin).href;
+  }
+
+  function buildShareCard(data){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'fortune-share-card';
+    const brandbar = document.createElement('div');
+    brandbar.className = 'share-brandbar';
+    const brandLeft = document.createElement('div');
+    brandLeft.className = 'share-brandleft';
+    const brandImg = document.createElement('img');
+    brandImg.src = resolveBrandLogoURL();
+    brandImg.alt = 'Unalome Codes';
+    const brandText = document.createElement('div');
+    brandText.className = 'share-brandtext';
+    const brandName = document.createElement('div');
+    brandName.className = 'share-brandname';
+    brandName.textContent = 'Unalome Codes';
+    const brandSite = document.createElement('div');
+    brandSite.className = 'share-brandsite';
+    brandSite.textContent = 'unalomecodes.com';
+    brandText.append(brandName, brandSite);
+    brandLeft.append(brandImg, brandText);
+    brandbar.appendChild(brandLeft);
+    const body = document.createElement('div');
+    body.className = 'fortune-share-body';
+    const head = document.createElement('div');
+    head.className = 'fortune-share-head';
+    const dateEl = document.createElement('div');
+    dateEl.className = 'fortune-share-date';
+    dateEl.textContent = data.dateKey || '—';
+    const phumEl = document.createElement('div');
+    phumEl.className = 'fortune-share-phum';
+    phumEl.textContent = data.phum || '—';
+    const statusEl = document.createElement('div');
+    statusEl.className = 'fortune-share-status';
+    statusEl.textContent = data.status || '';
+    head.append(dateEl, phumEl, statusEl);
+    body.appendChild(head);
+    if (data.task){
+      const taskEl = document.createElement('div');
+      taskEl.className = 'fortune-share-task';
+      taskEl.textContent = data.task;
+      body.appendChild(taskEl);
+    }
+    const summary = data.summary ? `摘要：${data.summary}` : '';
+    const advice = data.advice ? `建議：${data.advice}` : '';
+    const ritual = data.ritual ? `守護神語：${data.ritual}` : '';
+    const mantra = data.mantra ? `咒語：${data.mantra}` : '';
+    [summary, advice, ritual, mantra].forEach(text=>{
+      if (!text) return;
+      const row = document.createElement('div');
+      row.className = 'fortune-share-row';
+      row.textContent = text;
+      body.appendChild(row);
+    });
+    wrapper.append(brandbar, body);
+    return wrapper;
+  }
+
+  function loadHtml2Canvas(){
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    return new Promise((resolve, reject)=>{
+      const src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      const existing = document.querySelector('script[data-html2canvas="1"]');
+      if (existing){
+        existing.addEventListener('load', ()=> resolve(window.html2canvas));
+        existing.addEventListener('error', ()=> reject(new Error('html2canvas_load_failed')));
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.html2canvas = '1';
+      script.onload = ()=> resolve(window.html2canvas);
+      script.onerror = ()=> reject(new Error('html2canvas_load_failed'));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function exportHistoryCardPNG(cardEl){
+    if (!cardEl) return;
+    const data = {
+      dateKey: cardEl.dataset.dateKey || '',
+      phum: cardEl.dataset.phum || '',
+      status: cardEl.dataset.status || '',
+      task: cardEl.dataset.task || '',
+      summary: cardEl.dataset.summary || '',
+      advice: cardEl.dataset.advice || '',
+      ritual: cardEl.dataset.ritual || '',
+      mantra: cardEl.dataset.mantra || ''
+    };
+    const tmp = document.createElement('div');
+    tmp.className = 'fortune-share-wrap';
+    const shareCard = buildShareCard(data);
+    tmp.appendChild(shareCard);
+    document.body.appendChild(tmp);
+    try{
+      const html2canvas = await loadHtml2Canvas();
+      const canvas = await html2canvas(shareCard, { backgroundColor:'#ffffff', scale:2 });
+      const blob = await new Promise(resolve=>{
+        if (canvas.toBlob){
+          canvas.toBlob(resolve, 'image/png');
+        }else{
+          const dataUrl = canvas.toDataURL('image/png');
+          const arr = dataUrl.split(',');
+          const mime = arr[0].match(/:(.*?);/)[1];
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) u8arr[n] = bstr.charCodeAt(n);
+          resolve(new Blob([u8arr], { type: mime }));
+        }
+      });
+      const filename = `unalomecodes_fortune_${data.dateKey || 'today'}_${data.phum || 'unknown'}.png`;
+      if (blob){
+        const file = new File([blob], filename, { type:'image/png' });
+        if (navigator.canShare && navigator.share && navigator.canShare({ files:[file] })){
+          await navigator.share({ files:[file], title:'Unalome Codes 日籤', text:'我的近期日籤（Unalome Codes）' });
+        }else{
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(()=> URL.revokeObjectURL(url), 1000);
+        }
+      }
+    }finally{
+      tmp.remove();
+    }
   }
 
   function bindHistoryDialog(opts){
@@ -227,6 +398,13 @@
     if (listEl && !listEl.dataset.historyListBound){
       listEl.dataset.historyListBound = '1';
     }
+    dialog.addEventListener('click', (ev)=>{
+      const shareBtn = ev.target && ev.target.closest ? ev.target.closest('[data-share="1"]') : null;
+      if (!shareBtn) return;
+      ev.preventDefault();
+      const cardEl = shareBtn.closest('.fortune-history-card');
+      exportHistoryCardPNG(cardEl);
+    });
   }
 
   async function openHistoryDialog(opts){

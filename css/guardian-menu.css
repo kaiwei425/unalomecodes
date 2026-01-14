@@ -136,3 +136,103 @@
   font-size:11px;
   color:#94a3b8;
 }
+.fortune-history-actions{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+.fortune-history-share{
+  border:1px solid rgba(148,163,184,.4);
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:12px;
+  color:#0f172a;
+  background:#fff;
+  cursor:pointer;
+}
+.fortune-history-share:active{
+  transform:scale(.98);
+}
+
+.fortune-share-wrap{
+  position:fixed;
+  left:-99999px;
+  top:0;
+  z-index:-1;
+  padding:12px;
+  background:#ffffff;
+}
+.fortune-share-card{
+  width:520px;
+  border-radius:16px;
+  border:1px solid rgba(148,163,184,.2);
+  background:#fff;
+  color:#0f172a;
+  overflow:hidden;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+.share-brandbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(148,163,184,.2);
+}
+.share-brandleft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.share-brandbar img{
+  width:22px;
+  height:22px;
+  border-radius:6px;
+  object-fit:cover;
+}
+.share-brandname{
+  font-weight:700;
+  font-size:13px;
+}
+.share-brandsite{
+  font-size:11px;
+  opacity:.7;
+}
+.fortune-share-body{
+  padding:12px 14px 16px;
+}
+.fortune-share-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:12px;
+  color:#475569;
+}
+.fortune-share-date{
+  font-weight:600;
+  color:#0f172a;
+}
+.fortune-share-phum{
+  font-weight:600;
+  color:#334155;
+}
+.fortune-share-status{
+  padding:2px 8px;
+  border-radius:999px;
+  background:#e2e8f0;
+  color:#1f2937;
+  font-size:11px;
+}
+.fortune-share-task{
+  margin-top:10px;
+  font-weight:700;
+  font-size:14px;
+  color:#0f172a;
+}
+.fortune-share-row{
+  margin-top:8px;
+  font-size:12px;
+  color:#334155;
+  line-height:1.6;
+}

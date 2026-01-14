@@ -5208,12 +5208,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const buddhistYear = parts.year + 543;
     const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
     const signals = buildUserSignals(quiz);
-    const personalTask = pickPersonalTask({
-      phum: taksa.phum,
-      signals,
-      seed,
-      avoidTasks
-    });
     const todayWeekdayKey = toWeekdayKey(parts.dow);
     const birthWeekdayKey = toBirthWeekdayKey(quiz);
     const taksa = getMahaTaksa(birthWeekdayKey, todayWeekdayKey);
@@ -5274,6 +5268,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const avoidSummaries = history.map(h=>h.summary).filter(Boolean).slice(0, 5);
     const avoidAdvice = history.map(h=>h.advice).filter(Boolean).slice(0, 5);
     const avoidTasks = history.map(h=>h.action && h.action.task).filter(Boolean).slice(0, 5);
+    const personalTask = pickPersonalTask({
+      phum: taksa.phum,
+      signals,
+      seed,
+      avoidTasks
+    });
     let fortune = null;
     let source = 'local';
     const taksaLabel = PHUM_LABEL[taksa.phum] || taksa.phum || '—';
