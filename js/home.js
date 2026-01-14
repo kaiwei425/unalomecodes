@@ -672,6 +672,16 @@
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabelHome');
   const FORTUNE_CACHE_KEY = '__fortune_payload__';
   let fortuneShareBtn = null;
+  const PHUM_FEEDBACK = {
+    AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
+    DECH:{ title:'行動到位', body:'Dech 日主打行動與決斷。你完成這一步，能把卡關點推進。' },
+    SRI:{ title:'順流啟動', body:'Sri 日偏向順流與收穫。這個小步驟會讓機會更容易到位。' },
+    MULA:{ title:'根基穩固', body:'Mula 日重點在根基與秩序。你先完成這件事，整體會更穩。' },
+    UTSAHA:{ title:'推進有力', body:'Utsaha 日強調推進與執行。這個任務能讓進度往前走。' },
+    MONTRI:{ title:'協調順暢', body:'Montri 日聚焦協調與支援。你完成這一步，溝通會更順。' },
+    BORIWAN:{ title:'節奏整理', body:'Boriwan 日著重安排與分配。完成這件事有助於聚焦。' },
+    KALAKINI:{ title:'避險成功', body:'Kalakini 日重點是降低風險與誤判。你完成這步，等於先把地雷排掉。' }
+  };
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
   const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
@@ -1507,34 +1517,6 @@
     showDialog(fortuneDialog);
   });
 
-  restoreHeroQuizCacheFromBackup();
-  const initialProfile = getAuthProfile();
-  if (initialProfile) syncLocalFromProfile(initialProfile);
-  toggleHeroVisibility();
-  updateDailyBadgeIndicator();
-  if (window.authState && typeof window.authState.onProfile === 'function'){
-    window.authState.onProfile((profile)=>{
-      if (profile) syncLocalFromProfile(profile);
-      toggleHeroVisibility();
-      updateDailyBadgeIndicator();
-      const pending = sessionStorage.getItem('__homeFortunePending__');
-      if (pending && window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()){
-        try{ sessionStorage.removeItem('__homeFortunePending__'); }catch(_){}
-        openFortuneDialog();
-      }
-    });
-  }
-})();
-  const PHUM_FEEDBACK = {
-    AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
-    DECH:{ title:'行動到位', body:'Dech 日主打行動與決斷。你完成這一步，能把卡關點推進。' },
-    SRI:{ title:'順流啟動', body:'Sri 日偏向順流與收穫。這個小步驟會讓機會更容易到位。' },
-    MULA:{ title:'根基穩固', body:'Mula 日重點在根基與秩序。你先完成這件事，整體會更穩。' },
-    UTSAHA:{ title:'推進有力', body:'Utsaha 日強調推進與執行。這個任務能讓進度往前走。' },
-    MONTRI:{ title:'協調順暢', body:'Montri 日聚焦協調與支援。你完成這一步，溝通會更順。' },
-    BORIWAN:{ title:'節奏整理', body:'Boriwan 日著重安排與分配。完成這件事有助於聚焦。' },
-    KALAKINI:{ title:'避險成功', body:'Kalakini 日重點是降低風險與誤判。你完成這步，等於先把地雷排掉。' }
-  };
   function renderTaskFeedback(fortune, data){
     if (!fortuneTaskFeedback) return;
     const phum = fortune && fortune.core ? fortune.core.phum : '';
@@ -1562,3 +1544,22 @@
     fortuneTaskFeedback.append(strong, br, span);
     fortuneTaskFeedback.style.display = '';
   }
+
+  restoreHeroQuizCacheFromBackup();
+  const initialProfile = getAuthProfile();
+  if (initialProfile) syncLocalFromProfile(initialProfile);
+  toggleHeroVisibility();
+  updateDailyBadgeIndicator();
+  if (window.authState && typeof window.authState.onProfile === 'function'){
+    window.authState.onProfile((profile)=>{
+      if (profile) syncLocalFromProfile(profile);
+      toggleHeroVisibility();
+      updateDailyBadgeIndicator();
+      const pending = sessionStorage.getItem('__homeFortunePending__');
+      if (pending && window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()){
+        try{ sessionStorage.removeItem('__homeFortunePending__'); }catch(_){}
+        openFortuneDialog();
+      }
+    });
+  }
+})();
