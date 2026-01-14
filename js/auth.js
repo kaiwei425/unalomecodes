@@ -310,6 +310,10 @@
     if (!profile){
       return;
     }
+    const pendingSync = readPendingQuizSync();
+    if (pendingSync){
+      return;
+    }
     const local = readLocalQuizPayload();
     if (local && local.guardian){
       bindingGuardian = true;
