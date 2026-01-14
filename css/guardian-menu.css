@@ -150,6 +150,15 @@
   background:#fff;
   cursor:pointer;
 }
+.fortune-history-view{
+  border:1px solid rgba(15,23,42,.15);
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:12px;
+  color:#0f172a;
+  background:#f8fafc;
+  cursor:pointer;
+}
 .fortune-history-share:active{
   transform:scale(.98);
 }
@@ -235,4 +244,12 @@
   font-size:12px;
   color:#334155;
   line-height:1.6;
+}
+.share-line{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.share-line.clamp-4{
+  -webkit-line-clamp:4;
 }

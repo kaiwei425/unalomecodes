@@ -718,6 +718,17 @@
     if (/^\d{4}\/\d{2}\/\d{2}$/.test(key)) return key.replace(/\//g, '-');
     return key;
   }
+  function getLocalDateKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function isTodayKey(dateKey){
+    const key = normalizeDateKey(dateKey);
+    return key === getLocalDateKey();
+  }
   function getYesterdayKey(dateKey){
     const key = normalizeDateKey(dateKey);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
@@ -1182,6 +1193,8 @@
     fortuneTaskWrap.style.display = '';
     fortuneTaskWrap.dataset.dateKey = dateKey;
     fortuneTaskWrap.dataset.task = task;
+    const isHistory = dateKey && !isTodayKey(dateKey);
+    fortuneTaskWrap.dataset.isHistory = isHistory ? '1' : '';
     fortuneTaskToggle.setAttribute('aria-pressed', done ? 'true' : 'false');
     fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
     renderStreak(dateKey, done);
@@ -1357,7 +1370,7 @@
       const next = toggleTaskDone(dateKey, task);
       toggleBtn.setAttribute('aria-pressed', next ? 'true' : 'false');
       toggleBtn.textContent = next ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
-      if (next){
+      if (next && wrap && wrap.dataset && wrap.dataset.isHistory !== '1'){
         updateStreakOnComplete(dateKey);
       }
       renderStreak(dateKey, next);
@@ -1369,6 +1382,13 @@
       }
     });
   }
+
+  window.addEventListener('fortune:open', (ev)=>{
+    const payload = ev && ev.detail ? ev.detail : null;
+    if (!payload || !payload.fortune) return;
+    renderFortune(payload.fortune, payload.meta || null, payload);
+    showDialog(fortuneDialog);
+  });
 
   restoreHeroQuizCacheFromBackup();
   const initialProfile = getAuthProfile();

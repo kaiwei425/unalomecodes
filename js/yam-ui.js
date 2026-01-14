@@ -18,6 +18,62 @@
     { start:'13:13', end:'15:36' },
     { start:'15:37', end:'18:00' }
   ];
+  const FOCUS_MAP = {
+    '工作':'work',
+    '感情':'love',
+    '財運':'money',
+    '健康':'health',
+    '人際':'social',
+    '學業':'study'
+  };
+  const PHUM_FALLBACK = {
+    AYU:'health',
+    DECH:'work',
+    SRI:'money',
+    MULA:'money',
+    UTSAHA:'work',
+    MONTRI:'social',
+    BORIWAN:'work',
+    KALAKINI:'work'
+  };
+  const SLOT_HINTS = {
+    work: {
+      BEST:'適合：處理重要待辦',
+      GOOD:'適合：安排會議溝通',
+      NEUTRAL:'適合：整理待辦清單',
+      BAD:'避免：倉促下結論'
+    },
+    love: {
+      BEST:'適合：表達感謝關心',
+      GOOD:'適合：安排輕鬆約會',
+      NEUTRAL:'適合：正常互動交流',
+      BAD:'避免：情緒化對話'
+    },
+    money: {
+      BEST:'適合：盤點收支帳目',
+      GOOD:'適合：確認付款細節',
+      NEUTRAL:'適合：整理固定支出',
+      BAD:'避免：衝動消費下單'
+    },
+    health: {
+      BEST:'適合：做 10 分鐘伸展',
+      GOOD:'適合：補水與放鬆',
+      NEUTRAL:'適合：維持作息節奏',
+      BAD:'避免：熬夜或硬撐'
+    },
+    social: {
+      BEST:'適合：回覆重要訊息',
+      GOOD:'適合：安排拜訪協調',
+      NEUTRAL:'適合：例行回覆追蹤',
+      BAD:'避免：正面衝突爭辯'
+    },
+    study: {
+      BEST:'適合：專注讀 15 分鐘',
+      GOOD:'適合：整理筆記重點',
+      NEUTRAL:'適合：回顧既有內容',
+      BAD:'避免：臨時抱佛腳'
+    }
+  };
 
   function toMinutes(hhmm){
     const parts = String(hhmm || '').split(':');
@@ -82,6 +138,34 @@
     return [];
   }
 
+  function resolveSignals(payload){
+    if (payload && payload.meta){
+      return payload.meta.userSignals || payload.meta.signals || null;
+    }
+    return null;
+  }
+
+  function pickBucket(phum, focus){
+    if (focus && FOCUS_MAP[focus]) return FOCUS_MAP[focus];
+    if (phum && PHUM_FALLBACK[phum]) return PHUM_FALLBACK[phum];
+    return 'work';
+  }
+
+  function buildSlotHint(level, phum, focus, isWarning){
+    const bucket = pickBucket(phum, focus);
+    const hints = SLOT_HINTS[bucket] || SLOT_HINTS.work;
+    let text = hints[level] || hints.NEUTRAL;
+    if (level === 'BAD' && isWarning){
+      if (bucket === 'money') text = '避免：冒進花費決策';
+      else if (bucket === 'social') text = '避免：硬碰硬衝突';
+      else if (bucket === 'work') text = '避免：倉促承諾';
+      else if (bucket === 'love') text = '避免：翻舊帳爭執';
+      else if (bucket === 'health') text = '避免：過度勉強';
+      else if (bucket === 'study') text = '避免：分心多線';
+    }
+    return text;
+  }
+
   function renderYamUbakong(opts){
     const containerEl = opts && opts.containerEl;
     const payload = opts && opts.payload;
@@ -95,6 +179,10 @@
     const now = new Date();
     const nowHHMM = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     const nowSlot = getNowSlot(slots, nowHHMM);
+    const signals = resolveSignals(payload);
+    const focus = signals && signals.focus && signals.focus[0] ? signals.focus[0] : '';
+    const phum = payload && payload.fortune && payload.fortune.core ? payload.fortune.core.phum : '';
+    const isWarning = payload && payload.fortune && payload.fortune.core ? !!payload.fortune.core.isWarning : false;
     const timeline = slots.map(s=>{
       const level = String(s.level || '').toUpperCase();
       const cls = LEVEL_CLASS[level] || LEVEL_CLASS.NEUTRAL;
@@ -105,11 +193,15 @@
       const level = String(s.level || '').toUpperCase();
       const cls = LEVEL_CLASS[level] || LEVEL_CLASS.NEUTRAL;
       const status = LEVEL_TEXT[level] || LEVEL_TEXT.NEUTRAL;
+      const isNow = nowSlot && nowSlot.start === s.start && nowSlot.end === s.end;
+      const hint = buildSlotHint(level, phum, focus, isWarning);
+      const hintText = isNow ? `現在：${hint}` : hint;
       return `
         <div class="yam-row">
           <div class="yam-time">${s.start}–${s.end}</div>
           <div class="yam-status ${cls}">${status}</div>
           <div class="yam-label">${s.label || ''}</div>
+          <div class="yam-hint">${hintText}</div>
         </div>
       `;
     }).join('');

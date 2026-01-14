@@ -1018,7 +1018,9 @@ async function writeGeoCache(env, key, coords){
   const payload = { lat: coords.lat, lng: coords.lng, display_name: coords.display_name || '' };
   try{
     await store.put(`GEO:${String(key).toLowerCase()}`, JSON.stringify(payload), { expirationTtl: 60 * 60 * 24 * 30 });
-  }catch(_){}
+  }catch(err){
+    console.warn('ensureFortuneIndex_failed', err);
+  }
 }
 async function geocodeByGoogle(query, env){
   const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || '').trim();
@@ -2781,7 +2783,7 @@ function buildUserSignals(quiz){
 }
 function pickPersonalTask({ phum, signals, seed, avoidTasks }){
   const bucket = normalizeBucket((signals && signals.focus && signals.focus[0]) || '');
-  const pool = (TASK_POOL[phum] && TASK_POOL[phum][bucket]) || (TASK_POOL[phum] && TASK_POOL[phum].work) || TASK_POOL.MULA.work;
+  const pool = (TASK_POOL[phum] && TASK_POOL[phum][bucket]) || (TASK_POOL[phum] && TASK_POOL[phum].work) || (TASK_POOL.MULA && TASK_POOL.MULA.work) || [];
   const avoid = new Set((avoidTasks || []).map(normalizeTaskText).filter(Boolean));
   for (let i=0;i<pool.length;i++){
     const task = pool[(seed + i) % pool.length];
@@ -2794,7 +2796,7 @@ function pickPersonalTask({ phum, signals, seed, avoidTasks }){
       };
     }
   }
-  const fallback = pool[0] || '';
+  const fallback = pool[0] || '列出今天三個待辦，先完成最重要的一件。';
   return { task: fallback, why: '先完成一件可控的小步驟，讓節奏回正。' };
 }
 function adviceMatchesSignals(advice, signals){
@@ -2825,6 +2827,22 @@ function buildTimingFromYam(yam){
   const avoid = Array.isArray(yam?.forbidden) ? yam.forbidden.map(s=>({ start:s.start, end:s.end, level:s.level })) : [];
   return { best, avoid };
 }
+async function ensureFortuneIndex(env, memberId, todayKey){
+  if (!env || !env.FORTUNES || !memberId || !todayKey) return;
+  const indexKey = `FORTUNE_INDEX:${memberId}`;
+  try{
+    const raw = await env.FORTUNES.get(indexKey);
+    let list = [];
+    if (raw){
+      try{
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) list = parsed.filter(Boolean);
+      }catch(_){}
+    }
+    const next = [todayKey, ...list.filter(k=>k !== todayKey)].slice(0, 7);
+    await env.FORTUNES.put(indexKey, JSON.stringify(next));
+  }catch(_){}
+}
 function buildLocalFortuneV2(ctx, seed, avoidTasks, signals){
   const phum = ctx.thaiTaksa?.phum || '';
   const summaryParts = [
@@ -2845,14 +2863,17 @@ function buildLocalFortuneV2(ctx, seed, avoidTasks, signals){
   const summary = ensurePhumSummary(pickBySeed(summaryParts, seed + 3), phum);
   const keyword = (userSignals.keywords && userSignals.keywords[0]) || '';
   const focusLabel = (userSignals.focus && userSignals.focus[0]) || '';
-  const jobLabel = userSignals.job || '';
+  let jobLabel = userSignals.job || '';
+  if (jobLabel){
+    jobLabel = String(jobLabel).replace(/[（(].*?[)）]/g, '').trim();
+  }
   let advice = pickBySeed(adviceParts, seed + 17);
   if (keyword){
-    advice = `${keyword}會是你今天的關鍵。${advice}`;
+    advice = `今天適合把重點放在「${keyword}」，先整理再推進。${advice}`;
   }else if (focusLabel){
     advice = `把注意力先放回${focusLabel}，${advice}`;
   }else if (jobLabel){
-    advice = `${jobLabel}的節奏要先穩住，${advice}`;
+    advice = `今天適合用「${jobLabel}式」的方法處理：先整理、再協調、再推進。${advice}`;
   }
   const mantra = pickBySeed(MANTRA_LIST, seed + 23);
   return {
@@ -5172,6 +5193,37 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!env.FORTUNES){
       return new Response(JSON.stringify({ ok:false, error:'FORTUNES KV not bound' }), { status:500, headers });
     }
+    if (url.searchParams.get('history') === '1'){
+      const indexKey = `FORTUNE_INDEX:${record.id}`;
+      let keys = [];
+      try{
+        const raw = await env.FORTUNES.get(indexKey);
+        if (raw){
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) keys = parsed.filter(Boolean).slice(0, 7);
+        }
+      }catch(_){}
+      const history = [];
+      for (const dateKey of keys){
+        try{
+          const raw = await env.FORTUNES.get(`FORTUNE:${record.id}:${dateKey}`);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.fortune){
+            history.push({
+              dateKey,
+              fortune: parsed.fortune,
+              meta: parsed.meta,
+              version: parsed.version,
+              source: parsed.source,
+              createdAt: parsed.createdAt
+            });
+          }
+        }catch(_){}
+      }
+      history.sort((a,b)=> String(b.dateKey || '').localeCompare(String(a.dateKey || '')));
+      return new Response(JSON.stringify({ ok:true, history }), { status:200, headers });
+    }
     const todayKey = taipeiDateKey();
     const targetVersion = FORTUNE_FORMAT_VERSION;
     const cacheKey = `FORTUNE:${record.id}:${todayKey}`;
@@ -5184,6 +5236,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const currentCode = String(record?.guardian?.code || '').toUpperCase();
         const cachedVersion = String(parsed?.version || '');
         if (cachedCode && currentCode && cachedCode === currentCode && cachedVersion === targetVersion){
+          try{ await ensureFortuneIndex(env, record.id, todayKey); }catch(_){}
           await recordFortuneStat(env, todayKey, record.id);
           return new Response(cached, { status:200, headers });
         }
@@ -5209,8 +5262,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
     const signals = buildUserSignals(quiz);
     const todayWeekdayKey = toWeekdayKey(parts.dow);
-    const birthWeekdayKey = toBirthWeekdayKey(quiz);
-    const taksa = getMahaTaksa(birthWeekdayKey, todayWeekdayKey);
+    const birthWeekdayKey = toBirthWeekdayKey(quiz) || todayWeekdayKey || '';
+    const taksa = getMahaTaksa(birthWeekdayKey || todayWeekdayKey, todayWeekdayKey);
     const yam = getYamUbakong(todayWeekdayKey);
     const dayColor = getThaiDayColor(todayWeekdayKey);
     const tabooColor = deriveTabooColor(birthWeekdayKey);
@@ -5238,7 +5291,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       guardianCode: String(guardian.code || '').toUpperCase(),
       thaiTaksa: taksa,
       yam,
-      lucky: { dayColor, tabooColor, numbers: luckyNumbers }
+      lucky: { dayColor, tabooColor, numbers: luckyNumbers },
+      signals
     };
     const ctx = {
       dateText,
@@ -5274,6 +5328,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       seed,
       avoidTasks
     });
+    const hasPersonalTask = personalTask && personalTask.task;
     let fortune = null;
     let source = 'local';
     const taksaLabel = PHUM_LABEL[taksa.phum] || taksa.phum || '—';
@@ -5306,6 +5361,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       signals.keywords && signals.keywords.length
         ? `advice 必須包含下列任一關鍵詞：${signals.keywords.join('、')}`
         : `advice 必須提到工作類型或關注領域（${signals.job} / ${signals.focus.join('、') || '工作'}）`,
+      `如果 advice 提到職業（signals.job 或 jobLabel），必須用方法論表達（例如「用管理/行政式的方法去整理、協調、請求資源」），禁止使用「{job}會是你今天的關鍵」這種身分直述句。`,
       avoidSummaries.length ? `避免與過去 summary 太相似：${avoidSummaries.join(' / ')}` : '',
       avoidAdvice.length ? `避免與過去 advice 太相似：${avoidAdvice.join(' / ')}` : '',
       avoidTasks.length ? `avoidTasks：${avoidTasks.join(' / ')}` : '',
@@ -5315,7 +5371,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
 
     ctx.userSignals = signals;
     ctx.personalTask = personalTask;
-    if (!forceLocal){
+    if (!forceLocal && hasPersonalTask){
       fortune = normalizeFortunePayloadV2(await callOpenAIFortune(env, prompt, seed, systemPrompt), ctx);
       source = fortune ? 'openai' : 'local';
     }
@@ -5377,6 +5433,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     };
     try{
       await env.FORTUNES.put(cacheKey, JSON.stringify(payload));
+      await ensureFortuneIndex(env, record.id, todayKey);
     }catch(_){}
     await recordFortuneStat(env, todayKey, record.id);
     return new Response(JSON.stringify(payload), { status:200, headers });

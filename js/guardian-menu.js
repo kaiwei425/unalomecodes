@@ -15,6 +15,7 @@
   };
   let activeHistoryDialog = null;
   let historyEscapeBound = false;
+  const historyPayloadMap = new WeakMap();
 
   function buildMenuHTML(opts){
     const actionAttr = (opts && opts.actionAttr) || 'data-guardian-action';
@@ -54,6 +55,11 @@
     return data.history || [];
   }
 
+  function setHistoryError(errorEl, message){
+    if (!errorEl) return;
+    errorEl.textContent = message || '分享失敗，請稍後再試。';
+    errorEl.style.display = '';
+  }
   function clearHistoryError(errorEl){
     if (!errorEl) return;
     errorEl.textContent = '';
@@ -188,12 +194,17 @@
         }
         const actions = document.createElement('div');
         actions.className = 'fortune-history-actions';
+        const viewBtn = document.createElement('button');
+        viewBtn.type = 'button';
+        viewBtn.className = 'fortune-history-view';
+        viewBtn.dataset.historyView = '1';
+        viewBtn.textContent = '查看日籤';
         const shareBtn = document.createElement('button');
         shareBtn.type = 'button';
         shareBtn.className = 'fortune-history-share';
         shareBtn.dataset.share = '1';
         shareBtn.textContent = '分享 PNG';
-        actions.appendChild(shareBtn);
+        actions.append(viewBtn, shareBtn);
         body.appendChild(actions);
       }else{
         const emptyRow = document.createElement('div');
@@ -204,6 +215,17 @@
 
       card.append(summary, body);
       listEl.appendChild(card);
+
+      if (fortune){
+        historyPayloadMap.set(card, {
+          dateKey,
+          fortune,
+          meta: item.meta || null,
+          version: item.version,
+          source: item.source,
+          createdAt: item.createdAt
+        });
+      }
     });
   }
 
@@ -238,6 +260,7 @@
     brandLeft.className = 'share-brandleft';
     const brandImg = document.createElement('img');
     brandImg.src = resolveBrandLogoURL();
+    brandImg.crossOrigin = 'anonymous';
     brandImg.alt = 'Unalome Codes';
     const brandText = document.createElement('div');
     brandText.className = 'share-brandtext';
@@ -278,7 +301,7 @@
     [summary, advice, ritual, mantra].forEach(text=>{
       if (!text) return;
       const row = document.createElement('div');
-      row.className = 'fortune-share-row';
+      row.className = 'fortune-share-row share-line clamp-4';
       row.textContent = text;
       body.appendChild(row);
     });
@@ -296,18 +319,29 @@
         existing.addEventListener('error', ()=> reject(new Error('html2canvas_load_failed')));
         return;
       }
+      const timer = setTimeout(()=>{
+        reject(new Error('html2canvas_timeout'));
+      }, 8000);
       const script = document.createElement('script');
       script.src = src;
       script.async = true;
       script.dataset.html2canvas = '1';
-      script.onload = ()=> resolve(window.html2canvas);
-      script.onerror = ()=> reject(new Error('html2canvas_load_failed'));
+      script.referrerPolicy = 'no-referrer';
+      script.onload = ()=> {
+        clearTimeout(timer);
+        resolve(window.html2canvas);
+      };
+      script.onerror = ()=> {
+        clearTimeout(timer);
+        reject(new Error('html2canvas_load_failed'));
+      };
       document.head.appendChild(script);
     });
   }
 
-  async function exportHistoryCardPNG(cardEl){
+  async function exportHistoryCardPNG(cardEl, opts){
     if (!cardEl) return;
+    const errorEl = opts && opts.errorEl;
     const data = {
       dateKey: cardEl.dataset.dateKey || '',
       phum: cardEl.dataset.phum || '',
@@ -325,36 +359,50 @@
     document.body.appendChild(tmp);
     try{
       const html2canvas = await loadHtml2Canvas();
-      const canvas = await html2canvas(shareCard, { backgroundColor:'#ffffff', scale:2 });
-      const blob = await new Promise(resolve=>{
-        if (canvas.toBlob){
-          canvas.toBlob(resolve, 'image/png');
-        }else{
-          const dataUrl = canvas.toDataURL('image/png');
-          const arr = dataUrl.split(',');
-          const mime = arr[0].match(/:(.*?);/)[1];
-          const bstr = atob(arr[1]);
-          let n = bstr.length;
-          const u8arr = new Uint8Array(n);
-          while (n--) u8arr[n] = bstr.charCodeAt(n);
-          resolve(new Blob([u8arr], { type: mime }));
-        }
+      const canvas = await html2canvas(shareCard, {
+        backgroundColor:'#ffffff',
+        scale:2,
+        useCORS:true,
+        allowTaint:false,
+        imageTimeout:15000
       });
-      const filename = `unalomecodes_fortune_${data.dateKey || 'today'}_${data.phum || 'unknown'}.png`;
-      if (blob){
-        const file = new File([blob], filename, { type:'image/png' });
-        if (navigator.canShare && navigator.share && navigator.canShare({ files:[file] })){
-          await navigator.share({ files:[file], title:'Unalome Codes 日籤', text:'我的近期日籤（Unalome Codes）' });
-        }else{
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          setTimeout(()=> URL.revokeObjectURL(url), 1000);
+      let blob = null;
+      if (canvas.toBlob){
+        blob = await new Promise(resolve=> canvas.toBlob(resolve, 'image/png'));
+      }
+      if (!blob){
+        const dataUrl = canvas.toDataURL('image/png');
+        try{
+          blob = await fetch(dataUrl).then(res=>res.blob());
+        }catch(_){
+          blob = null;
         }
+      }
+      if (!blob){
+        setHistoryError(errorEl, '分享失敗：目前瀏覽器無法產生圖片，請改用 Chrome 或更新 Safari。');
+        return;
+      }
+      const filename = `unalomecodes_fortune_${data.dateKey || 'today'}_${data.phum || 'unknown'}.png`;
+      const file = new File([blob], filename, { type:'image/png' });
+      if (navigator.canShare && navigator.share && navigator.canShare({ files:[file] })){
+        await navigator.share({ files:[file], title:'Unalome Codes 日籤', text:'我的近期日籤（Unalome Codes）' });
+      }else{
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(()=> URL.revokeObjectURL(url), 1000);
+      }
+      clearHistoryError(errorEl);
+    }catch(err){
+      const reason = err && err.message ? err.message : 'unknown_error';
+      if (reason === 'html2canvas_timeout' || reason === 'html2canvas_load_failed'){
+        setHistoryError(errorEl, '分享失敗：目前瀏覽器無法載入產圖工具，請改用 Chrome 或更新 Safari。');
+      }else{
+        setHistoryError(errorEl, '分享失敗：目前瀏覽器無法產生圖片，請稍後再試。');
       }
     }finally{
       tmp.remove();
@@ -373,8 +421,34 @@
       if (activeHistoryDialog === dialog) activeHistoryDialog = null;
     };
     dialog.addEventListener('click', (ev)=>{
-      if (ev.target === dialog || ev.target.closest('[data-guardian-history-close]')){
+      const target = ev.target;
+      if (!target) return;
+      const closeBtn = target.closest ? target.closest('[data-guardian-history-close]') : null;
+      const shareBtn = target.closest ? target.closest('[data-share="1"]') : null;
+      const viewBtn = target.closest ? target.closest('[data-history-view="1"]') : null;
+      if (target === dialog || closeBtn){
+        ev.preventDefault();
+        ev.stopPropagation();
         handleClose();
+        return;
+      }
+      if (shareBtn){
+        ev.preventDefault();
+        ev.stopPropagation();
+        const cardEl = shareBtn.closest('.fortune-history-card');
+        if (!cardEl) return;
+        exportHistoryCardPNG(cardEl, { errorEl });
+        return;
+      }
+      if (viewBtn){
+        ev.preventDefault();
+        ev.stopPropagation();
+        const cardEl = viewBtn.closest('.fortune-history-card');
+        if (!cardEl) return;
+        const payload = historyPayloadMap.get(cardEl);
+        if (!payload) return;
+        window.__FORTUNE_HISTORY_SELECTED__ = payload;
+        openFortuneViewer(payload);
       }
     });
     dialog.addEventListener('cancel', (ev)=>{
@@ -398,13 +472,6 @@
     if (listEl && !listEl.dataset.historyListBound){
       listEl.dataset.historyListBound = '1';
     }
-    dialog.addEventListener('click', (ev)=>{
-      const shareBtn = ev.target && ev.target.closest ? ev.target.closest('[data-share="1"]') : null;
-      if (!shareBtn) return;
-      ev.preventDefault();
-      const cardEl = shareBtn.closest('.fortune-history-card');
-      exportHistoryCardPNG(cardEl);
-    });
   }
 
   async function openHistoryDialog(opts){
@@ -497,6 +564,21 @@
     return '/quiz/';
   }
 
+  function openFortuneViewer(payload){
+    if (!payload) return false;
+    if (window.FortuneViewer && typeof window.FortuneViewer.open === 'function'){
+      return window.FortuneViewer.open(payload);
+    }
+    if (window.dispatchEvent){
+      try{
+        const ev = new CustomEvent('fortune:open', { detail: payload });
+        window.dispatchEvent(ev);
+        return true;
+      }catch(_){}
+    }
+    return false;
+  }
+
   window.GuardianMenu = {
     buildMenuHTML,
     openHistoryDialog,
@@ -505,6 +587,7 @@
     persistLastQuizResult,
     getCurrentGuardianCode,
     buildResultUrl,
+    openFortuneViewer,
     MENU_ITEMS
   };
 })();

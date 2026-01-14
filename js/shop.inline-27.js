@@ -99,6 +99,15 @@
       return '';
     }
   }
+  function normalizeDateKey(dateKey){
+    if (!dateKey) return '';
+    return String(dateKey).trim().replace(/\//g, '-');
+  }
+  function isTodayKey(dateKey){
+    const today = getTaipeiDateKey(new Date());
+    if (!today) return false;
+    return normalizeDateKey(dateKey) === today;
+  }
   function readFortuneKey(){
     try{
       return localStorage.getItem(FORTUNE_KEY) || '';
@@ -240,7 +249,7 @@
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = 'none';
   }
-  function renderFortune(fortune, data){
+  function renderFortune(fortune, meta, data){
     if (!fortune) return;
     lastFortune = fortune;
     lastFortunePayload = data || lastFortunePayload;
@@ -269,6 +278,8 @@
         fortuneTaskWrap.style.display = '';
         fortuneTaskWrap.dataset.dateKey = dateKey;
         fortuneTaskWrap.dataset.task = task;
+        const isHistory = dateKey && !isTodayKey(dateKey);
+        fortuneTaskWrap.dataset.isHistory = isHistory ? '1' : '';
         fortuneTaskToggle.setAttribute('aria-pressed', done ? 'true' : 'false');
         fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
         renderStreak(dateKey, done);
@@ -281,21 +292,21 @@
     }
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
     if (fortuneMeta){
-      const meta = fortune.meta || {};
+      const payloadMeta = meta || (data && data.meta) || fortune.meta || {};
       const tags = [];
-      if (meta.userZodiac){
-        const zodiacLabel = meta.userZodiacElement ? `${meta.userZodiac}（${meta.userZodiacElement}象）` : meta.userZodiac;
+      if (payloadMeta.userZodiac){
+        const zodiacLabel = payloadMeta.userZodiacElement ? `${payloadMeta.userZodiac}（${payloadMeta.userZodiacElement}象）` : payloadMeta.userZodiac;
         tags.push(`星座 ${zodiacLabel}`);
       }
-      if (meta.moonPhase) tags.push(`月相 ${meta.moonPhase}`);
-      if (meta.iching) tags.push(`易經 ${meta.iching}`);
-      if (meta.todayDow) tags.push(`今日星期${meta.todayDow}`);
-      if (meta.thaiDayColor) tags.push(`泰國星期色 ${meta.thaiDayColor}`);
-      if (meta.buddhistYear) tags.push(`佛曆 ${meta.buddhistYear}`);
+      if (payloadMeta.moonPhase) tags.push(`月相 ${payloadMeta.moonPhase}`);
+      if (payloadMeta.iching) tags.push(`易經 ${payloadMeta.iching}`);
+      if (payloadMeta.todayDow) tags.push(`今日星期${payloadMeta.todayDow}`);
+      if (payloadMeta.thaiDayColor) tags.push(`泰國星期色 ${payloadMeta.thaiDayColor}`);
+      if (payloadMeta.buddhistYear) tags.push(`佛曆 ${payloadMeta.buddhistYear}`);
       fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
     }
     if (fortuneRitualLabel){
-      const gName = (fortune.meta && fortune.meta.guardianName) || '';
+      const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';
       lastGuardianName = gName || lastGuardianName;
       fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
     }
@@ -340,7 +351,7 @@
         throw new Error((data && data.error) || '取得日籤失敗');
       }
       const fortune = data.fortune || null;
-      renderFortune(fortune, data || null);
+      renderFortune(fortune, data && data.meta ? data.meta : null, data || null);
       if (fortune) markFortuneClaimed();
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
@@ -760,7 +771,7 @@
       const next = toggleTaskDone(dateKey, task);
       toggleBtn.setAttribute('aria-pressed', next ? 'true' : 'false');
       toggleBtn.textContent = next ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
-      if (next){
+      if (next && wrap && wrap.dataset && wrap.dataset.isHistory !== '1'){
         updateStreakOnComplete(dateKey);
       }
       renderStreak(dateKey, next);
@@ -772,4 +783,11 @@
       }
     });
   }
+
+  window.addEventListener('fortune:open', (ev)=>{
+    const payload = ev && ev.detail ? ev.detail : null;
+    if (!payload || !payload.fortune) return;
+    renderFortune(payload.fortune, payload.meta || null, payload);
+    showDialog(fortuneDialog);
+  });
 })();
