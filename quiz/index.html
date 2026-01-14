@@ -218,13 +218,27 @@
         <div class="fortune-body">
           <div id="fortuneLoadingQuiz" class="fortune-loading">正在翻牌中…</div>
           <div id="fortuneErrorQuiz" class="fortune-error" style="display:none;"></div>
-          <div id="fortuneCardQuiz" class="fortune-card" style="display:none;">
-            <div class="fortune-stars" id="fortuneStarsQuiz"></div>
-            <div class="fortune-summary" id="fortuneSummaryQuiz"></div>
-            <div class="fortune-section">
-              <div class="fortune-label">生活小建議</div>
-              <div class="fortune-text" id="fortuneAdviceQuiz"></div>
-            </div>
+            <div id="fortuneCardQuiz" class="fortune-card" style="display:none;">
+              <div class="fortune-stars" id="fortuneStarsQuiz"></div>
+              <div class="fortune-summary" id="fortuneSummaryQuiz"></div>
+              <div class="fortune-explain" id="fortuneExplainQuiz" style="display:none;">
+                <button type="button" class="fortune-explain-toggle" id="fortuneExplainToggleQuiz" aria-expanded="false">📖 為什麼今天是 — 日？</button>
+                <div class="fortune-explain-body" id="fortuneExplainBodyQuiz" hidden>
+                  <div class="fortune-explain-title" id="fortuneExplainTitleQuiz"></div>
+                  <div class="fortune-explain-desc" id="fortuneExplainDescQuiz"></div>
+                  <div class="fortune-explain-how" id="fortuneExplainHowQuiz"></div>
+                </div>
+              </div>
+              <div class="fortune-section">
+                <div class="fortune-label">生活小建議</div>
+                <div class="fortune-text" id="fortuneAdviceQuiz"></div>
+              </div>
+              <div class="fortune-section fortune-task" id="fortuneTaskWrapQuiz" style="display:none;">
+                <div class="fortune-label">今日任務</div>
+                <div class="fortune-text" id="fortuneTaskTextQuiz"></div>
+                <div class="fortune-task-streak" id="fortuneTaskStreakQuiz" style="display:none;"></div>
+                <button type="button" class="fortune-task-toggle" id="fortuneTaskToggleQuiz" aria-pressed="false">☐ 我完成了</button>
+              </div>
             <div class="fortune-section">
               <div class="fortune-label" id="fortuneRitualLabelQuiz">守護神想對你說</div>
               <div class="fortune-text" id="fortuneRitualQuiz"></div>

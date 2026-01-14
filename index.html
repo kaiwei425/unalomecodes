@@ -145,9 +145,23 @@
             <div id="fortuneCardHome" class="fortune-card" style="display:none;">
               <div class="fortune-stars" id="fortuneStarsHome"></div>
               <div class="fortune-summary" id="fortuneSummaryHome"></div>
+              <div class="fortune-explain" id="fortuneExplainHome" style="display:none;">
+                <button type="button" class="fortune-explain-toggle" id="fortuneExplainToggleHome" aria-expanded="false">📖 為什麼今天是 — 日？</button>
+                <div class="fortune-explain-body" id="fortuneExplainBodyHome" hidden>
+                  <div class="fortune-explain-title" id="fortuneExplainTitleHome"></div>
+                  <div class="fortune-explain-desc" id="fortuneExplainDescHome"></div>
+                  <div class="fortune-explain-how" id="fortuneExplainHowHome"></div>
+                </div>
+              </div>
               <div class="fortune-section">
                 <div class="fortune-label">生活小建議</div>
                 <div class="fortune-text" id="fortuneAdviceHome"></div>
+              </div>
+              <div class="fortune-section fortune-task" id="fortuneTaskWrapHome" style="display:none;">
+                <div class="fortune-label">今日任務</div>
+                <div class="fortune-text" id="fortuneTaskTextHome"></div>
+                <div class="fortune-task-streak" id="fortuneTaskStreakHome" style="display:none;"></div>
+                <button type="button" class="fortune-task-toggle" id="fortuneTaskToggleHome" aria-pressed="false">☐ 我完成了</button>
               </div>
               <div class="fortune-section">
                 <div class="fortune-label" id="fortuneRitualLabelHome">守護神想對你說</div>

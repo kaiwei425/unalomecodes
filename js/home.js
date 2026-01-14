@@ -649,10 +649,147 @@
   const fortuneDate = document.getElementById('fortuneDateHome');
   const fortuneStars = document.getElementById('fortuneStarsHome');
   const fortuneSummary = document.getElementById('fortuneSummaryHome');
+  const fortuneExplain = document.getElementById('fortuneExplainHome');
+  const fortuneExplainToggle = document.getElementById('fortuneExplainToggleHome');
+  const fortuneExplainBody = document.getElementById('fortuneExplainBodyHome');
+  const fortuneExplainTitle = document.getElementById('fortuneExplainTitleHome');
+  const fortuneExplainDesc = document.getElementById('fortuneExplainDescHome');
+  const fortuneExplainHow = document.getElementById('fortuneExplainHowHome');
   const fortuneAdvice = document.getElementById('fortuneAdviceHome');
+  const fortuneTaskWrap = document.getElementById('fortuneTaskWrapHome');
+  const fortuneTaskText = document.getElementById('fortuneTaskTextHome');
+  const fortuneTaskToggle = document.getElementById('fortuneTaskToggleHome');
+  const fortuneTaskStreak = document.getElementById('fortuneTaskStreakHome');
   const fortuneRitual = document.getElementById('fortuneRitualHome');
   const fortuneMeta = document.getElementById('fortuneMetaHome');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabelHome');
+  const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
+  const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
+  const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
+  function simpleHash(str){
+    return fnv1aHash(String(str || '')).toString(16);
+  }
+  function resolveDateKey(data, fortune){
+    if (data && data.dateKey) return String(data.dateKey);
+    if (fortune && fortune.date) return String(fortune.date).replace(/\s+/g,'');
+    return '';
+  }
+  function getTaskDoneKey(dateKey, task){
+    if (!dateKey || !task) return '';
+    return `${TASK_KEY_PREFIX}:${dateKey}:${simpleHash(task)}`;
+  }
+  function isTaskDone(dateKey, task){
+    const key = getTaskDoneKey(dateKey, task);
+    if (!key) return false;
+    try{ return localStorage.getItem(key) === '1'; }catch(_){ return false; }
+  }
+  function setTaskDone(dateKey, task, done){
+    const key = getTaskDoneKey(dateKey, task);
+    if (!key) return;
+    try{
+      if (done) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+    }catch(_){}
+  }
+  function toggleTaskDone(dateKey, task){
+    const next = !isTaskDone(dateKey, task);
+    setTaskDone(dateKey, task, next);
+    return next;
+  }
+  function normalizeDateKey(dateKey){
+    if (!dateKey) return '';
+    const key = String(dateKey).trim();
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(key)) return key.replace(/\//g, '-');
+    return key;
+  }
+  function getYesterdayKey(dateKey){
+    const key = normalizeDateKey(dateKey);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+    const [y,m,d] = key.split('-').map(n=> Number(n));
+    const ts = Date.UTC(y, m - 1, d) - 86400000;
+    return new Date(ts).toISOString().slice(0,10);
+  }
+  function getStreakState(){
+    let count = 0;
+    let last = '';
+    try{
+      count = Number(localStorage.getItem(STREAK_COUNT_KEY) || 0) || 0;
+      last = String(localStorage.getItem(STREAK_LAST_KEY) || '');
+    }catch(_){}
+    return { count, last };
+  }
+  function setStreakState(count, last){
+    try{
+      localStorage.setItem(STREAK_COUNT_KEY, String(count));
+      localStorage.setItem(STREAK_LAST_KEY, String(last || ''));
+    }catch(_){}
+  }
+  function updateStreakOnComplete(dateKey){
+    const key = normalizeDateKey(dateKey);
+    if (!key) return 0;
+    const { count, last } = getStreakState();
+    if (last === key) return count;
+    const yesterday = getYesterdayKey(key);
+    const next = last === yesterday ? count + 1 : 1;
+    setStreakState(next, key);
+    return next;
+  }
+  function renderStreak(dateKey, done){
+    if (!fortuneTaskStreak) return;
+    if (!done){
+      fortuneTaskStreak.style.display = 'none';
+      return;
+    }
+    const { count } = getStreakState();
+    if (!count){
+      fortuneTaskStreak.style.display = 'none';
+      return;
+    }
+    fortuneTaskStreak.textContent = `🔥 已連續完成 ${count} 天`;
+    fortuneTaskStreak.style.display = '';
+  }
+  const TAKSA_EXPLAIN = {
+    BORIWAN:{
+      title:'為什麼今天是 Boriwan（日）？',
+      description:'Boriwan（日）對應人際支持與團隊互動，代表「身邊的人」與你當下的連結品質。當今日落在 Boriwan，重點不是衝刺，而是把合作與互動調順。',
+      howToUse:'今天適合主動建立連結、明確協調分工，讓事情更容易推進。'
+    },
+    AYU:{
+      title:'為什麼今天是 Ayu（日）？',
+      description:'Ayu（日）在泰國 Maha Taksa 中代表節奏與續航力。當今天落在 Ayu，命理上的重點是把步調調回可持續狀態，而不是急著求結果。',
+      howToUse:'今天只要完成一件「恢復節奏的小事」（整理、減少干擾、調整作息）就很對。'
+    },
+    DECH:{
+      title:'為什麼今天是 Dech（日）？',
+      description:'Dech（日）象徵決斷力與推進力。當今天落在 Dech，適合做明確選擇與主動行動。',
+      howToUse:'今天適合做決定、談判或推動卡關的事情。'
+    },
+    SRI:{
+      title:'為什麼今天是 Sri（日）？',
+      description:'Sri（日）代表好運與吸引力，屬於「順勢而為」的日子。重點是讓好事自然發生，而不是用力推進。',
+      howToUse:'今天適合曝光、分享、談錢或接受他人的善意。'
+    },
+    MULA:{
+      title:'為什麼今天是 Mula（日）？',
+      description:'Mula（日）對應基礎與根源，提醒你先把地基打穩。當今天落在 Mula，重點是把資源與節奏整理好。',
+      howToUse:'今天適合整理財務、盤點資源、修正基礎流程。'
+    },
+    UTSAHA:{
+      title:'為什麼今天是 Utsaha（日）？',
+      description:'Utsaha（日）代表努力與行動的推進力。當今天落在 Utsaha，適合用小步驟帶動進度。',
+      howToUse:'今天適合設定短時間任務、快速完成一件小成果。'
+    },
+    MONTRI:{
+      title:'為什麼今天是 Montri（日）？',
+      description:'Montri（日）代表貴人與支援。當今天落在 Montri，重點是「求助與協調」會比單打獨鬥更有效。',
+      howToUse:'今天適合請教、協調資源、尋求合作或建議。'
+    },
+    KALAKINI:{
+      title:'為什麼今天是 Kalakini（日）？',
+      description:'Kalakini（日）代表干擾與阻礙。這不是倒楣，而是提醒你避開衝突與過度耗損。',
+      howToUse:'今天不宜硬碰硬，適合保守行事或做清理型行動。'
+    }
+  };
 
   const GUARDIAN_NAME_MAP = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
 
@@ -965,8 +1102,42 @@
     if (fortuneCard) fortuneCard.style.display = 'none';
   }
 
-  function renderFortune(fortune){
+  function renderExplain(fortune){
+    if (!fortuneExplain || !fortuneExplainToggle || !fortuneExplainBody) return;
+    const phum = fortune && fortune.core ? fortune.core.phum : '';
+    const explain = phum ? TAKSA_EXPLAIN[phum] : null;
+    if (!explain){
+      fortuneExplain.style.display = 'none';
+      return;
+    }
+    fortuneExplain.style.display = '';
+    fortuneExplainToggle.textContent = `📖 為什麼今天是 ${phum} 日？`;
+    if (fortuneExplainTitle) fortuneExplainTitle.textContent = explain.title;
+    if (fortuneExplainDesc) fortuneExplainDesc.textContent = explain.description;
+    if (fortuneExplainHow) fortuneExplainHow.textContent = explain.howToUse;
+    fortuneExplainBody.hidden = true;
+    fortuneExplainToggle.setAttribute('aria-expanded', 'false');
+  }
+  function renderTask(fortune, data){
+    if (!fortuneTaskWrap || !fortuneTaskText || !fortuneTaskToggle) return;
+    const task = fortune && fortune.action ? String(fortune.action.task || '').trim() : '';
+    if (!task){
+      fortuneTaskWrap.style.display = 'none';
+      return;
+    }
+    const dateKey = resolveDateKey(data, fortune);
+    const done = isTaskDone(dateKey, task);
+    fortuneTaskText.textContent = task;
+    fortuneTaskWrap.style.display = '';
+    fortuneTaskWrap.dataset.dateKey = dateKey;
+    fortuneTaskWrap.dataset.task = task;
+    fortuneTaskToggle.setAttribute('aria-pressed', done ? 'true' : 'false');
+    fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
+    renderStreak(dateKey, done);
+  }
+  function renderFortune(fortune, meta, data){
     if (!fortune) return;
+    lastFortunePayload = data || null;
     if (fortuneDate) fortuneDate.textContent = fortune.date || '';
     if (fortuneStars){
       const stars = fortune.stars || '';
@@ -974,18 +1145,20 @@
       fortuneStars.style.display = stars ? '' : 'none';
     }
     if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
+    renderExplain(fortune);
     if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    renderTask(fortune, data);
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
     if (fortuneMeta){
-      const meta = fortune.meta || {};
+      const payloadMeta = meta || fortune.meta || {};
       const tags = [];
-      if (meta.guardianName) tags.push(meta.guardianName);
-      if (meta.element) tags.push(meta.element);
-      if (meta.focus) tags.push(meta.focus);
+      if (payloadMeta.guardianName) tags.push(payloadMeta.guardianName);
+      if (payloadMeta.element) tags.push(payloadMeta.element);
+      if (payloadMeta.focus) tags.push(payloadMeta.focus);
       fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
     }
     if (fortuneRitualLabel){
-      const gName = (fortune.meta && fortune.meta.guardianName) || '';
+      const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';
       fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
     }
     if (fortuneLoading) fortuneLoading.style.display = 'none';
@@ -1002,7 +1175,7 @@
         if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取每日運勢。');
         throw new Error((data && data.error) || '取得日籤失敗');
       }
-      renderFortune(data.fortune || null);
+      renderFortune(data.fortune || null, data.meta || null, data || null);
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
     }
@@ -1068,6 +1241,30 @@
 
   if (fortuneClose){
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
+  }
+  if (fortuneExplainToggle && fortuneExplainBody){
+    fortuneExplainToggle.addEventListener('click', ()=>{
+      const expanded = fortuneExplainToggle.getAttribute('aria-expanded') === 'true';
+      fortuneExplainToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      fortuneExplainBody.hidden = expanded;
+    });
+  }
+  if (fortuneDialog){
+    fortuneDialog.addEventListener('click', (ev)=>{
+      const toggleBtn = ev.target.closest('.fortune-task-toggle');
+      if (!toggleBtn) return;
+      const wrap = ev.target.closest('.fortune-task');
+      const dateKey = wrap && wrap.dataset ? String(wrap.dataset.dateKey || '') : '';
+      const task = wrap && wrap.dataset ? String(wrap.dataset.task || '') : '';
+      if (!dateKey || !task) return;
+      const next = toggleTaskDone(dateKey, task);
+      toggleBtn.setAttribute('aria-pressed', next ? 'true' : 'false');
+      toggleBtn.textContent = next ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
+      if (next){
+        updateStreakOnComplete(dateKey);
+      }
+      renderStreak(dateKey, next);
+    });
   }
 
   restoreHeroQuizCacheFromBackup();
