@@ -146,7 +146,7 @@
       card.dataset.summary = fortune && fortune.summary ? String(fortune.summary) : '';
       card.dataset.advice = fortune && fortune.advice ? String(fortune.advice) : '';
       card.dataset.ritual = fortune && fortune.ritual ? String(fortune.ritual) : '';
-      card.dataset.mantra = fortune && fortune.mantra ? String(fortune.mantra) : '';
+      card.dataset.mantra = '';
 
       const summary = document.createElement('summary');
       summary.className = 'fortune-history-summary';
@@ -186,11 +186,11 @@
         ritualRow.className = 'fortune-history-row';
         ritualRow.textContent = `守護神語：${fortune.ritual || '—'}`;
         body.append(summaryRow, adviceRow, ritualRow);
-        if (fortune.mantra){
-          const mantraRow = document.createElement('div');
-          mantraRow.className = 'fortune-history-row';
-          mantraRow.textContent = `咒語：${fortune.mantra}`;
-          body.appendChild(mantraRow);
+        if (fortune.action && fortune.action.why){
+          const whyRow = document.createElement('div');
+          whyRow.className = 'fortune-history-row';
+          whyRow.textContent = `行動理由：${fortune.action.why}`;
+          body.appendChild(whyRow);
         }
         const actions = document.createElement('div');
         actions.className = 'fortune-history-actions';

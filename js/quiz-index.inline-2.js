@@ -2328,6 +2328,7 @@ Enter this code at checkout.`
   const fortuneRitual = document.getElementById('fortuneRitualQuiz');
   const fortuneMeta = document.getElementById('fortuneMetaQuiz');
   const fortuneRitualLabel = document.getElementById('fortuneRitualLabelQuiz');
+  let fortuneShareBtn = null;
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
   const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
@@ -2535,9 +2536,86 @@ Enter this code at checkout.`
       const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';
       fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
     }
+    ensureShareButton();
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneError) fortuneError.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = '';
+  }
+
+  function loadHtml2Canvas(){
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    return new Promise((resolve, reject)=>{
+      const src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      const existing = document.querySelector('script[data-html2canvas="1"]');
+      if (existing){
+        existing.addEventListener('load', ()=> resolve(window.html2canvas));
+        existing.addEventListener('error', ()=> reject(new Error('html2canvas_load_failed')));
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.html2canvas = '1';
+      script.onload = ()=> resolve(window.html2canvas);
+      script.onerror = ()=> reject(new Error('html2canvas_load_failed'));
+      document.head.appendChild(script);
+    });
+  }
+  async function shareFortuneCard(){
+    if (!fortuneCard) return;
+    if (fortuneShareBtn){
+      fortuneShareBtn.disabled = true;
+      fortuneShareBtn.textContent = '產生中…';
+    }
+    try{
+      const html2canvas = await loadHtml2Canvas();
+      const canvas = await html2canvas(fortuneCard, { backgroundColor:'#ffffff', scale:2, useCORS:true, allowTaint:false, imageTimeout:15000 });
+      let blob = null;
+      if (canvas.toBlob){
+        blob = await new Promise(resolve=> canvas.toBlob(resolve, 'image/png'));
+      }
+      if (!blob){
+        const dataUrl = canvas.toDataURL('image/png');
+        blob = await fetch(dataUrl).then(res=>res.blob());
+      }
+      if (!blob) throw new Error('圖片產生失敗');
+      const dateKey = (lastFortunePayload && lastFortunePayload.dateKey) || (lastFortunePayload && lastFortunePayload.fortune && lastFortunePayload.fortune.date) || 'today';
+      const fileName = `fortune-${String(dateKey).replace(/\\//g,'-')}.png`;
+      const file = new File([blob], fileName, { type:'image/png' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
+        await navigator.share({ title:'我的今日日籤', files:[file] });
+      }else{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=> URL.revokeObjectURL(url), 500);
+      }
+    }catch(err){
+      alert(err && err.message ? err.message : '分享失敗，請稍後再試。');
+    }finally{
+      if (fortuneShareBtn){
+        fortuneShareBtn.disabled = false;
+        fortuneShareBtn.textContent = '自動截圖分享';
+      }
+    }
+  }
+  function ensureShareButton(){
+    if (!fortuneCard) return;
+    if (!fortuneShareBtn){
+      fortuneShareBtn = fortuneCard.querySelector('.fortune-share-btn');
+    }
+    if (!fortuneShareBtn){
+      fortuneShareBtn = document.createElement('button');
+      fortuneShareBtn.type = 'button';
+      fortuneShareBtn.className = 'fortune-share-btn';
+      fortuneShareBtn.textContent = '自動截圖分享';
+      fortuneCard.appendChild(fortuneShareBtn);
+      fortuneShareBtn.addEventListener('click', shareFortuneCard);
+    }
   }
   function cachePendingQuizSync(){
     try{
