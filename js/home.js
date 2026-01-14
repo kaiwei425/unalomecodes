@@ -634,13 +634,16 @@
   const heroBadge = document.getElementById('heroGuardianBadge');
   const heroBadgeMenu = heroBadge ? heroBadge.querySelector('[data-hero-guardian-menu]') : null;
   const heroBadgeLabel = heroBadge ? heroBadge.querySelector('[data-hero-guardian-label]') : null;
-  const heroDailyAction = heroBadge ? heroBadge.querySelector('[data-hero-guardian-action="daily"]') : null;
-  const heroDailyBadge = heroDailyAction ? heroDailyAction.querySelector('.guardian-menu-badge') : null;
+  let heroDailyAction = null;
+  let heroDailyBadge = null;
   const heroCTA = document.querySelector('[data-hero-quiz-cta]');
   const heroNote = document.querySelector('.hero-cta__note');
   const dailyModal = document.getElementById('dailyFortuneModal');
   const dailyConfirm = document.getElementById('dailyFortuneConfirm');
   const dailyCancel = document.getElementById('dailyFortuneCancel');
+  const historyDialog = document.getElementById('fortuneHistoryDialog');
+  const historyList = document.getElementById('fortuneHistoryList');
+  const historyError = document.getElementById('fortuneHistoryError');
   const heroInfoTrigger = document.getElementById('heroInfoTrigger');
   const heroInfoDialog = document.getElementById('heroInfoDialog');
   const fortuneDialog = document.getElementById('fortuneDialogHome');
@@ -972,6 +975,14 @@
   function showHeroBadge(){
     if (!heroBadge || !heroCTA) return;
     if (!shouldShowHeroBadge()) return;
+    if (heroBadgeMenu && window.GuardianMenu && !heroBadgeMenu.dataset.menuReady){
+      heroBadgeMenu.innerHTML = window.GuardianMenu.buildMenuHTML({ actionAttr:'data-hero-guardian-action' });
+      heroBadgeMenu.dataset.menuReady = '1';
+    }
+    if (heroBadgeMenu){
+      heroDailyAction = heroBadgeMenu.querySelector('[data-hero-guardian-action="daily"]');
+      heroDailyBadge = heroDailyAction ? heroDailyAction.querySelector('.guardian-menu-badge') : null;
+    }
     setHeroBadgeVisible(true);
     setHeroCtaVisible(false);
     if (heroNote) heroNote.style.display = 'none';
@@ -1040,6 +1051,23 @@
       openFortuneDialog();
       return;
     }
+    if (type === 'history'){
+      const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+        ? window.authState.isLoggedIn()
+        : false;
+      if (!loggedIn){
+        showDailyModal();
+        return;
+      }
+      if (window.GuardianMenu && historyDialog){
+        window.GuardianMenu.openHistoryDialog({
+          dialog: historyDialog,
+          listEl: historyList,
+          errorEl: historyError
+        });
+      }
+      return;
+    }
     if (type === 'retake'){
       const lastTs = getLastQuizTimestamp();
       if (lastTs && isSameTaipeiDay(lastTs, Date.now())){
@@ -1050,6 +1078,12 @@
       return;
     }
     if (type === 'result'){
+      if (window.GuardianMenu){
+        window.GuardianMenu.persistLastQuizResult({
+          guardian,
+          quiz: getActiveQuizProfile()
+        });
+      }
       window.location.href = '/quiz/';
       return;
     }
@@ -1262,6 +1296,13 @@
         if (typeof heroInfoDialog.close === 'function') heroInfoDialog.close();
         else heroInfoDialog.removeAttribute('open');
       }
+    });
+  }
+  if (historyDialog && window.GuardianMenu){
+    window.GuardianMenu.bindHistoryDialog({
+      dialog: historyDialog,
+      listEl: historyList,
+      errorEl: historyError
     });
   }
 

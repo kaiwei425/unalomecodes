@@ -48,6 +48,9 @@
   const recommendClose = document.getElementById('guardianRecommendClose');
   const recommendName = document.getElementById('guardianRecommendName');
   const recommendList = document.getElementById('guardianRecommendList');
+  const historyDialog = document.getElementById('fortuneHistoryDialog');
+  const historyList = document.getElementById('fortuneHistoryList');
+  const historyError = document.getElementById('fortuneHistoryError');
   let lastFortune = null;
   let lastGuardianName = '';
   let lastGuardianCode = '';
@@ -99,7 +102,7 @@
   function updateFortuneAlert(){
     if (!badge) return;
     const alertEl = badge.querySelector('[data-guardian-alert]');
-    const menuBadge = badge.querySelector('[data-guardian-menu-badge]');
+    const menuBadge = badge.querySelector('.guardian-menu-badge');
     if (!alertEl) return;
     if (shouldShowFortuneAlert()){
       alertEl.textContent = '1';
@@ -486,6 +489,21 @@
     return null;
   }catch(_){ return null; }
   }
+  function readQuizProfile(){
+    try{
+      const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+        ? window.authState.isLoggedIn()
+        : false;
+      if (loggedIn && window.authState && typeof window.authState.getProfile === 'function'){
+        const p = window.authState.getProfile();
+        if (p && p.quiz) return p.quiz;
+      }
+      const raw = localStorage.getItem('__lastQuizProfile__');
+      return raw ? JSON.parse(raw) : null;
+    }catch(_){
+      return null;
+    }
+  }
   function render(){
     if (!badge) return;
     const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
@@ -506,6 +524,9 @@
     badge.setAttribute('tabindex', '0');
     badge.setAttribute('aria-haspopup', 'menu');
     badge.setAttribute('aria-expanded', 'false');
+    const menuHtml = window.GuardianMenu
+      ? window.GuardianMenu.buildMenuHTML({ actionAttr:'data-guardian-action' })
+      : `<button type="button" data-guardian-action="fortune">領取日籤 <span class="guardian-menu-badge" data-guardian-menu-badge aria-hidden="true">1</span></button>`;
     badge.innerHTML = `
       <span class="guardian-alert" data-guardian-alert aria-hidden="true">1</span>
       <img src="${badgeIcon}" alt="守護神">
@@ -514,9 +535,7 @@
         <span class="guardian-sub">點擊徽章開啟選單</span>
       </div>
       <div class="guardian-menu" data-guardian-menu role="menu" aria-hidden="true">
-        <button type="button" data-guardian-action="fortune">領取日籤 <span class="guardian-menu-badge" data-guardian-menu-badge aria-hidden="true">1</span></button>
-        <a href="/deity?code=${code}" data-guardian-action="intro">守護神介紹</a>
-        <button type="button" data-guardian-action="recommend">推薦商品</button>
+        ${menuHtml}
       </div>
     `;
     badge.style.display = 'flex';
@@ -528,8 +547,44 @@
         const action = e.target.closest('[data-guardian-action]');
         if (action){
           const type = action.getAttribute('data-guardian-action');
-          if (type === 'fortune'){
+          if (type === 'daily'){
             openFortuneDialog();
+            closeMenu();
+            return;
+          }
+          if (type === 'history'){
+            const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+              ? window.authState.isLoggedIn()
+              : false;
+            if (!loggedIn){
+              if (window.authState && typeof window.authState.promptLogin === 'function'){
+                window.authState.promptLogin('請先登入後再查看近期日籤。');
+              }
+              return;
+            }
+            if (window.GuardianMenu && historyDialog){
+              window.GuardianMenu.openHistoryDialog({
+                dialog: historyDialog,
+                listEl: historyList,
+                errorEl: historyError
+              });
+            }
+            closeMenu();
+            return;
+          }
+          if (type === 'result'){
+            if (window.GuardianMenu){
+              window.GuardianMenu.persistLastQuizResult({
+                guardian: readGuardian(),
+                quiz: readQuizProfile()
+              });
+            }
+            window.location.href = '/quiz/';
+            closeMenu();
+            return;
+          }
+          if (type === 'retake'){
+            window.location.href = '/quiz/?retake=1';
             closeMenu();
             return;
           }
@@ -539,6 +594,11 @@
             return;
           }
           if (type === 'intro'){
+            if (code){
+              window.location.href = `/deity?code=${encodeURIComponent(code)}`;
+              closeMenu();
+              return;
+            }
             closeMenu();
             return;
           }
@@ -573,6 +633,13 @@
   }
   if (recommendClose){
     recommendClose.addEventListener('click', ()=> closeDialog(recommendDialog));
+  }
+  if (historyDialog && window.GuardianMenu){
+    window.GuardianMenu.bindHistoryDialog({
+      dialog: historyDialog,
+      listEl: historyList,
+      errorEl: historyError
+    });
   }
   if (fortuneShareBtn){
     fortuneShareBtn.addEventListener('click', shareFortuneImage);

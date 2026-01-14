@@ -16,6 +16,7 @@
   <meta property="og:image" content="https://unalomecodes.com/img/logo.png">
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="/css/home.css">
+  <link rel="stylesheet" href="/css/guardian-menu.css">
 </head>
 <body data-page-key="home">
   <div class="page">
@@ -144,6 +145,16 @@
             <p><strong>• 守護神解讀</strong><br>依你的守護神性格，給出不同的行動提醒。</p>
             <p>每天的位置不同，解讀也會不同。</p>
           </div>
+        </div>
+      </dialog>
+      <dialog id="fortuneHistoryDialog" class="fortune-history-dialog">
+        <div class="fortune-history-card">
+          <div class="fortune-history-head">
+            <div class="fortune-history-title">近期日籤（近七天）</div>
+            <button type="button" class="fortune-history-close" data-guardian-history-close aria-label="關閉">✕</button>
+          </div>
+          <div class="fortune-history-error" id="fortuneHistoryError" style="display:none;"></div>
+          <div class="fortune-history-list" id="fortuneHistoryList"></div>
         </div>
       </dialog>
       <dialog id="fortuneDialogHome" class="fortune-dialog">
@@ -324,6 +335,7 @@
   </div>
   <script src="/js/auth.js"></script>
   <script src="/js/track.js"></script>
+  <script src="/js/guardian-menu.js"></script>
   <script src="/js/home.js"></script>
   <script src="/js/page-admin.js"></script>
   <script>

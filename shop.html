@@ -48,6 +48,7 @@
 <link rel="stylesheet" href="/css/style.css">
 <meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="/css/shop.inline-1.css">
+<link rel="stylesheet" href="/css/guardian-menu.css">
 </head>
 <body>
 <script src="/js/shop.inline-1.js"></script>
@@ -266,6 +267,16 @@
     <div class="guardian-recommend-list" id="guardianRecommendList">
       <div class="guardian-recommend-empty">推薦商品載入中…</div>
     </div>
+  </div>
+</dialog>
+<dialog id="fortuneHistoryDialog" class="fortune-history-dialog">
+  <div class="fortune-history-card">
+    <div class="fortune-history-head">
+      <div class="fortune-history-title">近期日籤（近七天）</div>
+      <button type="button" class="fortune-history-close" data-guardian-history-close aria-label="關閉">✕</button>
+    </div>
+    <div class="fortune-history-error" id="fortuneHistoryError" style="display:none;"></div>
+    <div class="fortune-history-list" id="fortuneHistoryList"></div>
   </div>
 </dialog>
 
@@ -740,6 +751,7 @@
 <script src="/js/shop.inline-25.js"></script>
 <script src="/js/shop.inline-26.js"></script>
 <link rel="stylesheet" href="/css/shop.inline-3.css">
+<script src="/js/guardian-menu.js"></script>
 <script src="/js/shop.inline-27.js"></script>
 </body>
 </html>

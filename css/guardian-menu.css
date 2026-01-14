@@ -1,0 +1,75 @@
+.fortune-history-dialog{
+  border:none;
+  border-radius:16px;
+  padding:0;
+  max-width:620px;
+  width:94%;
+  background:#fff;
+  color:#0f172a;
+  box-shadow:0 30px 70px rgba(0,0,0,.35);
+}
+.fortune-history-card{
+  padding:20px;
+  display:grid;
+  gap:12px;
+}
+.fortune-history-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.fortune-history-title{
+  font-size:18px;
+  font-weight:700;
+}
+.fortune-history-close{
+  border:none;
+  background:#f1f5f9;
+  color:#0f172a;
+  border-radius:999px;
+  width:28px;
+  height:28px;
+  cursor:pointer;
+}
+.fortune-history-error{
+  padding:10px 12px;
+  border-radius:10px;
+  background:#fef2f2;
+  border:1px solid rgba(239,68,68,.2);
+  color:#991b1b;
+  font-size:13px;
+}
+.fortune-history-loading{
+  font-size:13px;
+  color:#64748b;
+}
+.fortune-history-list{
+  display:grid;
+  gap:10px;
+}
+.fortune-history-item{
+  border:1px solid rgba(148,163,184,.25);
+  border-radius:12px;
+  padding:10px 12px;
+  background:#f8fafc;
+}
+.fortune-history-item summary{
+  cursor:pointer;
+  font-size:13px;
+  color:#0f172a;
+  list-style:none;
+}
+.fortune-history-item summary::-webkit-details-marker{
+  display:none;
+}
+.fortune-history-body{
+  margin-top:8px;
+  font-size:12px;
+  color:#475569;
+  display:grid;
+  gap:6px;
+}
+.fortune-history-row strong{
+  color:#0f172a;
+}
