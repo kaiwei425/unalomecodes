@@ -2289,6 +2289,15 @@ Enter this code at checkout.`
   const TASK_KEY_PREFIX = 'FORTUNE_TASK_DONE';
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
   const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
+  function fnv1aHash(str){
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++){
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
   function simpleHash(str){
     return fnv1aHash(String(str || '')).toString(16);
   }
