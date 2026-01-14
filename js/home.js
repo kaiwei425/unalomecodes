@@ -661,6 +661,7 @@
   const fortuneExplainDesc = document.getElementById('fortuneExplainDescHome');
   const fortuneExplainHow = document.getElementById('fortuneExplainHowHome');
   const fortuneAdvice = document.getElementById('fortuneAdviceHome');
+  const fortuneYam = fortuneDialog ? fortuneDialog.querySelector('[data-yam-container]') : null;
   const fortuneTaskWrap = document.getElementById('fortuneTaskWrapHome');
   const fortuneTaskText = document.getElementById('fortuneTaskTextHome');
   const fortuneTaskToggle = document.getElementById('fortuneTaskToggleHome');
@@ -1196,6 +1197,12 @@
     if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
     renderExplain(fortune);
     if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    if (fortuneYam && window.YamUbakongUI){
+      window.YamUbakongUI.renderYamUbakong({ containerEl: fortuneYam, payload: data || {} });
+    }else if (fortuneYam){
+      fortuneYam.style.display = 'none';
+      fortuneYam.innerHTML = '';
+    }
     renderTask(fortune, data);
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
     if (fortuneMeta){

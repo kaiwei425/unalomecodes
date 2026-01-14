@@ -2319,6 +2319,7 @@ Enter this code at checkout.`
   const fortuneExplainDesc = document.getElementById('fortuneExplainDescQuiz');
   const fortuneExplainHow = document.getElementById('fortuneExplainHowQuiz');
   const fortuneAdvice = document.getElementById('fortuneAdviceQuiz');
+  const fortuneYam = fortuneDialog ? fortuneDialog.querySelector('[data-yam-container]') : null;
   const fortuneTaskWrap = document.getElementById('fortuneTaskWrapQuiz');
   const fortuneTaskText = document.getElementById('fortuneTaskTextQuiz');
   const fortuneTaskToggle = document.getElementById('fortuneTaskToggleQuiz');
@@ -2488,6 +2489,12 @@ function renderFortune(fortune, meta, data){
     if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
     renderExplain(fortune);
     if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    if (fortuneYam && window.YamUbakongUI){
+      window.YamUbakongUI.renderYamUbakong({ containerEl: fortuneYam, payload: data || {} });
+    }else if (fortuneYam){
+      fortuneYam.style.display = 'none';
+      fortuneYam.innerHTML = '';
+    }
     renderTask(fortune, data);
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
     if (fortuneMeta){

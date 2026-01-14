@@ -39,6 +39,7 @@
   const fortuneDate = document.getElementById('fortuneDate');
   const fortuneStars = document.getElementById('fortuneStars');
   const fortuneSummary = document.getElementById('fortuneSummary');
+  const fortuneYam = fortuneDialog ? fortuneDialog.querySelector('[data-yam-container]') : null;
   const fortuneAdvice = document.getElementById('fortuneAdvice');
   const fortuneRitual = document.getElementById('fortuneRitual');
   const fortuneMeta = document.getElementById('fortuneMeta');
@@ -223,7 +224,7 @@
     if (fortuneLoading) fortuneLoading.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = 'none';
   }
-  function renderFortune(fortune){
+  function renderFortune(fortune, data){
     if (!fortune) return;
     lastFortune = fortune;
     if (fortuneDate) fortuneDate.textContent = fortune.date || '';
@@ -234,6 +235,12 @@
     }
     if (fortuneSummary) fortuneSummary.textContent = fortune.summary || '';
     if (fortuneAdvice) fortuneAdvice.textContent = fortune.advice || '';
+    if (fortuneYam && window.YamUbakongUI){
+      window.YamUbakongUI.renderYamUbakong({ containerEl: fortuneYam, payload: data || {} });
+    }else if (fortuneYam){
+      fortuneYam.style.display = 'none';
+      fortuneYam.innerHTML = '';
+    }
     if (fortuneRitual) fortuneRitual.textContent = fortune.ritual || '';
     if (fortuneMeta){
       const meta = fortune.meta || {};
@@ -268,7 +275,7 @@
         throw new Error((data && data.error) || '取得日籤失敗');
       }
       const fortune = data.fortune || null;
-      renderFortune(fortune);
+      renderFortune(fortune, data || null);
       if (fortune) markFortuneClaimed();
     }catch(err){
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
