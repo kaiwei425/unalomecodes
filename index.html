@@ -113,6 +113,7 @@
                 </div>
                 <a class="hero-cta__secondary" href="/templemap" data-i18n="home-hero-cta-secondary" data-hero-temple-cta>探索寺廟地圖</a>
               </div>
+              <button type="button" class="hero-info-link" id="heroInfoTrigger">ℹ️ 這份運勢怎麼來的？</button>
               <p class="hero-cta__note" data-i18n="home-hero-cta-note">完成後會得到命中指引、行動建議與可下載的守護卡</p>
             </div>
             <p class="lead-sub" data-edit-key="home-hero-lead" style="display:none;"></p>
@@ -130,6 +131,21 @@
           </div>
         </div>
       </div>
+      <dialog id="heroInfoDialog" class="hero-info-dialog">
+        <div class="hero-info-card">
+          <div class="hero-info-head">
+            <h3>📜 這份每日運勢怎麼產生？</h3>
+            <button type="button" class="hero-info-close" data-hero-info-close aria-label="關閉">✕</button>
+          </div>
+          <div class="hero-info-body">
+            <p>我們的每日運勢並非隨機生成，而是基於泰國傳統命理系統：</p>
+            <p><strong>• Maha Taksa（大特薩）</strong><br>你的出生日 × 今日能量，決定你今天所處的位置（如財富日、修復日）。</p>
+            <p><strong>• Yam Ubakong（烏巴公時光）</strong><br>指出今天適合行動的時段，以及應該放慢的時間。</p>
+            <p><strong>• 守護神解讀</strong><br>依你的守護神性格，給出不同的行動提醒。</p>
+            <p>每天的位置不同，解讀也會不同。</p>
+          </div>
+        </div>
+      </dialog>
       <dialog id="fortuneDialogHome" class="fortune-dialog">
         <div class="fortune-shell">
           <div class="fortune-head">

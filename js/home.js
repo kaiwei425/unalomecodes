@@ -641,6 +641,8 @@
   const dailyModal = document.getElementById('dailyFortuneModal');
   const dailyConfirm = document.getElementById('dailyFortuneConfirm');
   const dailyCancel = document.getElementById('dailyFortuneCancel');
+  const heroInfoTrigger = document.getElementById('heroInfoTrigger');
+  const heroInfoDialog = document.getElementById('heroInfoDialog');
   const fortuneDialog = document.getElementById('fortuneDialogHome');
   const fortuneClose = document.getElementById('fortuneCloseHome');
   const fortuneLoading = document.getElementById('fortuneLoadingHome');
@@ -1246,6 +1248,21 @@
   }
   if (dailyCancel){
     dailyCancel.addEventListener('click', hideDailyModal);
+  }
+  if (heroInfoTrigger && heroInfoDialog){
+    heroInfoTrigger.addEventListener('click', ()=>{
+      if (typeof heroInfoDialog.showModal === 'function'){
+        if (!heroInfoDialog.open) heroInfoDialog.showModal();
+      }else{
+        heroInfoDialog.setAttribute('open','open');
+      }
+    });
+    heroInfoDialog.addEventListener('click', (ev)=>{
+      if (ev.target === heroInfoDialog || ev.target.closest('[data-hero-info-close]')){
+        if (typeof heroInfoDialog.close === 'function') heroInfoDialog.close();
+        else heroInfoDialog.removeAttribute('open');
+      }
+    });
   }
 
   if (fortuneClose){

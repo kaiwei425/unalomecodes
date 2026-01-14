@@ -721,6 +721,64 @@ body.nav-open .nav-drawer__panel{
   justify-content:center;
   line-height:1;
 }
+.hero-info-link{
+  margin-top:10px;
+  border:none;
+  background:transparent;
+  color:#64748b;
+  font-size:12px;
+  text-align:left;
+  cursor:pointer;
+}
+.hero-info-link:hover{
+  color:#475569;
+}
+.hero-info-dialog{
+  border:none;
+  border-radius:16px;
+  padding:0;
+  max-width:520px;
+  width:92%;
+  background:#fff;
+  color:#0f172a;
+  box-shadow:0 30px 70px rgba(0,0,0,.35);
+}
+.hero-info-card{
+  padding:20px;
+  display:grid;
+  gap:12px;
+}
+.hero-info-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.hero-info-head h3{
+  font-size:18px;
+  font-weight:700;
+  margin:0;
+}
+.hero-info-close{
+  border:none;
+  background:#f1f5f9;
+  color:#0f172a;
+  border-radius:999px;
+  width:28px;
+  height:28px;
+  cursor:pointer;
+}
+.hero-info-body{
+  font-size:13px;
+  line-height:1.7;
+  color:#475569;
+}
+.hero-info-body p{
+  margin:0 0 10px;
+}
+.hero-info-body strong{
+  color:#0f172a;
+}
 @media(max-width:560px){
   .hero-guardian-badge{
     justify-content:center;
