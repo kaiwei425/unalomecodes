@@ -1230,10 +1230,23 @@
     }
   }
 
-  function openFortuneDialog(){
+  async function openFortuneDialog(){
     if (!fortuneDialog) return;
-    showDialog(fortuneDialog);
-    fetchFortune();
+    if (window.__fortuneClaimLock) return;
+    window.__fortuneClaimLock = true;
+    try{
+      if (window.authState && typeof window.authState.syncPendingQuizToAccount === 'function'){
+        const res = await window.authState.syncPendingQuizToAccount();
+        if (res && res.ok === false){
+          alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
+          return;
+        }
+      }
+      showDialog(fortuneDialog);
+      await fetchFortune();
+    } finally {
+      window.__fortuneClaimLock = false;
+    }
   }
 
   if (heroBadge){

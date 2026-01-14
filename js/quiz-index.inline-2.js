@@ -1414,6 +1414,7 @@ if (lineRetakeBtn){
 }
 
 const FORTUNE_AUTO_KEY = '__quizOpenFortune__';
+const PENDING_QUIZ_SYNC_KEY = 'PENDING_QUIZ_SYNC';
 
 const dowBox = document.getElementById('dowBox');
 const zodiacBox = document.getElementById('zodiacBox');
@@ -2476,7 +2477,7 @@ Enter this code at checkout.`
     fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
     renderStreak(dateKey, done);
   }
-  function renderFortune(fortune, meta, data){
+function renderFortune(fortune, meta, data){
     if (!fortune) return;
     if (fortuneDate) fortuneDate.textContent = fortune.date || '';
     if (fortuneStars){
@@ -2511,6 +2512,22 @@ Enter this code at checkout.`
     if (fortuneError) fortuneError.style.display = 'none';
     if (fortuneCard) fortuneCard.style.display = '';
   }
+  function cachePendingQuizSync(){
+    try{
+      const guardian = loadStoredGuardian() || {};
+      const code = String(guardian.code || guardian.id || (lastGuardianCard && lastGuardianCard.code) || '').trim().toUpperCase();
+      if (!code) return;
+      const name = String(guardian.name || (lastGuardianCard && lastGuardianCard.name) || deityName(code, 'zh') || '').trim();
+      const quizProfile = loadStoredQuizProfile();
+      const payload = {
+        guardianCode: code,
+        guardianName: name,
+        quizProfile: quizProfile || null,
+        createdAt: Date.now()
+      };
+      sessionStorage.setItem(PENDING_QUIZ_SYNC_KEY, JSON.stringify(payload));
+    }catch(_){}
+  }
   async function fetchFortune(){
     setFortuneLoading();
     try{
@@ -2530,6 +2547,7 @@ Enter this code at checkout.`
     if (!loggedIn){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
         backupQuizCache();
+        cachePendingQuizSync();
         try{ sessionStorage.setItem(FORTUNE_AUTO_KEY, '1'); }catch(_){}
         window.authState.promptLogin('請先登入後再領取每日運勢。');
         return;
@@ -2545,7 +2563,27 @@ Enter this code at checkout.`
       const pending = sessionStorage.getItem(FORTUNE_AUTO_KEY) === '1';
       const loggedIn = window.authState && typeof window.authState.isLoggedIn==='function' ? window.authState.isLoggedIn() : false;
       if (!pending || !loggedIn) return;
+      if (window.__fortuneClaimLock) return;
+      window.__fortuneClaimLock = true;
       sessionStorage.removeItem(FORTUNE_AUTO_KEY);
+      const syncer = window.authState && typeof window.authState.syncPendingQuizToAccount === 'function'
+        ? window.authState.syncPendingQuizToAccount
+        : null;
+      if (syncer){
+        syncer().then((res)=>{
+          window.__fortuneClaimLock = false;
+          if (!res || res.ok === false){
+            alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
+            return;
+          }
+          openFortuneDialog();
+        }).catch(()=>{
+          window.__fortuneClaimLock = false;
+          alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
+        });
+        return;
+      }
+      window.__fortuneClaimLock = false;
       openFortuneDialog();
     }catch(_){}
   }

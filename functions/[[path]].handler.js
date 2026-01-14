@@ -1,4 +1,11 @@
 // functions/[[path]].handler.js
+import {
+  getMahaTaksa,
+  getThaiDayColor,
+  toWeekdayKey,
+  deriveTabooColor
+} from '../lib/mahataksa.js';
+import { getYamUbakong } from '../lib/ubakong.js';
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Access-Control-Allow-Origin': '*',
@@ -2276,44 +2283,6 @@ function thaiDayColor(dow){
   const map = ['紅','黃','粉紅','綠','橘','藍','紫'];
   return map[dow] || '';
 }
-const PHUM_ORDER = ['BORIWAN','AYU','DECH','SRI','MULA','UTSAHA','MONTRI','KALAKINI'];
-const TAKSA_MAP = {
-  SUN:[1,2,3,4,7,5,8,6],
-  MON:[2,3,4,7,5,8,6,1],
-  TUE:[3,4,7,5,8,6,1,2],
-  WED:[4,7,5,8,6,1,2,3],
-  THU:[5,8,6,1,2,3,4,7],
-  FRI:[6,1,2,3,4,7,5,8],
-  SAT:[7,5,8,6,1,2,3,4],
-  WED_NIGHT:[8,6,1,2,3,4,7,5]
-};
-const WEEKDAY_KEYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-const DAY_COLOR = {
-  SUN:'Red',
-  MON:'Yellow',
-  TUE:'Pink',
-  WED:'Green/Grey',
-  THU:'Orange',
-  FRI:'Blue',
-  SAT:'Purple',
-  WED_NIGHT:'Green/Grey'
-};
-const YAM_SLOTS = {
-  MORNING:{ start:'06:01', end:'08:24' },
-  LATE_MORNING:{ start:'08:25', end:'10:48' },
-  MIDDAY:{ start:'10:49', end:'13:12' },
-  AFTERNOON:{ start:'13:13', end:'15:36' },
-  EVENING:{ start:'15:37', end:'18:00' }
-};
-const YAM_TABLE = {
-  SUN:{ MORNING:'BEST', LATE_MORNING:'GOOD', MIDDAY:'CAUTION', AFTERNOON:'FORBIDDEN', EVENING:'GOOD' },
-  MON:{ MORNING:'GOOD', LATE_MORNING:'BEST', MIDDAY:'CAUTION', AFTERNOON:'GOOD', EVENING:'FORBIDDEN' },
-  TUE:{ MORNING:'CAUTION', LATE_MORNING:'GOOD', MIDDAY:'BEST', AFTERNOON:'FORBIDDEN', EVENING:'GOOD' },
-  WED:{ MORNING:'GOOD', LATE_MORNING:'CAUTION', MIDDAY:'GOOD', AFTERNOON:'BEST', EVENING:'FORBIDDEN' },
-  THU:{ MORNING:'BEST', LATE_MORNING:'GOOD', MIDDAY:'FORBIDDEN', AFTERNOON:'GOOD', EVENING:'CAUTION' },
-  FRI:{ MORNING:'GOOD', LATE_MORNING:'BEST', MIDDAY:'CAUTION', AFTERNOON:'GOOD', EVENING:'FORBIDDEN' },
-  SAT:{ MORNING:'CAUTION', LATE_MORNING:'GOOD', MIDDAY:'BEST', AFTERNOON:'FORBIDDEN', EVENING:'GOOD' }
-};
 const PHUM_LABEL = {
   BORIWAN:'บริวาร (Boriwan)',
   AYU:'อายุ (Ayu)',
@@ -2330,87 +2299,12 @@ const MANTRA_LIST = [
   'นะโม พุท ธา ยะ',
   'โอม สุขะโต'
 ];
-function getDayPlanetNo(weekdayKey){
-  const key = String(weekdayKey || '').toUpperCase();
-  if (key === 'SUN') return 1;
-  if (key === 'MON') return 2;
-  if (key === 'TUE') return 3;
-  if (key === 'WED') return 4;
-  if (key === 'THU') return 5;
-  if (key === 'FRI') return 6;
-  if (key === 'SAT') return 7;
-  if (key === 'WED_NIGHT') return 8;
-  return 0;
-}
-function getMahaTaksa(birthDayKey, todayWeekdayKey){
-  const birthKey = String(birthDayKey || '').toUpperCase();
-  const todayKey = String(todayWeekdayKey || '').toUpperCase();
-  const dayPlanetNo = getDayPlanetNo(todayKey);
-  const row = TAKSA_MAP[birthKey];
-  const idx = row ? row.indexOf(dayPlanetNo) : -1;
-  const phum = idx >= 0 ? PHUM_ORDER[idx] : '';
-  return {
-    birthDayKey: birthKey,
-    todayWeekdayKey: todayKey,
-    dayPlanetNo,
-    phum,
-    isWarning: phum === 'KALAKINI'
-  };
-}
-function getThaiDayColor(todayWeekdayKey){
-  const key = String(todayWeekdayKey || '').toUpperCase();
-  return DAY_COLOR[key] || '';
-}
-function getYamUbakong(todayWeekdayKey){
-  const key = String(todayWeekdayKey || '').toUpperCase();
-  const table = YAM_TABLE[key] || {};
-  const slots = Object.keys(YAM_SLOTS).map(slotKey=>{
-    const time = YAM_SLOTS[slotKey];
-    return {
-      slot: slotKey,
-      start: time.start,
-      end: time.end,
-      level: table[slotKey] || 'GOOD'
-    };
-  });
-  let best = slots.filter(s=> s.level === 'BEST');
-  if (!best.length) best = slots.filter(s=> s.level === 'GOOD');
-  const good = slots.filter(s=> s.level === 'GOOD');
-  const forbidden = slots.filter(s=> s.level === 'FORBIDDEN');
-  return {
-    slots,
-    best,
-    good,
-    forbidden: forbidden.length ? [forbidden[0]] : []
-  };
-}
-function toWeekdayKey(dowIndex){
-  // JS Date.getDay(): 0=Sunday..6=Saturday
-  if (Number.isInteger(dowIndex)){
-    if (dowIndex >= 0 && dowIndex <= 6) return WEEKDAY_KEYS[dowIndex] || '';
-    if (dowIndex >= 1 && dowIndex <= 7) return WEEKDAY_KEYS[(dowIndex - 1) % 7] || '';
-  }
-  return '';
-}
 function toBirthWeekdayKey(quiz){
   const raw = String(quiz?.dow || '').trim();
   if (!raw) return '';
   const map = { Sun:'SUN', Mon:'MON', Tue:'TUE', Wed:'WED', Thu:'THU', Fri:'FRI', Sat:'SAT' };
   const key = map[raw] || map[raw.slice(0,3)];
   return key || raw.toUpperCase();
-}
-function deriveTabooColor(birthDayKey){
-  const key = String(birthDayKey || '').toUpperCase();
-  const row = TAKSA_MAP[key];
-  if (!row) return '';
-  const kalIndex = PHUM_ORDER.indexOf('KALAKINI');
-  const kalStar = row[kalIndex];
-  if (kalStar === 8) return 'Green/Grey';
-  if (kalStar >= 1 && kalStar <= 7){
-    const weekdayKey = WEEKDAY_KEYS[kalStar - 1];
-    return DAY_COLOR[weekdayKey] || '';
-  }
-  return '';
 }
 function buildLuckyNumbers(seedStr){
   const base = fnv1aHash(seedStr);

@@ -51,6 +51,7 @@
   const historyDialog = document.getElementById('fortuneHistoryDialog');
   const historyList = document.getElementById('fortuneHistoryList');
   const historyError = document.getElementById('fortuneHistoryError');
+  const SHOP_FORTUNE_PENDING = '__shopFortunePending__';
   let lastFortune = null;
   let lastGuardianName = '';
   let lastGuardianCode = '';
@@ -273,18 +274,32 @@
       setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
     }
   }
-  function openFortuneDialog(){
+  async function openFortuneDialog(){
     const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
       ? window.authState.isLoggedIn()
       : false;
     if (!loggedIn){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
+        try{ sessionStorage.setItem(SHOP_FORTUNE_PENDING, '1'); }catch(_){}
         window.authState.promptLogin('請先登入後再領取日籤。');
       }
       return;
     }
-    showDialog(fortuneDialog);
-    fetchFortune();
+    if (window.__fortuneClaimLock) return;
+    window.__fortuneClaimLock = true;
+    try{
+      if (window.authState && typeof window.authState.syncPendingQuizToAccount === 'function'){
+        const res = await window.authState.syncPendingQuizToAccount();
+        if (res && res.ok === false){
+          alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
+          return;
+        }
+      }
+      showDialog(fortuneDialog);
+      await fetchFortune();
+    } finally {
+      window.__fortuneClaimLock = false;
+    }
   }
   function openMenu(){
     if (!badge) return;
@@ -628,7 +643,19 @@
     }
   }
   if (window.authState && typeof window.authState.onProfile === 'function'){
-    window.authState.onProfile(()=>render());
+    window.authState.onProfile(()=>{
+      render();
+      try{
+        const pending = sessionStorage.getItem(SHOP_FORTUNE_PENDING);
+        const loggedIn = window.authState && typeof window.authState.isLoggedIn === 'function'
+          ? window.authState.isLoggedIn()
+          : false;
+        if (pending && loggedIn){
+          sessionStorage.removeItem(SHOP_FORTUNE_PENDING);
+          openFortuneDialog();
+        }
+      }catch(_){}
+    });
   }
   // 若剛登入後端尚未回傳 guardian，稍後再補一次
   setTimeout(render, 800);

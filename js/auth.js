@@ -154,6 +154,7 @@
   let bindingGuardian = false;
   const QUIZ_BIND_KEY = '__lastQuizBindPending__';
   const QUIZ_BIND_TTL = 2 * 60 * 60 * 1000;
+  const PENDING_QUIZ_SYNC_KEY = 'PENDING_QUIZ_SYNC';
   function clearLocalQuizCache(){
     try{
       localStorage.removeItem('__lastQuizGuardian__');
@@ -235,6 +236,73 @@
     if (typeof value === 'number') return value;
     const parsed = Date.parse(value);
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  function readPendingQuizSync(){
+    try{
+      const raw = sessionStorage.getItem(PENDING_QUIZ_SYNC_KEY);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.guardianCode) return null;
+      const code = String(obj.guardianCode || '').trim().toUpperCase();
+      if (!code) return null;
+      return {
+        code,
+        name: String(obj.guardianName || '').trim(),
+        quiz: obj.quizProfile || null,
+        createdAt: obj.createdAt || Date.now()
+      };
+    }catch(_){
+      return null;
+    }
+  }
+
+  function clearPendingQuizSync(){
+    try{ sessionStorage.removeItem(PENDING_QUIZ_SYNC_KEY); }catch(_){}
+  }
+
+  async function syncPendingQuizToAccount(){
+    const pending = readPendingQuizSync();
+    if (!pending) return { ok:true };
+    if (!state.user) return { ok:false, reason:'not_logged_in' };
+    try{
+      const guardianPayload = {
+        code: pending.code,
+        name: pending.name || pending.code,
+        ts: new Date(pending.createdAt || Date.now()).toISOString()
+      };
+      await fetch('/api/me/profile', {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify({
+          guardian: guardianPayload,
+          quiz: pending.quiz || undefined
+        })
+      });
+      clearLocalQuizCache();
+      try{
+        const guardianLocal = JSON.stringify({
+          code: guardianPayload.code,
+          name: guardianPayload.name,
+          ts: parseGuardianTs(guardianPayload.ts) || Date.now()
+        });
+        localStorage.setItem('__lastQuizGuardian__', guardianLocal);
+        localStorage.setItem('__lastQuizGuardianBackup__', guardianLocal);
+      }catch(_){}
+      if (pending.quiz){
+        try{
+          const quizPayload = JSON.stringify(pending.quiz);
+          localStorage.setItem('__lastQuizProfile__', quizPayload);
+          localStorage.setItem('__lastQuizProfileBackup__', quizPayload);
+        }catch(_){}
+      }
+      clearPendingQuizSync();
+      await refreshProfile();
+      return { ok:true };
+    }catch(err){
+      return { ok:false, reason: err && err.message ? err.message : 'sync_failed' };
+    }
   }
 
   async function bindLocalGuardianIfNeeded(profile){
@@ -641,6 +709,7 @@
     logout,
     promptLogin,
     requireLogin,
+    syncPendingQuizToAccount,
     refreshProfile,
     refreshAdmin,
     subscribe(fn){
