@@ -103,6 +103,12 @@
     if (!dateKey) return '';
     return String(dateKey).trim().replace(/\//g, '-');
   }
+  function resolveDateKey(data, fortune){
+    if (data && data.dateKey) return String(data.dateKey || '').replace(/\s+/g,'');
+    if (fortune && fortune.dateKey) return String(fortune.dateKey || '').replace(/\s+/g,'');
+    if (fortune && fortune.date) return String(fortune.date || '').replace(/\s+/g,'');
+    return '';
+  }
   function isTodayKey(dateKey){
     const today = getTaipeiDateKey(new Date());
     if (!today) return false;
