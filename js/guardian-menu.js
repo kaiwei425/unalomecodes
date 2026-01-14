@@ -230,12 +230,27 @@
     }
   }
 
+  function getCurrentGuardianCode(opts){
+    const badgeEl = opts && opts.badgeEl;
+    if (!badgeEl || !badgeEl.dataset) return '';
+    const code = String(badgeEl.dataset.guardianCode || '').trim().toUpperCase();
+    return code;
+  }
+
+  function buildResultUrl(opts){
+    const code = getCurrentGuardianCode(opts);
+    if (code) return `/quiz/?guardian=${encodeURIComponent(code)}&src=menu`;
+    return '/quiz/';
+  }
+
   window.GuardianMenu = {
     buildMenuHTML,
     openHistoryDialog,
     closeDialog,
     bindHistoryDialog,
     persistLastQuizResult,
+    getCurrentGuardianCode,
+    buildResultUrl,
     MENU_ITEMS
   };
 })();

@@ -990,6 +990,8 @@
     const name = formatGuardianName(guardian);
     if (heroBadgeLabel) heroBadgeLabel.textContent = `守護神：${name}`;
     heroBadge.dataset.guardianCode = String(guardian.code || guardian.id || '').toUpperCase();
+    heroBadge.dataset.guardianName = guardian.name || '';
+    heroBadge.dataset.quizReady = '1';
     heroBadge.setAttribute('aria-expanded','false');
     if (heroBadgeMenu) heroBadgeMenu.setAttribute('aria-hidden','true');
     updateDailyBadgeIndicator();
@@ -1083,6 +1085,8 @@
           guardian,
           quiz: getActiveQuizProfile()
         });
+        window.location.href = window.GuardianMenu.buildResultUrl({ badgeEl: heroBadge });
+        return;
       }
       window.location.href = '/quiz/';
       return;

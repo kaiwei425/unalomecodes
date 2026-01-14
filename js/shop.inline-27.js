@@ -520,6 +520,9 @@
     const name = map[code] || '守護神';
     lastGuardianCode = code;
     lastGuardianName = name;
+    badge.dataset.guardianCode = code;
+    badge.dataset.guardianName = g.name || name || '';
+    badge.dataset.quizReady = '1';
     badge.setAttribute('role', 'button');
     badge.setAttribute('tabindex', '0');
     badge.setAttribute('aria-haspopup', 'menu');
@@ -578,6 +581,9 @@
                 guardian: readGuardian(),
                 quiz: readQuizProfile()
               });
+              window.location.href = window.GuardianMenu.buildResultUrl({ badgeEl: badge });
+              closeMenu();
+              return;
             }
             window.location.href = '/quiz/';
             closeMenu();

@@ -1289,17 +1289,51 @@ function isProfileComplete(profile){
 
 restoreQuizCacheFromBackup();
 
+let forceQuiz = false;
+let queryGuardianOverride = '';
+try{
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('retake') === '1') forceQuiz = true;
+  const guardianParam = params.get('guardian');
+  if (!forceQuiz && guardianParam){
+    const normalized = String(guardianParam || '').trim().toUpperCase();
+    if (/^[A-Z0-9_]+$/.test(normalized)){
+      if (typeof window.getDeityById === 'function'){
+        if (window.getDeityById(normalized)) queryGuardianOverride = normalized;
+      }else{
+        queryGuardianOverride = normalized;
+      }
+    }
+  }
+}catch(_){}
+
 function shouldShowStoredResult(){
   if (forceQuiz) return false;
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
   if (!guardian || !profile || !isProfileComplete(profile)) return false;
   const ts = guardian.ts || profile.ts || 0;
+  if (queryGuardianOverride) return true;
   return isSameTaipeiDay(ts, Date.now());
+}
+
+function applyQueryGuardianOverride(){
+  if (!queryGuardianOverride) return;
+  try{
+    const storedName = deityName(queryGuardianOverride, 'zh') || '';
+    const payload = JSON.stringify({
+      code: queryGuardianOverride,
+      name: storedName,
+      ts: Date.now()
+    });
+    localStorage.setItem(QUIZ_GUARDIAN_KEY, payload);
+    localStorage.setItem(QUIZ_GUARDIAN_BACKUP, payload);
+  }catch(_){}
 }
 
 function initStoredResult(){
   if (forceQuiz) return;
+  applyQueryGuardianOverride();
   const guardian = loadStoredGuardian();
   const profile = loadStoredQuizProfile();
   if (!guardian || !profile || !isProfileComplete(profile)) return;
@@ -1321,11 +1355,6 @@ const lineGuardianBadge = document.getElementById('lineGuardianBadge');
 const lineRetakeBtn = document.getElementById('lineRetakeBtn');
 const retakeCooldown = document.getElementById('retakeCooldown');
 const membershipPrompt = document.getElementById('membershipPrompt');
-let forceQuiz = false;
-try{
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('retake') === '1') forceQuiz = true;
-}catch(_){}
 var lastLineProfile = null;
 function isLineClient(){
   return !!(window.liff && window.liff.isInClient && window.liff.isInClient());
@@ -1815,15 +1844,19 @@ async function showResult(opts){
 
     const lang = getLang();
     const langParam = lang === 'en' ? 'en' : 'zh';
-    const code = decideWinner(state);
+    const computedCode = decideWinner(state);
     const score = compileScore(state);
     const ranked = Object.entries(score).sort((a,b)=> (b[1]-a[1]) || a[0].localeCompare(b[0]));
-    const secondaryCode = (ranked.find(([g])=> g !== code) || [code])[0];
+    const displayCode = (rerender && queryGuardianOverride) ? queryGuardianOverride : computedCode;
+    const secondaryCode = (ranked.find(([g])=> g !== displayCode) || [displayCode])[0];
+    const code = displayCode;
 
-    const primaryDeity = (typeof window.getDeityById === 'function') ? window.getDeityById(code) : null;
-const primaryName = deityName(code, lang);
+    const primaryDeity = (typeof window.getDeityById === 'function')
+      ? (window.getDeityById(displayCode) || window.getDeityById(computedCode))
+      : null;
+const primaryName = deityName(displayCode, lang);
     const secondaryName = deityName(secondaryCode, lang);
-    const primaryId = (primaryDeity && (primaryDeity.id || primaryDeity.code)) || code;
+    const primaryId = (primaryDeity && (primaryDeity.id || primaryDeity.code)) || displayCode;
 
     const dayInfoZh = DOW[state.dow] || {};
     const dayInfo = getDayInfo(state.dow, lang);
@@ -1846,9 +1879,10 @@ const primaryName = deityName(code, lang);
       ts: Date.now()
     };
 
-    const storedName = deityName(code, 'zh');
+    const storedName = deityName(computedCode, 'zh');
+    const displayNameZh = deityName(displayCode, 'zh');
     if (!rerender){
-      try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code, name: storedName, ts: Date.now() })); }catch(_){}
+      try{ localStorage.setItem('__lastQuizGuardian__', JSON.stringify({ code: computedCode, name: storedName, ts: Date.now() })); }catch(_){}
       try{ localStorage.setItem('__lastQuizProfile__', JSON.stringify(quizProfile)); }catch(_){}
       try{ localStorage.setItem('__lastQuizBindPending__', JSON.stringify({ ts: Date.now() })); }catch(_){}
       clearQuizBackup();
@@ -1859,7 +1893,7 @@ const primaryName = deityName(code, lang);
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           credentials:'include',
-          body: JSON.stringify({ guardian:{ code, name: storedName, ts: Date.now() }, quiz: quizProfile })
+          body: JSON.stringify({ guardian:{ code: computedCode, name: storedName, ts: Date.now() }, quiz: quizProfile })
         });
       }catch(_){}
     }
@@ -1876,7 +1910,7 @@ const primaryName = deityName(code, lang);
     if (resultTitle) resultTitle.textContent = lang === 'en' ? `Primary Deity: ${primaryName}` : `主守護神：${primaryName}`;
     const personalHook = getPersonalHook({
       lang,
-      primaryDeity: primaryDeity || { code, name:{ zh: storedName, en: primaryName } },
+      primaryDeity: primaryDeity || { code: displayCode, name:{ zh: displayNameZh, en: primaryName } },
       topIntent,
       topBlocker,
       style,
@@ -1894,7 +1928,7 @@ const primaryName = deityName(code, lang);
 
     const primarySlot = document.getElementById('primaryDeityProfile');
     if (primarySlot){
-      const fallback = primaryDeity || { code, name:{ zh: storedName, en: primaryName }, desc:{ zh:'', en:'' }, wear:{} };
+      const fallback = primaryDeity || { code, name:{ zh: displayNameZh, en: primaryName }, desc:{ zh:'', en:'' }, wear:{} };
       const linkHref = `/deity?code=${encodeURIComponent(code)}&intent=${encodeURIComponent(intentParam)}&lang=${encodeURIComponent(langParam)}`;
       const linkHtml = `<a class="guardian-name-link" href="${escapeHtml(linkHref)}">${escapeHtml(primaryName)}</a>`;
       const html = (typeof window.renderDeityProfile === 'function') ? window.renderDeityProfile(fallback, lang) : '';
@@ -1948,7 +1982,7 @@ const primaryName = deityName(code, lang);
           p6: state.p6,
           p7: state.p7
         },
-        primaryDeity: primaryDeity || { code, name:{ zh: storedName, en: primaryName } },
+        primaryDeity: primaryDeity || { code, name:{ zh: displayNameZh, en: primaryName } },
         topIntent,
         topBlocker,
         lang
