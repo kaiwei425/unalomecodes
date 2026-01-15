@@ -159,6 +159,9 @@
     if (!window.authState || typeof window.authState.onAdmin !== 'function') return;
     window.authState.onAdmin(function(isAdmin){
       if (!isAdmin) return;
+      if (typeof window.authState.hasAdminPermission === 'function'){
+        if (!window.authState.hasAdminPermission('page_meta_edit')) return;
+      }
       if (adminBar) return;
       adminBar = bindAdminBar();
     });

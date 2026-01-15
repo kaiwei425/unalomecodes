@@ -14,10 +14,10 @@
           root.classList.remove('admin-guard-hide');
           return;
         }
-        location.href = '/api/auth/google/admin/start?redirect=' + redirect;
+        location.href = '/admin/login?redirect=' + redirect;
       })
       .catch(function(){
-        location.href = '/api/auth/google/admin/start?redirect=' + redirect;
+        location.href = '/admin/login?redirect=' + redirect;
       });
   }catch(_){
     // ignore

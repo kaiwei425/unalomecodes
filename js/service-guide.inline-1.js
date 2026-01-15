@@ -15,6 +15,9 @@
     }
 
     function applyAdminState(isAdmin){
+      if (typeof window.authState !== 'undefined' && typeof window.authState.hasAdminPermission === 'function'){
+        isAdmin = isAdmin && window.authState.hasAdminPermission('service_guide_edit');
+      }
       editBtn.style.display = isAdmin ? '' : 'none';
       if (!isAdmin){
         saveBtn.style.display = 'none';

@@ -3,6 +3,9 @@
   const btn = document.getElementById('btnEditSubtitle');
   if (!subEl || !btn) return;
   function applyAdminState(isAdmin){
+    if (typeof window.authState !== 'undefined' && typeof window.authState.hasAdminPermission === 'function'){
+      isAdmin = isAdmin && window.authState.hasAdminPermission('shop_meta_edit');
+    }
     btn.style.display = isAdmin ? 'inline-block' : 'none';
   }
   if (window.authState && typeof window.authState.onAdmin === 'function'){

@@ -546,11 +546,11 @@ async function getAdminSession(request, env){
   }catch(_){ return null; }
 }
 
-function getAdminRole(email, env){
+function getAdminRoleFromMap(email, env){
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (!normalizedEmail) return 'owner';
+  if (!normalizedEmail) return '';
   const raw = String(env && env.ADMIN_ROLE_MAP || '').trim();
-  if (!raw) return 'owner';
+  if (!raw) return '';
   // Format: "email1:role1,email2:role2"
   const pairs = raw.split(',').map(s=>s.trim()).filter(Boolean);
   for (const pair of pairs){
@@ -561,7 +561,25 @@ function getAdminRole(email, env){
     if (!e || !role) continue;
     if (e === normalizedEmail) return role;
   }
-  return 'owner';
+  return '';
+}
+
+async function getAdminRole(email, env){
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return '';
+  const kv = env && env.ADMIN_ROLE_KV;
+  if (kv){
+    try{
+      const kvRole = await kv.get(`admin:role:${normalizedEmail}`);
+      if (kvRole) return String(kvRole).trim();
+    }catch(_){}
+  }
+  const envRole = getAdminRoleFromMap(normalizedEmail, env);
+  if (envRole) return envRole;
+  if (!String(env && env.ADMIN_ROLE_MAP || '').trim() && !kv){
+    return 'owner';
+  }
+  return '';
 }
 
 function getAdminPermissions(role){
@@ -575,13 +593,54 @@ function getAdminPermissions(role){
   // default deny for unknown/empty roles
   return [];
 }
-function hasAdminPermission(adminSession, env, perm){
+async function getAdminPermissionsForEmail(email, env, roleOverride){
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const role = roleOverride || await getAdminRole(normalizedEmail, env);
+  if (!role) return [];
+  if (String(role).trim().toLowerCase() === 'owner'){
+    return ['*'];
+  }
+  if (String(role).trim().toLowerCase() === 'fulfillment'){
+    return getAdminPermissions(role);
+  }
+  const kv = env && env.ADMIN_ROLE_KV;
+  if (kv && normalizedEmail){
+    try{
+      const raw = await kv.get(`admin:perms:${normalizedEmail}`);
+      const list = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(list)) return list.filter(Boolean);
+    }catch(_){}
+  }
+  return getAdminPermissions(role);
+}
+
+async function hasAdminPermission(adminSession, env, perm){
   if (!adminSession || !adminSession.email) return true;
-  const role = getAdminRole(adminSession.email, env);
-  const perms = getAdminPermissions(role);
+  const perms = await getAdminPermissionsForEmail(adminSession.email, env);
   if (!Array.isArray(perms) || !perms.length) return false;
   if (perms.includes('*')) return true;
   return perms.includes(perm);
+}
+
+async function isOwnerAdmin(request, env){
+  if (!(await isAdmin(request, env))) return false;
+  const adminSession = await getAdminSession(request, env);
+  if (!adminSession || !adminSession.email) return true;
+  const role = await getAdminRole(adminSession.email, env);
+  return role === 'owner';
+}
+
+async function requireAdminPermission(request, env, perm){
+  if (!(await isAdmin(request, env))) {
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  const adminSession = await getAdminSession(request, env);
+  if (!adminSession || !adminSession.email) return null; // admin key full access
+  const allowed = await hasAdminPermission(adminSession, env, perm);
+  if (!allowed){
+    return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  return null;
 }
 async function isAdmin(request, env){
   try{
@@ -656,7 +715,7 @@ async function buildAuditActor(request, env){
   if (adminSession && adminSession.email){
     return {
       actorEmail: String(adminSession.email),
-      actorRole: getAdminRole(adminSession.email, env),
+      actorRole: await getAdminRole(adminSession.email, env),
       ip: getClientIp(request) || '',
       ua: request.headers.get('User-Agent') || ''
     };
@@ -736,8 +795,12 @@ async function requireCronOrAdmin(request, env){
     const adminSession = await getAdminSession(request, env);
     // If no cookie session (likely X-Admin-Key), allow full access.
     if (!adminSession || !adminSession.email) return null;
-    const role = getAdminRole(adminSession.email, env);
+    const role = await getAdminRole(adminSession.email, env);
     if (role === 'fulfillment'){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+    const allowed = await hasAdminPermission(adminSession, env, 'cron.run');
+    if (!allowed){
       return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
     }
     return null;
@@ -759,7 +822,7 @@ async function forbidIfFulfillmentAdmin(request, env){
   const adminSession = await getAdminSession(request, env);
   // Only block cookie-session admins with fulfillment role.
   if (!adminSession || !adminSession.email) return null;
-  const role = getAdminRole(adminSession.email, env);
+  const role = await getAdminRole(adminSession.email, env);
   if (role === 'fulfillment'){
     return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
   }
@@ -4868,8 +4931,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!admin){
       return json({ ok:false, error:'unauthorized' }, 401);
     }
-    const role = getAdminRole(admin.email || '', env);
-    const permissions = getAdminPermissions(role);
+    const role = await getAdminRole(admin.email || '', env);
+    const permissions = await getAdminPermissionsForEmail(admin.email || '', env, role);
     return json({
       ok:true,
       admin:true,
@@ -4878,6 +4941,74 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       role,
       permissions
     });
+  }
+
+  if (pathname === '/api/admin/roles') {
+    if (!(await isOwnerAdmin(request, env))){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+    const kv = env.ADMIN_ROLE_KV;
+    if (!kv){
+      return new Response(JSON.stringify({ ok:false, error:'admin_role_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const emailParam = String(url.searchParams.get('email') || '').trim().toLowerCase();
+    if (request.method === 'GET'){
+      if (!emailParam){
+        return new Response(JSON.stringify({ ok:false, error:'missing_email' }), { status:400, headers: jsonHeadersFor(request, env) });
+      }
+      const role = await getAdminRole(emailParam, env);
+      const permissions = await getAdminPermissionsForEmail(emailParam, env, role);
+      return new Response(JSON.stringify({ ok:true, email: emailParam, role, permissions }), { status:200, headers: jsonHeadersFor(request, env) });
+    }
+    if (request.method === 'DELETE'){
+      if (!emailParam){
+        return new Response(JSON.stringify({ ok:false, error:'missing_email' }), { status:400, headers: jsonHeadersFor(request, env) });
+      }
+      try{
+        await kv.delete(`admin:role:${emailParam}`);
+        await kv.delete(`admin:perms:${emailParam}`);
+        const idxKey = 'admin:role:index';
+        const raw = await kv.get(idxKey);
+        const list = raw ? (JSON.parse(raw) || []) : [];
+        const next = Array.isArray(list) ? list.filter(x=> String(x).toLowerCase() !== emailParam) : [];
+        await kv.put(idxKey, JSON.stringify(next));
+      }catch(_){}
+      return new Response(JSON.stringify({ ok:true, email: emailParam }), { status:200, headers: jsonHeadersFor(request, env) });
+    }
+    if (request.method === 'POST'){
+      let body = {};
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      const email = String(body.email || '').trim().toLowerCase();
+      const role = String(body.role || '').trim().toLowerCase();
+      const perms = Array.isArray(body.permissions) ? body.permissions.filter(Boolean) : [];
+      if (!email){
+        return new Response(JSON.stringify({ ok:false, error:'missing_email' }), { status:400, headers: jsonHeadersFor(request, env) });
+      }
+      if (!role){
+        try{
+          await kv.delete(`admin:role:${email}`);
+          await kv.delete(`admin:perms:${email}`);
+        }catch(_){}
+      }else{
+        await kv.put(`admin:role:${email}`, role);
+        if (role === 'custom'){
+          await kv.put(`admin:perms:${email}`, JSON.stringify(perms));
+        }else{
+          await kv.delete(`admin:perms:${email}`);
+        }
+      }
+      try{
+        const idxKey = 'admin:role:index';
+        const raw = await kv.get(idxKey);
+        const list = raw ? (JSON.parse(raw) || []) : [];
+        let next = Array.isArray(list) ? list.slice() : [];
+        next = next.filter(x=> String(x).toLowerCase() !== email);
+        if (role) next.unshift(email);
+        await kv.put(idxKey, JSON.stringify(next.slice(0, 500)));
+      }catch(_){}
+      return new Response(JSON.stringify({ ok:true, email, role, permissions: role === 'custom' ? perms : [] }), { status:200, headers: jsonHeadersFor(request, env) });
+    }
+    return new Response(JSON.stringify({ ok:false, error:'method_not_allowed' }), { status:405, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/fortune-stats' && request.method === 'GET') {
@@ -5074,7 +5205,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const adminSession = await getAdminSession(request, env);
     if (adminSession && adminSession.email) {
-      const role = getAdminRole(adminSession.email, env);
+      const role = await getAdminRole(adminSession.email, env);
       if (role !== 'owner') {
         return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
       }
@@ -5859,7 +5990,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'food_map_edit');
         if (guard) return guard;
       }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
@@ -5887,8 +6018,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (request.method === 'DELETE'){
       const isAdminUser = await isAdmin(request, env);
       if (isAdminUser){
-        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
-        if (roleGuard) return roleGuard;
+        const permGuard = await requireAdminPermission(request, env, 'food_map_edit');
+        if (permGuard) return permGuard;
       }
       let creatorRecord = null;
       if (!isAdminUser){
@@ -5921,8 +6052,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (request.method === 'POST'){
       const isAdminUser = await isAdmin(request, env);
       if (isAdminUser){
-        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
-        if (roleGuard) return roleGuard;
+        const permGuard = await requireAdminPermission(request, env, 'food_map_edit');
+        if (permGuard) return permGuard;
       }
       let creatorRecord = null;
       if (!isAdminUser){
@@ -5982,7 +6113,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'food_map_edit');
       if (guard) return guard;
     }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
@@ -6037,7 +6168,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'food_map_edit');
       if (guard) return guard;
     }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
@@ -6052,7 +6183,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'food_map_edit');
       if (guard) return guard;
     }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
@@ -6282,7 +6413,7 @@ if (pathname === '/api/me/temple-favs') {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'temple_map_edit');
         if (guard) return guard;
       }
       if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6306,7 +6437,7 @@ if (pathname === '/api/me/temple-favs') {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'shop_meta_edit');
         if (guard) return guard;
       }
       if (!env.PRODUCTS) return json({ ok:false, error:'PRODUCTS KV not bound' }, 500);
@@ -6331,7 +6462,7 @@ if (pathname === '/api/me/temple-favs') {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'service_meta_edit');
         if (guard) return guard;
       }
       const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
@@ -6360,7 +6491,7 @@ if (pathname === '/api/me/temple-favs') {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'page_meta_edit');
         if (guard) return guard;
       }
       const body = await request.json().catch(()=>({}));
@@ -6383,7 +6514,7 @@ if (pathname === '/api/me/temple-favs') {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'service_guide_edit');
         if (guard) return guard;
       }
       const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
@@ -6416,7 +6547,7 @@ if (pathname === '/api/me/temple-favs') {
         if (guard) return guard;
       }
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'temple_map_edit');
         if (guard) return guard;
       }
       if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6440,7 +6571,7 @@ if (pathname === '/api/me/temple-favs') {
         if (guard) return guard;
       }
       {
-        const guard = await forbidIfFulfillmentAdmin(request, env);
+        const guard = await requireAdminPermission(request, env, 'temple_map_edit');
         if (guard) return guard;
       }
       if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6476,7 +6607,7 @@ if (pathname === '/api/me/temple-favs') {
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'temple_map_edit');
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6531,7 +6662,7 @@ if (pathname === '/api/me/temple-favs') {
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'temple_map_edit');
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6587,7 +6718,7 @@ if (pathname === '/api/me/temple-favs') {
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'temple_map_edit');
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6602,7 +6733,7 @@ if (pathname === '/api/me/temple-favs') {
       if (guard) return guard;
     }
     {
-      const guard = await forbidIfFulfillmentAdmin(request, env);
+      const guard = await requireAdminPermission(request, env, 'temple_map_edit');
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6749,7 +6880,7 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
     const adminSession = await getAdminSession(request, env);
     const adminKeyOk = await isAdmin(request, env);
     const isAdminUser = !!adminSession || adminKeyOk;
-    const adminRole = adminSession && adminSession.email ? getAdminRole(adminSession.email, env) : '';
+    const adminRole = adminSession && adminSession.email ? await getAdminRole(adminSession.email, env) : '';
     let body = {};
     if (request.method !== 'GET') {
       try{ body = await request.json(); }catch(_){ body = {}; }
@@ -8018,6 +8149,18 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
   {
     const guard = await forbidIfFulfillmentAdmin(request, env);
     if (guard) return guard;
+  }
+  {
+    const adminSession = await getAdminSession(request, env);
+    if (adminSession && !(await hasAdminPermission(adminSession, env, 'service_orders.export'))){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+  }
+  {
+    const adminSession = await getAdminSession(request, env);
+    if (adminSession && !(await hasAdminPermission(adminSession, env, 'orders.export'))){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
   }
   if (!env.COUPONS){
     return json({ ok:false, error:'COUPONS KV not bound' }, 500, request, env);
@@ -10019,7 +10162,7 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeadersFor(request, env) });
       const obj = JSON.parse(raw);
       const adminSession = await getAdminSession(request, env);
-      const isFulfillment = !!(adminSession && adminSession.email && getAdminRole(adminSession.email, env) === 'fulfillment');
+      const isFulfillment = !!(adminSession && adminSession.email && (await getAdminRole(adminSession.email, env)) === 'fulfillment');
       if (isFulfillment && status){
         const prevKey = normalizeStatus(obj.status || '');
         const nextKey = normalizeStatus(status || '');
@@ -10682,7 +10825,7 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
   }
   {
     const adminSession = await getAdminSession(request, env);
-    if (adminSession && !hasAdminPermission(adminSession, env, 'service_orders.result_upload')) {
+    if (adminSession && !(await hasAdminPermission(adminSession, env, 'service_orders.result_upload'))) {
       return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
     }
   }
@@ -10717,7 +10860,7 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
     try{
       const adminSession = await getAdminSession(request, env);
       const email = (adminSession && adminSession.email) ? String(adminSession.email) : '';
-      const role = email ? getAdminRole(email, env) : 'admin_key';
+      const role = email ? await getAdminRole(email, env) : 'admin_key';
       console.log(JSON.stringify({
         ts: new Date().toISOString(),
         adminEmail: email,
@@ -10809,6 +10952,10 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
         if (guard) return guard;
       }
       {
+        const guard = await requireAdminPermission(request, env, 'file.delete');
+        if (guard) return guard;
+      }
+      {
         const actor = await buildAuditActor(request, env);
         const rule = parseRate(env.ADMIN_DELETE_RATE_LIMIT || '30/10m');
         const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'file_delete'), rule);
@@ -10854,6 +11001,10 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
       }
       {
         const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
+      {
+        const guard = await requireAdminPermission(request, env, 'file.delete');
         if (guard) return guard;
       }
       {
@@ -11094,7 +11245,7 @@ async function handleUpload(request, env, origin) {
     const isAuthed = !!uploader || !!adminSession;
     const authTier = uploader ? 'user' : (adminSession ? 'admin' : 'anon');
     const adminEmail = (adminSession && adminSession.email) ? String(adminSession.email) : '';
-    const adminRole = adminEmail ? getAdminRole(adminEmail, env) : '';
+    const adminRole = adminEmail ? await getAdminRole(adminEmail, env) : '';
     const isFulfillmentAdmin = !!adminEmail && adminRole === 'fulfillment';
     if (!isAuthed) {
       return withCORS(json({ ok:false, error:"Login required" }, 401));

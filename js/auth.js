@@ -1,5 +1,5 @@
 (function(){
-  const state = { user:null, ready:false, loading:false, profile:null, admin:false, adminReady:false };
+  const state = { user:null, ready:false, loading:false, profile:null, admin:false, adminReady:false, adminRole:'', adminPermissions:[] };
   const listeners = [];
   const profileListeners = [];
   const adminListeners = [];
@@ -26,6 +26,13 @@
     listeners.forEach(fn=>{
       try{ fn(state.user); }catch(_){}
     });
+  }
+
+  function hasAdminPerm(perm){
+    if (!perm) return !!state.admin;
+    const perms = Array.isArray(state.adminPermissions) ? state.adminPermissions : [];
+    if (perms.includes('*')) return true;
+    return perms.includes(perm);
   }
 
   function updateWidgets(){
@@ -55,9 +62,11 @@
       }
     });
     document.querySelectorAll('[data-admin-only]').forEach(el=>{
-      el.style.display = state.admin ? '' : 'none';
+      const perm = el.getAttribute('data-admin-perm') || '';
+      const allow = state.admin && (!perm || hasAdminPerm(perm));
+      el.style.display = allow ? '' : 'none';
       if (el.tagName === 'A'){
-        if (state.admin){
+        if (allow){
           const target = el.getAttribute('data-admin-href') || '/admin/';
           el.setAttribute('href', target);
         }else{
@@ -362,6 +371,8 @@
   async function refreshAdmin(){
     if (!state.user){
       state.admin = false;
+      state.adminRole = '';
+      state.adminPermissions = [];
       state.adminReady = true;
       updateWidgets();
       adminListeners.forEach(fn=>{ try{ fn(state.admin); }catch(_){ } });
@@ -371,12 +382,18 @@
       const res = await fetch('/api/auth/admin/me', { credentials:'include' });
       if (res.ok){
         const data = await res.json().catch(()=>null);
-        state.admin = !!(data && data.ok && data.role === 'owner');
+        state.admin = !!(data && data.ok);
+        state.adminRole = data && data.role ? String(data.role) : '';
+        state.adminPermissions = Array.isArray(data && data.permissions) ? data.permissions : [];
       }else{
         state.admin = false;
+        state.adminRole = '';
+        state.adminPermissions = [];
       }
     }catch(_){
       state.admin = false;
+      state.adminRole = '';
+      state.adminPermissions = [];
     }
     state.adminReady = true;
     updateWidgets();
@@ -740,7 +757,10 @@
           try{ fn(state.admin); }catch(_){}
         }
       }
-    }
+    },
+    getAdminRole: ()=>state.adminRole,
+    getAdminPermissions: ()=>state.adminPermissions,
+    hasAdminPermission: hasAdminPerm
   };
 
   (async ()=>{

@@ -16,6 +16,7 @@
       { href: '/admin/coupons', label: '優惠券', icon: '🎟️', group: 'extra' },
       { href: '/admin/code-viewer', label: '留言', icon: '💬', group: 'extra' },
       { href: '/admin/audit-logs', label: '審計日誌', icon: '📋', group: 'extra' },
+      { href: '/admin/admin-roles', label: '權限管理', icon: '🛡️', group: 'extra' },
       { href: '/admin/admin-guide', label: '管理員手冊', icon: '📘', group: 'extra' }
     ];
 
@@ -124,7 +125,7 @@
         });
       } else if (role !== 'owner'){
         finalItems = navItems.filter(function(item){
-          return item.href !== '/admin/audit-logs' && item.href !== '/admin/fulfillment' && item.href !== '/admin/admin-guide';
+          return item.href !== '/admin/audit-logs' && item.href !== '/admin/fulfillment' && item.href !== '/admin/admin-guide' && item.href !== '/admin/admin-roles';
         });
       }
       renderShell(finalItems);

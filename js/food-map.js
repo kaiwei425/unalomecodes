@@ -2333,7 +2333,9 @@ async function checkAdmin(){
   try{
     const res = await fetch('/api/auth/admin/me', { credentials:'include', cache:'no-store' });
     const data = await res.json().catch(()=>({}));
-    isAdmin = !!(data && data.ok && data.role === 'owner');
+    const perms = Array.isArray(data && data.permissions) ? data.permissions : [];
+    const hasPerm = perms.includes('*') || perms.includes('food_map_edit');
+    isAdmin = !!(data && data.ok && hasPerm);
   }catch(_){
     isAdmin = false;
   }

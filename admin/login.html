@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="管理員登入頁面">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/login">
+<title>unalomecodes | 管理員登入</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<style>
+  .admin-login{max-width:720px;margin:8vh auto;padding:28px 24px;background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(15,23,42,.08);}
+  .admin-login h1{margin:0 0 8px;font-size:26px;}
+  .admin-login p{margin:0 0 18px;color:#475569;line-height:1.7;}
+  .login-grid{display:grid;gap:12px;margin-top:18px;}
+  .login-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid #e2e8f0;font-size:14px;cursor:pointer;background:#0f172a;color:#fff;}
+  .login-btn.secondary{background:#fff;color:#0f172a;border-color:#e2e8f0;}
+  .login-btn[disabled]{cursor:not-allowed;opacity:.6;}
+  .login-note{margin-top:16px;font-size:12px;color:#94a3b8;}
+  .login-footer{margin-top:20px;font-size:12px;color:#64748b;}
+</style>
+<script src="/js/admin-login.inline-1.js" defer></script>
+</head>
+<body>
+  <div class="admin-login">
+    <h1>管理員登入</h1>
+    <p>請使用已授權的管理員帳號登入。登入後將會自動導回原先的管理頁面。</p>
+    <div class="login-grid">
+      <button type="button" class="login-btn" id="btnAdminGoogle">使用 Google 管理員登入</button>
+      <button type="button" class="login-btn secondary" id="btnAdminLine" disabled>使用 LINE 管理員登入（即將開放）</button>
+    </div>
+    <div class="login-note">若出現權限不足訊息，請聯繫擁有者協助設定角色與權限。</div>
+    <div class="login-footer">Unalome Codes Admin Center</div>
+  </div>
+</body>
+</html>

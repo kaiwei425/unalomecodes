@@ -90,10 +90,10 @@
                   <a href="/account-coupons" id="userCouponsLink" class="qna-link">我的優惠券 <span class="qna-badge" id="userCouponBadge">0</span></a>
                   <a href="/account-orders" id="userOrdersLink" class="qna-link">我的訂單 <span class="qna-badge" id="userQnaBadge">0</span></a>
                   <a href="/account-store">門市預設</a>
-                  <a href="/admin/orders" id="adminQnaLink" class="qna-link" data-admin-only data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadge">0</span></a>
-                  <a href="/admin" data-admin-only data-admin-href="/admin" style="display:none;">後台管理</a>
-                  <button type="button" id="adminToolsToggle" data-admin-only style="display:none;">美食地圖 ▾</button>
-                  <div class="member-menu-subpanel" id="adminToolsPanel" data-admin-only style="display:none;">
+                  <a href="/admin/orders" id="adminQnaLink" class="qna-link" data-admin-only data-admin-perm="admin_panel_view" data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadge">0</span></a>
+                  <a href="/admin" data-admin-only data-admin-perm="admin_panel_view" data-admin-href="/admin" style="display:none;">後台管理</a>
+                  <button type="button" id="adminToolsToggle" data-admin-only data-admin-perm="food_map_edit" style="display:none;">美食地圖 ▾</button>
+                  <div class="member-menu-subpanel" id="adminToolsPanel" data-admin-only data-admin-perm="food_map_edit" style="display:none;">
                     <button type="button" id="btnAdd" style="display:none;">新增餐廳</button>
                     <button type="button" id="btnExport" style="display:none;">匯出備份</button>
                     <button type="button" id="btnImport" style="display:none;">匯入救援檔</button>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="後台權限管理頁（僅限 owner）。">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/admin-roles">
+<title>unalomecodes | 權限管理</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<link rel="stylesheet" href="/css/admin-members.inline-1.css">
+<script src="/js/admin-guard.js" defer></script>
+<script src="/js/admin-shell.js" defer></script>
+<script src="/js/admin-roles.inline-1.js" defer></script>
+<style>
+  .role-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 16px 30px rgba(15,23,42,.08);}
+  .role-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px;}
+  .perm-item{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:13px;}
+  .perm-item input{margin-top:2px;}
+  .role-actions{display:flex;gap:12px;margin-top:16px;}
+  .role-actions .btn{min-width:120px;}
+  .status-text{margin-top:12px;color:#475569;font-size:13px;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
+    <h1>管理員權限管理</h1>
+    <p class="muted">僅限 owner 調整其他管理員的角色與權限。請填入管理員 Email 後查詢。</p>
+
+    <div class="role-card">
+      <div class="role-row">
+        <label>管理員 Email
+          <input type="email" id="adminEmail" placeholder="name@example.com" style="width:100%">
+        </label>
+        <label>角色
+          <select id="adminRole" style="width:100%">
+            <option value="">請選擇</option>
+            <option value="owner">owner（全權）</option>
+            <option value="fulfillment">fulfillment（出貨）</option>
+            <option value="custom">custom（自訂）</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="permWrap" style="margin-top:12px;">
+        <div class="muted">自訂權限（角色為 custom 時生效）</div>
+        <div class="perm-grid" id="permGrid"></div>
+      </div>
+
+      <div class="role-actions">
+        <button class="btn" id="btnLoad">讀取權限</button>
+        <button class="btn gold" id="btnSave">儲存</button>
+        <button class="btn danger" id="btnRemove">移除</button>
+      </div>
+      <div class="status-text" id="statusText">請輸入 Email 並讀取。</div>
+    </div>
+  </div>
+</body>
+</html>
