@@ -11,28 +11,53 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
 <link rel="stylesheet" href="/admin/admin-ui.css">
 <style>
-  .admin-login{max-width:720px;margin:8vh auto;padding:28px 24px;background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(15,23,42,.08);}
-  .admin-login h1{margin:0 0 8px;font-size:26px;}
-  .admin-login p{margin:0 0 18px;color:#475569;line-height:1.7;}
-  .login-grid{display:grid;gap:12px;margin-top:18px;}
-  .login-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid #e2e8f0;font-size:14px;cursor:pointer;background:#0f172a;color:#fff;}
+  body{background:radial-gradient(circle at top, #fff7ed 0%, #f8fafc 50%, #eef2ff 100%);}
+  .admin-login{max-width:980px;margin:8vh auto;padding:0;background:#fff;border-radius:24px;box-shadow:0 28px 60px rgba(15,23,42,.12);overflow:hidden;display:grid;grid-template-columns:1.1fr 1fr;}
+  .login-hero{padding:40px 36px;background:linear-gradient(160deg,#0f172a,#1e293b);color:#fff;display:flex;flex-direction:column;gap:16px;}
+  .login-hero .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.4px;}
+  .login-hero .badge{width:42px;height:42px;border-radius:12px;background:#f59e0b;color:#1f2937;display:flex;align-items:center;justify-content:center;font-weight:800;}
+  .login-hero h1{margin:0;font-size:28px;}
+  .login-hero p{margin:0;color:#cbd5f5;line-height:1.7;}
+  .login-hero ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:10px;color:#e2e8f0;font-size:14px;}
+  .login-panel{padding:40px 36px;}
+  .login-panel h2{margin:0 0 10px;font-size:22px;}
+  .login-panel p{margin:0 0 18px;color:#475569;line-height:1.7;}
+  .login-grid{display:grid;gap:12px;margin-top:12px;}
+  .login-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 16px;border-radius:14px;border:1px solid #0f172a;font-size:14px;cursor:pointer;background:#0f172a;color:#fff;transition:transform .15s ease, box-shadow .15s ease;}
+  .login-btn:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(15,23,42,.15);}
   .login-btn.secondary{background:#fff;color:#0f172a;border-color:#e2e8f0;}
-  .login-btn[disabled]{cursor:not-allowed;opacity:.6;}
+  .login-btn[disabled]{cursor:not-allowed;opacity:.5;box-shadow:none;transform:none;}
   .login-note{margin-top:16px;font-size:12px;color:#94a3b8;}
   .login-footer{margin-top:20px;font-size:12px;color:#64748b;}
+  @media (max-width:900px){.admin-login{grid-template-columns:1fr;margin:6vh 16px;}}
 </style>
 <script src="/js/admin-login.inline-1.js" defer></script>
 </head>
 <body>
   <div class="admin-login">
-    <h1>管理員登入</h1>
-    <p>請使用已授權的管理員帳號登入。登入後將會自動導回原先的管理頁面。</p>
-    <div class="login-grid">
-      <button type="button" class="login-btn" id="btnAdminGoogle">使用 Google 管理員登入</button>
-      <button type="button" class="login-btn secondary" id="btnAdminLine" disabled>使用 LINE 管理員登入（即將開放）</button>
-    </div>
-    <div class="login-note">若出現權限不足訊息，請聯繫擁有者協助設定角色與權限。</div>
-    <div class="login-footer">Unalome Codes Admin Center</div>
+    <section class="login-hero">
+      <div class="brand">
+        <div class="badge">UA</div>
+        <div>Unalome Codes Admin</div>
+      </div>
+      <h1>後台管理登入</h1>
+      <p>僅限已授權的管理員帳號使用。系統會記錄所有重要操作，保障資料安全。</p>
+      <ul>
+        <li>✓ 角色權限分流（Owner / Fulfillment）</li>
+        <li>✓ 重要操作審計與限流保護</li>
+        <li>✓ 系統資料與內容分層管理</li>
+      </ul>
+    </section>
+    <section class="login-panel">
+      <h2>選擇登入方式</h2>
+      <p>登入後將自動導回原先的管理頁面。若尚未授權，會顯示權限不足提示。</p>
+      <div class="login-grid">
+        <button type="button" class="login-btn" id="btnAdminGoogle">使用 Google 管理員登入</button>
+        <button type="button" class="login-btn secondary" id="btnAdminLine" disabled>使用 LINE 管理員登入（即將開放）</button>
+      </div>
+      <div class="login-note">如需開通權限，請聯繫 Owner 於「權限管理」設定。</div>
+      <div class="login-footer">Unalome Codes Admin Center</div>
+    </section>
   </div>
 </body>
 </html>

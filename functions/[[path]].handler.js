@@ -4410,11 +4410,15 @@ export async function onRequest(context) {
   }
 
   if ((pathname === '/admin' || pathname.startsWith('/admin/')) && (request.method === 'GET' || request.method === 'HEAD')) {
+    if (pathname === '/admin/login' || pathname === '/admin/login/') {
+      // allow login page without admin session
+    } else {
     const admin = await isAdmin(request, env);
     if (!admin) {
       const redirectPath = pathname + url.search;
-      const target = `${origin}/api/auth/google/admin/start?redirect=${encodeURIComponent(redirectPath)}`;
+      const target = `${origin}/admin/login?redirect=${encodeURIComponent(redirectPath)}`;
       return Response.redirect(target, 302);
+    }
     }
   }
 
