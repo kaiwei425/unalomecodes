@@ -20,7 +20,7 @@
       { href: '/admin/admin-guide', label: '管理員手冊', icon: '📘', group: 'extra' }
     ];
 
-    function renderShell(items){
+    function renderShell(items, adminInfo){
       var path = location.pathname.replace(/\/$/, '');
       if (path === '/admin') path = '/admin';
 
@@ -78,6 +78,33 @@
       topbarTitle.textContent = (h1 && h1.textContent) ? h1.textContent.trim() : (document.title || '後台管理');
       var topbarActions = document.createElement('div');
       topbarActions.className = 'admin-topbar-actions';
+      if (adminInfo && (adminInfo.name || adminInfo.email)){
+        var userWrap = document.createElement('div');
+        userWrap.className = 'admin-topbar-user';
+        var userName = document.createElement('div');
+        userName.className = 'admin-topbar-user__name';
+        userName.textContent = (adminInfo.name || adminInfo.email || '').trim();
+        var userMeta = document.createElement('div');
+        userMeta.className = 'admin-topbar-user__meta';
+        userMeta.textContent = (adminInfo.role ? String(adminInfo.role).toLowerCase() : '');
+        userWrap.appendChild(userName);
+        userWrap.appendChild(userMeta);
+        topbarActions.appendChild(userWrap);
+
+        var btnLogout = document.createElement('button');
+        btnLogout.type = 'button';
+        btnLogout.className = 'admin-topbar-logout';
+        btnLogout.textContent = '登出';
+        btnLogout.addEventListener('click', function(){
+          btnLogout.disabled = true;
+          fetch('/api/logout', { method:'POST', credentials:'include' })
+            .catch(function(){})
+            .finally(function(){
+              location.href = '/admin/login';
+            });
+        });
+        topbarActions.appendChild(btnLogout);
+      }
       var linkShop = document.createElement('a');
       linkShop.href = '/shop';
       linkShop.textContent = '前台首頁';
@@ -101,18 +128,26 @@
 
     var authState = window.AUTH && typeof window.AUTH.getState === 'function' ? window.AUTH.getState() : null;
     var existingRole = authState && authState.adminReady && authState.admin ? authState.admin.role : '';
-    var fetchAdminRole = function(){
+    var fetchAdminInfo = function(){
       return fetch('/api/auth/admin/me', { credentials:'include', cache:'no-store' })
         .then(function(res){ return res.ok ? res.json() : null; })
         .then(function(data){
-          if (!data || data.ok === false) return '';
-          return String(data.role || '').trim().toLowerCase();
+          if (!data || data.ok === false) return { role:'', name:'', email:'' };
+          return {
+            role: String(data.role || '').trim().toLowerCase(),
+            name: String(data.name || '').trim(),
+            email: String(data.email || '').trim()
+          };
         })
-        .catch(function(){ return ''; });
+        .catch(function(){ return { role:'', name:'', email:'' }; });
     };
 
-    var ready = existingRole ? Promise.resolve(existingRole) : fetchAdminRole();
-    ready.then(function(role){
+    var ready = existingRole
+      ? Promise.resolve({ role: String(existingRole || '').trim().toLowerCase(), name:'', email:'' })
+      : fetchAdminInfo();
+
+    ready.then(function(info){
+      var role = (info && info.role) ? info.role : '';
       var finalItems = navItems.slice();
       if (role === 'fulfillment'){
         var allow = new Set(['/admin/fulfillment','/admin/orders','/admin/service-orders']);
@@ -128,7 +163,7 @@
           return item.href !== '/admin/audit-logs' && item.href !== '/admin/fulfillment' && item.href !== '/admin/admin-guide' && item.href !== '/admin/admin-roles';
         });
       }
-      renderShell(finalItems);
+      renderShell(finalItems, info);
     });
   }catch(_){
     // ignore
