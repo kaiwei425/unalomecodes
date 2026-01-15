@@ -29,6 +29,7 @@
   }
 
   function hasAdminPerm(perm){
+    if (state.adminRole !== 'owner') return false;
     if (!perm) return !!state.admin;
     const perms = Array.isArray(state.adminPermissions) ? state.adminPermissions : [];
     if (perms.includes('*')) return true;
@@ -63,7 +64,7 @@
     });
     document.querySelectorAll('[data-admin-only]').forEach(el=>{
       const perm = el.getAttribute('data-admin-perm') || '';
-      const allow = state.admin && (!perm || hasAdminPerm(perm));
+      const allow = state.admin && state.adminRole === 'owner' && (!perm || hasAdminPerm(perm));
       el.style.display = allow ? '' : 'none';
       if (el.tagName === 'A'){
         if (allow){
