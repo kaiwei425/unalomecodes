@@ -4366,6 +4366,10 @@ export async function onRequest(context) {
   if (pathname === "/api/products" && request.method === "POST") {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     return createProduct(request, env);
   }
 
@@ -4374,9 +4378,27 @@ export async function onRequest(context) {
     if (prodIdMatch) {
       const id = decodeURIComponent(prodIdMatch[1]);
       if (request.method === "GET")   return getProduct(id, env);
-      if (request.method === "PUT")   { const guard = await requireAdminWrite(request, env); if (guard) return guard; return putProduct(id, request, env); }
-      if (request.method === "PATCH") { const guard = await requireAdminWrite(request, env); if (guard) return guard; return patchProduct(id, request, env); }
-      if (request.method === "DELETE"){ const guard = await requireAdminWrite(request, env); if (guard) return guard; return deleteProduct(id, env); }
+      if (request.method === "PUT")   {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
+        if (roleGuard) return roleGuard;
+        return putProduct(id, request, env);
+      }
+      if (request.method === "PATCH") {
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
+        if (roleGuard) return roleGuard;
+        return patchProduct(id, request, env);
+      }
+      if (request.method === "DELETE"){
+        const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
+        if (roleGuard) return roleGuard;
+        return deleteProduct(id, env);
+      }
     }
 // ======== Bank Transfer Additions (non-breaking) ========
 if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathname === '/api/order/confirm-transfer')) {
@@ -5468,6 +5490,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     const store = getUserStore(env);
     if (!store) return json({ ok:false, error:'USER store not bound' }, 500);
     let body = {};
@@ -5832,6 +5858,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (request.method === 'POST'){
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
       const body = await request.json().catch(()=>({}));
       const prev = await env.FOODS.get('FOOD_MAP_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
@@ -5856,6 +5886,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     if (request.method === 'DELETE'){
       const isAdminUser = await isAdmin(request, env);
+      if (isAdminUser){
+        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
+        if (roleGuard) return roleGuard;
+      }
       let creatorRecord = null;
       if (!isAdminUser){
         creatorRecord = await getSessionUserRecord(request, env);
@@ -5886,6 +5920,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     if (request.method === 'POST'){
       const isAdminUser = await isAdmin(request, env);
+      if (isAdminUser){
+        const roleGuard = await forbidIfFulfillmentAdmin(request, env);
+        if (roleGuard) return roleGuard;
+      }
       let creatorRecord = null;
       if (!isAdminUser){
         creatorRecord = await getSessionUserRecord(request, env);
@@ -5943,6 +5981,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
     let body = {};
     try{ body = await request.json().catch(()=>({})); }catch(_){}
@@ -5994,6 +6036,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
     resetFoodsListMemoryCache();
     await deleteFoodsListCache(env);
@@ -6003,6 +6049,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/foods/sync' && request.method === 'POST'){
     {
       const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
@@ -6231,6 +6281,10 @@ if (pathname === '/api/me/temple-favs') {
     if (request.method === 'POST'){
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
       const body = await request.json().catch(()=>({}));
       const prev = await env.TEMPLES.get('TEMPLE_MAP_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
@@ -6251,6 +6305,10 @@ if (pathname === '/api/me/temple-favs') {
     if (request.method === 'POST'){
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       if (!env.PRODUCTS) return json({ ok:false, error:'PRODUCTS KV not bound' }, 500);
       const body = await request.json().catch(()=>({}));
       const prev = await env.PRODUCTS.get('SHOP_PAGE_META').then(r=>r?JSON.parse(r):{}).catch(()=>({}));
@@ -6272,6 +6330,10 @@ if (pathname === '/api/me/temple-favs') {
     if (request.method === 'POST'){
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
       if (!store) return json({ ok:false, error:'SERVICE_PRODUCTS/PRODUCTS KV not bound' }, 500);
       const body = await request.json().catch(()=>({}));
@@ -6297,6 +6359,10 @@ if (pathname === '/api/me/temple-favs') {
     if (request.method === 'POST'){
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       const body = await request.json().catch(()=>({}));
       const meta = body && typeof body.meta === 'object' && body.meta ? body.meta : {};
       await store.put(key, JSON.stringify(meta));
@@ -6316,6 +6382,10 @@ if (pathname === '/api/me/temple-favs') {
     if (request.method === 'POST'){
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
       if (!store) return json({ ok:false, error:'SERVICE_PRODUCTS/PRODUCTS KV not bound' }, 500);
       const body = await request.json().catch(()=>({}));
@@ -6345,6 +6415,10 @@ if (pathname === '/api/me/temple-favs') {
         const guard = await requireAdminWrite(request, env);
         if (guard) return guard;
       }
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
       if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
       let id = url.searchParams.get('id') || '';
       if (!id){
@@ -6363,6 +6437,10 @@ if (pathname === '/api/me/temple-favs') {
     if (request.method === 'POST'){
       {
         const guard = await requireAdminWrite(request, env);
+        if (guard) return guard;
+      }
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
         if (guard) return guard;
       }
       if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6395,6 +6473,10 @@ if (pathname === '/api/me/temple-favs') {
   if (pathname === '/api/temples/geocode' && request.method === 'POST'){
     {
       const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6446,6 +6528,10 @@ if (pathname === '/api/me/temple-favs') {
   if (pathname === '/api/temples/hours' && request.method === 'POST'){
     {
       const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6500,6 +6586,10 @@ if (pathname === '/api/me/temple-favs') {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
     resetTemplesListMemoryCache();
     await deleteTemplesListCache(env);
@@ -6509,6 +6599,10 @@ if (pathname === '/api/me/temple-favs') {
   if (pathname === '/api/temples/sync' && request.method === 'POST'){
     {
       const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
@@ -6564,6 +6658,10 @@ if (pathname === '/api/me/temple-favs') {
   if (pathname === '/api/admin/temple-stats' && request.method === 'GET'){
     if (!(await isAdmin(request, env))){
       return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
     }
     if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
     const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
@@ -10090,6 +10188,10 @@ if (pathname === '/api/service/products' && request.method === 'POST') {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
   }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store){
     return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
@@ -10130,6 +10232,10 @@ if (pathname === '/api/service/products' && request.method === 'PUT') {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
   }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
+    if (guard) return guard;
+  }
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store) return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:500, headers: jsonHeaders });
   const body = await request.json();
@@ -10151,6 +10257,10 @@ if (pathname === '/api/service/products' && request.method === 'PUT') {
 if (pathname === '/api/service/products' && request.method === 'DELETE') {
   {
     const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
     if (guard) return guard;
   }
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;

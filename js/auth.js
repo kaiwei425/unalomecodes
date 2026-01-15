@@ -370,7 +370,8 @@
     try{
       const res = await fetch('/api/auth/admin/me', { credentials:'include' });
       if (res.ok){
-        state.admin = true;
+        const data = await res.json().catch(()=>null);
+        state.admin = !!(data && data.ok && data.role === 'owner');
       }else{
         state.admin = false;
       }

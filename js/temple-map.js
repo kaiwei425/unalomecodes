@@ -1347,9 +1347,9 @@ function resetFilters(){
 
 async function checkAdmin(){
   try{
-    const res = await fetch('/api/admin/status', { credentials:'include', cache:'no-store' });
+    const res = await fetch('/api/auth/admin/me', { credentials:'include', cache:'no-store' });
     const data = await res.json().catch(()=>({}));
-    isAdmin = !!(data && data.admin);
+    isAdmin = !!(data && data.ok && data.role === 'owner');
   }catch(_){
     isAdmin = false;
   }
