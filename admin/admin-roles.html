@@ -15,14 +15,22 @@
 <script src="/js/admin-shell.js" defer></script>
 <script src="/js/admin-roles.inline-1.js" defer></script>
 <style>
-  .role-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 16px 30px rgba(15,23,42,.08);}
-  .role-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  .perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px;}
-  .perm-item{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:13px;}
+  .role-shell{display:grid;gap:18px;}
+  .role-card{background:#fff;border-radius:18px;padding:24px;box-shadow:0 16px 30px rgba(15,23,42,.08);}
+  .role-row{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;}
+  .role-row label{font-weight:600;color:#1e293b;display:grid;gap:8px;}
+  .role-row input,.role-row select{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;font-size:14px;}
+  .perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:12px;}
+  .perm-item{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;font-size:13px;}
   .perm-item input{margin-top:2px;}
-  .role-actions{display:flex;gap:12px;margin-top:16px;}
-  .role-actions .btn{min-width:120px;}
+  .perm-item span{color:#334155;}
+  .role-actions{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;}
+  .role-actions .btn{min-width:140px;border-radius:999px;}
+  .role-actions .btn.gold{background:#0f172a;color:#fff;border:1px solid #0f172a;}
+  .role-actions .btn.danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;}
   .status-text{margin-top:12px;color:#475569;font-size:13px;}
+  .role-hint{padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid rgba(251,146,60,.25);color:#7c2d12;font-size:13px;}
+  @media (max-width:900px){.role-row{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -31,32 +39,37 @@
     <h1>管理員權限管理</h1>
     <p class="muted">僅限 owner 調整其他管理員的角色與權限。請填入管理員 Email 後查詢。</p>
 
-    <div class="role-card">
-      <div class="role-row">
-        <label>管理員 Email
-          <input type="email" id="adminEmail" placeholder="name@example.com" style="width:100%">
-        </label>
-        <label>角色
-          <select id="adminRole" style="width:100%">
-            <option value="">請選擇</option>
-            <option value="owner">owner（全權）</option>
-            <option value="fulfillment">fulfillment（出貨）</option>
-            <option value="custom">custom（自訂）</option>
-          </select>
-        </label>
+    <div class="role-shell">
+      <div class="role-hint">
+        權限變更會即時影響前台與後台可見功能，建議先「讀取」確認現況，再進行調整。
       </div>
+      <div class="role-card">
+        <div class="role-row">
+          <label>管理員 Email
+            <input type="email" id="adminEmail" placeholder="name@example.com">
+          </label>
+          <label>角色
+            <select id="adminRole">
+              <option value="">請選擇</option>
+              <option value="owner">owner（全權）</option>
+              <option value="fulfillment">fulfillment（出貨）</option>
+              <option value="custom">custom（自訂）</option>
+            </select>
+          </label>
+        </div>
 
-      <div id="permWrap" style="margin-top:12px;">
-        <div class="muted">自訂權限（角色為 custom 時生效）</div>
-        <div class="perm-grid" id="permGrid"></div>
-      </div>
+        <div id="permWrap" style="margin-top:16px;">
+          <div class="muted">自訂權限（角色為 custom 時生效）</div>
+          <div class="perm-grid" id="permGrid"></div>
+        </div>
 
-      <div class="role-actions">
-        <button class="btn" id="btnLoad">讀取權限</button>
-        <button class="btn gold" id="btnSave">儲存</button>
-        <button class="btn danger" id="btnRemove">移除</button>
+        <div class="role-actions">
+          <button class="btn" id="btnLoad">讀取權限</button>
+          <button class="btn gold" id="btnSave">儲存</button>
+          <button class="btn danger" id="btnRemove">移除</button>
+        </div>
+        <div class="status-text" id="statusText">請輸入 Email 並讀取。</div>
       </div>
-      <div class="status-text" id="statusText">請輸入 Email 並讀取。</div>
     </div>
   </div>
 </body>
