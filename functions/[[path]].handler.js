@@ -545,6 +545,44 @@ async function getAdminSession(request, env){
     return payload;
   }catch(_){ return null; }
 }
+
+function getAdminRole(email, env){
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return 'owner';
+  const raw = String(env && env.ADMIN_ROLE_MAP || '').trim();
+  if (!raw) return 'owner';
+  // Format: "email1:role1,email2:role2"
+  const pairs = raw.split(',').map(s=>s.trim()).filter(Boolean);
+  for (const pair of pairs){
+    const idx = pair.indexOf(':');
+    if (idx === -1) continue;
+    const e = pair.slice(0, idx).trim().toLowerCase();
+    const role = pair.slice(idx + 1).trim();
+    if (!e || !role) continue;
+    if (e === normalizedEmail) return role;
+  }
+  return 'owner';
+}
+
+function getAdminPermissions(role){
+  const r = String(role || '').trim().toLowerCase();
+  if (r === 'owner'){
+    return ['*'];
+  }
+  if (r === 'fulfillment'){
+    return ['orders.view','orders.status_update','orders.qna.view','proof.view','service_orders.result_upload'];
+  }
+  // default deny for unknown/empty roles
+  return [];
+}
+function hasAdminPermission(adminSession, env, perm){
+  if (!adminSession || !adminSession.email) return true;
+  const role = getAdminRole(adminSession.email, env);
+  const perms = getAdminPermissions(role);
+  if (!Array.isArray(perms) || !perms.length) return false;
+  if (perms.includes('*')) return true;
+  return perms.includes(perm);
+}
 async function isAdmin(request, env){
   try{
     const fromCookie = await getAdminSession(request, env);
@@ -573,6 +611,101 @@ function collectAllowedOrigins(env, request, extraRaw){
   extra.forEach(addOrigin);
   return allow;
 }
+
+async function auditAppend(env, entry){
+  const kv = env && env.ADMIN_AUDIT_KV;
+  const safeEntry = entry || {};
+  const ts = safeEntry.ts || new Date().toISOString();
+  const id = `${Date.now()}_${crypto.randomUUID()}`;
+  const payload = Object.assign({
+    ts,
+    action: '',
+    actorEmail: '',
+    actorRole: 'unknown',
+    ip: '',
+    ua: '',
+    targetType: '',
+    targetId: '',
+    meta: undefined
+  }, safeEntry);
+  if (!kv){
+    console.log(JSON.stringify({ audit: payload }));
+    return false;
+  }
+  const ttlDays = Math.max(1, Number(env.ADMIN_AUDIT_TTL_DAYS || 90) || 90);
+  const ttl = ttlDays * 86400;
+  try{
+    await kv.put(`audit:${id}`, JSON.stringify(payload), { expirationTtl: ttl });
+    const idxKey = 'audit:index';
+    let idxRaw = await kv.get(idxKey);
+    idxRaw = idxRaw ? String(idxRaw) : '';
+    const combined = idxRaw ? `${id}\n${idxRaw}` : id;
+    const list = combined.split('\n').filter(Boolean);
+    const trimmed = list.slice(0, 5000).join('\n');
+    await kv.put(idxKey, trimmed);
+    return true;
+  }catch(err){
+    console.warn('auditAppend_failed', err);
+    console.log(JSON.stringify({ audit: payload }));
+    return false;
+  }
+}
+
+async function buildAuditActor(request, env){
+  const adminSession = await getAdminSession(request, env);
+  if (adminSession && adminSession.email){
+    return {
+      actorEmail: String(adminSession.email),
+      actorRole: getAdminRole(adminSession.email, env),
+      ip: getClientIp(request) || '',
+      ua: request.headers.get('User-Agent') || ''
+    };
+  }
+  return {
+    actorEmail: '',
+    actorRole: 'admin_key',
+    ip: getClientIp(request) || '',
+    ua: request.headers.get('User-Agent') || ''
+  };
+}
+
+function parseRate(input){
+  const m = String(input || '').trim().match(/^(\d+)\s*\/\s*(\d+)\s*(s|m|h)$/i);
+  if (!m) return null;
+  const limit = Math.max(1, Number(m[1]) || 0);
+  const n = Math.max(1, Number(m[2]) || 0);
+  const unit = m[3].toLowerCase();
+  const mult = unit === 'h' ? 3600 : unit === 'm' ? 60 : 1;
+  return { limit, windowSec: n * mult };
+}
+
+function buildRateKey(actor, action){
+  if (actor && actor.actorEmail){
+    return `${action}:${actor.actorEmail}`;
+  }
+  return `${action}:admin_key`;
+}
+
+async function checkAdminRateLimit(env, key, rule){
+  if (!env.ADMIN_GUARD_KV || !rule){
+    return { allowed: true };
+  }
+  const now = Date.now();
+  const windowMs = rule.windowSec * 1000;
+  const bucket = Math.floor(now / windowMs);
+  const kvKey = `rl:${key}:${bucket}`;
+  const raw = await env.ADMIN_GUARD_KV.get(kvKey);
+  const count = Number(raw) || 0;
+  if (count >= rule.limit){
+    return { allowed: false };
+  }
+  await env.ADMIN_GUARD_KV.put(
+    kvKey,
+    String(count + 1),
+    { expirationTtl: rule.windowSec + 5 }
+  );
+  return { allowed: true };
+}
 function isAllowedAdminOrigin(request, env){
   const allow = collectAllowedOrigins(env, request, env.ADMIN_ORIGINS || '');
   const originHeader = (request.headers.get('Origin') || '').trim();
@@ -599,7 +732,16 @@ async function requireAdminWrite(request, env){
   return null;
 }
 async function requireCronOrAdmin(request, env){
-  if (await isAdmin(request, env)) return null;
+  if (await isAdmin(request, env)) {
+    const adminSession = await getAdminSession(request, env);
+    // If no cookie session (likely X-Admin-Key), allow full access.
+    if (!adminSession || !adminSession.email) return null;
+    const role = getAdminRole(adminSession.email, env);
+    if (role === 'fulfillment'){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+    return null;
+  }
   const secret = String(env.CRON_SECRET || env.CRON_KEY || env.ADMIN_CRON_KEY || '').trim();
   if (!secret) {
     return new Response(JSON.stringify({ ok:false, error:'Cron key not configured' }), { status:403, headers: jsonHeadersFor(request, env) });
@@ -611,6 +753,17 @@ async function requireCronOrAdmin(request, env){
   }catch(_){}
   if (h === secret || q === secret) return null;
   return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+}
+
+async function forbidIfFulfillmentAdmin(request, env){
+  const adminSession = await getAdminSession(request, env);
+  // Only block cookie-session admins with fulfillment role.
+  if (!adminSession || !adminSession.email) return null;
+  const role = getAdminRole(adminSession.email, env);
+  if (role === 'fulfillment'){
+    return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  return null;
 }
 async function verifyLineIdToken(idToken, env){
   if (!idToken || !env || !env.LINE_CHANNEL_ID) return null;
@@ -3575,32 +3728,78 @@ async function canAccessProof(request, env, key){
   return await verifyProofToken(env, key, token);
 }
 
-function normalizeStatus(s){
-  return String(s || '').trim();
+const CANONICAL_STATUS = {
+  PENDING: 'PENDING',
+  READY_TO_SHIP: 'READY_TO_SHIP',
+  SHIPPED: 'SHIPPED',
+  COMPLETED: 'COMPLETED',
+  OVERDUE: 'OVERDUE',
+  CANCELED: 'CANCELED'
+};
+
+function normalizeStatus(input){
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  const normalized = lower.replace(/\s+/g, '_').replace(/-+/g, '_');
+
+  // English keys
+  if (normalized === 'pending' || normalized === 'waiting' || normalized === 'waiting_payment' || normalized === 'waiting_verify') return CANONICAL_STATUS.PENDING;
+  if (normalized === 'to_ship' || normalized === 'ready_to_ship' || normalized === 'paid') return CANONICAL_STATUS.READY_TO_SHIP;
+  if (normalized === 'shipped' || normalized === 'shipping') return CANONICAL_STATUS.SHIPPED;
+  if (normalized === 'completed' || normalized === 'done' || normalized === 'picked_up') return CANONICAL_STATUS.COMPLETED;
+  if (normalized === 'overdue' || normalized === 'expired') return CANONICAL_STATUS.OVERDUE;
+  if (normalized === 'canceled' || normalized === 'cancelled' || normalized === 'refunded' || normalized === 'refund') return CANONICAL_STATUS.CANCELED;
+
+  // Chinese labels (current UI + common variants)
+  if (raw.includes('訂單待處理') || raw.includes('待處理') || raw.includes('待付款') || raw.includes('未付款') || raw.includes('待確認')) {
+    return CANONICAL_STATUS.PENDING;
+  }
+  if (raw.includes('已付款') || raw.includes('待出貨')) {
+    return CANONICAL_STATUS.READY_TO_SHIP;
+  }
+  if (raw.includes('已寄件') || raw.includes('已寄出') || raw.includes('已出貨')) {
+    return CANONICAL_STATUS.SHIPPED;
+  }
+  if (raw.includes('已取件') || raw.includes('已完成訂單') || raw.includes('完成訂單') || raw.includes('訂單完成')) {
+    return CANONICAL_STATUS.COMPLETED;
+  }
+  if (raw.includes('付款逾期') || raw.includes('逾期')) {
+    return CANONICAL_STATUS.OVERDUE;
+  }
+  if (raw.includes('取消訂單') || raw.includes('取消') || raw.includes('作廢') || raw.includes('退款') || raw.includes('退貨') || raw.includes('失敗') || raw.includes('金額不符') || raw.includes('拒收') || raw.includes('未取') || raw.includes('無效') || raw.includes('撤單')) {
+    return CANONICAL_STATUS.CANCELED;
+  }
+  return '';
 }
 function statusIsPaid(s){
-  const v = normalizeStatus(s);
-  if (!v) return false;
-  const lower = v.toLowerCase();
-  const unpaidHints = ['待付款','未付款','pending','waiting','待處理','待確認'];
-  if (unpaidHints.some(k => lower.includes(k))) return false;
-  const paidHints = ['已付款','待出貨','已寄件','已出貨','已完成','完成訂單','訂單完成','已取件','完成','出貨'];
-  if (paidHints.some(k => v.includes(k))) return true;
-  return /\bpaid\b/i.test(v);
+  const key = normalizeStatus(s);
+  return key === CANONICAL_STATUS.READY_TO_SHIP
+    || key === CANONICAL_STATUS.SHIPPED
+    || key === CANONICAL_STATUS.COMPLETED;
 }
 function statusIsCompleted(s){
-  const v = normalizeStatus(s);
-  if (!v) return false;
-  if (/祈福完成/.test(v) || /成果已通知/.test(v)) return true;
-  if (/已完成訂單/.test(v) || /完成訂單/.test(v) || /訂單完成/.test(v) || /已取件/.test(v)) return true;
-  return /\bcompleted\b/i.test(v);
+  const key = normalizeStatus(s);
+  return key === CANONICAL_STATUS.COMPLETED;
 }
 function statusIsCanceled(s){
-  const v = normalizeStatus(s);
-  if (!v) return false;
-  const cancelHints = ['取消','作廢','退款','退貨','失敗','金額不符','拒收','逾期','未取','無效','撤單'];
-  if (cancelHints.some(k => v.includes(k))) return true;
-  return /\b(cancel|failed|void|refund|chargeback)\b/i.test(v);
+  const key = normalizeStatus(s);
+  return key === CANONICAL_STATUS.CANCELED;
+}
+
+const FULFILLMENT_ORDER_TRANSITIONS = {
+  [CANONICAL_STATUS.PENDING]: [CANONICAL_STATUS.READY_TO_SHIP],
+  [CANONICAL_STATUS.READY_TO_SHIP]: [CANONICAL_STATUS.SHIPPED],
+  [CANONICAL_STATUS.SHIPPED]: [CANONICAL_STATUS.COMPLETED]
+};
+
+function isFulfillmentOrderTransitionAllowed(prevKey, nextKey){
+  if (!nextKey) return false;
+  if (prevKey && prevKey === nextKey) return true;
+  if (!prevKey) return false;
+  const allowed = FULFILLMENT_ORDER_TRANSITIONS[prevKey];
+  if (!allowed) return false;
+  return allowed.includes(nextKey);
 }
 function toTs(value){
   if (!value) return 0;
@@ -3715,10 +3914,11 @@ function resolveOrderHoldTtlSec(order, env){
   return fallback;
 }
 function isWaitingVerifyStatus(status){
-  const v = normalizeStatus(status);
-  if (!v) return false;
-  if (v === 'waiting_verify') return true;
-  return v.includes('待確認') || v.includes('待查帳');
+  const raw = String(status || '').trim();
+  if (!raw) return false;
+  const lower = raw.toLowerCase();
+  if (lower === 'waiting_verify' || lower === 'waiting verify') return true;
+  return raw.includes('待確認') || raw.includes('待查帳');
 }
 function isHoldReleaseCandidate(order, includeWaitingVerify){
   if (!order || order.type === 'service') return false;
@@ -4646,7 +4846,16 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!admin){
       return json({ ok:false, error:'unauthorized' }, 401);
     }
-    return json({ ok:true, admin:true, email: admin.email || '', name: admin.name || admin.email || '' });
+    const role = getAdminRole(admin.email || '', env);
+    const permissions = getAdminPermissions(role);
+    return json({
+      ok:true,
+      admin:true,
+      email: admin.email || '',
+      name: admin.name || admin.email || '',
+      role,
+      permissions
+    });
   }
 
   if (pathname === '/api/admin/fortune-stats' && request.method === 'GET') {
@@ -4776,12 +4985,90 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/admin/cron/update-dashboard' && request.method === 'POST') {
     const guard = await requireCronOrAdmin(request, env);
     if (guard) return guard;
+    {
+      const actor = await buildAuditActor(request, env);
+      const rule = parseRate(env.ADMIN_CRON_RATE_LIMIT || '20/10m');
+      const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'cron'), rule);
+      if (!rate.allowed){
+        try{
+          await auditAppend(env, {
+            ts: new Date().toISOString(),
+            action: 'rate_limited',
+            ...actor,
+            targetType: 'cron',
+            targetId: 'maintenance',
+            meta: { rule: env.ADMIN_CRON_RATE_LIMIT || '20/10m' }
+          });
+        }catch(_){}
+        return new Response(
+          JSON.stringify({ ok:false, error:'rate_limited' }),
+          { status: 429, headers: jsonHeadersFor(request, env) }
+        );
+      }
+    }
     const store = env.ORDERS;
     if (!store) return json({ ok: false, error: 'STATS_CACHE_STORE not bound' }, 500);
     const result = await updateDashboardStats(env);
     const dashboardCacheTtl = Math.max(60, Math.min(Number(env.DASHBOARD_CACHE_TTL || 600) || 600, 3600));
     await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: dashboardCacheTtl });
+    // Manual test: owner cron update -> audit logs include action=cron_update_dashboard
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'cron_update_dashboard',
+        ...actor,
+        targetType: 'cron',
+        targetId: 'update-dashboard',
+        meta: {}
+      });
+    }catch(_){}
     return json({ ok: true, ...result });
+  }
+
+  // Manual tests:
+  // 1) owner: GET /api/admin/audit-logs -> 200
+  // 2) fulfillment: GET /api/admin/audit-logs -> 403
+  // 3) service_result_upload -> audit entry created and returned
+  if (pathname === '/api/admin/audit-logs' && request.method === 'GET') {
+    if (!(await isAdmin(request, env))) {
+      return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+    }
+    const adminSession = await getAdminSession(request, env);
+    if (adminSession && adminSession.email) {
+      const role = getAdminRole(adminSession.email, env);
+      if (role !== 'owner') {
+        return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+      }
+    }
+    if (!env.ADMIN_AUDIT_KV){
+      return new Response(JSON.stringify({ ok:false, error:'audit_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 50) || 50));
+    const cursorRaw = url.searchParams.get('cursor');
+    const actionFilter = String(url.searchParams.get('action') || '').trim();
+    const offset = Math.max(0, Number(cursorRaw || 0) || 0);
+    let idxRaw = await env.ADMIN_AUDIT_KV.get('audit:index');
+    let ids = idxRaw ? String(idxRaw).split('\n').filter(Boolean) : [];
+    if (ids.length >= 2){
+      const a = parseInt(String(ids[0]).split('_')[0] || '0', 10);
+      const b = parseInt(String(ids[ids.length - 1]).split('_')[0] || '0', 10);
+      if (a && b && a < b) ids = ids.slice().reverse();
+    }
+    const items = [];
+    let i = offset;
+    for (; i < ids.length && items.length < limit; i++){
+      const id = ids[i];
+      const raw = await env.ADMIN_AUDIT_KV.get(`audit:${id}`);
+      if (!raw) continue;
+      let entry = null;
+      try{ entry = JSON.parse(raw); }catch(_){ entry = null; }
+      if (!entry) continue;
+      if (actionFilter && String(entry.action || '') !== actionFilter) continue;
+      items.push(entry);
+    }
+    const nextCursor = i < ids.length ? String(i) : null;
+    return new Response(JSON.stringify({ ok:true, items, nextCursor }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/users/reset-guardian' && request.method === 'POST') {
@@ -7409,6 +7696,7 @@ if (pathname === '/api/payment/ecpay/notify' && request.method === 'POST') {
       return new Response('0|ORDER_NOT_FOUND', { status:404, headers:{'Content-Type':'text/plain'} });
     }
     const order = JSON.parse(raw);
+    const prevStatus = order.status || '';
     const paidAmount = Number(formObj.TradeAmt || formObj.TotalAmount || 0);
     const orderAmount = Number(order.amount || 0);
     if (!order.payment) order.payment = {};
@@ -8848,6 +9136,31 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
   if (!(await isAdmin(request, env))) {
     return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
   }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
+    if (guard) return guard;
+  }
+  {
+    const actor = await buildAuditActor(request, env);
+    const rule = parseRate(env.ADMIN_EXPORT_RATE_LIMIT || '10/5m');
+    const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'export'), rule);
+    if (!rate.allowed){
+      try{
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'rate_limited',
+          ...actor,
+          targetType: 'export',
+          targetId: 'orders',
+          meta: { rule: env.ADMIN_EXPORT_RATE_LIMIT || '10/5m' }
+        });
+      }catch(_){}
+      return new Response(
+        JSON.stringify({ ok:false, error:'rate_limited' }),
+        { status: 429, headers: jsonHeadersFor(request, env) }
+      );
+    }
+  }
   try {
     const origin = new URL(request.url).origin;
     const idsParam = (url.searchParams.get('ids') || '').trim();
@@ -8930,6 +9243,29 @@ if (pathname === '/api/orders/export' && request.method === 'GET') {
     h.set('Content-Disposition', `attachment; filename="orders_${Date.now()}.csv"`);
     h.set('Cache-Control', 'no-store');
     h.set('Access-Control-Allow-Origin', resolveCorsOrigin(request, env));
+    // Manual test: owner export -> audit logs include action=orders_export
+    try{
+      const actor = await buildAuditActor(request, env);
+      let meta = { kind:'physical' };
+      if (idsParam){
+        const list = idsParam.split(',').map(s => s.trim()).filter(Boolean);
+        if (idsParam.length > 500){
+          meta = { kind:'physical', count: list.length, truncated:true };
+        } else {
+          meta = { kind:'physical', ids: list };
+        }
+      } else {
+        meta = { kind:'physical', count: candidates.length };
+      }
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'orders_export',
+        ...actor,
+        targetType: 'orders',
+        targetId: 'bulk',
+        meta
+      });
+    }catch(_){}
     return new Response(csv, { status: 200, headers: h });
   } catch (e) {
     return new Response(String(e), { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': resolveCorsOrigin(request, env) } });
@@ -9528,6 +9864,15 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       const raw = await env.ORDERS.get(id);
       if (!raw) return new Response(JSON.stringify({ ok:false, error:'Not found' }), { status:404, headers: jsonHeadersFor(request, env) });
       const obj = JSON.parse(raw);
+      const adminSession = await getAdminSession(request, env);
+      const isFulfillment = !!(adminSession && adminSession.email && getAdminRole(adminSession.email, env) === 'fulfillment');
+      if (isFulfillment && status){
+        const prevKey = normalizeStatus(obj.status || '');
+        const nextKey = normalizeStatus(status || '');
+        if (!nextKey || !isFulfillmentOrderTransitionAllowed(prevKey, nextKey)){
+          return new Response(JSON.stringify({ ok:false, error:'invalid_status_transition' }), { status:403, headers: jsonHeadersFor(request, env) });
+        }
+      }
       const prevStatus = obj.status || '';
       let statusChanged = false;
       const wantsShipped = /已寄件|已寄出|已出貨|寄出/.test(status);
@@ -9555,6 +9900,18 @@ if (pathname === '/api/order/status' && request.method === 'POST') {
       }
       obj.updatedAt = new Date().toISOString();
       await env.ORDERS.put(id, JSON.stringify(obj));
+      // Manual test: owner status update -> audit logs include action=order_status_update
+      try{
+        const actor = await buildAuditActor(request, env);
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'order_status_update',
+          ...actor,
+          targetType: 'order',
+          targetId: id,
+          meta: { prevStatus, nextStatus: obj.status || '', op: action || 'set' }
+        });
+      }catch(_){}
       let emailNotified = false;
       if (statusChanged && shouldNotifyStatus(obj.status)) {
         try {
@@ -9578,6 +9935,27 @@ if ((pathname === '/api/admin/cron/release-holds' || pathname === '/api/cron/rel
     const guard = await requireCronOrAdmin(request, env);
     if (guard) return guard;
   }
+  {
+    const actor = await buildAuditActor(request, env);
+    const rule = parseRate(env.ADMIN_CRON_RATE_LIMIT || '20/10m');
+    const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'cron'), rule);
+    if (!rate.allowed){
+      try{
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'rate_limited',
+          ...actor,
+          targetType: 'cron',
+          targetId: 'maintenance',
+          meta: { rule: env.ADMIN_CRON_RATE_LIMIT || '20/10m' }
+        });
+      }catch(_){}
+      return new Response(
+        JSON.stringify({ ok:false, error:'rate_limited' }),
+        { status: 429, headers: jsonHeadersFor(request, env) }
+      );
+    }
+  }
   let body = {};
   if (request.method === 'POST') {
     try{ body = await request.json(); }catch(_){ body = {}; }
@@ -9588,6 +9966,18 @@ if ((pathname === '/api/admin/cron/release-holds' || pathname === '/api/cron/rel
   const includeWaitingVerify = String(body.includeWaitingVerify || url.searchParams.get('includeWaitingVerify') || '').toLowerCase() === 'true'
     || String(body.includeWaitingVerify || url.searchParams.get('includeWaitingVerify') || '') === '1';
   const result = await releaseExpiredOrderHolds(env, { limit, dryRun, includeWaitingVerify });
+  // Manual test: owner cron release-holds -> audit logs include action=cron_release_holds
+  try{
+    const actor = await buildAuditActor(request, env);
+    await auditAppend(env, {
+      ts: new Date().toISOString(),
+      action: 'cron_release_holds',
+      ...actor,
+      targetType: 'cron',
+      targetId: 'release-holds',
+      meta: {}
+    });
+  }catch(_){}
   return new Response(JSON.stringify(result), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
@@ -9958,6 +10348,31 @@ if (pathname === '/api/service/orders' && request.method === 'GET') {
 // 匯出服務訂單 CSV
 if (pathname === '/api/service/orders/export' && request.method === 'GET') {
   if (!(await isAdmin(request, env))) return new Response('Unauthorized', { status:401, headers:{'Content-Type':'text/plain'} });
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
+    if (guard) return guard;
+  }
+  {
+    const actor = await buildAuditActor(request, env);
+    const rule = parseRate(env.ADMIN_EXPORT_RATE_LIMIT || '10/5m');
+    const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'export'), rule);
+    if (!rate.allowed){
+      try{
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'rate_limited',
+          ...actor,
+          targetType: 'export',
+          targetId: 'orders',
+          meta: { rule: env.ADMIN_EXPORT_RATE_LIMIT || '10/5m' }
+        });
+      }catch(_){}
+      return new Response(
+        JSON.stringify({ ok:false, error:'rate_limited' }),
+        { status: 429, headers: jsonHeadersFor(request, env) }
+      );
+    }
+  }
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
     return new Response('SERVICE_ORDERS 未綁定', { status:500, headers:{'Content-Type':'text/plain'} });
@@ -10003,6 +10418,18 @@ if (pathname === '/api/service/orders/export' && request.method === 'GET') {
       rows.push(row.map(csvEscape).join(','));
     }
     const csv = rows.join('\n');
+    // Manual test: owner service export -> audit logs include action=service_orders_export
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'service_orders_export',
+        ...actor,
+        targetType: 'orders',
+        targetId: 'bulk',
+        meta: { kind:'service', count: Math.max(0, rows.length - 1) }
+      });
+    }catch(_){}
     return new Response(csv, {
       status: 200,
       headers: {
@@ -10019,6 +10446,10 @@ if (pathname === '/api/service/orders/export' && request.method === 'GET') {
 if (pathname === '/api/service/order/status' && request.method === 'POST') {
   {
     const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
     if (guard) return guard;
   }
   const store = env.SERVICE_ORDERS || env.ORDERS;
@@ -10053,6 +10484,18 @@ if (pathname === '/api/service/order/status' && request.method === 'POST') {
     order.status = status;
     order.updatedAt = new Date().toISOString();
     await store.put(id, JSON.stringify(order));
+    // Manual test: owner service status update -> audit logs include action=service_order_status_update
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'service_order_status_update',
+        ...actor,
+        targetType: 'service_order',
+        targetId: id,
+        meta: { prevStatus, nextStatus: order.status || '' }
+      });
+    }catch(_){}
     let notified = false;
     if (shouldNotifyStatus(status)){
       try{
@@ -10070,6 +10513,12 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
   {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
+  }
+  {
+    const adminSession = await getAdminSession(request, env);
+    if (adminSession && !hasAdminPermission(adminSession, env, 'service_orders.result_upload')) {
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
   }
   const store = env.SERVICE_ORDERS || env.ORDERS;
   if (!store){
@@ -10099,6 +10548,30 @@ if (pathname === '/api/service/order/result-photo' && request.method === 'POST')
     order.results = results;
     order.updatedAt = new Date().toISOString();
     await store.put(id, JSON.stringify(order));
+    try{
+      const adminSession = await getAdminSession(request, env);
+      const email = (adminSession && adminSession.email) ? String(adminSession.email) : '';
+      const role = email ? getAdminRole(email, env) : 'admin_key';
+      console.log(JSON.stringify({
+        ts: new Date().toISOString(),
+        adminEmail: email,
+        role,
+        action: 'service_result_upload',
+        orderId: id,
+        photo
+      }));
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'service_result_upload',
+        actorEmail: email,
+        actorRole: role,
+        ip: getClientIp(request) || '',
+        ua: request.headers.get('User-Agent') || '',
+        targetType: 'service_order',
+        targetId: id,
+        meta: { photo }
+      });
+    }catch(_){}
     return new Response(JSON.stringify({ ok:true, photo }), { status:200, headers: jsonHeaders });
   }catch(err){
     return new Response(JSON.stringify({ ok:false, error:String(err) }), { status:500, headers: jsonHeaders });
@@ -10165,15 +10638,99 @@ if (pathname === '/api/service/orders/lookup' && request.method === 'GET') {
         const guard = await requireAdminWrite(request, env);
         if (guard) return guard;
       }
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
+      {
+        const actor = await buildAuditActor(request, env);
+        const rule = parseRate(env.ADMIN_DELETE_RATE_LIMIT || '30/10m');
+        const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'file_delete'), rule);
+        if (!rate.allowed){
+          try{
+            await auditAppend(env, {
+              ts: new Date().toISOString(),
+              action: 'rate_limited',
+              ...actor,
+              targetType: 'file',
+              targetId: 'bulk',
+              meta: { rule: env.ADMIN_DELETE_RATE_LIMIT || '30/10m' }
+            });
+          }catch(_){}
+          return new Response(
+            JSON.stringify({ ok:false, error:'rate_limited' }),
+            { status: 429, headers: jsonHeadersFor(request, env) }
+          );
+        }
+      }
       const key = decodeURIComponent(pathname.replace("/api/file/", ""));
-      return deleteR2FileByKey(key, env);
+      const resp = await deleteR2FileByKey(key, env);
+      // Manual test: owner delete file -> audit logs include action=file_delete
+      if (resp && resp.ok){
+        try{
+          const actor = await buildAuditActor(request, env);
+          await auditAppend(env, {
+            ts: new Date().toISOString(),
+            action: 'file_delete',
+            ...actor,
+            targetType: 'file',
+            targetId: key,
+            meta: { endpoint: '/api/file/*' }
+          });
+        }catch(_){}
+      }
+      return resp;
     }
     if (pathname === "/api/deleteFile" && request.method === "POST") {
       {
         const guard = await requireAdminWrite(request, env);
         if (guard) return guard;
       }
-      return deleteR2FileViaBody(request, env);
+      {
+        const guard = await forbidIfFulfillmentAdmin(request, env);
+        if (guard) return guard;
+      }
+      {
+        const actor = await buildAuditActor(request, env);
+        const rule = parseRate(env.ADMIN_DELETE_RATE_LIMIT || '30/10m');
+        const rate = await checkAdminRateLimit(env, buildRateKey(actor, 'file_delete'), rule);
+        if (!rate.allowed){
+          try{
+            await auditAppend(env, {
+              ts: new Date().toISOString(),
+              action: 'rate_limited',
+              ...actor,
+              targetType: 'file',
+              targetId: 'bulk',
+              meta: { rule: env.ADMIN_DELETE_RATE_LIMIT || '30/10m' }
+            });
+          }catch(_){}
+          return new Response(
+            JSON.stringify({ ok:false, error:'rate_limited' }),
+            { status: 429, headers: jsonHeadersFor(request, env) }
+          );
+        }
+      }
+      let body = {};
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      let key = body?.key;
+      if (!key && body?.url) key = extractKeyFromProxyUrl(body.url);
+      const resp = await deleteR2FileViaBody(request, env, body);
+      // Manual test: owner delete file -> audit logs include action=file_delete
+      if (resp && resp.ok){
+        try{
+          const actor = await buildAuditActor(request, env);
+          await auditAppend(env, {
+            ts: new Date().toISOString(),
+            action: 'file_delete',
+            ...actor,
+            targetType: 'file',
+            targetId: key || '',
+            meta: { endpoint: '/api/deleteFile' }
+          });
+        }catch(_){}
+      }
+      return resp;
     }
 
     // CORS Preflight for all /api/ routes
@@ -10362,6 +10919,9 @@ async function handleUpload(request, env, origin) {
     const adminSession = await getAdminSession(request, env);
     const isAuthed = !!uploader || !!adminSession;
     const authTier = uploader ? 'user' : (adminSession ? 'admin' : 'anon');
+    const adminEmail = (adminSession && adminSession.email) ? String(adminSession.email) : '';
+    const adminRole = adminEmail ? getAdminRole(adminEmail, env) : '';
+    const isFulfillmentAdmin = !!adminEmail && adminRole === 'fulfillment';
     if (!isAuthed) {
       return withCORS(json({ ok:false, error:"Login required" }, 401));
     }
@@ -10418,13 +10978,23 @@ async function handleUpload(request, env, origin) {
       allowedMimes.delete("application/pdf");
       allowedExts.delete("pdf");
     }
+    if (isFulfillmentAdmin){
+      // Fulfillment: allow only image uploads, strict types.
+      allowedMimes.clear();
+      allowedExts.clear();
+      ["image/jpeg","image/jpg","image/png","image/webp"].forEach(x=>allowedMimes.add(x));
+      ["jpg","jpeg","png","webp"].forEach(x=>allowedExts.add(x));
+      delete extMimeMap.pdf;
+    }
     const anonMaxMb = Math.max(1, Number(env.UPLOAD_ANON_MAX_MB || env.UPLOAD_MAX_MB || 10) || 10);
     const authMaxMb = Math.max(1, Number(env.UPLOAD_AUTH_MAX_MB || env.UPLOAD_MAX_MB || 20) || 20);
     const maxBytes = (isAuthed ? authMaxMb : anonMaxMb) * 1024 * 1024;
+    const fulfillmentMaxMb = Math.max(1, Number(env.UPLOAD_FULFILLMENT_MAX_MB || 10) || 10);
+    const effectiveMaxBytes = isFulfillmentAdmin ? (fulfillmentMaxMb * 1024 * 1024) : maxBytes;
     for (const f of files) {
       if (typeof f.stream !== "function") continue;
-      if (f.size && f.size > maxBytes) {
-        const limitMb = Math.round(maxBytes / (1024 * 1024));
+      if (f.size && f.size > effectiveMaxBytes) {
+        const limitMb = Math.round(effectiveMaxBytes / (1024 * 1024));
         return json({ ok:false, error:`File too large (>${limitMb}MB)` }, 413);
       }
       const mime = String(f.type || "").toLowerCase();
@@ -10471,9 +11041,9 @@ async function deleteR2FileByKey(key, env) {
   }
 }
 
-async function deleteR2FileViaBody(request, env) {
+async function deleteR2FileViaBody(request, env, bodyOverride) {
   try {
-    const body = await request.json();
+    const body = bodyOverride || await request.json();
     let key = body?.key;
     if (!key && body?.url) key = extractKeyFromProxyUrl(body.url);
     if (!key) return withCORS(json({ ok:false, error:"Missing key or url" }, 400));

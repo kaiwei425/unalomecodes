@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="後台出貨工作台（僅限管理員）。">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/fulfillment">
+<title>unalomecodes | 懂玩泰國 - 後台 fulfillment</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<script src="/js/admin-guard.js" defer></script>
+<script src="/js/admin-shell.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
+    <h1>出貨工作台</h1>
+
+    <div class="card">
+      <h2>📦 待出貨訂單</h2>
+      <div class="muted" id="physicalStatus">載入中...</div>
+      <div style="overflow:auto;">
+        <table id="physicalTable">
+          <thead>
+            <tr>
+              <th style="min-width:180px">訂單編號</th>
+              <th style="min-width:140px">收件人姓名</th>
+              <th style="min-width:140px">目前狀態</th>
+              <th style="min-width:160px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="physicalBody"></tbody>
+        </table>
+      </div>
+      <div class="muted" id="physicalEmpty" style="display:none;">目前沒有待處理任務</div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>🧘‍♂️ 服務訂單工作列</h2>
+      <div class="muted" id="serviceStatus">載入中...</div>
+      <div style="overflow:auto;">
+        <table id="serviceTable">
+          <thead>
+            <tr>
+              <th style="min-width:180px">訂單編號</th>
+              <th style="min-width:140px">客戶姓名</th>
+              <th style="min-width:140px">指定日期</th>
+              <th style="min-width:140px">目前狀態</th>
+              <th style="min-width:180px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="serviceBody"></tbody>
+        </table>
+      </div>
+      <div class="muted" id="serviceEmpty" style="display:none;">目前沒有待處理任務</div>
+    </div>
+  </div>
+
+  <input type="file" id="serviceResultFile" accept="image/*" style="display:none;">
+
+  <script src="/js/admin-fulfillment.inline-2.js"></script>
+</body>
+</html>

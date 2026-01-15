@@ -1,0 +1,93 @@
+[
+  {
+    "action_type": "auth",
+    "route/page/api": "/admin/* (GET/HEAD gate) + /api/auth/google/admin/*",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "後台入口保護：管理員登入、簽發 admin_session、允許信任信箱白名單；若設定錯誤會造成後台暴露或鎖死。"
+  },
+  {
+    "action_type": "user_mgmt",
+    "route/page/api": "/api/admin/users/delete",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "刪除/清理會員資料屬不可逆高風險操作，需後端強制權限與來源限制。"
+  },
+  {
+    "action_type": "user_mgmt",
+    "route/page/api": "/api/admin/users/reset-guardian",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "重置會員守護神屬於帳號狀態修改，會影響個人化體驗與日籤生成。"
+  },
+  {
+    "action_type": "user_mgmt",
+    "route/page/api": "/api/admin/users/creator-invite + /api/admin/creator/invite",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "創作者邀請/權限提升可能影響內容寫入與管理權限，屬權限邊界相關高風險。"
+  },
+  {
+    "action_type": "settings",
+    "route/page/api": "X-Admin-Key / ADMIN_KEY / ADMIN_ALLOWED_EMAILS / ADMIN_JWT_SECRET / ADMIN_ORIGINS",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "管理權限校驗與來源限制依賴環境變數；配置失誤會造成越權或阻斷。"
+  },
+  {
+    "action_type": "delete",
+    "route/page/api": "/api/products/:id (DELETE)",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "刪除商品會影響前台販售與訂單一致性，需嚴格權限與審計。"
+  },
+  {
+    "action_type": "write",
+    "route/page/api": "/api/products (POST) /api/products/:id (PUT/PATCH)",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "商品上架與內容修改會影響價格/庫存/頁面渲染，屬核心營運寫入。"
+  },
+  {
+    "action_type": "delete",
+    "route/page/api": "/api/service/products (DELETE)",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "刪除服務商品會影響服務訂單與履約流程。"
+  },
+  {
+    "action_type": "write",
+    "route/page/api": "/api/service/products (POST/PUT/PATCH)",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "服務商品內容與價格調整會影響服務訂單與客訴風險。"
+  },
+  {
+    "action_type": "order_mgmt",
+    "route/page/api": "/api/order/status + /api/service/order/status",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "更新訂單狀態（付款/出貨/完成）屬金流/履約關鍵路徑。"
+  },
+  {
+    "action_type": "export",
+    "route/page/api": "/api/orders/export + /api/service/orders/export",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "訂單匯出包含個資/交易資訊，需最小權限、審計、與下載限制。"
+  },
+  {
+    "action_type": "content_delete",
+    "route/page/api": "/api/stories?code=...&_method=DELETE",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "刪除使用者故事/留言屬內容審核操作，需權限與追蹤。"
+  },
+  {
+    "action_type": "file_upload",
+    "route/page/api": "/api/upload + /api/deleteFile",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "檔案上傳/刪除可能導致資安與營運損失（惡意檔、誤刪素材），需後端驗證與限制。"
+  },
+  {
+    "action_type": "marketing",
+    "route/page/api": "/api/coupons/issue + /api/coupons/issue-batch",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "發券會直接影響營收與成本；批次發放尤其高風險，需權限、上限與審計。"
+  },
+  {
+    "action_type": "cron",
+    "route/page/api": "/api/admin/cron/update-dashboard + /api/admin/cron/release-holds",
+    "file_path": "functions/[[path]].handler.js",
+    "reason": "後台排程與解鎖保留單屬系統維運操作，若被濫用會影響訂單與庫存一致性。"
+  }
+]
+

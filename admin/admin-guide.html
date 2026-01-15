@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="後台管理員手冊（僅限 owner）。">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/admin-guide">
+<title>unalomecodes | 懂玩泰國 - 管理員手冊</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<script src="/js/admin-guard.js" defer></script>
+<script src="/js/admin-shell.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
+    <h1>管理員手冊</h1>
+
+    <div class="card">
+      <h2>1) 角色總覽</h2>
+      <p><strong>owner</strong></p>
+      <ul>
+        <li>完整權限（所有後台功能）</li>
+        <li>可匯出訂單</li>
+        <li>可執行 cron/維護動作</li>
+        <li>可刪除檔案</li>
+        <li>可查看審計日誌</li>
+      </ul>
+      <p><strong>fulfillment</strong></p>
+      <ul>
+        <li>可查看訂單與服務訂單</li>
+        <li>可更新實體商品出貨狀態</li>
+        <li>可上傳服務成果照片</li>
+        <li>不可匯出</li>
+        <li>不可刪除</li>
+        <li>不可執行 cron</li>
+        <li>不可查看財務與敏感資料</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>2) 每日工作流程（Fulfillment）</h2>
+      <ul>
+        <li>使用「出貨工作台」查看待處理任務</li>
+        <li>實體訂單：按「標記為已寄件」完成出貨狀態更新</li>
+        <li>服務訂單：按「上傳服務成果」上傳完成照片</li>
+        <li>若遇到 403：代表權限不足，請聯繫 owner</li>
+        <li>若遇到 429：代表操作過於頻繁，請稍後再試</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>3) 安全規範</h2>
+      <ul>
+        <li>所有高風險操作都會被記錄（審計日誌）</li>
+        <li>系統有頻率限制，連續 429 不要持續重試</li>
+        <li>不要分享管理員帳號或登入連結</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>4) 緊急處理（Owner Only）</h2>
+      <ul>
+        <li>可在「審計日誌」查看關鍵操作紀錄</li>
+        <li>若發現異常行為，應檢查來源帳號與操作時間</li>
+        <li>前端 UI 只是提示，後端權限才是最終判斷</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/js/admin-guide.inline.js"></script>
+</body>
+</html>

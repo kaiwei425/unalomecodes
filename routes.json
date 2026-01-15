@@ -1,0 +1,197 @@
+{
+  "basePath": "/admin",
+  "routes": [
+    {
+      "path": "/admin",
+      "label": "總覽 / Dashboard",
+      "module": "dashboard",
+      "file": "admin/index.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-index.inline-1.css",
+        "js/admin-index.inline-1.js",
+        "js/admin-index.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/admin/dashboard",
+        "/api/admin/track-stats?event=home_view",
+        "/api/admin/track-stats?event=quiz_start",
+        "/api/admin/food-stats",
+        "/api/admin/temple-stats"
+      ]
+    },
+    {
+      "path": "/admin/orders",
+      "label": "訂單管理 / Orders",
+      "module": "orders",
+      "file": "admin/orders.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-orders.inline-1.css",
+        "js/admin-orders.inline-1.js",
+        "js/admin-orders.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/orders",
+        "/api/orders/export",
+        "/api/order/status",
+        "/api/order/qna",
+        "/api/admin/qna/unread",
+        "/api/admin/cron/release-holds",
+        "/api/proof/*"
+      ]
+    },
+    {
+      "path": "/admin/products",
+      "label": "商品管理 / Products",
+      "module": "products",
+      "file": "admin/products.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-products.inline-1.css",
+        "js/admin-products.inline-1.js",
+        "js/admin-products.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/products (GET/POST)",
+        "/api/products/:id (GET/PUT/PATCH/DELETE)",
+        "/api/upload",
+        "/api/deleteFile"
+      ]
+    },
+    {
+      "path": "/admin/service-orders",
+      "label": "服務訂單 / Service Orders",
+      "module": "service_orders",
+      "file": "admin/service-orders.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-service-orders.inline-1.css",
+        "js/admin-service-orders.inline-1.js",
+        "js/admin-service-orders.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/service/orders",
+        "/api/service/orders/export",
+        "/api/service/order/status",
+        "/api/service/order/result-photo",
+        "/api/upload",
+        "/api/order/qna",
+        "/api/admin/qna/unread",
+        "/api/proof/*"
+      ]
+    },
+    {
+      "path": "/admin/service-products",
+      "label": "服務商品 / Service Products",
+      "module": "service_products",
+      "file": "admin/service-products.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-service-products.inline-1.css",
+        "js/admin-service-products.inline-1.js",
+        "js/admin-service-products.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/service/products (GET/POST/DELETE)",
+        "/api/upload"
+      ]
+    },
+    {
+      "path": "/admin/members",
+      "label": "會員管理 / Customers",
+      "module": "customers",
+      "file": "admin/members.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-members.inline-1.css",
+        "js/admin-members.inline-1.js",
+        "js/admin-members.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/admin/users",
+        "/api/admin/users/reset-guardian",
+        "/api/admin/users/delete",
+        "/api/admin/users/creator-invite",
+        "/api/admin/creator/invite"
+      ]
+    },
+    {
+      "path": "/admin/coupons",
+      "label": "優惠券 / Marketing",
+      "module": "marketing",
+      "file": "admin/coupons.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-coupons.inline-1.css",
+        "js/admin-coupons.inline-1.js",
+        "js/admin-coupons.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/coupons/issue",
+        "/api/coupons/issue-batch",
+        "/api/coupons/list",
+        "/api/products?active=true"
+      ]
+    },
+    {
+      "path": "/admin/code-viewer",
+      "label": "留言管理 / Content Moderation",
+      "module": "content_moderation",
+      "file": "admin/code-viewer.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-code-viewer.inline-1.css",
+        "js/admin-code-viewer.inline-1.js",
+        "js/admin-code-viewer.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": [
+        "/api/products",
+        "/api/service/products",
+        "/api/stories?code=... (&_method=DELETE)"
+      ]
+    }
+  ],
+  "adminGate": {
+    "paths": [
+      "/admin",
+      "/admin/*"
+    ],
+    "authFlow": [
+      "/api/auth/google/admin/start",
+      "/api/auth/google/admin/callback",
+      "/api/auth/admin/me"
+    ],
+    "implementationFile": "functions/[[path]].handler.js"
+  },
+  "adminApi": [
+    { "path": "/api/admin/dashboard", "file": "functions/[[path]].handler.js", "module": "dashboard" },
+    { "path": "/api/admin/track-stats", "file": "functions/[[path]].handler.js", "module": "analytics" },
+    { "path": "/api/admin/food-stats", "file": "functions/[[path]].handler.js", "module": "analytics" },
+    { "path": "/api/admin/temple-stats", "file": "functions/[[path]].handler.js", "module": "analytics" },
+    { "path": "/api/admin/users", "file": "functions/[[path]].handler.js", "module": "customers" },
+    { "path": "/api/admin/users/reset-guardian", "file": "functions/[[path]].handler.js", "module": "customers" },
+    { "path": "/api/admin/users/delete", "file": "functions/[[path]].handler.js", "module": "customers" },
+    { "path": "/api/admin/users/creator-invite", "file": "functions/[[path]].handler.js", "module": "customers" },
+    { "path": "/api/admin/creator/invite", "file": "functions/[[path]].handler.js", "module": "content" },
+    { "path": "/api/admin/qna/unread", "file": "functions/[[path]].handler.js", "module": "orders" },
+    { "path": "/api/admin/cron/update-dashboard", "file": "functions/[[path]].handler.js", "module": "analytics" },
+    { "path": "/api/admin/cron/release-holds", "file": "functions/[[path]].handler.js", "module": "orders" }
+  ]
+}

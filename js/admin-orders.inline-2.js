@@ -17,6 +17,8 @@ let ORDERS = [];
 let current = [];
 let selected = new Set();
 let activeTab = 'all';
+let ADMIN_ROLE = '';
+let IS_FULFILLMENT = false;
 
 function toast(msg){
   const t = document.createElement('div');
@@ -46,6 +48,97 @@ function normalizeDisplayStatus(status){
   if (s.includes('付款逾期') || s.includes('付款失敗') || s.includes('金額不符')) return '付款逾期';
   if (s.includes('取消') || s.includes('退款') || s.includes('作廢')) return '取消訂單';
   return s;
+}
+
+function getNextStatusForFulfillment(displayStatus){
+  const raw = String(displayStatus || '').trim();
+  const s = raw.replace(/\s+/g, '');
+  if (!s) return '';
+  if (s.includes('訂單待處理') || s.includes('待處理') || s.includes('待付款') || s.includes('未付款')) return '待出貨';
+  if (s.includes('待出貨') || s.includes('已付款')) return '已寄件';
+  if (s.includes('已寄件') || s.includes('已寄出') || s.includes('已出貨')) return '已取件（訂單完成）';
+  return '';
+}
+
+function buildFulfillmentStatusOptions(displayStatus){
+  const next = getNextStatusForFulfillment(displayStatus);
+  if (!next){
+    return { options: '<option value="">無可變更</option>', disabled: true };
+  }
+  return { options: `<option value="">選擇狀態</option><option value="${escapeHtml(next)}">${escapeHtml(next)}</option>`, disabled: false };
+}
+
+function applyFulfillmentUi(){
+  if (!IS_FULFILLMENT) return;
+  const exportCsv = document.getElementById('exportCsv');
+  if (exportCsv){
+    exportCsv.style.display = 'none';
+    exportCsv.disabled = true;
+  }
+  const export711 = document.getElementById('export711');
+  if (export711){
+    export711.style.display = 'none';
+    export711.disabled = true;
+  }
+  const exportNeedles = ['匯出','export'];
+  const riskyNeedles = ['釋放','release','cron','解鎖','批次','delete','刪除'];
+  const nodes = Array.from(document.querySelectorAll('a,button'));
+  nodes.forEach(el=>{
+    const text = String(el.textContent || '').toLowerCase();
+    const href = String(el.getAttribute('href') || '').toLowerCase();
+    const dataUrl = String(el.getAttribute('data-url') || '').toLowerCase();
+    const dataHref = String(el.getAttribute('data-href') || '').toLowerCase();
+    const dataApi = String(el.getAttribute('data-api') || '').toLowerCase();
+    const dataEndpoint = String(el.getAttribute('data-endpoint') || '').toLowerCase();
+    const hasExportHref = href.includes('/api/orders/export');
+    const hasReleaseEndpoint = href.includes('/api/admin/cron/release-holds')
+      || dataUrl.includes('/api/admin/cron/release-holds')
+      || dataHref.includes('/api/admin/cron/release-holds')
+      || dataApi.includes('/api/admin/cron/release-holds')
+      || dataEndpoint.includes('/api/admin/cron/release-holds');
+    const hasExportText = exportNeedles.some(n=> text.includes(n));
+    const hasRiskText = riskyNeedles.some(n=> text.includes(n));
+    if (hasExportHref || hasReleaseEndpoint || hasExportText || hasRiskText){
+      el.style.display = 'none';
+      if ('disabled' in el) el.disabled = true;
+    }
+  });
+}
+
+function hideTableColumns(indices){
+  const table = document.getElementById('tbl');
+  if (!table) return;
+  const rows = table.querySelectorAll('tr');
+  rows.forEach(row => {
+    indices.forEach(idx => {
+      const cell = row.children[idx - 1];
+      if (cell) cell.style.display = 'none';
+    });
+  });
+}
+
+async function resolveAdminRole(){
+  if (ADMIN_ROLE) return ADMIN_ROLE;
+  try{
+    if (window.AUTH && typeof window.AUTH.getState === 'function'){
+      const state = window.AUTH.getState();
+      const role = state && state.admin && state.admin.role ? String(state.admin.role).trim().toLowerCase() : '';
+      if (role){
+        ADMIN_ROLE = role;
+        IS_FULFILLMENT = role === 'fulfillment';
+        return ADMIN_ROLE;
+      }
+    }
+  }catch(_){}
+  try{
+    const res = await authedFetch('/api/auth/admin/me', { cache:'no-store' });
+    const data = await res.json().catch(()=>({}));
+    if (res.ok && data && data.ok){
+      ADMIN_ROLE = String(data.role || '').trim().toLowerCase();
+      IS_FULFILLMENT = ADMIN_ROLE === 'fulfillment';
+    }
+  }catch(_){}
+  return ADMIN_ROLE;
 }
 
 function normalizeDigits(val){
@@ -373,9 +466,12 @@ const items = Array.isArray(o.items) ? o.items : [{
       const rawPrice = (it.price != null ? it.price : (it.unitPrice != null ? it.unitPrice : 0));
       const priceNum = Number(String(rawPrice).replace(/[^\d.]/g,'')) || 0;
       const sub   = priceNum * qty;
+      const detailLine = IS_FULFILLMENT
+        ? `數量：${qty}${specLine}`
+        : `單價：NT$ ${priceNum.toLocaleString('en-US')}${specLine}｜數量：${qty}｜小計：NT$ ${sub.toLocaleString('en-US')}`;
       return `<div style="margin:2px 0">
         <div><span class="mono">${title}</span></div>
-        <div class="muted">單價：NT$ ${priceNum.toLocaleString('en-US')}${specLine}｜數量：${qty}｜小計：NT$ ${sub.toLocaleString('en-US')}</div>
+        <div class="muted">${detailLine}</div>
       </div>`;
     }).join('');
 
@@ -393,7 +489,7 @@ const items = Array.isArray(o.items) ? o.items : [{
       return sum.toLocaleString('en-US');
     })();
 
-    const payHtml = ((()=>{
+    const payHtml = IS_FULFILLMENT ? '<div class="muted">—</div>' : ((()=>{
       const m = String(o.method||'').trim();
       const ml = m.toLowerCase();
       const isBank = (ml === 'bank-transfer') || (ml === 'bank_transfer') || (ml === 'bank transfer') || /bank|轉帳|匯款/.test(ml);
@@ -518,27 +614,26 @@ const items = Array.isArray(o.items) ? o.items : [{
       return parts.join('');
     }))();
 
-    return `<tr data-id="${o.id}">
-      <td><input class="checkbox rowcheck" type="checkbox" ${checked} data-id="${o.id}"></td>
-      <td>
-        <div><span class="badge">${o.id||''}</span></div>
-        <div class="muted">${fmt(o.createdAt)}</div>
-      </td>
-      <td>${itemsHtml}</td>
-      <td><strong>NT$ ${amount}</strong></td>
-      <td>${payHtml}</td>
-      <td>
+    const buyerInfoHtml = IS_FULFILLMENT ? (function(){
+      const name = escapeHtml(buyer.name || o.name || "");
+      const store = (buyer.store||o.store) ? `<div class="muted">7-11 門市：${escapeHtml(buyer.store||o.store)}</div>` : '';
+      const note = remarkVal ? `<div class="muted">備註：${escapeHtml(remarkVal)}</div>` : '';
+      return `<div>${name || '—'}</div>${store}${note}`;
+    })() : (function(){
+      return `
   <div>${escapeHtml(buyer.name||"")}</div>
   ${ (buyer.phone||o.phone||buyer.tel||buyer.mobile) ? `<div class="muted">電話：${escapeHtml(buyer.phone||o.phone||buyer.tel||buyer.mobile)}</div>` : "" }
   ${ (buyer.email||o.email) ? `<div class="muted">Email：${escapeHtml(buyer.email||o.email)}</div>` : "" }
   ${ buyer.line ? `<div class="muted">LINE：${escapeHtml(buyer.line)}</div>` : "" }
   ${ (buyer.store||o.store) ? `<div class="muted">7-11 門市：${escapeHtml(buyer.store||o.store)}</div>` : "" }
-  ${ trackingNo ? `<div class="muted order-tracking">配送單號：${escapeHtml(trackingNo)}</div>` : "" }
   <div class="muted">備註：${escapeHtml(remarkVal) || '（無）'}</div>
-</td>
-      <td><span class="badge ${statusClass(displayStatus)}">${escapeHtml(displayStatus || "訂單待處理")}</span></td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">
-        <select class="opStatus" style="padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#0b1022;color:#e5e7eb" data-id="${o.id}">
+`;
+    })();
+
+    const statusOptionsData = IS_FULFILLMENT
+      ? buildFulfillmentStatusOptions(displayStatus)
+      : {
+          options: `
           <option value="">選擇狀態</option>
           <option value="訂單待處理" ${displayStatus === "訂單待處理" ? "selected":""}>訂單待處理</option>
           <option value="待出貨" ${displayStatus === "待出貨" ? "selected":""}>待出貨</option>
@@ -546,8 +641,29 @@ const items = Array.isArray(o.items) ? o.items : [{
           <option value="已取件（訂單完成）" ${displayStatus === "已取件（訂單完成）" ? "selected":""}>已取件（訂單完成）</option>
           <option value="付款逾期" ${displayStatus === "付款逾期" ? "selected":""}>付款逾期</option>
           <option value="取消訂單" ${displayStatus === "取消訂單" ? "selected":""}>取消訂單</option>
+        `,
+          disabled: false
+        };
+
+    return `<tr data-id="${o.id}">
+      <td><input class="checkbox rowcheck" type="checkbox" ${checked} data-id="${o.id}"></td>
+      <td>
+        <div><span class="badge">${o.id||''}</span></div>
+        <div class="muted">${fmt(o.createdAt)}</div>
+      </td>
+      <td>${itemsHtml}</td>
+      <td><strong>NT$ ${IS_FULFILLMENT ? '—' : amount}</strong></td>
+      <td>${payHtml}</td>
+      <td>
+${buyerInfoHtml}
+  ${ trackingNo ? `<div class="muted order-tracking">配送單號：${escapeHtml(trackingNo)}</div>` : "" }
+</td>
+      <td><span class="badge ${statusClass(displayStatus)}">${escapeHtml(displayStatus || "訂單待處理")}</span></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <select class="opStatus" style="padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#0b1022;color:#e5e7eb" data-id="${o.id}" ${statusOptionsData.disabled ? 'disabled' : ''}>
+          ${statusOptionsData.options}
         </select>
-        <button class="btn" data-act="applyStatus" data-id="${o.id}">套用</button>
+        <button class="btn" data-act="applyStatus" data-id="${o.id}" ${statusOptionsData.disabled ? 'disabled' : ''}>套用</button>
         <button class="btn" data-act="qna" data-id="${o.id}">問與答</button>
         <button class="btn danger" data-act="singleDel" data-id="${o.id}">刪除</button>
       </td>
@@ -555,6 +671,9 @@ const items = Array.isArray(o.items) ? o.items : [{
   }).join('');
   $('#tbody').innerHTML = rows || '<tr><td colspan="8" class="muted">目前沒有訂單</td></tr>';
   hydrateProofThumbs();
+  if (IS_FULFILLMENT){
+    hideTableColumns([4,5]);
+  }
 function hydrateProofThumbs(){
   const thumbs = document.querySelectorAll('img.proofThumb[data-src]');
   thumbs.forEach(async (img)=>{
@@ -1068,6 +1187,11 @@ async function ensureAdminSession(){
     const res = await authedFetch('/api/auth/admin/me', { cache:'no-store' });
     const data = await res.json().catch(()=>({}));
     if (res.ok && data && data.ok){
+      if (data.role){
+        ADMIN_ROLE = String(data.role || '').trim().toLowerCase();
+        IS_FULFILLMENT = ADMIN_ROLE === 'fulfillment';
+        applyFulfillmentUi();
+      }
       gate.style.display = 'none';
       return true;
     }
@@ -1081,6 +1205,8 @@ async function boot(){
   try{
     setActiveTab(activeTab);
     if (await ensureAdminSession()){
+      await resolveAdminRole();
+      applyFulfillmentUi();
       clearQnaUnread();
       loadOrders();
     }

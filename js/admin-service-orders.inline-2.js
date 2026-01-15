@@ -20,6 +20,8 @@
   let orders = [];
   let activeStatus = 'pending';
   const STATUSES = ['待處理','已確認付款，祈福進行中','祈福完成','祈福成果已通知'];
+  let ADMIN_ROLE = '';
+  let IS_FULFILLMENT = false;
 
   function fmtCurrency(val){
     return 'NT$ ' + Number(val||0).toLocaleString('zh-TW');
@@ -97,6 +99,60 @@
   }
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  async function resolveAdminRole(){
+    if (ADMIN_ROLE) return ADMIN_ROLE;
+    try{
+      if (window.AUTH && typeof window.AUTH.getState === 'function'){
+        const state = window.AUTH.getState();
+        const role = state && state.admin && state.admin.role ? String(state.admin.role).trim().toLowerCase() : '';
+        if (role){
+          ADMIN_ROLE = role;
+          IS_FULFILLMENT = role === 'fulfillment';
+          return ADMIN_ROLE;
+        }
+      }
+    }catch(_){}
+    try{
+      const data = await authedFetch('/api/auth/admin/me', { cache:'no-store' });
+      if (data && data.ok){
+        ADMIN_ROLE = String(data.role || '').trim().toLowerCase();
+        IS_FULFILLMENT = ADMIN_ROLE === 'fulfillment';
+      }
+    }catch(_){}
+    return ADMIN_ROLE;
+  }
+
+  function applyFulfillmentUi(){
+    if (!IS_FULFILLMENT) return;
+    if (btnExport){
+      btnExport.style.display = 'none';
+      btnExport.disabled = true;
+    }
+    const exportNeedles = ['匯出','export'];
+    const riskyNeedles = ['釋放','release','cron','解鎖','批次','delete','刪除'];
+    const nodes = Array.from(document.querySelectorAll('a,button'));
+    nodes.forEach(el=>{
+      const text = String(el.textContent || '').toLowerCase();
+      const href = String(el.getAttribute('href') || '').toLowerCase();
+      const dataUrl = String(el.getAttribute('data-url') || '').toLowerCase();
+      const dataHref = String(el.getAttribute('data-href') || '').toLowerCase();
+      const dataApi = String(el.getAttribute('data-api') || '').toLowerCase();
+      const dataEndpoint = String(el.getAttribute('data-endpoint') || '').toLowerCase();
+      const hasExportHref = href.includes('/api/service/orders/export');
+      const hasReleaseEndpoint = href.includes('/api/admin/cron/release-holds')
+        || dataUrl.includes('/api/admin/cron/release-holds')
+        || dataHref.includes('/api/admin/cron/release-holds')
+        || dataApi.includes('/api/admin/cron/release-holds')
+        || dataEndpoint.includes('/api/admin/cron/release-holds');
+      const hasExportText = exportNeedles.some(n=> text.includes(n));
+      const hasRiskText = riskyNeedles.some(n=> text.includes(n));
+      if (hasExportHref || hasReleaseEndpoint || hasExportText || hasRiskText){
+        el.style.display = 'none';
+        if ('disabled' in el) el.disabled = true;
+      }
+    });
   }
 
   const qnaDialog = document.getElementById('svcQnaDialog');
@@ -214,8 +270,20 @@
     }
     bodyEl.innerHTML = view.map(o=>{
       const transferLast5 = getTransferLast5(o);
-      const transferDisplay = transferLast5 ? `<strong style="letter-spacing:1px;">${transferLast5}</strong>` : '—';
+      const transferDisplay = IS_FULFILLMENT
+        ? '—'
+        : (transferLast5 ? `<strong style="letter-spacing:1px;">${transferLast5}</strong>` : '—');
       const totalAmount = getOrderTotal(o);
+      const totalAmountDisplay = IS_FULFILLMENT ? '—' : fmtCurrency(totalAmount);
+      const contactPhone = IS_FULFILLMENT ? '' : escapeHtml(o.buyer && o.buyer.phone || '');
+      const contactEmail = IS_FULFILLMENT ? '' : escapeHtml(o.buyer && o.buyer.email || '');
+      const nameEn = IS_FULFILLMENT ? '' : (o.buyer && o.buyer.nameEn ? `<div class="muted">英文：${escapeHtml(o.buyer.nameEn)}</div>` : '');
+      const requestDate = escapeHtml(o.requestDate || '—');
+      const birthText = IS_FULFILLMENT ? '—' : escapeHtml((o.buyer && o.buyer.birth) || '—');
+      const statusDisabled = IS_FULFILLMENT ? 'disabled' : '';
+      const applyHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
+      const proofHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
+      const deleteHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       return `
         <div class="order-card" data-id="${o.id}">
           <div class="order-header">
@@ -233,37 +301,38 @@
               <div class="muted">內容：${formatItems(o)}</div>
               <div class="muted">備註：${escapeHtml(o.note||'—')}</div>
               <div class="muted">匯款末五碼：${transferDisplay}</div>
-              <div class="muted">總金額：${fmtCurrency(totalAmount)}</div>
+              <div class="muted">總金額：${totalAmountDisplay}</div>
             </div>
             <div class="section">
               <strong>聯絡人</strong>
               <div>${escapeHtml(o.buyer && o.buyer.name || '')}</div>
-              ${o.buyer && o.buyer.nameEn ? `<div class="muted">英文：${escapeHtml(o.buyer.nameEn)}</div>` : ''}
-              <div class="muted">${escapeHtml(o.buyer && o.buyer.phone || '')}</div>
-              <div class="muted">${escapeHtml(o.buyer && o.buyer.email || '')}</div>
-              <div class="muted">生日：${escapeHtml((o.buyer && o.buyer.birth) || '—')}</div>
-              <div class="muted">指定日期：${escapeHtml(o.requestDate || '—')}</div>
+              ${nameEn}
+              ${contactPhone ? `<div class="muted">${contactPhone}</div>` : ''}
+              ${contactEmail ? `<div class="muted">${contactEmail}</div>` : ''}
+              <div class="muted">生日：${birthText}</div>
+              <div class="muted">指定日期：${requestDate}</div>
             </div>
           </div>
           <div class="section">
             <strong>狀態</strong>
-            <select data-id="${o.id}" class="statusSel">
+            <select data-id="${o.id}" class="statusSel" ${statusDisabled}>
               ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
             </select>
           </div>
           <div class="actions">
-            <button class="btn primary" data-act="apply" data-id="${o.id}">套用</button>
+            <button class="btn primary" data-act="apply" data-id="${o.id}" ${applyHidden}>套用</button>
             <button class="btn" data-act="view" data-id="${o.id}">明細</button>
             <button class="btn" data-act="qna" data-id="${o.id}">問與答</button>
             <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
             <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
             <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
-            <button class="btn" data-act="proof" data-id="${o.id}">匯款憑證</button>
-            <button class="btn danger" data-act="delete" data-id="${o.id}">刪除</button>
+            <button class="btn" data-act="proof" data-id="${o.id}" ${proofHidden}>匯款憑證</button>
+            <button class="btn danger" data-act="delete" data-id="${o.id}" ${deleteHidden}>刪除</button>
           </div>
         </div>
       `;
     }).join('');
+    if (IS_FULFILLMENT) applyFulfillmentUi();
   }
   async function loadOrders(){
     bodyEl.innerHTML = '<div class="muted">載入中…</div>';
@@ -420,17 +489,29 @@
     const itemHtml = items.length ? items.map(it=> `<div>${escapeHtml(it.name||'')}｜${fmtCurrency(it.total||0)}</div>`).join('') : `<div>${escapeHtml(order.serviceName||'')}</div>`;
     const birth = (order.buyer && (order.buyer.birth || order.buyer.birthday)) || '—';
     const reqDate = order.requestDate || '—';
-    detailBody.innerHTML = `
-      <div><span class="muted">訂單編號</span><br><strong>${escapeHtml(order.id||'')}</strong></div>
-      <div><span class="muted">服務內容</span>${itemHtml}</div>
-      <div><span class="muted">聯絡人</span><br>${escapeHtml(order.buyer && order.buyer.name || '')}｜${escapeHtml(order.buyer && order.buyer.phone || '')}<br>${escapeHtml(order.buyer && order.buyer.email || '')}${order.buyer && order.buyer.nameEn ? `<br>英文：${escapeHtml(order.buyer.nameEn)}` : ''}<br>生日：${escapeHtml(birth)}｜指定日期：${escapeHtml(reqDate)}</div>
-      <div><span class="muted">匯款金額</span><br>${fmtCurrency(transfer.amount || order.amount || 0)}</div>
-      <div><span class="muted">匯款資訊</span><br>銀行：${escapeHtml(transfer.bank || '—')}<br>帳號：${escapeHtml(transfer.account || '—')}<br>末五碼：${escapeHtml(transfer.last5 || order.transferLast5 || '—')}</div>
-      <div><span class="muted">備註 / 匯款說明</span><br>${escapeHtml(transfer.memo || order.transferMemo || order.note || '—')}</div>
-      ${receipt ? `<div><span class="muted">匯款憑證</span><br><a href="${escapeHtml(receipt)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(receipt)}" alt="匯款憑證" class="proof-img"></div>` : '<div><span class="muted">匯款憑證</span><br>尚未提供</div>'}
-      ${ritualPhoto ? `<div><span class="muted">顧客照片</span><br><a href="${escapeHtml(ritualPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(ritualPhoto)}" alt="顧客照片" class="proof-img"></div>` : '<div><span class="muted">顧客照片</span><br>未提供</div>'}
-      ${resultPhoto ? `<div><span class="muted">祈福成果</span><br><a href="${escapeHtml(resultPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(resultPhoto)}" alt="祈福成果" class="proof-img"></div>` : '<div><span class="muted">祈福成果</span><br>未上傳</div>'}
-    `;
+    if (IS_FULFILLMENT){
+      detailBody.innerHTML = `
+        <div><span class="muted">訂單編號</span><br><strong>${escapeHtml(order.id||'')}</strong></div>
+        <div><span class="muted">服務內容</span>${itemHtml}</div>
+        <div><span class="muted">聯絡人</span><br>${escapeHtml(order.buyer && order.buyer.name || '')}</div>
+        <div><span class="muted">指定日期</span><br>${escapeHtml(reqDate)}</div>
+        <div><span class="muted">備註</span><br>${escapeHtml(order.note || '—')}</div>
+        ${ritualPhoto ? `<div><span class="muted">顧客照片</span><br><a href="${escapeHtml(ritualPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(ritualPhoto)}" alt="顧客照片" class="proof-img"></div>` : '<div><span class="muted">顧客照片</span><br>未提供</div>'}
+        ${resultPhoto ? `<div><span class="muted">祈福成果</span><br><a href="${escapeHtml(resultPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(resultPhoto)}" alt="祈福成果" class="proof-img"></div>` : '<div><span class="muted">祈福成果</span><br>未上傳</div>'}
+      `;
+    }else{
+      detailBody.innerHTML = `
+        <div><span class="muted">訂單編號</span><br><strong>${escapeHtml(order.id||'')}</strong></div>
+        <div><span class="muted">服務內容</span>${itemHtml}</div>
+        <div><span class="muted">聯絡人</span><br>${escapeHtml(order.buyer && order.buyer.name || '')}｜${escapeHtml(order.buyer && order.buyer.phone || '')}<br>${escapeHtml(order.buyer && order.buyer.email || '')}${order.buyer && order.buyer.nameEn ? `<br>英文：${escapeHtml(order.buyer.nameEn)}` : ''}<br>生日：${escapeHtml(birth)}｜指定日期：${escapeHtml(reqDate)}</div>
+        <div><span class="muted">匯款金額</span><br>${fmtCurrency(transfer.amount || order.amount || 0)}</div>
+        <div><span class="muted">匯款資訊</span><br>銀行：${escapeHtml(transfer.bank || '—')}<br>帳號：${escapeHtml(transfer.account || '—')}<br>末五碼：${escapeHtml(transfer.last5 || order.transferLast5 || '—')}</div>
+        <div><span class="muted">備註 / 匯款說明</span><br>${escapeHtml(transfer.memo || order.transferMemo || order.note || '—')}</div>
+        ${receipt ? `<div><span class="muted">匯款憑證</span><br><a href="${escapeHtml(receipt)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(receipt)}" alt="匯款憑證" class="proof-img"></div>` : '<div><span class="muted">匯款憑證</span><br>尚未提供</div>'}
+        ${ritualPhoto ? `<div><span class="muted">顧客照片</span><br><a href="${escapeHtml(ritualPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(ritualPhoto)}" alt="顧客照片" class="proof-img"></div>` : '<div><span class="muted">顧客照片</span><br>未提供</div>'}
+        ${resultPhoto ? `<div><span class="muted">祈福成果</span><br><a href="${escapeHtml(resultPhoto)}" target="_blank" rel="noopener" style="color:#38bdf8;">開新視窗查看</a><img src="${escapeHtml(resultPhoto)}" alt="祈福成果" class="proof-img"></div>` : '<div><span class="muted">祈福成果</span><br>未上傳</div>'}
+      `;
+    }
     detailDialog.showModal();
   }
   if (detailClose){
@@ -542,5 +623,8 @@
       render();
     });
   }
-  loadOrders();
+  resolveAdminRole().then(()=>{
+    applyFulfillmentUi();
+    loadOrders();
+  });
 })();

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="後台審計日誌（僅限管理員）。">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/audit-logs">
+<title>unalomecodes | 懂玩泰國 - 後台 audit logs</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<script src="/js/admin-guard.js" defer></script>
+<script src="/js/admin-shell.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
+    <h1>審計日誌</h1>
+    <div class="bar">
+      <select id="actionFilter">
+        <option value="">全部</option>
+        <option value="orders_export">orders_export</option>
+        <option value="service_orders_export">service_orders_export</option>
+        <option value="order_status_update">order_status_update</option>
+        <option value="service_order_status_update">service_order_status_update</option>
+        <option value="file_delete">file_delete</option>
+        <option value="cron_update_dashboard">cron_update_dashboard</option>
+        <option value="cron_release_holds">cron_release_holds</option>
+        <option value="service_result_upload">service_result_upload</option>
+        <option value="rate_limited">rate_limited</option>
+      </select>
+      <input id="actorFilter" placeholder="email 或 role (owner/fulfillment/admin_key)">
+      <input id="targetFilter" placeholder="targetId (order id / file key)">
+      <button class="btn" id="btnSearch">查詢</button>
+      <button class="btn" id="btnReset">重置</button>
+      <span class="muted" id="statusText"></span>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div style="overflow:auto; max-height:70vh;">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th style="min-width:180px">時間</th>
+                <th style="min-width:180px">action</th>
+                <th style="min-width:240px">actor</th>
+                <th style="min-width:240px">target</th>
+                <th style="min-width:320px">meta</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <button class="btn" id="btnMore">載入更多</button>
+      <span class="muted" id="statusTextBottom"></span>
+    </div>
+  </div>
+
+  <script src="/js/admin-audit-logs.inline-2.js"></script>
+</body>
+</html>
