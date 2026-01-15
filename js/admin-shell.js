@@ -37,15 +37,43 @@
 
       var nav = document.createElement('nav');
       nav.className = 'admin-nav';
+
+      var GROUP_ORDER = ['main','primary','extra'];
+      var GROUP_LABELS = {
+        main: '工作台',
+        primary: '營運',
+        extra: '設定'
+      };
+      var groups = {};
+      GROUP_ORDER.forEach(function(key){ groups[key] = []; });
       items.forEach(function(item){
-        var a = document.createElement('a');
-        a.href = item.href;
-        a.setAttribute('data-nav', item.href);
-        if (item.group) a.setAttribute('data-nav-group', item.group);
-        a.innerHTML = '<span class="nav-icon">' + item.icon + '</span>' +
-          '<span class="nav-label">' + item.label + '</span>';
-        if (path === item.href) a.classList.add('active');
-        nav.appendChild(a);
+        var g = item.group && groups[item.group] ? item.group : 'primary';
+        groups[g].push(item);
+      });
+
+      GROUP_ORDER.forEach(function(groupKey){
+        var list = groups[groupKey] || [];
+        if (!list.length) return;
+        var section = document.createElement('div');
+        section.className = 'admin-nav-group';
+        section.setAttribute('data-group', groupKey);
+        var title = document.createElement('div');
+        title.className = 'admin-nav-group__title';
+        title.textContent = GROUP_LABELS[groupKey] || '';
+        section.appendChild(title);
+
+        list.forEach(function(item){
+          var a = document.createElement('a');
+          a.href = item.href;
+          a.setAttribute('data-nav', item.href);
+          if (item.group) a.setAttribute('data-nav-group', item.group);
+          a.innerHTML = '<span class="nav-icon">' + item.icon + '</span>' +
+            '<span class="nav-label">' + item.label + '</span>';
+          if (path === item.href) a.classList.add('active');
+          section.appendChild(a);
+        });
+
+        nav.appendChild(section);
       });
 
       var toggle = document.createElement('button');
