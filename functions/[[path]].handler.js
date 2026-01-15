@@ -4862,6 +4862,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!(await isAdmin(request, env))){
       return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     if (!env.FORTUNES){
       return new Response(JSON.stringify({ ok:false, error:'FORTUNES KV not bound' }), { status:500, headers: jsonHeadersFor(request, env) });
     }
@@ -4884,6 +4888,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/admin/users' && request.method === 'GET') {
     if (!(await isAdmin(request, env))){
       return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
     }
     const store = getUserStore(env);
     if (!store){
@@ -4926,6 +4934,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!(await isAdmin(request, env))){
       return json({ ok:false, error:'unauthorized' }, 401);
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     const store = env.ORDERS; // Use a consistent KV store for the cache
     if (!store) return json({ ok: false, error: 'STATS_CACHE_STORE not bound' }, 500);
     const forceFresh = url.searchParams.get('fresh') === '1' || url.searchParams.get('refresh') === '1';
@@ -4948,6 +4960,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/admin/home-stats' && request.method === 'GET') {
     if (!(await isAdmin(request, env))){
       return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
     }
     const base = String(env.ADMIN_STATS_API_BASE || env.ADMIN_STATS_BASE || 'https://coupon-service.kaiwei425.workers.dev').trim();
     const event = String(url.searchParams.get('event') || 'home_view').trim();
@@ -5076,6 +5092,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     const store = getUserStore(env);
     if (!store){
       return json({ ok:false, error:'USERS KV not bound' }, 500);
@@ -5103,6 +5123,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/admin/users/delete' && request.method === 'POST') {
     {
       const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     const store = getUserStore(env);
@@ -5135,6 +5159,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/admin/users/creator-invite' && request.method === 'POST') {
     {
       const guard = await requireAdminWrite(request, env);
+      if (guard) return guard;
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     const store = getUserStore(env);
@@ -6046,6 +6074,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     if (!(await isAdmin(request, env))){
       return json({ ok:false, error:'unauthorized' }, 401);
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
     const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
     const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
@@ -6072,6 +6104,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   if (pathname === '/api/admin/track-stats' && request.method === 'GET'){
     if (!(await isAdmin(request, env))){
       return json({ ok:false, error:'unauthorized' }, 401);
+    }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
     }
     const store = pickTrackStore(env);
     if (!store) return json({ ok:false, error:'TRACK store not bound' }, 500);
@@ -6615,6 +6651,7 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
     const adminSession = await getAdminSession(request, env);
     const adminKeyOk = await isAdmin(request, env);
     const isAdminUser = !!adminSession || adminKeyOk;
+    const adminRole = adminSession && adminSession.email ? getAdminRole(adminSession.email, env) : '';
     let body = {};
     if (request.method !== 'GET') {
       try{ body = await request.json(); }catch(_){ body = {}; }
@@ -6755,6 +6792,9 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
       return json({ ok:true, item: sanitizeQnaItem(target) });
     }
     if (request.method === 'DELETE'){
+      if (isAdminUser && adminRole === 'fulfillment'){
+        return json({ ok:false, error:'forbidden_role' }, 403);
+      }
       const msgId = String(body.id || url.searchParams.get('id') || '').trim();
       if (!msgId) return json({ ok:false, error:'missing id' }, 400);
       const idx = items.findIndex(it => it && it.id === msgId);
@@ -6773,6 +6813,10 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
   if (pathname === '/api/admin/qna/unread') {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     if (request.method === 'GET') {
       const unread = await getAdminQnaUnread(env, env.ORDERS || env.SERVICE_ORDERS || null);
       return json({ ok:true, unread });
@@ -7873,6 +7917,10 @@ if (pathname === '/api/coupons/issue' && request.method === 'POST') {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
   }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
+    if (guard) return guard;
+  }
   if (!env.COUPONS){
     return json({ ok:false, error:'COUPONS KV not bound' }, 500, request, env);
   }
@@ -7996,6 +8044,10 @@ if (pathname === '/api/coupons/list' && request.method === 'GET') {
   if (!(await isAdmin(request, env))){
     return json({ ok:false, error:'Unauthorized' }, 401, request, env);
   }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
+    if (guard) return guard;
+  }
   if (!env.COUPONS){
     return json({ ok:false, error:'COUPONS KV not bound' }, 500, request, env);
   }
@@ -8042,6 +8094,10 @@ if (pathname === '/api/coupons/list' && request.method === 'GET') {
 if (pathname === '/api/coupons/issue-batch' && request.method === 'POST') {
   {
     const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
     if (guard) return guard;
   }
   if (!env.COUPONS){
@@ -10874,6 +10930,10 @@ if (pathname === "/api/stories" && request.method === "POST") {
       const guard = await requireAdminWrite(request, env);
       if (guard) return guard;
     }
+    {
+      const guard = await forbidIfFulfillmentAdmin(request, env);
+      if (guard) return guard;
+    }
     return deleteStories(request, url, env);
   }
   return createStory(request, env);
@@ -10881,6 +10941,10 @@ if (pathname === "/api/stories" && request.method === "POST") {
 if (pathname === "/api/stories" && request.method === "DELETE") {
   {
     const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+  }
+  {
+    const guard = await forbidIfFulfillmentAdmin(request, env);
     if (guard) return guard;
   }
   return deleteStories(request, url, env);
