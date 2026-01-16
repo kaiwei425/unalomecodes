@@ -4410,15 +4410,18 @@ export async function onRequest(context) {
   }
 
   if ((pathname === '/admin' || pathname.startsWith('/admin/')) && (request.method === 'GET' || request.method === 'HEAD')) {
-    if (pathname === '/admin/login' || pathname === '/admin/login/') {
+    // Allow admin shell CSS to load before login (otherwise it gets redirected and becomes HTML -> MIME error).
+    if (pathname === '/admin/admin-ui.css') {
+      // allow
+    } else if (pathname === '/admin/login' || pathname === '/admin/login/') {
       // allow login page without admin session
     } else {
-    const admin = await isAdmin(request, env);
-    if (!admin) {
-      const redirectPath = pathname + url.search;
-      const target = `${origin}/admin/login?redirect=${encodeURIComponent(redirectPath)}`;
-      return Response.redirect(target, 302);
-    }
+      const admin = await isAdmin(request, env);
+      if (!admin) {
+        const redirectPath = pathname + url.search;
+        const target = `${origin}/admin/login?redirect=${encodeURIComponent(redirectPath)}`;
+        return Response.redirect(target, 302);
+      }
     }
   }
 
