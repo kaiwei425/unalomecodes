@@ -30,6 +30,10 @@
   let items = [];
   let currentId = '';
 
+  function escapeHtml(str){
+    return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
   function resolveServiceId(item){
     if (!item) return '';
     return item.id || item._id || item.key || item._key || '';
@@ -262,12 +266,15 @@
     }
     listBody.innerHTML = view.map(it => {
       const rowId = getRowId(it);
+      const name = escapeHtml(it.name || '');
+      const cover = escapeHtml(it.cover || '');
+      const includes = Array.isArray(it.includes) && it.includes.length ? escapeHtml(it.includes[0]) : '—';
       return `
       <tr data-id="${rowId}">
-        <td>${it.cover ? `<img src="${it.cover}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px;">` : ''}</td>
+        <td>${cover ? `<img src="${cover}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px;">` : ''}</td>
         <td>
-          <div style="font-weight:700;">${it.name||''}</div>
-          <div class="muted">${it.includes && it.includes.length ? it.includes[0] : '—'}</div>
+          <div style="font-weight:700;">${name}</div>
+          <div class="muted">${includes}</div>
           <div class="muted">已售出：${Number(it.sold||0)}</div>
         </td>
         <td>
@@ -292,7 +299,7 @@
       ensureItemIds(items);
       renderList();
     }catch(err){
-      listBody.innerHTML = `<tr><td colspan="4" class="muted">載入失敗：${err.message}</td></tr>`;
+      listBody.innerHTML = `<tr><td colspan="4" class="muted">載入失敗：${escapeHtml(err.message || 'error')}</td></tr>`;
     }
   }
 

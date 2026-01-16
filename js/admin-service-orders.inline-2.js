@@ -284,14 +284,16 @@
       const applyHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       const proofHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       const deleteHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
+      const safeId = escapeHtml(o.id || '');
+      const safeStatus = escapeHtml(o.status || '待處理');
       return `
-        <div class="order-card" data-id="${o.id}">
+        <div class="order-card" data-id="${safeId}">
           <div class="order-header">
             <div>
-              <div class="order-id">${o.id}</div>
+              <div class="order-id">${safeId}</div>
               <div class="order-time">${fmt(o.createdAt)}</div>
             </div>
-            <div class="pill">${o.status || '待處理'}</div>
+            <div class="pill">${safeStatus}</div>
           </div>
           <div class="grid-two">
             <div class="section">
@@ -315,19 +317,19 @@
           </div>
           <div class="section">
             <strong>狀態</strong>
-            <select data-id="${o.id}" class="statusSel" ${statusDisabled}>
+            <select data-id="${safeId}" class="statusSel" ${statusDisabled}>
               ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
             </select>
           </div>
           <div class="actions">
-            <button class="btn primary" data-act="apply" data-id="${o.id}" ${applyHidden}>套用</button>
-            <button class="btn" data-act="view" data-id="${o.id}">明細</button>
-            <button class="btn" data-act="qna" data-id="${o.id}">問與答</button>
-            <button class="btn" data-act="photo" data-id="${o.id}">顧客照片</button>
-            <button class="btn" data-act="result-view" data-id="${o.id}">查看成果</button>
-            <button class="btn" data-act="result-upload" data-id="${o.id}">上傳成果</button>
-            <button class="btn" data-act="proof" data-id="${o.id}" ${proofHidden}>匯款憑證</button>
-            <button class="btn danger" data-act="delete" data-id="${o.id}" ${deleteHidden}>刪除</button>
+            <button class="btn primary" data-act="apply" data-id="${safeId}" ${applyHidden}>套用</button>
+            <button class="btn" data-act="view" data-id="${safeId}">明細</button>
+            <button class="btn" data-act="qna" data-id="${safeId}">問與答</button>
+            <button class="btn" data-act="photo" data-id="${safeId}">顧客照片</button>
+            <button class="btn" data-act="result-view" data-id="${safeId}">查看成果</button>
+            <button class="btn" data-act="result-upload" data-id="${safeId}">上傳成果</button>
+            <button class="btn" data-act="proof" data-id="${safeId}" ${proofHidden}>匯款憑證</button>
+            <button class="btn danger" data-act="delete" data-id="${safeId}" ${deleteHidden}>刪除</button>
           </div>
         </div>
       `;
@@ -343,7 +345,7 @@
       render();
       clearQnaUnread();
     }catch(err){
-      bodyEl.innerHTML = `<div class="muted">載入失敗：${err.message}</div>`;
+      bodyEl.innerHTML = `<div class="muted">載入失敗：${escapeHtml(err.message || 'error')}</div>`;
     }
   }
 

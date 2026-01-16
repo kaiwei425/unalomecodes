@@ -8,7 +8,6 @@ import {
 import { getYamUbakong } from '../lib/ubakong.js';
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key, x-admin-key, X-Cron-Key, x-cron-key, X-Quiz-Key, x-quiz-key',
   'Cache-Control': 'no-store'
@@ -3818,7 +3817,7 @@ function normalizeStatus(input){
   if (raw.includes('訂單待處理') || raw.includes('待處理') || raw.includes('待付款') || raw.includes('未付款') || raw.includes('待確認')) {
     return CANONICAL_STATUS.PENDING;
   }
-  if (raw.includes('已付款') || raw.includes('待出貨')) {
+  if (raw.includes('已付款') || raw.includes('已確認付款') || raw.includes('確認付款') || raw.includes('付款成功') || raw.includes('付款完成') || raw.includes('待出貨')) {
     return CANONICAL_STATUS.READY_TO_SHIP;
   }
   if (raw.includes('已寄件') || raw.includes('已寄出') || raw.includes('已出貨')) {
@@ -3885,7 +3884,25 @@ function getOrderPaidTs(order){
   );
 }
 function getOrderAmount(order){
-  const amt = Number(order?.amount ?? order?.total ?? order?.totalAmount ?? order?.price ?? 0);
+  const raw =
+    order?.amount ??
+    order?.total ??
+    order?.totalAmount ??
+    order?.total_amount ??
+    order?.totalPrice ??
+    order?.total_price ??
+    order?.amountTotal ??
+    order?.price ??
+    order?.payment?.amount ??
+    order?.payment?.total ??
+    order?.payment?.paidAmount ??
+    0;
+  if (typeof raw === 'string') {
+    const cleaned = raw.replace(/[^\d.]/g, '');
+    const num = Number(cleaned || 0);
+    return Number.isFinite(num) ? num : 0;
+  }
+  const amt = Number(raw || 0);
   return Number.isFinite(amt) ? amt : 0;
 }
 function extractCouponCodes(coupon){
@@ -4108,6 +4125,13 @@ async function updateDashboardStats(env) {
     if (!current.image && payload.image) current.image = payload.image;
     map.set(key, current);
   };
+  const getOrderItems = (o)=>{
+    if (Array.isArray(o?.items)) return o.items;
+    if (Array.isArray(o?.products)) return o.products;
+    if (Array.isArray(o?.cartItems)) return o.cartItems;
+    if (Array.isArray(o?.orderItems)) return o.orderItems;
+    return [];
+  };
 
   // Products
   if (env.PRODUCTS){
@@ -4140,6 +4164,18 @@ async function updateDashboardStats(env) {
     }
   }
 
+  const isOrderPaid = (order)=>{
+    const paymentStatus = String(order?.payment?.status || '').trim().toUpperCase();
+    const paymentOk = paymentStatus === 'PAID'
+      || paymentStatus === 'SUCCESS'
+      || paymentStatus === 'CONFIRMED'
+      || paymentStatus === 'COMPLETED'
+      || paymentStatus === 'OK'
+      || order?.payment?.paid === true
+      || order?.payment?.isPaid === true;
+    return statusIsPaid(order?.status) || paymentOk;
+  };
+
   // Orders
   if (env.ORDERS){
     let ids = [];
@@ -4159,7 +4195,7 @@ async function updateDashboardStats(env) {
       try{
         const o = JSON.parse(raw);
         const isDone = statusIsCompleted(o.status);
-        const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
+        const isPaid = isOrderPaid(o);
         const isCanceled = statusIsCanceled(o.status);
         if (isDone) stats.orders.done++;
         else if (isPaid) stats.orders.paid++;
@@ -4178,7 +4214,7 @@ async function updateDashboardStats(env) {
           const paidTs = getOrderPaidTs(o) || createdTs;
           const amount = getOrderAmount(o);
           if (amount > 0) addPeriods(reports.physical.revenue, paidTs, amount);
-          const items = Array.isArray(o.items) ? o.items : [];
+          const items = getOrderItems(o);
           if (items.length){
             for (const it of items){
               const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
@@ -4246,7 +4282,7 @@ async function updateDashboardStats(env) {
       try{
         const o = JSON.parse(raw);
         const isDone = statusIsCompleted(o.status);
-        const isPaid = statusIsPaid(o.status) || String(o?.payment?.status || '').toUpperCase() === 'PAID';
+        const isPaid = isOrderPaid(o);
         const isCanceled = statusIsCanceled(o.status);
         if (isDone) stats.serviceOrders.done++;
         else if (isPaid) stats.serviceOrders.paid++;
@@ -4264,7 +4300,7 @@ async function updateDashboardStats(env) {
             const paidTs = getOrderPaidTs(o) || createdTs;
             const amount = getOrderAmount(o);
             if (amount > 0) addPeriods(reports.service.revenue, paidTs, amount);
-            const rawItems = Array.isArray(o.items) ? o.items : [];
+            const rawItems = getOrderItems(o);
             if (rawItems.length){
               for (const it of rawItems){
                 const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
@@ -5124,14 +5160,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
 
   if (pathname === '/api/admin/dashboard' && request.method === 'GET') {
     if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+      return json({ ok:false, error:'unauthorized' }, 401, request, env);
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     const store = env.ORDERS; // Use a consistent KV store for the cache
-    if (!store) return json({ ok: false, error: 'STATS_CACHE_STORE not bound' }, 500);
+    if (!store) return json({ ok: false, error: 'STATS_CACHE_STORE not bound' }, 500, request, env);
     const forceFresh = url.searchParams.get('fresh') === '1' || url.searchParams.get('refresh') === '1';
     const dashboardCacheTtl = Math.max(60, Math.min(Number(env.DASHBOARD_CACHE_TTL || 600) || 600, 3600));
     if (!forceFresh){
@@ -5139,19 +5175,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (raw) {
         try{
           const data = JSON.parse(raw);
-          return json({ ok: true, ...data, fromCache: true });
+          return json({ ok: true, ...data, fromCache: true }, 200, request, env);
         }catch(_){}
       }
     }
     // Cache empty: compute once, return immediately, and cache the result.
     const result = await updateDashboardStats(env);
     await store.put('DASHBOARD_STATS_CACHE', JSON.stringify(result), { expirationTtl: dashboardCacheTtl });
-    return json({ ok: true, ...result, fromCache: false });
+    return json({ ok: true, ...result, fromCache: false }, 200, request, env);
   }
 
   if (pathname === '/api/admin/home-stats' && request.method === 'GET') {
     if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+      return json({ ok:false, error:'unauthorized' }, 401, request, env);
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
@@ -5160,7 +5196,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     const base = String(env.ADMIN_STATS_API_BASE || env.ADMIN_STATS_BASE || 'https://coupon-service.kaiwei425.workers.dev').trim();
     const event = String(url.searchParams.get('event') || 'home_view').trim();
     const days = Math.min(60, Math.max(1, Number(url.searchParams.get('days') || 14) || 14));
-    if (!base) return json({ ok:false, error:'missing_stats_base' }, 500);
+    if (!base) return json({ ok:false, error:'missing_stats_base' }, 500, request, env);
     const target = `${base.replace(/\/+$/, '')}/admin/stats/trend?event=${encodeURIComponent(event)}&days=${days}`;
     const headers = new Headers();
     const bearer = String(env.ADMIN_STATS_TOKEN || env.ADMIN_TOKEN || '').trim();
@@ -5172,7 +5208,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       headers.set('CF-Access-Client-Secret', accessSecret);
     }
     if (!bearer && !(accessId && accessSecret)){
-      return json({ ok:false, error:'missing_admin_stats_credentials' }, 500);
+      return json({ ok:false, error:'missing_admin_stats_credentials' }, 500, request, env);
     }
     try{
       const res = await fetch(target, { headers });
@@ -5182,11 +5218,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         data = { ok:false, error:'invalid_upstream_json' };
       }
       if (!res.ok){
-        return json({ ok:false, error: data && data.error ? data.error : `upstream_${res.status}` }, res.status);
+        return json({ ok:false, error: data && data.error ? data.error : `upstream_${res.status}` }, res.status, request, env);
       }
-      return json(data, 200);
+      return json(data, 200, request, env);
     }catch(e){
-      return json({ ok:false, error:String(e) }, 500);
+      return json({ ok:false, error:String(e) }, 500, request, env);
     }
   }
 
@@ -6292,13 +6328,13 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
 
   if (pathname === '/api/admin/food-stats' && request.method === 'GET'){
     if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+      return json({ ok:false, error:'unauthorized' }, 401, request, env);
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
-    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500);
+    if (!env.FOODS) return json({ ok:false, error:'FOODS KV not bound' }, 500, request, env);
     const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
     const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
     const out = [];
@@ -6318,19 +6354,19 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       totalUnique = parseInt(rawTotal || '0', 10) || 0;
     } catch(_) {}
 
-    return json({ ok:true, stats: out, total: totalUnique });
+    return json({ ok:true, stats: out, total: totalUnique }, 200, request, env);
   }
 
   if (pathname === '/api/admin/track-stats' && request.method === 'GET'){
     if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+      return json({ ok:false, error:'unauthorized' }, 401, request, env);
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
     const store = pickTrackStore(env);
-    if (!store) return json({ ok:false, error:'TRACK store not bound' }, 500);
+    if (!store) return json({ ok:false, error:'TRACK store not bound' }, 500, request, env);
     const eventName = normalizeTrackEvent(url.searchParams.get('event') || 'order_submit');
     const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
     const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
@@ -6370,7 +6406,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       .sort((a,b)=> b[1]-a[1])
       .slice(0, 8)
       .map(([name, count])=>({ name, count }));
-    return json({ ok:true, event: eventName, total, stats, sources: topSources, campaigns: topCampaigns });
+    return json({ ok:true, event: eventName, total, stats, sources: topSources, campaigns: topCampaigns }, 200, request, env);
   }
 
   
@@ -6827,13 +6863,13 @@ if (pathname === '/api/me/temple-favs') {
 
   if (pathname === '/api/admin/temple-stats' && request.method === 'GET'){
     if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+      return json({ ok:false, error:'unauthorized' }, 401, request, env);
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;
     }
-    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500);
+    if (!env.TEMPLES) return json({ ok:false, error:'TEMPLES KV not bound' }, 500, request, env);
     const daysRaw = parseInt(url.searchParams.get('days') || '14', 10);
     const days = Math.max(1, Math.min(90, Number.isFinite(daysRaw) ? daysRaw : 14));
     const out = [];
@@ -6853,7 +6889,7 @@ if (pathname === '/api/me/temple-favs') {
       totalUnique = parseInt(rawTotal || '0', 10) || 0;
     } catch(_) {}
 
-    return json({ ok:true, stats: out, total: totalUnique });
+    return json({ ok:true, stats: out, total: totalUnique }, 200, request, env);
   }
 
   

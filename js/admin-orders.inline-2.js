@@ -401,7 +401,7 @@ async function loadOrders(){
     ORDERS = [];
     console.error('loadOrders error', e);
     if (tbody){
-      tbody.innerHTML = `<tr><td colspan="8" class="muted">讀取失敗：${(e && e.message) || e}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">讀取失敗：${escapeHtml((e && e.message) || e)}</td></tr>`;
     }
   }
   render();

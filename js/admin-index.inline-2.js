@@ -126,6 +126,17 @@
         return `<li><span class="name">${name}</span><span>× ${qty}</span></li>`;
       });
     };
+    let forcedDashboardFresh = false;
+    const shouldForceFresh = (data)=>{
+      const r = data && data.reports;
+      if (!r) return true;
+      const physical = r.physical || {};
+      const service = r.service || {};
+      const rev = (obj)=> (obj?.revenue?.today || 0) + (obj?.revenue?.last7 || 0) + (obj?.revenue?.last30 || 0);
+      const hasTop = (obj)=> Array.isArray(obj?.topItems) && obj.topItems.length > 0;
+      const hasLow = (obj)=> Array.isArray(obj?.lowStock) && obj.lowStock.length > 0;
+      return rev(physical) === 0 && rev(service) === 0 && !hasTop(physical) && !hasTop(service) && !hasLow(physical);
+    };
     const loadDashboard = (attempt = 0, forceFresh = false)=>{
       const url = forceFresh ? '/api/admin/dashboard?fresh=1' : '/api/admin/dashboard';
       return fetch(url, { credentials:'include', cache:'no-store' })
@@ -141,6 +152,10 @@
             return;
           }
           applyDashboard(data);
+          if (!forcedDashboardFresh && data && data.fromCache && shouldForceFresh(data)){
+            forcedDashboardFresh = true;
+            loadDashboard(0, true);
+          }
         })
         .catch(()=>{
           if (!box) return;
@@ -169,151 +184,178 @@
     const homeCtx = document.getElementById('homeChart');
     const homeTotalEl = document.getElementById('homeTotal');
     if (homeCtx) {
-      fetch('/api/admin/track-stats?event=home_view&days=14', { credentials:'include', cache:'no-store' })
-        .then(r => r.json())
-        .then(data => {
-          if (!data || !data.ok) return;
-          if (homeTotalEl) homeTotalEl.textContent = (data.total || 0).toLocaleString() + ' 人';
+      const loadHomeStats = ()=>{
+        fetch('/api/admin/track-stats?event=home_view&days=14', { credentials:'include', cache:'no-store' })
+          .then(r => r.json())
+          .then(data => {
+            if (!data || !data.ok) return;
+            if (homeTotalEl) homeTotalEl.textContent = (data.total || 0).toLocaleString() + ' 人';
 
-          const labels = (data.stats || []).map(s => s.date.slice(5));
-          const counts = (data.stats || []).map(s => s.count);
+            const labels = (data.stats || []).map(s => s.date.slice(5));
+            const counts = (data.stats || []).map(s => s.count);
 
-          if (!window.Chart) return;
-          try{
-            new Chart(homeCtx, {
-              type: 'line',
-              data: {
-                labels: labels,
-                datasets: [{
-                  label: '每日瀏覽',
-                  data: counts,
-                  borderColor: '#f97316',
-                  backgroundColor: 'rgba(249,115,22,0.12)',
-                  borderWidth: 2,
-                  tension: 0.3,
-                  fill: true,
-                  pointBackgroundColor: '#ffffff',
-                  pointBorderColor: '#f97316',
-                  pointRadius: 4
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(15,23,42,0.9)',
-                    titleColor: '#e2e8f0',
-                    bodyColor: '#e2e8f0',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { stepSize: 1, font: { size: 11 } }
-                  },
-                  x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 11 } }
-                  }
-                },
-                interaction: {
-                  mode: 'nearest',
-                  axis: 'x',
-                  intersect: false
-                }
+            if (!window.Chart) return;
+            try{
+              if (homeCtx.__chart){
+                homeCtx.__chart.data.labels = labels;
+                homeCtx.__chart.data.datasets[0].data = counts;
+                homeCtx.__chart.update();
+                return;
               }
-            });
-          }catch(err){
-            console.error(err);
-          }
-        })
-        .catch(console.error);
+              homeCtx.__chart = new Chart(homeCtx, {
+                type: 'line',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: '每日瀏覽',
+                    data: counts,
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249,115,22,0.12)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f97316',
+                    pointRadius: 4
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      mode: 'index',
+                      intersect: false,
+                      backgroundColor: 'rgba(15,23,42,0.9)',
+                      titleColor: '#e2e8f0',
+                      bodyColor: '#e2e8f0',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      borderWidth: 1
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: 'rgba(0,0,0,0.05)' },
+                      ticks: { stepSize: 1, font: { size: 11 } }
+                    },
+                    x: {
+                      grid: { display: false },
+                      ticks: { font: { size: 11 } }
+                    }
+                  },
+                  interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                  }
+                }
+              });
+            }catch(err){
+              console.error(err);
+            }
+          })
+          .catch(console.error);
+      };
+      loadHomeStats();
+      if (!homeCtx.dataset.timer){
+        homeCtx.dataset.timer = '1';
+        setInterval(loadHomeStats, 60000);
+      }
     }
 
     // Load Quiz Traffic Stats
     const quizCtx = document.getElementById('quizChart');
     const quizTotalEl = document.getElementById('quizTotal');
     if (quizCtx) {
-      fetch('/api/admin/track-stats?event=quiz_start&days=14', { credentials:'include', cache:'no-store' })
-        .then(r => r.json())
-        .then(data => {
-          if (!data || !data.ok) return;
-          if (quizTotalEl) quizTotalEl.textContent = (data.total || 0).toLocaleString() + ' 人';
+      const loadQuizStats = ()=>{
+        fetch('/api/admin/track-stats?event=quiz_start&days=14', { credentials:'include', cache:'no-store' })
+          .then(r => r.json())
+          .then(data => {
+            if (!data || !data.ok) return;
+            if (quizTotalEl) quizTotalEl.textContent = (data.total || 0).toLocaleString() + ' 人';
 
-          const labels = (data.stats || []).map(s => s.date.slice(5));
-          const counts = (data.stats || []).map(s => s.count);
+            const labels = (data.stats || []).map(s => s.date.slice(5));
+            const counts = (data.stats || []).map(s => s.count);
 
-          if (!window.Chart) return;
-          try{
-            new Chart(quizCtx, {
-              type: 'line',
-              data: {
-                labels: labels,
-                datasets: [{
-                  label: '每日測驗點擊',
-                  data: counts,
-                  borderColor: '#f97316',
-                  backgroundColor: 'rgba(249,115,22,0.15)',
-                  borderWidth: 2,
-                  tension: 0.3,
-                  fill: true,
-                  pointBackgroundColor: '#ffffff',
-                  pointBorderColor: '#f97316',
-                  pointRadius: 4
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(15,23,42,0.9)',
-                    titleColor: '#e2e8f0',
-                    bodyColor: '#e2e8f0',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { stepSize: 1, font: { size: 11 } }
-                  },
-                  x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 11 } }
-                  }
-                },
-                interaction: {
-                  mode: 'nearest',
-                  axis: 'x',
-                  intersect: false
-                }
+            if (!window.Chart) return;
+            try{
+              if (quizCtx.__chart){
+                quizCtx.__chart.data.labels = labels;
+                quizCtx.__chart.data.datasets[0].data = counts;
+                quizCtx.__chart.update();
+                return;
               }
-            });
-          }catch(err){
-            console.error(err);
-          }
-        })
-        .catch(console.error);
+              quizCtx.__chart = new Chart(quizCtx, {
+                type: 'line',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: '每日測驗點擊',
+                    data: counts,
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249,115,22,0.15)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#f97316',
+                    pointRadius: 4
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      mode: 'index',
+                      intersect: false,
+                      backgroundColor: 'rgba(15,23,42,0.9)',
+                      titleColor: '#e2e8f0',
+                      bodyColor: '#e2e8f0',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      borderWidth: 1
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { color: 'rgba(0,0,0,0.05)' },
+                      ticks: { stepSize: 1, font: { size: 11 } }
+                    },
+                    x: {
+                      grid: { display: false },
+                      ticks: { font: { size: 11 } }
+                    }
+                  },
+                  interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                  }
+                }
+              });
+            }catch(err){
+              console.error(err);
+            }
+          })
+          .catch(console.error);
+      };
+      loadQuizStats();
+      if (!quizCtx.dataset.timer){
+        quizCtx.dataset.timer = '1';
+        setInterval(loadQuizStats, 60000);
+      }
     }
 
     // Load Food Map Stats
     const ctx = document.getElementById('foodMapChart');
     const totalEl = document.getElementById('foodMapTotal');
     if (ctx) {
-      fetch('/api/admin/food-stats?days=14', { credentials:'include', cache:'no-store' })
+      const loadFoodStats = ()=>{
+        fetch('/api/admin/food-stats?days=14', { credentials:'include', cache:'no-store' })
         .then(r => r.json())
         .then(data => {
           if (!data.ok) return;
@@ -324,7 +366,13 @@
 
           if (!window.Chart) return;
           try{
-            new Chart(ctx, {
+            if (ctx.__chart){
+              ctx.__chart.data.labels = labels;
+              ctx.__chart.data.datasets[0].data = counts;
+              ctx.__chart.update();
+              return;
+            }
+            ctx.__chart = new Chart(ctx, {
               type: 'line',
               data: {
                 labels: labels,
@@ -379,13 +427,20 @@
           }
         })
         .catch(console.error);
+      };
+      loadFoodStats();
+      if (!ctx.dataset.timer){
+        ctx.dataset.timer = '1';
+        setInterval(loadFoodStats, 60000);
+      }
     }
 
     // Load Temple Map Stats
     const templeCtx = document.getElementById('templeMapChart');
     const templeTotalEl = document.getElementById('templeMapTotal');
     if (templeCtx) {
-      fetch('/api/admin/temple-stats?days=14', { credentials:'include', cache:'no-store' })
+      const loadTempleStats = ()=>{
+        fetch('/api/admin/temple-stats?days=14', { credentials:'include', cache:'no-store' })
         .then(r => r.json())
         .then(data => {
           if (!data.ok) return;
@@ -396,7 +451,13 @@
 
           if (!window.Chart) return;
           try{
-            new Chart(templeCtx, {
+            if (templeCtx.__chart){
+              templeCtx.__chart.data.labels = labels;
+              templeCtx.__chart.data.datasets[0].data = counts;
+              templeCtx.__chart.update();
+              return;
+            }
+            templeCtx.__chart = new Chart(templeCtx, {
               type: 'line',
               data: {
                 labels: labels,
@@ -451,6 +512,12 @@
           }
         })
         .catch(console.error);
+      };
+      loadTempleStats();
+      if (!templeCtx.dataset.timer){
+        templeCtx.dataset.timer = '1';
+        setInterval(loadTempleStats, 60000);
+      }
     }
 
     const loadUtmStats = (eventName, totalKey, listKey)=>{

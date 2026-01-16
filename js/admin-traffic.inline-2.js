@@ -14,6 +14,11 @@
   function fmt(num){
     return new Intl.NumberFormat('zh-Hant').format(num || 0);
   }
+  function escapeHtml(str){
+    return String(str||'').replace(/[&<>"']/g, function(m){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+    });
+  }
 
   function clampDays(value){
     var n = parseInt(value, 10);
@@ -29,7 +34,7 @@
     }
     el.innerHTML = items.map(function(item){
       var name = item && item.name ? item.name : 'direct';
-      return '<div class="traffic-list-item"><span>' + name + '</span><strong>' + fmt(item.count) + '</strong></div>';
+      return '<div class="traffic-list-item"><span>' + escapeHtml(name) + '</span><strong>' + fmt(item.count) + '</strong></div>';
     }).join('');
   }
 
@@ -40,7 +45,7 @@
       return;
     }
     tableBody.innerHTML = stats.map(function(row){
-      return '<tr><td>' + row.date + '</td><td>' + fmt(row.count) + '</td></tr>';
+      return '<tr><td>' + escapeHtml(row.date) + '</td><td>' + fmt(row.count) + '</td></tr>';
     }).join('');
   }
 
@@ -140,4 +145,7 @@
   }
 
   loadStats();
+  if (!window.__adminTrafficTimer){
+    window.__adminTrafficTimer = setInterval(loadStats, 60000);
+  }
 })();
