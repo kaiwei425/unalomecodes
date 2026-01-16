@@ -47,6 +47,16 @@
   font-family:"Space Grotesk", "Segoe UI", system-ui, sans-serif;
 }
 
+.admin-brand-logo{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  object-fit:contain;
+  background:#fff;
+  padding:4px;
+  box-shadow:0 10px 25px rgba(15,23,42,0.12);
+}
+
 .admin-brand .badge{
   width:36px;
   height:36px;

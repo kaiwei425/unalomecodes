@@ -34,7 +34,7 @@
 
       var brand = document.createElement('div');
       brand.className = 'admin-brand';
-      brand.innerHTML = '<div class="badge">UA</div>' +
+      brand.innerHTML = '<img class="admin-brand-logo" src="/img/logo.png" alt="unalomecodes logo">' +
         '<div><div class="title">unalomecodes</div><div class="subtitle">Admin Center</div></div>';
 
       var nav = document.createElement('nav');
