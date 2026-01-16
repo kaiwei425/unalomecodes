@@ -115,13 +115,16 @@
       imagePreview.innerHTML = '<span class="muted">尚未上傳</span>';
       return;
     }
-    imagePreview.innerHTML = urls.map((url, idx) => `
+    imagePreview.innerHTML = urls.map((url, idx) => {
+      const safeUrl = escapeHtml(url);
+      return `
       <div class="thumb">
-        <img src="${url}" alt="">
-        <button type="button" class="x" data-url="${url}">×</button>
+        <img src="${safeUrl}" alt="">
+        <button type="button" class="x" data-url="${safeUrl}">×</button>
         ${idx === 0 ? '<div style="position:absolute;left:6px;bottom:6px;font-size:11px;background:rgba(15,23,42,.7);color:#fff;padding:2px 6px;border-radius:999px;">封面</div>' : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   function addOptionRow(name='', price=0){
     const row = document.createElement('div');

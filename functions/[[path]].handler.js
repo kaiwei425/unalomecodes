@@ -5115,7 +5115,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
   // Admin: list users / profiles
   if (pathname === '/api/admin/users' && request.method === 'GET') {
     if (!(await isAdmin(request, env))){
-      return json({ ok:false, error:'unauthorized' }, 401);
+      return json({ ok:false, error:'unauthorized' }, 401, request, env);
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
@@ -5123,10 +5123,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const store = getUserStore(env);
     if (!store){
-      return json({ ok:false, error:'USERS KV not bound' }, 500);
+      return json({ ok:false, error:'USERS KV not bound' }, 500, request, env);
     }
     if (!store.list){
-      return json({ ok:false, error:'list_not_supported_on_store' }, 500);
+      return json({ ok:false, error:'list_not_supported_on_store' }, 500, request, env);
     }
     try{
       const qRaw = (url.searchParams.get('q') || '').trim().toLowerCase();
@@ -5152,9 +5152,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const lb = new Date(b.lastLoginAt || b.updatedAt || b.createdAt || 0).getTime();
         return lb - la;
       });
-      return json({ ok:true, items: out.slice(0, limit) });
+      return json({ ok:true, items: out.slice(0, limit) }, 200, request, env);
     }catch(e){
-      return json({ ok:false, error:String(e) }, 500);
+      return json({ ok:false, error:String(e) }, 500, request, env);
     }
   }
 
@@ -5267,7 +5267,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         meta: {}
       });
     }catch(_){}
-    return json({ ok: true, ...result });
+    return json({ ok: true, ...result }, 200, request, env);
   }
 
   // Manual tests:
@@ -5326,17 +5326,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const store = getUserStore(env);
     if (!store){
-      return json({ ok:false, error:'USERS KV not bound' }, 500);
+      return json({ ok:false, error:'USERS KV not bound' }, 500, request, env);
     }
     let body = {};
     try{ body = await request.json(); }catch(_){ body = {}; }
     const id = String(body.id || body.userId || '').trim();
     if (!id){
-      return json({ ok:false, error:'missing_user_id' }, 400);
+      return json({ ok:false, error:'missing_user_id' }, 400, request, env);
     }
     const record = await loadUserRecord(env, id);
     if (!record){
-      return json({ ok:false, error:'user_not_found' }, 404);
+      return json({ ok:false, error:'user_not_found' }, 404, request, env);
     }
     delete record.guardian;
     delete record.quiz;
@@ -5346,7 +5346,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         await env.FORTUNES.delete(`FORTUNE:${record.id}:${taipeiDateKey()}`);
       }catch(_){}
     }
-    return json({ ok:true, id });
+    return json({ ok:true, id }, 200, request, env);
   }
   if (pathname === '/api/admin/users/delete' && request.method === 'POST') {
     {
@@ -5359,21 +5359,21 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const store = getUserStore(env);
     if (!store){
-      return json({ ok:false, error:'USERS KV not bound' }, 500);
+      return json({ ok:false, error:'USERS KV not bound' }, 500, request, env);
     }
     let body = {};
     try{ body = await request.json(); }catch(_){ body = {}; }
     const id = String(body.id || body.userId || '').trim();
     const confirm = String(body.confirm || '').trim();
     if (!id){
-      return json({ ok:false, error:'missing_user_id' }, 400);
+      return json({ ok:false, error:'missing_user_id' }, 400, request, env);
     }
     if (confirm !== '刪除'){
-      return json({ ok:false, error:'confirm_required' }, 400);
+      return json({ ok:false, error:'confirm_required' }, 400, request, env);
     }
     const record = await loadUserRecord(env, id);
     if (!record){
-      return json({ ok:false, error:'user_not_found' }, 404);
+      return json({ ok:false, error:'user_not_found' }, 404, request, env);
     }
     let revokedCoupons = null;
     try{
@@ -5382,7 +5382,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       revokedCoupons = { error: String(e) };
     }
     await store.delete(userKey(id));
-    return json({ ok:true, id, revokedCoupons });
+    return json({ ok:true, id, revokedCoupons }, 200, request, env);
   }
   if (pathname === '/api/admin/users/creator-invite' && request.method === 'POST') {
     {
@@ -5395,22 +5395,22 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     const store = getUserStore(env);
     if (!store){
-      return json({ ok:false, error:'USERS KV not bound' }, 500);
+      return json({ ok:false, error:'USERS KV not bound' }, 500, request, env);
     }
     let body = {};
     try{ body = await request.json(); }catch(_){ body = {}; }
     const id = String(body.id || body.userId || '').trim();
     const allow = body.allow === true || body.allow === 'true' || body.allow === 1 || body.allow === '1';
     if (!id){
-      return json({ ok:false, error:'missing_user_id' }, 400);
+      return json({ ok:false, error:'missing_user_id' }, 400, request, env);
     }
     const record = await loadUserRecord(env, id);
     if (!record){
-      return json({ ok:false, error:'user_not_found' }, 404);
+      return json({ ok:false, error:'user_not_found' }, 404, request, env);
     }
     record.creatorInviteAllowed = allow;
     await saveUserRecord(env, record);
-    return json({ ok:true, id, allow });
+    return json({ ok:true, id, allow }, 200, request, env);
   }
 
   if (pathname === '/api/me/store') {
@@ -5688,7 +5688,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       record.creatorInviteCode = code;
       await saveUserRecord(env, record);
     }
-    return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200);
+    return json({ ok:true, creator:true, name: resolveCreatorName(record) }, 200, request, env);
   }
 
   if (pathname === '/api/admin/creator/invite' && request.method === 'POST'){
@@ -5701,7 +5701,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (guard) return guard;
     }
     const store = getUserStore(env);
-    if (!store) return json({ ok:false, error:'USER store not bound' }, 500);
+    if (!store) return json({ ok:false, error:'USER store not bound' }, 500, request, env);
     let body = {};
     try{ body = await request.json().catch(()=>({})); }catch(_){}
     const label = String(body.label || '').trim().slice(0, 80);
@@ -5716,7 +5716,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         break;
       }
     }
-    if (!code) return json({ ok:false, error:'code_generation_failed' }, 500);
+    if (!code) return json({ ok:false, error:'code_generation_failed' }, 500, request, env);
     const ttl = mode === 'link' ? CREATOR_INVITE_LINK_TTL : CREATOR_INVITE_TTL;
     const invite = {
       code,
@@ -5728,7 +5728,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     await store.put(creatorInviteKey(code), JSON.stringify(invite), { expirationTtl: ttl });
     const link = `${origin}/food-map?creator_invite=${encodeURIComponent(code)}`;
     const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
-    return json({ ok:true, code, label, mode, link, expiresAt });
+    return json({ ok:true, code, label, mode, link, expiresAt }, 200, request, env);
   }
 
   if (pathname === '/api/fortune' && request.method === 'GET') {
@@ -6016,7 +6016,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
 
   if (pathname === '/api/admin/status' && request.method === 'GET') {
     const admin = await isAdmin(request, env);
-    return json({ ok:true, admin: !!admin }, 200);
+    return json({ ok:true, admin: !!admin }, 200, request, env);
   }
 
   if (pathname === '/api/ig/cover' && request.method === 'GET') {
@@ -6439,7 +6439,7 @@ if (pathname === '/api/me/temple-favs') {
 
   if (pathname === '/api/admin/status' && request.method === 'GET') {
     const admin = await isAdmin(request, env);
-    return json({ ok:true, admin: !!admin }, 200);
+    return json({ ok:true, admin: !!admin }, 200, request, env);
   }
 
   if (pathname === '/api/ig/cover' && request.method === 'GET') {
@@ -7123,7 +7123,7 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
     }
     if (request.method === 'GET') {
       const unread = await getAdminQnaUnread(env, env.ORDERS || env.SERVICE_ORDERS || null);
-      return json({ ok:true, unread });
+      return json({ ok:true, unread }, 200, request, env);
     }
     if (request.method === 'POST') {
       let body = {};
@@ -7131,11 +7131,11 @@ if (pathname === '/api/me/orders' && request.method === 'GET') {
       const action = String(body.action || body.mode || '').toLowerCase();
       if (action === 'clear' || action === 'reset' || action === 'read') {
         const unread = await clearAdminQnaUnread(env, env.ORDERS || env.SERVICE_ORDERS || null);
-        return json({ ok:true, unread });
+        return json({ ok:true, unread }, 200, request, env);
       }
-      return json({ ok:false, error:'invalid action' }, 400);
+      return json({ ok:false, error:'invalid action' }, 400, request, env);
     }
-    return json({ ok:false, error:'method not allowed' }, 405);
+    return json({ ok:false, error:'method not allowed' }, 405, request, env);
   }
 
   if (pathname === '/api/me/qna/unread') {
