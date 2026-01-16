@@ -14,6 +14,46 @@
       .catch(function(){ return ''; });
   }
 
+  var dashboardReady = false;
+  function initDashboardOnce(){
+    if (dashboardReady) return;
+    dashboardReady = true;
+    initDashboard();
+  }
+
+  function setupDashboardTabs(){
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-dash-tab]'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('[data-dash-panel]'));
+    if (!tabs.length || !panels.length){
+      // fallback: no tabs => keep existing behavior
+      initDashboardOnce();
+      return;
+    }
+    var activate = function(key){
+      tabs.forEach(function(btn){
+        var k = btn.getAttribute('data-dash-tab');
+        btn.classList.toggle('active', k === key);
+      });
+      panels.forEach(function(panel){
+        var k = panel.getAttribute('data-dash-panel');
+        panel.classList.toggle('active', k === key);
+      });
+      if (key === 'monitor'){
+        initDashboardOnce();
+      }
+    };
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var key = btn.getAttribute('data-dash-tab') || 'work';
+        activate(key);
+        if (key === 'monitor') location.hash = '#monitor';
+        else history.replaceState(null, '', location.pathname + location.search);
+      });
+    });
+    var initial = (location.hash === '#monitor') ? 'monitor' : 'work';
+    activate(initial);
+  }
+
   function initDashboard(){
     const box = document.getElementById('adminStats');
     if (!box) return;
@@ -462,8 +502,8 @@
       hideOwnerOnly();
       return;
     }
-    initDashboard();
+    setupDashboardTabs();
   }).catch(function(){
-    initDashboard();
+    setupDashboardTabs();
   });
 })();

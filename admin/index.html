@@ -51,50 +51,13 @@
     </div>
   </header>
 
-  <section class="entry-section" data-owner-only>
-    <div class="section-head">
-      <div>
-        <h2>營運快覽</h2>
-        <p class="muted">即時總覽重點數據</p>
-      </div>
-      <div class="section-note">
-        <span>統計以台灣時間計算</span>
-        <button class="btn ghost" id="refreshDashboardStats" type="button">重新整理</button>
-      </div>
-    </div>
-    <div class="admin-stats" id="adminStats">
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">商品總數</div>
-        <div class="admin-stat-value" data-stat="products-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">訂單總數</div>
-        <div class="admin-stat-value" data-stat="orders-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">服務訂單總數</div>
-        <div class="admin-stat-value" data-stat="service-orders-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="service-orders-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">會員數</div>
-        <div class="admin-stat-value" data-stat="members-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-      <div class="admin-stat-title">優惠券使用（近 7 日）</div>
-        <div class="admin-stat-value" data-stat="coupons-used">—</div>
-        <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">今日入口瀏覽</div>
-        <div class="admin-stat-value" data-stat="home-views-today">—</div>
-        <div class="admin-stat-sub" data-stat-sub="home-views-sub">載入中…</div>
-      </div>
-    </div>
-  </section>
+  <div class="dash-layout">
+    <aside class="dash-tabs" data-owner-only>
+      <button type="button" class="dash-tab active" data-dash-tab="work">工作概覽</button>
+      <button type="button" class="dash-tab" data-dash-tab="monitor">數據監控</button>
+    </aside>
+    <div class="dash-content">
+      <div class="dash-panel active" data-dash-panel="work">
 
   <section class="entry-section">
     <div class="section-head">
@@ -108,13 +71,13 @@
         <div class="entry-card-head">
           <div class="entry-card-title">
             <span class="entry-icon">🧾</span>
-            <h3>訂單 / 出貨</h3>
+            <h3>商品訂單</h3>
           </div>
           <span class="tag alt">訂單查詢 / 狀態更新</span>
         </div>
         <p class="muted">查看訂單、更新付款與出貨狀態，對齊客服與物流資訊。</p>
         <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/orders">進入訂單</a>
+          <a class="btn primary" href="/admin/orders">進入商品訂單</a>
           <a class="btn ghost" href="/admin/orders" target="_blank" rel="noopener">新分頁 ↗</a>
         </div>
       </article>
@@ -123,13 +86,13 @@
         <div class="entry-card-head">
           <div class="entry-card-title">
             <span class="entry-icon">📦</span>
-            <h3>商品管理</h3>
+            <h3>商品上架</h3>
           </div>
           <span class="tag">新增 / 編輯 / 上架</span>
         </div>
         <p class="muted">維持原商品上架頁功能，可調整名稱、神祇代碼、分類、售價與規格。</p>
         <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/products">進入商品</a>
+          <a class="btn primary" href="/admin/products">進入商品上架</a>
           <a class="btn ghost" href="/admin/products" target="_blank" rel="noopener">新分頁 ↗</a>
         </div>
       </article>
@@ -146,6 +109,21 @@
         <div class="entry-card-actions">
           <a class="btn primary" href="/admin/service-orders">進入服務訂單</a>
           <a class="btn ghost" href="/admin/service-orders" target="_blank" rel="noopener">新分頁 ↗</a>
+        </div>
+      </article>
+
+      <article class="entry-card" data-owner-only>
+        <div class="entry-card-head">
+          <div class="entry-card-title">
+            <span class="entry-icon">🕯️</span>
+            <h3>服務上架</h3>
+          </div>
+          <span class="tag">蠟燭祈福 / 儀式服務</span>
+        </div>
+        <p class="muted">管理服務專區的上架內容，包含價格、介紹、包含項目與示意圖。</p>
+        <div class="entry-card-actions">
+          <a class="btn primary" href="/admin/service-products">進入服務上架</a>
+          <a class="btn ghost" href="/admin/service-products" target="_blank" rel="noopener">新分頁 ↗</a>
         </div>
       </article>
 
@@ -353,21 +331,6 @@
       <article class="entry-card">
         <div class="entry-card-head">
           <div class="entry-card-title">
-            <span class="entry-icon">🕯️</span>
-            <h3>服務型商品</h3>
-          </div>
-          <span class="tag">蠟燭祈福 / 儀式服務</span>
-        </div>
-        <p class="muted">管理服務專區的上架內容，包含價格、介紹、包含項目與示意圖。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/service-products">管理服務</a>
-          <a class="btn ghost" href="/admin/service-products" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
-      <article class="entry-card">
-        <div class="entry-card-head">
-          <div class="entry-card-title">
             <span class="entry-icon">👤</span>
             <h3>會員管理</h3>
           </div>
@@ -398,83 +361,234 @@
   </section>
 
   <div class="footer">需要新增模組？保留此入口並加入新卡片連結即可。</div>
+      </div>
+      <div class="dash-panel" data-dash-panel="monitor" data-owner-only>
+
+  <section class="entry-section" data-owner-only>
+    <div class="section-head">
+      <div>
+        <h2>營運快覽</h2>
+        <p class="muted">即時總覽重點數據</p>
+      </div>
+      <div class="section-note">
+        <span>統計以台灣時間計算</span>
+        <button class="btn ghost" id="refreshDashboardStats" type="button">重新整理</button>
+      </div>
+    </div>
+    <div class="admin-stats" id="adminStats">
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">商品總數</div>
+        <div class="admin-stat-value" data-stat="products-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">訂單總數</div>
+        <div class="admin-stat-value" data-stat="orders-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">服務訂單總數</div>
+        <div class="admin-stat-value" data-stat="service-orders-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="service-orders-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">會員數</div>
+        <div class="admin-stat-value" data-stat="members-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+      <div class="admin-stat-title">優惠券使用（近 7 日）</div>
+        <div class="admin-stat-value" data-stat="coupons-used">—</div>
+        <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">今日入口瀏覽</div>
+        <div class="admin-stat-value" data-stat="home-views-today">—</div>
+        <div class="admin-stat-sub" data-stat-sub="home-views-sub">載入中…</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="entry-section" data-owner-only>
+    <div class="section-head">
+      <div>
+        <h2>數據監控</h2>
+        <p class="muted">流量趨勢與營運報表</p>
+      </div>
+    </div>
+    <div class="data-grid">
+      <div class="data-stack">
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>入口首頁流量統計</h3>
+            <div class="muted">
+              總累積瀏覽次數：<span id="homeTotal" class="stat-accent">—</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="homeChart"></canvas>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>入口測驗流量統計</h3>
+            <div class="muted">
+              總累積瀏覽次數：<span id="quizTotal" class="stat-accent">—</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="quizChart"></canvas>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>美食地圖流量統計</h3>
+            <div class="muted">
+              總累積瀏覽次數：<span id="foodMapTotal" class="stat-accent">—</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="foodMapChart"></canvas>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>寺廟地圖流量統計</h3>
+            <div class="muted">
+              總累積瀏覽次數：<span id="templeMapTotal" class="stat-accent">—</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px;width:100%;">
+            <canvas id="templeMapChart"></canvas>
+          </div>
+        </div>
+
+        <div class="data-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3>UTM 轉換統計</h3>
+            <div class="muted">近 14 天</div>
+          </div>
+          <div class="report-kpis">
+            <div class="report-kpi">
+              <div class="label">實體商品轉換</div>
+              <div class="value" data-report="utm-physical-total">—</div>
+            </div>
+            <div class="report-kpi">
+              <div class="label">服務商品轉換</div>
+              <div class="value" data-report="utm-service-total">—</div>
+            </div>
+          </div>
+          <div class="report-lists">
+            <div>
+              <div class="tag">實體商品入口</div>
+              <ul class="report-list" data-report-list="utm-physical-source"></ul>
+            </div>
+            <div>
+              <div class="tag alt">服務商品入口</div>
+              <ul class="report-list" data-report-list="utm-service-source"></ul>
+            </div>
+          </div>
+          <div class="report-note">依 UTM source 統計，未帶參數視為 direct。</div>
+        </div>
+      </div>
+
+      <section class="report-section data-card" id="reportSection">
+        <div class="report-head">
+          <h2>營運報表</h2>
+          <div class="report-note">統計以台灣時間計算</div>
+        </div>
+        <div class="report-grid">
+          <div class="report-card">
+            <h3>實體商品</h3>
+            <div class="report-kpis">
+              <div class="report-kpi">
+                <div class="label">今日營收</div>
+                <div class="value" data-report="physical-rev-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天營收</div>
+                <div class="value" data-report="physical-rev-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天營收</div>
+                <div class="value" data-report="physical-rev-30">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">今日訂單</div>
+                <div class="value" data-report="physical-ord-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天訂單</div>
+                <div class="value" data-report="physical-ord-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天訂單</div>
+                <div class="value" data-report="physical-ord-30">—</div>
+              </div>
+            </div>
+            <div class="report-row"><span>訂單狀態</span><span data-report="physical-status">—</span></div>
+            <div class="report-row"><span>掃描範圍</span><span data-report="physical-scan">—</span></div>
+            <div class="report-lists">
+              <div>
+                <div class="tag">熱賣 TOP10</div>
+                <ul class="report-list" data-report-list="physical-top"></ul>
+              </div>
+              <div>
+                <div class="tag alt">低庫存</div>
+                <ul class="report-list" data-report-list="physical-low"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="report-card">
+            <h3>服務商品</h3>
+            <div class="report-kpis">
+              <div class="report-kpi">
+                <div class="label">今日營收</div>
+                <div class="value" data-report="service-rev-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天營收</div>
+                <div class="value" data-report="service-rev-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天營收</div>
+                <div class="value" data-report="service-rev-30">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">今日訂單</div>
+                <div class="value" data-report="service-ord-today">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">7 天訂單</div>
+                <div class="value" data-report="service-ord-7">—</div>
+              </div>
+              <div class="report-kpi">
+                <div class="label">30 天訂單</div>
+                <div class="value" data-report="service-ord-30">—</div>
+              </div>
+            </div>
+            <div class="report-row"><span>訂單狀態</span><span data-report="service-status">—</span></div>
+            <div class="report-row"><span>掃描範圍</span><span data-report="service-scan">—</span></div>
+            <div class="report-lists">
+              <div>
+                <div class="tag">熱賣 TOP10</div>
+                <ul class="report-list" data-report-list="service-top"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="/js/admin-index.inline-2.js"></script>
-<script>
-  // 補丁：獨立抓取入口首頁 (home_view) 的數據並渲染圖表
-  (function() {
-    async function fetchHomeStats() {
-      try {
-        // 抓取 home_view 趨勢數據 (14天)
-        const res = await fetch('/api/admin/home-stats?event=home_view&days=14', { credentials: 'include' });
-        if (!res.ok) return;
-        const data = await res.json();
-        
-        // 修正：API 回傳結構為 stats 陣列，而非 history
-        const history = data.stats || [];
-        const total = data.total || 0;
-        const lastEntry = history.length > 0 ? history[history.length - 1] : { count: 0 };
-        const todayCount = lastEntry.count || 0;
-
-        // 1. 更新今日數據卡片
-        const todayEl = document.querySelector('[data-stat="home-views-today"]');
-        const subEl = document.querySelector('[data-stat-sub="home-views-sub"]');
-        if (todayEl) todayEl.textContent = todayCount.toLocaleString();
-        if (subEl) subEl.textContent = '已更新';
-
-        // 2. 更新圖表區總數
-        const totalEl = document.getElementById('homeTotal');
-        if (totalEl) totalEl.textContent = total.toLocaleString();
-
-        // 3. 繪製圖表
-        const ctx = document.getElementById('homeChart');
-        if (ctx && history.length > 0 && window.Chart) {
-          // 如果已經有實例則銷毀 (避免重複渲染)
-          const existingChart = Chart.getChart(ctx);
-          if (existingChart) existingChart.destroy();
-
-          new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: history.map(h => h.date),
-              datasets: [{
-                label: '瀏覽人次',
-                data: history.map(h => h.count),
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 3
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: {
-                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
-                x: { grid: { display: false } }
-              },
-              interaction: { intersect: false, mode: 'index' }
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Home stats fetch error:', err);
-        const subEl = document.querySelector('[data-stat-sub="home-views-sub"]');
-        if (subEl) subEl.textContent = '載入失敗';
-      }
-    }
-
-    // 頁面載入後執行
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', fetchHomeStats);
-    } else {
-      fetchHomeStats();
-    }
-  })();
-</script>
 </body>
 </html>

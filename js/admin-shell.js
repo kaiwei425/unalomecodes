@@ -7,11 +7,12 @@
 
     var navItems = [
       { href: '/admin', label: '總覽', icon: '🏠', group: 'extra' },
-      { href: '/admin/orders', label: '訂單管理', icon: '🧾', group: 'primary' },
       { href: '/admin/fulfillment', label: '出貨工作台', icon: '📦', group: 'main' },
-      { href: '/admin/products', label: '商品管理', icon: '📦', group: 'primary' },
-      { href: '/admin/service-products', label: '服務商品', icon: '🕯️', group: 'extra' },
+      // 營運（由上到下的排序）
+      { href: '/admin/orders', label: '商品訂單', icon: '🧾', group: 'primary' },
       { href: '/admin/service-orders', label: '服務訂單', icon: '🧿', group: 'primary' },
+      { href: '/admin/products', label: '商品上架', icon: '📦', group: 'primary' },
+      { href: '/admin/service-products', label: '服務上架', icon: '🕯️', group: 'primary' },
       { href: '/admin/members', label: '會員', icon: '👤', group: 'extra' },
       { href: '/admin/coupons', label: '優惠券', icon: '🎟️', group: 'extra' },
       { href: '/admin/code-viewer', label: '留言', icon: '💬', group: 'extra' },
