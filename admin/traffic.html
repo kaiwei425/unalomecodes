@@ -24,11 +24,11 @@
   <header class="entry-hero">
     <div class="entry-hero-text">
       <div class="entry-eyebrow">數據監控</div>
-      <h1>流量與營運監控</h1>
+      <h1>流量監控</h1>
       <div class="entry-chips">
         <span class="pill">流量趨勢</span>
-        <span class="pill alt">UTM 轉換</span>
-        <span class="pill">營運報表</span>
+        <span class="pill alt">入口追蹤</span>
+        <span class="pill">地圖流量</span>
       </div>
       <div class="muted">統計以台灣時間計算，僅供內部營運參考。</div>
     </div>
@@ -43,51 +43,6 @@
       </a>
     </div>
   </header>
-
-  <section class="entry-section" data-owner-only>
-    <div class="section-head">
-      <div>
-        <h2>營運快覽</h2>
-        <p class="muted">即時總覽重點數據</p>
-      </div>
-      <div class="section-note">
-        <span>統計以台灣時間計算</span>
-        <button class="btn ghost" id="refreshDashboardStats" type="button">重新整理</button>
-      </div>
-    </div>
-    <div class="admin-stats" id="adminStats">
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">商品總數</div>
-        <div class="admin-stat-value" data-stat="products-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">訂單總數</div>
-        <div class="admin-stat-value" data-stat="orders-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">服務訂單總數</div>
-        <div class="admin-stat-value" data-stat="service-orders-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="service-orders-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">會員數</div>
-        <div class="admin-stat-value" data-stat="members-total">—</div>
-        <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">優惠券使用（近 7 日）</div>
-        <div class="admin-stat-value" data-stat="coupons-used">—</div>
-        <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-title">今日入口瀏覽</div>
-        <div class="admin-stat-value" data-stat="home-views-today">—</div>
-        <div class="admin-stat-sub" data-stat-sub="home-views-sub">載入中…</div>
-      </div>
-    </div>
-  </section>
 
   <section class="entry-section" data-owner-only>
     <div class="section-head">
@@ -146,128 +101,13 @@
           </div>
         </div>
 
-        <div class="data-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3>UTM 轉換統計</h3>
-            <div class="muted">近 14 天</div>
-          </div>
-          <div class="report-kpis">
-            <div class="report-kpi">
-              <div class="label">實體商品轉換</div>
-              <div class="value" data-report="utm-physical-total">—</div>
-            </div>
-            <div class="report-kpi">
-              <div class="label">服務商品轉換</div>
-              <div class="value" data-report="utm-service-total">—</div>
-            </div>
-          </div>
-          <div class="report-lists">
-            <div>
-              <div class="tag">實體商品入口</div>
-              <ul class="report-list" data-report-list="utm-physical-source"></ul>
-            </div>
-            <div>
-              <div class="tag alt">服務商品入口</div>
-              <ul class="report-list" data-report-list="utm-service-source"></ul>
-            </div>
-          </div>
-          <div class="report-note">依 UTM source 統計，未帶參數視為 direct。</div>
-        </div>
       </div>
-
-      <section class="report-section data-card" id="reportSection">
-        <div class="report-head">
-          <h2>營運報表</h2>
-          <div class="report-note">統計以台灣時間計算</div>
-        </div>
-        <div class="report-grid">
-          <div class="report-card">
-            <h3>實體商品</h3>
-            <div class="report-kpis">
-              <div class="report-kpi">
-                <div class="label">今日營收</div>
-                <div class="value" data-report="physical-rev-today">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">7 天營收</div>
-                <div class="value" data-report="physical-rev-7">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">30 天營收</div>
-                <div class="value" data-report="physical-rev-30">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">今日訂單</div>
-                <div class="value" data-report="physical-ord-today">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">7 天訂單</div>
-                <div class="value" data-report="physical-ord-7">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">30 天訂單</div>
-                <div class="value" data-report="physical-ord-30">—</div>
-              </div>
-            </div>
-            <div class="report-row"><span>訂單狀態</span><span data-report="physical-status">—</span></div>
-            <div class="report-row"><span>掃描範圍</span><span data-report="physical-scan">—</span></div>
-            <div class="report-lists">
-              <div>
-                <div class="tag">熱賣 TOP10</div>
-                <ul class="report-list" data-report-list="physical-top"></ul>
-              </div>
-              <div>
-                <div class="tag alt">低庫存</div>
-                <ul class="report-list" data-report-list="physical-low"></ul>
-              </div>
-            </div>
-          </div>
-          <div class="report-card">
-            <h3>服務商品</h3>
-            <div class="report-kpis">
-              <div class="report-kpi">
-                <div class="label">今日營收</div>
-                <div class="value" data-report="service-rev-today">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">7 天營收</div>
-                <div class="value" data-report="service-rev-7">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">30 天營收</div>
-                <div class="value" data-report="service-rev-30">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">今日訂單</div>
-                <div class="value" data-report="service-ord-today">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">7 天訂單</div>
-                <div class="value" data-report="service-ord-7">—</div>
-              </div>
-              <div class="report-kpi">
-                <div class="label">30 天訂單</div>
-                <div class="value" data-report="service-ord-30">—</div>
-              </div>
-            </div>
-            <div class="report-row"><span>訂單狀態</span><span data-report="service-status">—</span></div>
-            <div class="report-row"><span>掃描範圍</span><span data-report="service-scan">—</span></div>
-            <div class="report-lists">
-              <div>
-                <div class="tag">熱賣 TOP10</div>
-                <ul class="report-list" data-report-list="service-top"></ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   </section>
 
-  <div class="footer" data-owner-only>需要新增監控項目？請在此頁新增卡片與對應 API 讀取即可。</div>
+  <div class="footer" data-owner-only>需要新增流量監控項目？請在此頁新增卡片與對應 API 讀取即可。</div>
 </div>
 
 <script src="/js/admin-index.inline-2.js"></script>
 </body>
 </html>
-

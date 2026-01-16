@@ -139,89 +139,11 @@
   <section class="entry-section" data-owner-only>
     <div class="section-head">
       <div>
-        <h2>數據監控</h2>
-        <p class="muted">流量趨勢與營運報表</p>
+        <h2>營運報表</h2>
+        <p class="muted">商品與服務營運總覽</p>
       </div>
     </div>
     <div class="data-grid">
-      <div class="data-stack">
-        <div class="data-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3>入口首頁流量統計</h3>
-            <div class="muted">
-              總累積瀏覽次數：<span id="homeTotal" class="stat-accent">—</span>
-            </div>
-          </div>
-          <div style="position:relative;height:300px;width:100%;">
-            <canvas id="homeChart"></canvas>
-          </div>
-        </div>
-
-        <div class="data-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3>入口測驗流量統計</h3>
-            <div class="muted">
-              總累積瀏覽次數：<span id="quizTotal" class="stat-accent">—</span>
-            </div>
-          </div>
-          <div style="position:relative;height:300px;width:100%;">
-            <canvas id="quizChart"></canvas>
-          </div>
-        </div>
-
-        <div class="data-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3>美食地圖流量統計</h3>
-            <div class="muted">
-              總累積瀏覽次數：<span id="foodMapTotal" class="stat-accent">—</span>
-            </div>
-          </div>
-          <div style="position:relative;height:300px;width:100%;">
-            <canvas id="foodMapChart"></canvas>
-          </div>
-        </div>
-
-        <div class="data-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3>寺廟地圖流量統計</h3>
-            <div class="muted">
-              總累積瀏覽次數：<span id="templeMapTotal" class="stat-accent">—</span>
-            </div>
-          </div>
-          <div style="position:relative;height:300px;width:100%;">
-            <canvas id="templeMapChart"></canvas>
-          </div>
-        </div>
-
-        <div class="data-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3>UTM 轉換統計</h3>
-            <div class="muted">近 14 天</div>
-          </div>
-          <div class="report-kpis">
-            <div class="report-kpi">
-              <div class="label">實體商品轉換</div>
-              <div class="value" data-report="utm-physical-total">—</div>
-            </div>
-            <div class="report-kpi">
-              <div class="label">服務商品轉換</div>
-              <div class="value" data-report="utm-service-total">—</div>
-            </div>
-          </div>
-          <div class="report-lists">
-            <div>
-              <div class="tag">實體商品入口</div>
-              <ul class="report-list" data-report-list="utm-physical-source"></ul>
-            </div>
-            <div>
-              <div class="tag alt">服務商品入口</div>
-              <ul class="report-list" data-report-list="utm-service-source"></ul>
-            </div>
-          </div>
-          <div class="report-note">依 UTM source 統計，未帶參數視為 direct。</div>
-        </div>
-      </div>
-
       <section class="report-section data-card" id="reportSection">
         <div class="report-head">
           <h2>營運報表</h2>

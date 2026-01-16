@@ -16,14 +16,23 @@
 
   function initDashboard(){
     const box = document.getElementById('adminStats');
-    if (!box) return;
+    const reportSection = document.getElementById('reportSection');
+    const hasTraffic = !!(
+      document.getElementById('homeChart') ||
+      document.getElementById('quizChart') ||
+      document.getElementById('foodMapChart') ||
+      document.getElementById('templeMapChart')
+    );
+    if (!box && !reportSection && !hasTraffic) return;
     const maxDashboardAttempts = 3;
     const retryDelay = (attempt) => 1400 * (attempt + 1);
     const set = (key, value) => {
+      if (!box) return;
       const el = box.querySelector(`[data-stat="${key}"]`);
       if (el) el.textContent = value;
     };
     const setSub = (key, value) => {
+      if (!box) return;
       const el = box.querySelector(`[data-stat-sub="${key}"]`);
       if (el) el.textContent = value;
     };
@@ -134,6 +143,7 @@
           applyDashboard(data);
         })
         .catch(()=>{
+          if (!box) return;
           const subs = box.querySelectorAll('[data-stat-sub]');
           subs.forEach(el => { el.textContent = '暫時無法載入'; });
         });
