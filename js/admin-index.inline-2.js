@@ -295,19 +295,49 @@
       }
     }
 
+    function fetchTrackStats(eventName, days){
+      return fetch('/api/admin/track-stats?event=' + encodeURIComponent(eventName) + '&days=' + days, {
+        credentials:'include',
+        cache:'no-store'
+      })
+        .then(r => r.json())
+        .then(data => (data && data.ok) ? data : null)
+        .catch(()=>null);
+    }
+
+    function mergeTrackStats(primary, secondary){
+      const map = new Map();
+      const pushStats = (stats)=>{
+        (stats || []).forEach(row=>{
+          const date = row.date;
+          if (!date) return;
+          const prev = map.get(date) || 0;
+          map.set(date, prev + (row.count || 0));
+        });
+      };
+      pushStats(primary && primary.stats);
+      pushStats(secondary && secondary.stats);
+      const dates = Array.from(map.keys()).sort();
+      const stats = dates.map(date => ({ date, count: map.get(date) || 0 }));
+      const total = (primary && primary.total ? primary.total : 0) + (secondary && secondary.total ? secondary.total : 0);
+      return { stats, total };
+    }
+
     // Load Quiz Traffic Stats
     const quizCtx = document.getElementById('quizChart');
     const quizTotalEl = document.getElementById('quizTotal');
     if (quizCtx) {
       const loadQuizStats = ()=>{
-        fetch('/api/admin/track-stats?event=home_quiz_cta_click&days=14', { credentials:'include', cache:'no-store' })
-          .then(r => r.json())
-          .then(data => {
-            if (!data || !data.ok) return;
-            if (quizTotalEl) quizTotalEl.textContent = (data.total || 0).toLocaleString() + ' 人';
+        Promise.all([
+          fetchTrackStats('quiz_start', 14),
+          fetchTrackStats('home_quiz_cta_click', 14)
+        ])
+          .then(([startData, ctaData]) => {
+            const merged = mergeTrackStats(startData, ctaData);
+            if (quizTotalEl) quizTotalEl.textContent = (merged.total || 0).toLocaleString() + ' 人';
 
-            const labels = (data.stats || []).map(s => s.date.slice(5));
-            const counts = (data.stats || []).map(s => s.count);
+            const labels = (merged.stats || []).map(s => s.date.slice(5));
+            const counts = (merged.stats || []).map(s => s.count);
 
             if (!window.Chart) return;
             try{
