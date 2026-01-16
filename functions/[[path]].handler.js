@@ -6,6 +6,7 @@ import {
   deriveTabooColor
 } from '../lib/mahataksa.js';
 import { getYamUbakong } from '../lib/ubakong.js';
+import { createSplitHandler } from './_handlers/index.js';
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
@@ -3823,7 +3824,12 @@ function normalizeStatus(input){
   if (raw.includes('已寄件') || raw.includes('已寄出') || raw.includes('已出貨')) {
     return CANONICAL_STATUS.SHIPPED;
   }
+  const rawNoSpace = raw.replace(/\s+/g, '');
+  const hasRefundish = rawNoSpace.includes('退款') || rawNoSpace.includes('退貨');
   if (raw.includes('已取件') || raw.includes('已完成訂單') || raw.includes('完成訂單') || raw.includes('訂單完成')) {
+    return CANONICAL_STATUS.COMPLETED;
+  }
+  if (!hasRefundish && rawNoSpace.includes('已完成') && (rawNoSpace.includes('訂單') || rawNoSpace.includes('取件') || rawNoSpace.includes('交易'))) {
     return CANONICAL_STATUS.COMPLETED;
   }
   if (raw.includes('付款逾期') || raw.includes('逾期')) {
@@ -4081,7 +4087,7 @@ async function updateDashboardStats(env) {
   const lowStockThreshold = Math.max(0, Number(env.LOW_STOCK_THRESHOLD || 3) || 3);
   const stats = {
     products: { total: 0, active: 0, lowStock: 0, approx: false },
-    orders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
+    orders: { total: 0, paid: 0, shipped: 0, pending: 0, done: 0, canceled: 0, approx: false },
     serviceOrders: { total: 0, paid: 0, pending: 0, done: 0, canceled: 0, approx: false },
     members: { total: 0, approx: false },
     coupons: { total: 0, used: 0, total7: 0, used7: 0, approx: false }
@@ -4104,7 +4110,7 @@ async function updateDashboardStats(env) {
     physical: {
       revenue: makePeriods(),
       orders: makePeriods(),
-      status: { paid: 0, pending: 0, done: 0, canceled: 0 },
+      status: { paid: 0, shipped: 0, pending: 0, done: 0, canceled: 0 },
       topItems: [],
       lowStock: [],
       approx: false
@@ -4219,16 +4225,21 @@ async function updateDashboardStats(env) {
       if (scanAll) aliveIds.push(oid);
       try{
         const o = JSON.parse(raw);
-        const isDone = statusIsCompleted(o.status);
+        const statusKey = normalizeStatus(o.status);
+        const isDone = statusKey === CANONICAL_STATUS.COMPLETED;
+        const isShipped = statusKey === CANONICAL_STATUS.SHIPPED;
+        const isReady = statusKey === CANONICAL_STATUS.READY_TO_SHIP;
+        const isCanceled = statusKey === CANONICAL_STATUS.CANCELED;
         const isPaid = isOrderPaid(o);
-        const isCanceled = statusIsCanceled(o.status);
         if (isDone) stats.orders.done++;
-        else if (isPaid) stats.orders.paid++;
+        else if (isShipped) stats.orders.shipped++;
+        else if (isReady) stats.orders.paid++;
         else if (isCanceled) stats.orders.canceled++;
         else stats.orders.pending++;
 
         if (isDone) reports.physical.status.done++;
-        else if (isPaid) reports.physical.status.paid++;
+        else if (isShipped) reports.physical.status.shipped++;
+        else if (isReady) reports.physical.status.paid++;
         else if (isCanceled) reports.physical.status.canceled++;
         else reports.physical.status.pending++;
 
@@ -4429,6 +4440,66 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const origin = url.origin;
   const pathname = url.pathname;
+  const useSplitHandlers = String(env.USE_SPLIT_HANDLERS || '').trim() === '1';
+  if (useSplitHandlers){
+    const split = createSplitHandler({
+      json,
+      jsonHeadersFor,
+      isAdmin,
+      getAdminSession,
+      getAdminRole,
+      getAdminPermissionsForEmail,
+      ORDER_INDEX_KEY,
+      resolveCorsOrigin,
+      forbidIfFulfillmentAdmin,
+      buildAuditActor,
+      parseRate,
+      checkAdminRateLimit,
+      buildRateKey,
+      auditAppend,
+      getAny,
+      normalizePhone,
+      matchPhone,
+      matchLast5,
+      orderAmount,
+      orderItemsSummary,
+      normalizeReceiptUrl,
+      csvEscape,
+      formatTZ,
+      ORDER_ID_PREFIX,
+      ORDER_ID_LEN,
+      getClientIp,
+      checkRateLimit,
+      normalizeOrderSuffix,
+      redactOrderForPublic,
+      attachSignedProofs,
+      trimOrderIndex,
+      requireAdminWrite,
+      normalizeStatus,
+      isFulfillmentOrderTransitionAllowed,
+      statusIsPaid,
+      statusIsCanceled,
+      releaseOrderResources,
+      ensureOrderPaidResources,
+      shouldNotifyStatus,
+      maybeSendOrderEmails,
+      jsonHeaders,
+      forbidIfFulfillmentAdmin,
+      buildAuditActor,
+      auditAppend,
+      jsonHeadersFor,
+      handleUpload,
+      normalizeTWPhoneStrict,
+      lastDigits,
+      hasAdminPermission,
+      updateDashboardStats,
+      pickTrackStore,
+      normalizeTrackEvent,
+      taipeiDateKey
+    });
+    const splitResponse = await split.handle(request, env, context);
+    if (splitResponse) return splitResponse;
+  }
   if (pathname === '/temple-map' || pathname === '/temple-map/') {
     return Response.redirect(`${origin}/templemap${url.search}`, 301);
   }

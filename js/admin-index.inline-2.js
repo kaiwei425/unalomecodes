@@ -98,7 +98,7 @@
       set('products-total', s.products ? s.products.total : '—');
       setSub('products-sub', s.products ? `上架 ${s.products.active || 0}｜低庫存 ${s.products.lowStock || 0}` : '—');
       set('orders-total', s.orders ? s.orders.total : '—');
-      setSub('orders-sub', s.orders ? `訂單待處理 ${s.orders.pending || 0}｜待出貨 ${s.orders.paid || 0}｜已取件（訂單完成） ${s.orders.done || 0}` : '—');
+      setSub('orders-sub', s.orders ? `訂單待處理 ${s.orders.pending || 0}｜待出貨 ${s.orders.paid || 0}｜已寄件 ${s.orders.shipped || 0}｜已取件（訂單完成） ${s.orders.done || 0}｜取消訂單 ${s.orders.canceled || 0}` : '—');
       set('service-orders-total', s.serviceOrders ? s.serviceOrders.total : '—');
       setSub('service-orders-sub', s.serviceOrders ? `新訂單 ${s.serviceOrders.pending || 0}｜已確認付款 ${s.serviceOrders.paid || 0}｜已完成訂單 ${s.serviceOrders.done || 0}` : '—');
       set('members-total', s.members ? s.members.total : '—');
@@ -118,7 +118,7 @@
       setReport('physical-ord-today', fmtNum(physical.orders?.today));
       setReport('physical-ord-7', fmtNum(physical.orders?.last7));
       setReport('physical-ord-30', fmtNum(physical.orders?.last30));
-      setReport('physical-status', `訂單待處理 ${fmtNum(physical.status?.pending)}｜待出貨 ${fmtNum(physical.status?.paid)}｜已取件（訂單完成） ${fmtNum(physical.status?.done)}`);
+      setReport('physical-status', `訂單待處理 ${fmtNum(physical.status?.pending)}｜待出貨 ${fmtNum(physical.status?.paid)}｜已寄件 ${fmtNum(physical.status?.shipped)}｜已取件（訂單完成） ${fmtNum(physical.status?.done)}｜取消訂單 ${fmtNum(physical.status?.canceled)}`);
       setReport('physical-scan', physical.approx ? `資料量較大，統計前 ${fmtNum(limits.scanLimit || 0)} 筆` : '完整統計');
 
       setReport('service-rev-today', fmtMoney(service.revenue?.today));
