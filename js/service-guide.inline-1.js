@@ -33,6 +33,19 @@
       applyAdminState(false);
     }
 
+    function safeSetHtml(el, html){
+      const raw = String(html || '').trim();
+      if (window.DOMPurify){
+        el.innerHTML = DOMPurify.sanitize(raw, {
+          ALLOWED_TAGS: ['b','i','em','strong','u','a','p','br','ul','ol','li','h1','h2','h3','blockquote','span'],
+          ALLOWED_ATTR: ['href','target','rel','style']
+        });
+        return;
+      }
+      // fallback: strip script tags
+      el.innerHTML = raw.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    }
+
     editBtn.addEventListener('click', () => {
       originalHtml = contentEl.innerHTML;
       setEditing(true);
@@ -40,7 +53,7 @@
 
     cancelBtn.addEventListener('click', () => {
       if (originalHtml){
-        contentEl.innerHTML = originalHtml;
+        safeSetHtml(contentEl, originalHtml);
       }
       setEditing(false);
     });
@@ -73,7 +86,7 @@
       .then(res => res.json())
       .then(data => {
         if (data && data.ok && data.html){
-          contentEl.innerHTML = data.html;
+          safeSetHtml(contentEl, data.html);
         }
       })
       .catch(()=>{});

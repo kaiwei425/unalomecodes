@@ -4179,14 +4179,31 @@ async function updateDashboardStats(env) {
           const amount = getOrderAmount(o);
           if (amount > 0) addPeriods(reports.physical.revenue, paidTs, amount);
           const items = Array.isArray(o.items) ? o.items : [];
-          for (const it of items){
-            const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
-            const unit = Number(it.price ?? it.unitPrice ?? it.amount ?? 0) || 0;
-            let total = Number(it.total ?? it.amountTotal ?? 0) || 0;
+          if (items.length){
+            for (const it of items){
+              const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+              const unit = Number(it.price ?? it.unitPrice ?? it.amount ?? 0) || 0;
+              let total = Number(it.total ?? it.amountTotal ?? 0) || 0;
+              if (!total && unit) total = unit * qty;
+              const name = it.productName || it.name || o.productName || o.name || '商品';
+              const id = it.productId || it.id || '';
+              const image = it.image || it.cover || it.thumb || '';
+              addTop(topPhysicalMap, String(id || name), {
+                id: String(id || ''),
+                name,
+                qty,
+                amount: total || 0,
+                image
+              });
+            }
+          } else {
+            const qty = Math.max(1, Number(o.qty ?? 1));
+            const unit = Number(o.price ?? 0) || 0;
+            let total = Number(o.amount ?? 0) || 0;
             if (!total && unit) total = unit * qty;
-            const name = it.productName || it.name || o.productName || o.name || '商品';
-            const id = it.productId || it.id || '';
-            const image = it.image || it.cover || it.thumb || '';
+            const name = o.productName || o.name || '商品';
+            const id = o.productId || o.id || '';
+            const image = o.image || o.cover || o.thumb || '';
             addTop(topPhysicalMap, String(id || name), {
               id: String(id || ''),
               name,
@@ -4247,18 +4264,33 @@ async function updateDashboardStats(env) {
             const paidTs = getOrderPaidTs(o) || createdTs;
             const amount = getOrderAmount(o);
             if (amount > 0) addPeriods(reports.service.revenue, paidTs, amount);
-            const rawItems = Array.isArray(o.items) && o.items.length
-              ? o.items
-              : [{ name: o.serviceName || o.productName || '服務商品', qty: o.qty || 1, total: amount }];
-            for (const it of rawItems){
-              const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
-              const unit = Number(it.price ?? it.unitPrice ?? it.amount ?? 0) || 0;
-              let total = Number(it.total ?? it.amountTotal ?? 0) || 0;
+            const rawItems = Array.isArray(o.items) ? o.items : [];
+            if (rawItems.length){
+              for (const it of rawItems){
+                const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+                const unit = Number(it.price ?? it.unitPrice ?? it.amount ?? 0) || 0;
+                let total = Number(it.total ?? it.amountTotal ?? 0) || 0;
+                if (!total && unit) total = unit * qty;
+                if (!total && amount) total = amount / rawItems.length;
+                const name = it.name || o.serviceName || o.productName || '服務商品';
+                const id = o.serviceId || it.serviceId || '';
+                const image = it.image || it.cover || o.cover || '';
+                addTop(topServiceMap, String(id || name), {
+                  id: String(id || ''),
+                  name,
+                  qty,
+                  amount: total || 0,
+                  image
+                });
+              }
+            } else {
+              const qty = Math.max(1, Number(o.qty ?? 1));
+              const unit = Number(o.price ?? 0) || 0;
+              let total = Number(o.amount ?? 0) || 0;
               if (!total && unit) total = unit * qty;
-              if (!total && amount) total = amount / rawItems.length;
-              const name = it.name || o.serviceName || o.productName || '服務商品';
-              const id = o.serviceId || it.serviceId || '';
-              const image = it.image || it.cover || o.cover || '';
+              const name = o.serviceName || o.productName || '服務商品';
+              const id = o.serviceId || o.id || '';
+              const image = o.image || o.cover || '';
               addTop(topServiceMap, String(id || name), {
                 id: String(id || ''),
                 name,
