@@ -4183,6 +4183,11 @@ async function updateDashboardStats(env) {
       || !!order?.paid_at;
     return statusIsPaid(order?.status) || paymentOk;
   };
+  const isServicePaid = (order)=>{
+    if (!order) return false;
+    if (statusIsCompleted(order.status)) return true; // 祈福完成視為已收款
+    return isOrderPaid(order);
+  };
 
   // Orders
   if (env.ORDERS){
@@ -4290,7 +4295,7 @@ async function updateDashboardStats(env) {
       try{
         const o = JSON.parse(raw);
         const isDone = statusIsCompleted(o.status);
-        const isPaid = isOrderPaid(o);
+        const isPaid = isServicePaid(o);
         const isCanceled = statusIsCanceled(o.status);
         if (isDone) stats.serviceOrders.done++;
         else if (isPaid) stats.serviceOrders.paid++;
