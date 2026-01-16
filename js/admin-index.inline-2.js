@@ -55,6 +55,11 @@
       }
       el.innerHTML = items.map(formatter).join('');
     };
+    const renderLoadingList = (key)=>{
+      const el = document.querySelector(`[data-report-list="${key}"]`);
+      if (!el) return;
+      el.innerHTML = '<li class="empty">載入中…</li>';
+    };
     const renderUtmList = (key, items)=>{
       renderList(key, items, (item)=>{
         const name = esc(item.name || 'direct');
@@ -72,6 +77,21 @@
       setReport('service-status', '統計更新中…');
       setReport('physical-scan', '統計更新中…');
       setReport('service-scan', '統計更新中…');
+      setReport('physical-rev-today', '載入中…');
+      setReport('physical-rev-7', '載入中…');
+      setReport('physical-rev-30', '載入中…');
+      setReport('physical-ord-today', '載入中…');
+      setReport('physical-ord-7', '載入中…');
+      setReport('physical-ord-30', '載入中…');
+      setReport('service-rev-today', '載入中…');
+      setReport('service-rev-7', '載入中…');
+      setReport('service-rev-30', '載入中…');
+      setReport('service-ord-today', '載入中…');
+      setReport('service-ord-7', '載入中…');
+      setReport('service-ord-30', '載入中…');
+      renderLoadingList('physical-top');
+      renderLoadingList('physical-low');
+      renderLoadingList('service-top');
     };
     const applyDashboard = (data)=>{
       const s = data.stats || {};
@@ -163,6 +183,7 @@
           subs.forEach(el => { el.textContent = '暫時無法載入'; });
         });
     };
+    markReportLoading();
     loadDashboard();
 
     const refreshBtn = document.getElementById('refreshDashboardStats');

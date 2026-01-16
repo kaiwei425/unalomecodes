@@ -4165,14 +4165,22 @@ async function updateDashboardStats(env) {
   }
 
   const isOrderPaid = (order)=>{
-    const paymentStatus = String(order?.payment?.status || '').trim().toUpperCase();
+    const paymentStatusRaw = order?.payment?.status ?? '';
+    const paymentStatus = String(paymentStatusRaw).trim().toUpperCase();
     const paymentOk = paymentStatus === 'PAID'
       || paymentStatus === 'SUCCESS'
+      || paymentStatus === 'SUCCESSFUL'
       || paymentStatus === 'CONFIRMED'
       || paymentStatus === 'COMPLETED'
       || paymentStatus === 'OK'
+      || paymentStatus === '1'
+      || paymentStatusRaw === 1
       || order?.payment?.paid === true
-      || order?.payment?.isPaid === true;
+      || order?.payment?.isPaid === true
+      || !!order?.payment?.paidAt
+      || !!order?.payment?.paid_at
+      || !!order?.paidAt
+      || !!order?.paid_at;
     return statusIsPaid(order?.status) || paymentOk;
   };
 

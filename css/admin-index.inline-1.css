@@ -176,6 +176,9 @@ html,body{
   gap:16px;
   align-items:start;
 }
+.data-grid.single{
+  grid-template-columns:1fr;
+}
 .data-grid.report-only{
   grid-template-columns:minmax(0,1fr);
 }
@@ -197,6 +200,7 @@ html,body{
   gap:12px;
   align-content:start;
   overflow:hidden;
+  min-width:0;
 }
 .data-card h3{margin:0;font-size:18px;font-weight:800;}
 .stat-accent{color:var(--accent);font-size:18px;font-weight:800;}
