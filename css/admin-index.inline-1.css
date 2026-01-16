@@ -176,6 +176,9 @@ html,body{
   gap:16px;
   align-items:start;
 }
+.data-grid.report-only{
+  grid-template-columns:minmax(0,1fr);
+}
 .data-stack{
   display:grid;
   gap:16px;
@@ -241,6 +244,7 @@ html,body{
   .report-grid{grid-template-columns:1fr;}
 }
 @media (max-width:1200px){
+  .data-grid{grid-template-columns:1fr;}
   .report-grid{grid-template-columns:1fr;}
 }
 html.admin-guard-hide{visibility:hidden;}
