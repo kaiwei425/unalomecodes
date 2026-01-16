@@ -3,144 +3,97 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="後台管理入口（僅限管理員）。">
+<meta name="description" content="後台流量與營運監控（僅限管理員）。">
 <meta name="robots" content="noindex,nofollow">
-<link rel="canonical" href="https://unalomecodes.com/admin">
-<title>unalomecodes | 懂玩泰國 - 後台 index</title>
+<link rel="canonical" href="https://unalomecodes.com/admin/traffic">
+<title>unalomecodes | 懂玩泰國 - 後台 流量監控</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
 <link rel="stylesheet" href="/css/admin-index.inline-1.css">
-<script src="/js/admin-index.inline-1.js"></script>
 <script src="/js/admin-guard.js" defer></script>
 <link rel="stylesheet" href="/admin/admin-ui.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/js/admin-shell.js" defer></script>
 </head>
 <body>
 <div class="wrap">
   <div class="backLink">
-    <a class="backBtn" href="/">← 返回入口首頁</a>
+    <a class="backBtn" href="/admin">← 返回後台總覽</a>
   </div>
+
   <header class="entry-hero">
     <div class="entry-hero-text">
-      <div class="entry-eyebrow">控制中心</div>
-      <h1>後台控制中心</h1>
+      <div class="entry-eyebrow">數據監控</div>
+      <h1>流量與營運監控</h1>
       <div class="entry-chips">
-        <span class="pill">訂單流程</span>
-        <span class="pill alt">商品上架</span>
-        <span class="pill">服務訂單</span>
+        <span class="pill">流量趨勢</span>
+        <span class="pill alt">UTM 轉換</span>
+        <span class="pill">營運報表</span>
       </div>
+      <div class="muted">統計以台灣時間計算，僅供內部營運參考。</div>
     </div>
     <div class="entry-actions">
       <a class="entry-action primary" href="/admin/orders">
-        <span class="action-title">處理訂單</span>
-        <span class="action-sub">付款 / 出貨</span>
+        <span class="action-title">回到訂單</span>
+        <span class="action-sub">處理出貨</span>
       </a>
-      <a class="entry-action" href="/admin/products" data-owner-only>
-        <span class="action-title">新增商品</span>
-        <span class="action-sub">上架與庫存</span>
-      </a>
-      <a class="entry-action" href="/admin/service-orders">
-        <span class="action-title">服務訂單</span>
-        <span class="action-sub">祈福進度</span>
-      </a>
-      <a class="entry-action ghost" href="/admin/code-viewer" data-owner-only>
-        <span class="action-title">查看留言</span>
-        <span class="action-sub">顧客回饋</span>
+      <a class="entry-action" href="/admin/audit-logs">
+        <span class="action-title">審計日誌</span>
+        <span class="action-sub">操作記錄</span>
       </a>
     </div>
   </header>
 
-  <section class="entry-section">
+  <section class="entry-section" data-owner-only>
     <div class="section-head">
       <div>
-        <h2>核心工作區</h2>
-        <p class="muted">高頻任務集中處理</p>
+        <h2>營運快覽</h2>
+        <p class="muted">即時總覽重點數據</p>
+      </div>
+      <div class="section-note">
+        <span>統計以台灣時間計算</span>
+        <button class="btn ghost" id="refreshDashboardStats" type="button">重新整理</button>
       </div>
     </div>
-    <div class="entry-grid">
-      <article class="entry-card">
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">🧾</span>
-            <h3>商品訂單</h3>
-          </div>
-          <span class="tag alt">訂單查詢 / 狀態更新</span>
-        </div>
-        <p class="muted">查看訂單、更新付款與出貨狀態，對齊客服與物流資訊。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/orders">進入商品訂單</a>
-          <a class="btn ghost" href="/admin/orders" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
-      <article class="entry-card" data-owner-only>
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">📦</span>
-            <h3>商品上架</h3>
-          </div>
-          <span class="tag">新增 / 編輯 / 上架</span>
-        </div>
-        <p class="muted">維持原商品上架頁功能，可調整名稱、神祇代碼、分類、售價與規格。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/products">進入商品上架</a>
-          <a class="btn ghost" href="/admin/products" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
-      <article class="entry-card">
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">🧿</span>
-            <h3>服務訂單</h3>
-          </div>
-          <span class="tag">祈福進度 / 狀態更新</span>
-        </div>
-        <p class="muted">查看顧客的祈福訂單、更新進度並寄出通知，與實體訂單分開管理。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/service-orders">進入服務訂單</a>
-          <a class="btn ghost" href="/admin/service-orders" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
-      <article class="entry-card" data-owner-only>
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">🕯️</span>
-            <h3>服務上架</h3>
-          </div>
-          <span class="tag">蠟燭祈福 / 儀式服務</span>
-        </div>
-        <p class="muted">管理服務專區的上架內容，包含價格、介紹、包含項目與示意圖。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/service-products">進入服務上架</a>
-          <a class="btn ghost" href="/admin/service-products" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
-      <article class="entry-card" data-owner-only>
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">💬</span>
-            <h3>留言管理</h3>
-          </div>
-          <span class="tag alt">顧客分享 / 批次整理</span>
-        </div>
-        <p class="muted">依神祇代碼載入留言，支援圖片預覽與批次刪除，與前台故事同步。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/code-viewer">進入留言</a>
-          <a class="btn ghost" href="/admin/code-viewer" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
+    <div class="admin-stats" id="adminStats">
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">商品總數</div>
+        <div class="admin-stat-value" data-stat="products-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="products-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">訂單總數</div>
+        <div class="admin-stat-value" data-stat="orders-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="orders-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">服務訂單總數</div>
+        <div class="admin-stat-value" data-stat="service-orders-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="service-orders-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">會員數</div>
+        <div class="admin-stat-value" data-stat="members-total">—</div>
+        <div class="admin-stat-sub" data-stat-sub="members-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">優惠券使用（近 7 日）</div>
+        <div class="admin-stat-value" data-stat="coupons-used">—</div>
+        <div class="admin-stat-sub" data-stat-sub="coupons-sub">載入中…</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-title">今日入口瀏覽</div>
+        <div class="admin-stat-value" data-stat="home-views-today">—</div>
+        <div class="admin-stat-sub" data-stat-sub="home-views-sub">載入中…</div>
+      </div>
     </div>
   </section>
 
   <section class="entry-section" data-owner-only>
     <div class="section-head">
       <div>
-        <h2>數據監控</h2>
-        <p class="muted">流量趨勢與營運報表</p>
+        <h2>流量監控</h2>
+        <p class="muted">流量趨勢與轉換統計</p>
       </div>
     </div>
     <div class="data-grid">
@@ -311,49 +264,10 @@
     </div>
   </section>
 
-  <section class="entry-section" data-owner-only>
-    <div class="section-head">
-      <div>
-        <h2>其他工具</h2>
-        <p class="muted">維持營運的支援功能</p>
-      </div>
-    </div>
-    <div class="entry-grid">
-      <article class="entry-card">
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">👤</span>
-            <h3>會員管理</h3>
-          </div>
-          <span class="tag alt">登入紀錄 / 聯絡資料</span>
-        </div>
-        <p class="muted">查看使用者基本資料、預設聯絡方式、登入時間與門市偏好。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/members">進入會員</a>
-          <a class="btn ghost" href="/admin/members" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-
-      <article class="entry-card">
-        <div class="entry-card-head">
-          <div class="entry-card-title">
-            <span class="entry-icon">🎟️</span>
-            <h3>優惠券產生器</h3>
-          </div>
-          <span class="tag alt">建立 / 管理優惠券</span>
-        </div>
-        <p class="muted">在本域直接產生、管理優惠券，避免被瀏覽器阻擋外站。</p>
-        <div class="entry-card-actions">
-          <a class="btn primary" href="/admin/coupons">開啟優惠券工具</a>
-          <a class="btn ghost" href="/admin/coupons" target="_blank" rel="noopener">新分頁 ↗</a>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <div class="footer">需要新增模組？保留此入口並加入新卡片連結即可。</div>
+  <div class="footer" data-owner-only>需要新增監控項目？請在此頁新增卡片與對應 API 讀取即可。</div>
 </div>
 
 <script src="/js/admin-index.inline-2.js"></script>
 </body>
 </html>
+

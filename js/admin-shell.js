@@ -16,6 +16,7 @@
       { href: '/admin/members', label: '會員', icon: '👤', group: 'extra' },
       { href: '/admin/coupons', label: '優惠券', icon: '🎟️', group: 'extra' },
       { href: '/admin/code-viewer', label: '留言', icon: '💬', group: 'extra' },
+      { href: '/admin/traffic', label: '流量監控', icon: '📈', group: 'extra' },
       { href: '/admin/audit-logs', label: '審計日誌', icon: '📋', group: 'extra' },
       { href: '/admin/admin-roles', label: '權限管理', icon: '🛡️', group: 'extra' },
       { href: '/admin/admin-guide', label: '管理員手冊', icon: '📘', group: 'extra' }
