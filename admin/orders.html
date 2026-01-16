@@ -8,6 +8,20 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://unalomecodes.com/admin/orders">
 <title>unalomecodes | 懂玩泰國 - 後台 orders</title>
+<script>
+  (function(){
+    try{
+      var qs = new URLSearchParams(location.search);
+      var ui = qs.get('ui');
+      if (ui === 'classic' || ui === 'modern') {
+        localStorage.setItem('ADMIN_UI', ui);
+      }
+      var pref = localStorage.getItem('ADMIN_UI');
+      var mode = pref === 'classic' ? 'classic' : 'modern';
+      document.documentElement.setAttribute('data-admin-ui', mode);
+    }catch(_){}
+  })();
+</script>
 <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
 <link rel="stylesheet" href="/css/admin-orders.inline-1.css">
@@ -20,40 +34,46 @@
 <body>
   <div class="wrap">
     <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
-    <h1>實體商品訂單管理</h1>
-    <div class="tabs" id="statusTabs">
-      <button class="tab-btn active" data-tab="all">全部 <span class="tab-count" data-tab="all">0</span></button>
-      <button class="tab-btn" data-tab="pending">訂單待處理 <span class="tab-count" data-tab="pending">0</span></button>
-      <button class="tab-btn" data-tab="ready">待出貨 <span class="tab-count" data-tab="ready">0</span></button>
-      <button class="tab-btn" data-tab="shipped">已寄件 <span class="tab-count" data-tab="shipped">0</span></button>
-      <button class="tab-btn" data-tab="done">已取件（訂單完成） <span class="tab-count" data-tab="done">0</span></button>
-      <button class="tab-btn" data-tab="cancel">取消訂單 <span class="tab-count" data-tab="cancel">0</span></button>
+    <div class="orders-hero">
+      <div class="orders-head">
+        <h1>實體商品訂單管理</h1>
+      </div>
+      <div class="tabs orders-tabs" id="statusTabs">
+        <button class="tab-btn active" data-tab="all">全部 <span class="tab-count" data-tab="all">0</span></button>
+        <button class="tab-btn" data-tab="pending">訂單待處理 <span class="tab-count" data-tab="pending">0</span></button>
+        <button class="tab-btn" data-tab="ready">待出貨 <span class="tab-count" data-tab="ready">0</span></button>
+        <button class="tab-btn" data-tab="shipped">已寄件 <span class="tab-count" data-tab="shipped">0</span></button>
+        <button class="tab-btn" data-tab="done">已取件（訂單完成） <span class="tab-count" data-tab="done">0</span></button>
+        <button class="tab-btn" data-tab="cancel">取消訂單 <span class="tab-count" data-tab="cancel">0</span></button>
+      </div>
     </div>
-<div class="bar">
-      <input id="q" placeholder="搜尋 訂單編號 / 商品 / email / 門市 ...">
-      <select id="statusSel">
-        <option value="">全部狀態</option>
-        <option value="訂單待處理">訂單待處理</option>
-        <option value="待出貨">待出貨</option>
-        <option value="已寄件">已寄件</option>
-        <option value="付款逾期">付款逾期</option>
-        <option value="已取件（訂單完成）">已取件（訂單完成）</option>
-        <option value="取消訂單">取消訂單</option>
-      </select>
-      <select id="sortSel"><option value="time_desc">時間：新 → 舊</option><option value="time_asc">時間：舊 → 新</option><option value="amt_desc">金額：高 → 低</option><option value="amt_asc">金額：低 → 高</option><option value="status">狀態</option></select>
-      <button class="btn" id="reload">重新整理</button>
-      <span class="muted" id="count"></span>
-    </div>
+    <div class="orders-toolbar">
+      <div class="bar">
+        <input id="q" placeholder="搜尋 訂單編號 / 商品 / email / 門市 ...">
+        <select id="statusSel">
+          <option value="">全部狀態</option>
+          <option value="訂單待處理">訂單待處理</option>
+          <option value="待出貨">待出貨</option>
+          <option value="已寄件">已寄件</option>
+          <option value="付款逾期">付款逾期</option>
+          <option value="已取件（訂單完成）">已取件（訂單完成）</option>
+          <option value="取消訂單">取消訂單</option>
+        </select>
+        <select id="sortSel"><option value="time_desc">時間：新 → 舊</option><option value="time_asc">時間：舊 → 新</option><option value="amt_desc">金額：高 → 低</option><option value="amt_asc">金額：低 → 高</option><option value="status">狀態</option></select>
+        <button class="btn" id="reload">重新整理</button>
+        <span class="muted" id="count"></span>
+      </div>
 
-    <div class="selbar">
-      <button class="btn gold" id="markPaid">批次標記待出貨</button>
-      <button class="btn gold" id="markShipped">批次標記已寄件</button>
-      <button class="btn gold" id="markDone">批次標記已取件（訂單完成）</button>
-      <button class="btn danger" id="batchDelete">批次刪除</button>
-      <button class="btn" id="releaseHolds">手動釋放逾期</button>
-      <button class="btn" id="exportCsv">匯出選取訂單（CSV）</button>
-      <button class="btn" id="export711">匯出選取訂單（7-11 XLSM）</button>
-      <span class="muted">已選取 <span class="count" id="selCount">0</span> 筆</span>
+      <div class="selbar">
+        <button class="btn gold" id="markPaid">批次標記待出貨</button>
+        <button class="btn gold" id="markShipped">批次標記已寄件</button>
+        <button class="btn gold" id="markDone">批次標記已取件（訂單完成）</button>
+        <button class="btn danger" id="batchDelete">批次刪除</button>
+        <button class="btn" id="releaseHolds">手動釋放逾期</button>
+        <button class="btn" id="exportCsv">匯出選取訂單（CSV）</button>
+        <button class="btn" id="export711">匯出選取訂單（7-11 XLSM）</button>
+        <span class="muted">已選取 <span class="count" id="selCount">0</span> 筆</span>
+      </div>
     </div>
 
     <div class="card">

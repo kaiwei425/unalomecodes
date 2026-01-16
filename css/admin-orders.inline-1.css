@@ -70,3 +70,19 @@
     color:#f59e0b;
   }
   html.admin-guard-hide{visibility:hidden;}
+
+  html[data-admin-ui="modern"] body{background:#f6f7fb}
+  html[data-admin-ui="modern"] .wrap{max-width:1280px;padding:24px 20px 48px}
+  html[data-admin-ui="modern"] h1{font-size:26px;margin:0}
+  html[data-admin-ui="modern"] .orders-hero{display:grid;gap:14px;margin-bottom:14px}
+  html[data-admin-ui="modern"] .orders-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+  html[data-admin-ui="modern"] .orders-tabs{background:#fff;border:1px solid var(--line);border-radius:18px;padding:10px 12px;box-shadow:0 10px 24px rgba(15,23,42,.06)}
+  html[data-admin-ui="modern"] .tabs{margin:0}
+  html[data-admin-ui="modern"] .tab-btn{background:#f8fafc}
+  html[data-admin-ui="modern"] .bar{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:0 10px 24px rgba(15,23,42,.06)}
+  html[data-admin-ui="modern"] .bar input,
+  html[data-admin-ui="modern"] .bar select{background:#f8fafc;border-color:#e2e8f0}
+  html[data-admin-ui="modern"] .orders-toolbar{display:grid;gap:10px;margin-bottom:16px}
+  html[data-admin-ui="modern"] .selbar{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:0 10px 24px rgba(15,23,42,.06);margin:0}
+  html[data-admin-ui="modern"] .card{border-radius:20px;padding:16px}
+  html[data-admin-ui="modern"] table{font-size:13.5px}

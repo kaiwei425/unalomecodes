@@ -48,12 +48,12 @@
 }
 
 .admin-brand-logo{
-  width:40px;
-  height:40px;
+  width:44px;
+  height:44px;
   border-radius:12px;
-  object-fit:contain;
-  background:#fff;
-  padding:4px;
+  object-fit:cover;
+  background:transparent;
+  padding:0;
   box-shadow:0 10px 25px rgba(15,23,42,0.12);
 }
 
