@@ -4183,9 +4183,21 @@ async function updateDashboardStats(env) {
       || !!order?.paid_at;
     return statusIsPaid(order?.status) || paymentOk;
   };
+  const normalizeServiceStatus = (status)=>{
+    const raw = String(status || '').replace(/\s+/g, '').trim();
+    if (!raw) return '';
+    if (raw.includes('取消') || raw.includes('退款') || raw.includes('作廢') || raw.includes('失敗')) return 'CANCELED';
+    if (raw.includes('祈福完成') || raw.includes('已完成') || raw.includes('成果') || raw.includes('完成')) return 'DONE';
+    if (raw.includes('已確認付款') || raw.includes('已付款') || raw.includes('祈福進行中') || raw.includes('進行中')) return 'PAID';
+    if (raw.includes('待處理') || raw.includes('待付款') || raw.includes('未付款') || raw.includes('待確認')) return 'PENDING';
+    return '';
+  };
+  const isServiceDone = (order)=> normalizeServiceStatus(order?.status) === 'DONE';
+  const isServiceCanceled = (order)=> normalizeServiceStatus(order?.status) === 'CANCELED';
   const isServicePaid = (order)=>{
     if (!order) return false;
-    if (statusIsCompleted(order.status)) return true; // 祈福完成視為已收款
+    const key = normalizeServiceStatus(order.status);
+    if (key === 'DONE' || key === 'PAID') return true; // 祈福完成/已確認付款 視為已收款
     return isOrderPaid(order);
   };
 
@@ -4294,9 +4306,9 @@ async function updateDashboardStats(env) {
         if (scanAll) aliveIds.push(oid);
       try{
         const o = JSON.parse(raw);
-        const isDone = statusIsCompleted(o.status);
+        const isDone = isServiceDone(o);
         const isPaid = isServicePaid(o);
-        const isCanceled = statusIsCanceled(o.status);
+        const isCanceled = isServiceCanceled(o);
         if (isDone) stats.serviceOrders.done++;
         else if (isPaid) stats.serviceOrders.paid++;
         else if (isCanceled) stats.serviceOrders.canceled++;

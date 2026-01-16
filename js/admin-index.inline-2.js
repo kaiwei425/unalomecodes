@@ -157,11 +157,21 @@
       const hasLow = (obj)=> Array.isArray(obj?.lowStock) && obj.lowStock.length > 0;
       return rev(physical) === 0 && rev(service) === 0 && !hasTop(physical) && !hasTop(service) && !hasLow(physical);
     };
+    let dashboardLoadingTimer = null;
     const loadDashboard = (attempt = 0, forceFresh = false)=>{
       const url = forceFresh ? '/api/admin/dashboard?fresh=1' : '/api/admin/dashboard';
+      if (!forceFresh && !dashboardLoadingTimer){
+        dashboardLoadingTimer = setTimeout(()=>{
+          markReportLoading();
+        }, 400);
+      }
       return fetch(url, { credentials:'include', cache:'no-store' })
         .then(res => res.json().catch(()=>({})).then(data => ({ ok: res.ok, data })))
         .then(({ ok, data })=>{
+          if (dashboardLoadingTimer){
+            clearTimeout(dashboardLoadingTimer);
+            dashboardLoadingTimer = null;
+          }
           if (!ok || !data || data.ok === false) throw new Error((data && data.error) || 'load_failed');
           const hasStats = data && data.stats && Object.keys(data.stats).length > 0;
           if (data && data.fromCache === false && !hasStats){
@@ -183,7 +193,6 @@
           subs.forEach(el => { el.textContent = '暫時無法載入'; });
         });
     };
-    markReportLoading();
     loadDashboard();
 
     const refreshBtn = document.getElementById('refreshDashboardStats');
@@ -291,7 +300,7 @@
     const quizTotalEl = document.getElementById('quizTotal');
     if (quizCtx) {
       const loadQuizStats = ()=>{
-        fetch('/api/admin/track-stats?event=quiz_start&days=14', { credentials:'include', cache:'no-store' })
+        fetch('/api/admin/track-stats?event=home_quiz_cta_click&days=14', { credentials:'include', cache:'no-store' })
           .then(r => r.json())
           .then(data => {
             if (!data || !data.ok) return;
