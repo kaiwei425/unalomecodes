@@ -1247,6 +1247,15 @@
       fortuneTaskFeedback.innerHTML = '';
     }
   }
+  function renderMetaTags(container, tags){
+    if (!container) return;
+    container.textContent = '';
+    (tags || []).filter(Boolean).forEach(tag=>{
+      const span = document.createElement('span');
+      span.textContent = String(tag);
+      container.appendChild(span);
+    });
+  }
   function renderFortune(fortune, meta, data){
     if (!fortune) return;
     lastFortunePayload = data || lastFortunePayload;
@@ -1273,7 +1282,7 @@
       if (payloadMeta.guardianName) tags.push(payloadMeta.guardianName);
       if (payloadMeta.element) tags.push(payloadMeta.element);
       if (payloadMeta.focus) tags.push(payloadMeta.focus);
-      fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+      renderMetaTags(fortuneMeta, tags);
     }
     if (fortuneRitualLabel){
       const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';

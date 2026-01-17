@@ -67,7 +67,12 @@
           if (meta.todayDow) tags.push(`今日星期${meta.todayDow}`);
           if (meta.thaiDayColor) tags.push(`泰國星期色 ${meta.thaiDayColor}`);
           if (meta.buddhistYear) tags.push(`佛曆 ${meta.buddhistYear}`);
-          fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+          fortuneMeta.textContent = '';
+          tags.filter(Boolean).forEach(tag=>{
+            const span = document.createElement('span');
+            span.textContent = String(tag);
+            fortuneMeta.appendChild(span);
+          });
         }
         if (fortuneRitualLabel){
           const gName = (fortune.meta && fortune.meta.guardianName) || '';
@@ -291,7 +296,21 @@
         }
         const code = String(g.code||'').toUpperCase();
         const name = map[code] || '守護神';
-        badge.innerHTML = `<img src="${badgeIcon}" alt="守護神"><div class="guardian-meta"><strong>守護神：${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>領取日籤</button></div>`;
+        badge.textContent = '';
+        const img = document.createElement('img');
+        img.src = badgeIcon;
+        img.alt = '守護神';
+        const meta = document.createElement('div');
+        meta.className = 'guardian-meta';
+        const strong = document.createElement('strong');
+        strong.textContent = `守護神：${name}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fortune-btn';
+        btn.dataset.fortuneBtn = '1';
+        btn.textContent = '領取日籤';
+        meta.append(strong, btn);
+        badge.append(img, meta);
         badge.style.display = 'flex';
         const btn = badge.querySelector('[data-fortune-btn]');
         if (btn){

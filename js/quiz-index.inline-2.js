@@ -867,7 +867,13 @@ function renderGuardianCardPreview(data){
   if (transferEl) transferEl.textContent = data.transfer || '';
   if (dateEl) dateEl.textContent = data.date || '';
   if (tagWrap){
-    tagWrap.innerHTML = (data.keywords || []).map(k => `<span class="tag">${k}</span>`).join('');
+    tagWrap.textContent = '';
+    (data.keywords || []).filter(Boolean).forEach((k)=>{
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.textContent = String(k);
+      tagWrap.appendChild(span);
+    });
   }
 }
 
@@ -1385,7 +1391,21 @@ function renderLineBadge(profile){
   const label = t('line-entry-guardian-label', lang);
   const claim = t('line-entry-claim', lang);
   const alt = t('line-entry-guardian-alt', lang);
-  lineGuardianBadge.innerHTML = `<img src="${badgeIcon}" alt="${alt}"><div class="guardian-meta"><strong>${label}${name}</strong><button type="button" class="fortune-btn" data-fortune-btn>${claim}</button></div>`;
+  lineGuardianBadge.textContent = '';
+  const img = document.createElement('img');
+  img.src = badgeIcon;
+  img.alt = alt;
+  const meta = document.createElement('div');
+  meta.className = 'guardian-meta';
+  const strong = document.createElement('strong');
+  strong.textContent = `${label}${name}`;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'fortune-btn';
+  btn.dataset.fortuneBtn = '1';
+  btn.textContent = claim;
+  meta.append(strong, btn);
+  lineGuardianBadge.append(img, meta);
   lineGuardianBadge.style.display = 'flex';
 }
 function showLineEntry(profile){
@@ -2562,7 +2582,12 @@ Enter this code at checkout.`
       if (payloadMeta.todayDow) tags.push(`今日星期${payloadMeta.todayDow}`);
       if (payloadMeta.thaiDayColor) tags.push(`泰國星期色 ${payloadMeta.thaiDayColor}`);
       if (payloadMeta.buddhistYear) tags.push(`佛曆 ${payloadMeta.buddhistYear}`);
-      fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+      fortuneMeta.textContent = '';
+      tags.filter(Boolean).forEach(tag=>{
+        const span = document.createElement('span');
+        span.textContent = String(tag);
+        fortuneMeta.appendChild(span);
+      });
     }
     if (fortuneRitualLabel){
       const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';

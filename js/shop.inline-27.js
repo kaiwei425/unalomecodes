@@ -481,7 +481,12 @@
       if (payloadMeta.guardianName) tags.push(payloadMeta.guardianName);
       if (payloadMeta.element) tags.push(payloadMeta.element);
       if (payloadMeta.focus) tags.push(payloadMeta.focus);
-      fortuneMeta.innerHTML = tags.map(t=>`<span>${t}</span>`).join('');
+      fortuneMeta.textContent = '';
+      tags.filter(Boolean).forEach(tag=>{
+        const span = document.createElement('span');
+        span.textContent = String(tag);
+        fortuneMeta.appendChild(span);
+      });
     }
     if (fortuneRitualLabel){
       const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';
@@ -829,17 +834,30 @@
     const menuHtml = window.GuardianMenu
       ? window.GuardianMenu.buildMenuHTML({ actionAttr:'data-guardian-action' })
       : `<button type="button" data-guardian-action="fortune">領取日籤 <span class="guardian-menu-badge" data-guardian-menu-badge aria-hidden="true">1</span></button>`;
-    badge.innerHTML = `
-      <span class="guardian-alert" data-guardian-alert aria-hidden="true">1</span>
-      <img src="${badgeIcon}" alt="守護神">
-      <div class="guardian-meta">
-        <strong>守護神：${name}</strong>
-        <span class="guardian-sub">點擊徽章開啟選單</span>
-      </div>
-      <div class="guardian-menu" data-guardian-menu role="menu" aria-hidden="true">
-        ${menuHtml}
-      </div>
-    `;
+    badge.textContent = '';
+    const alert = document.createElement('span');
+    alert.className = 'guardian-alert';
+    alert.dataset.guardianAlert = '1';
+    alert.setAttribute('aria-hidden', 'true');
+    alert.textContent = '1';
+    const img = document.createElement('img');
+    img.src = badgeIcon;
+    img.alt = '守護神';
+    const meta = document.createElement('div');
+    meta.className = 'guardian-meta';
+    const strong = document.createElement('strong');
+    strong.textContent = `守護神：${name}`;
+    const sub = document.createElement('span');
+    sub.className = 'guardian-sub';
+    sub.textContent = '點擊徽章開啟選單';
+    meta.append(strong, sub);
+    const menu = document.createElement('div');
+    menu.className = 'guardian-menu';
+    menu.dataset.guardianMenu = '1';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-hidden', 'true');
+    menu.innerHTML = menuHtml;
+    badge.append(alert, img, meta, menu);
     badge.style.display = 'flex';
     updateFortuneAlert();
     closeMenu();

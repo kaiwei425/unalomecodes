@@ -4496,60 +4496,6 @@ export async function onRequest(context) {
   if (pathname === '/temple-map' || pathname === '/temple-map/') {
     return Response.redirect(`${origin}/templemap${url.search}`, 301);
   }
-  /*__CVS_CALLBACK_MERGE_FINAL__*/
-  try{
-    const _u = new URL(request.url);
-    if (_u.pathname === "/cvs_callback" && (request.method === "GET" || request.method === "POST")) {
-        let source;
-        if (request.method === "POST") {
-          source = await request.formData();
-        } else { // GET
-          source = _u.searchParams;
-        }
-
-        const pick = (src, ...keys) => {
-          for (const k of keys) {
-            const v = src.get(k);
-            if (v) return String(v);
-          }
-          return "";
-        };
-
-        const data = {
-          __cvs_store__: true,
-          storeid:   pick(source, "storeid", "StoreId", "stCode", "code", "store"),
-          storename: pick(source, "storename", "StoreName", "stName", "name"),
-          storeaddress: pick(source, "storeaddress", "StoreAddress", "address", "Addr"),
-          storetel: pick(source, "storetel", "StoreTel", "tel", "TEL")
-        };
-        const dataJson = JSON.stringify(data);
-
-        const html = `<!doctype html>
-<html>
-<head><meta charset="utf-8"><title>處理中...</title></head>
-<body>
-  <p>已選擇門市，正在返回...</p>
-  <script>
-    (function(){
-      try {
-        if (window.opener && !window.opener.closed) {
-          window.opener.postMessage(${dataJson}, "*");
-        }
-      } catch(e) { console.error(e); }
-      try { window.close(); } catch(e) {}
-    })();
-  </script>
-</body>
-</html>`;
-
-        return new Response(html, {
-          status: 200,
-          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
-        });
-      }
-  }catch(e){ /* ignore and continue */ }
-  
-  
   if (url.pathname === '/payment-result' && request.method === 'POST') {
     try {
       const form = await request.formData();
@@ -6015,19 +5961,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     return json({ ok:false, error:'method not allowed' }, 405);
   }
-
-  if (pathname === '/api/admin/status' && request.method === 'GET') {
-    const admin = await isAdmin(request, env);
-    return json({ ok:true, admin: !!admin }, 200, request, env);
-  }
-
-  if (pathname === '/api/ig/cover' && request.method === 'GET') {
-    const headers = jsonHeadersFor(request, env);
-    const targetRaw = url.searchParams.get('url') || url.searchParams.get('u') || '';
-    const target = normalizeInstagramPostUrl(targetRaw);
-    if (!target) {
-      return new Response(JSON.stringify({ ok:false, error:'invalid_url' }), { status:400, headers });
-    }
     const ip = getClientIp(request) || '0.0.0.0';
     const allowed = await checkRateLimit(env, `rl:igcover:${ip}`, 40, 60);
     if (!allowed) {
