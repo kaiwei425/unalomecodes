@@ -138,6 +138,32 @@
       </aside>
 
       <div class="main service-main">
+        <section id="svcPromoPhone" class="svc-promo" style="display:none">
+          <div class="svc-promo-card">
+            <div class="svc-promo-left">
+              <div class="svc-promo-kicker">NEW</div>
+              <h2 class="svc-promo-title">電話算命預約（含即時翻譯）</h2>
+              <div class="svc-promo-sub">泰國老師（泰文）× 中文 / 英文即時翻譯｜可自行全程錄音</div>
+              <ul class="svc-promo-bullets">
+                <li>電話進行，不需視訊</li>
+                <li>方案價格：中文 NT$ 4,000｜英文 NT$ 3,500</li>
+                <li>可加購「轉譯＋重點摘要整理」+NT$500</li>
+              </ul>
+              <div class="svc-promo-note">改期需在預約時間 48 小時前提出</div>
+            </div>
+            <div class="svc-promo-right">
+              <div class="svc-promo-pack">
+                <div class="svc-pack-label">選擇翻譯方案</div>
+                <div class="svc-pack-pills">
+                  <button type="button" class="svc-pill" data-pack="en">英文翻譯 NT$3500</button>
+                  <button type="button" class="svc-pill" data-pack="zh">中文翻譯 NT$4000</button>
+                </div>
+              </div>
+              <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
+              <div class="svc-promo-mini">不需填寫想問的主題，依現場解讀進行</div>
+            </div>
+          </div>
+        </section>
         <section id="svcHotSection" class="hot-section" style="display:none;">
           <div class="hot-head">
             <div class="hot-title">熱賣中服務</div>
@@ -394,6 +420,11 @@
             <input type="date" name="requestDate">
             <span class="svc-bank-hint">如中午前完成下單，可選擇當日祈福；超過 12:00 請改選翌日以後。</span>
           </label>
+          <div id="svcRequestTimeWrap" class="svc-field" style="display:none">
+            <label for="svcRequestTime" class="svc-label">時間</label>
+            <input type="time" id="svcRequestTime" class="svc-input" />
+            <div class="muted" id="svcRequestTimeHint">改期需在預約時間 48 小時前提出</div>
+          </div>
           <label>
             備註
             <textarea name="note" placeholder="可輸入希望代許的願望，例如：身體健康、事業順利 或回向給眾生等等..."></textarea>

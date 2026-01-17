@@ -98,7 +98,18 @@
   const privacyLink = document.getElementById('privacyLink');
   const privacyDialog = document.getElementById('privacyDialog');
   const privacyClose = document.getElementById('privacyClose');
+  const promoSection = document.getElementById('svcPromoPhone');
+  const promoCta = document.getElementById('svcPromoCta');
+  const promoPills = Array.from(document.querySelectorAll('#svcPromoPhone .svc-pill'));
+  const requestTimeWrap = document.getElementById('svcRequestTimeWrap');
+  const requestTimeInput = document.getElementById('svcRequestTime');
+  const requestDateHintEl = requestDateWrap ? requestDateWrap.querySelector('.svc-bank-hint') : null;
   const CART_KEY = 'svcCartItems';
+  let __IS_ADMIN_VIEWER__ = false;
+  let __PHONE_PACK__ = 'en';
+  let __PHONE_SVC_ID__ = null;
+  let requestDateLabelOriginal = '';
+  let requestDateHintOriginal = '';
   let detailDataset = null;
   let lastDetailService = null;
   let checkoutStep = 1;
@@ -332,12 +343,114 @@
     return /蠟燭|candle/i.test(name) || /蠟燭|candle/i.test(option);
   }
 
+  async function isAdminViewer(){
+    try{
+      const res = await fetch('/api/auth/admin/me', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(()=>null);
+      if (res.ok && data && data.ok) return true;
+    }catch(_){}
+    return false;
+  }
+
+  function getPhoneConsultScore(service){
+    if (!service) return 0;
+    const name = String(service.name || service.serviceName || '').trim();
+    const desc = String(service.description || service.desc || '').trim();
+    const tags = Array.isArray(service.tags) ? service.tags.join(' ') : String(service.tags || '').trim();
+    const text = `${name} ${desc} ${tags}`.toLowerCase();
+    let score = 0;
+    if (/電話算命|電話|phone/i.test(text)) score += 3;
+    if (/翻譯|translation|泰文/i.test(text)) score += 2;
+    return score;
+  }
+
+  function findPhoneConsultService(services){
+    const list = Array.isArray(services) ? services : [];
+    let best = null;
+    let bestScore = 0;
+    list.forEach(service=>{
+      const score = getPhoneConsultScore(service);
+      if (score > bestScore){
+        bestScore = score;
+        best = service;
+      }
+    });
+    return bestScore >= 4 ? best : null;
+  }
+
+  function isPhoneConsultService(service){
+    return getPhoneConsultScore(service) >= 4;
+  }
+
+  function getPhoneAddonCheckbox(){
+    const row = document.getElementById('svcAddonSummary');
+    return row ? row.querySelector('input[type="checkbox"]') : null;
+  }
+
+  function isPhoneAddonChecked(){
+    const input = getPhoneAddonCheckbox();
+    return !!(input && input.checked);
+  }
+
+  function ensureRequestDateLabelOriginal(){
+    if (!requestDateWrap || requestDateLabelOriginal) return;
+    const node = Array.from(requestDateWrap.childNodes).find(child => child.nodeType === Node.TEXT_NODE && child.textContent.trim());
+    if (node){
+      requestDateLabelOriginal = node.textContent.trim();
+      requestDateWrap.__labelNode = node;
+    }
+    if (requestDateHintEl && !requestDateHintOriginal){
+      requestDateHintOriginal = requestDateHintEl.textContent;
+    }
+  }
+
+  function setRequestDateLabelText(text){
+    if (!requestDateWrap) return;
+    ensureRequestDateLabelOriginal();
+    const node = requestDateWrap.__labelNode;
+    if (!node) return;
+    node.textContent = text;
+  }
+
+  function restoreRequestDateLabelText(){
+    if (!requestDateWrap || !requestDateLabelOriginal) return;
+    const node = requestDateWrap.__labelNode;
+    if (node) node.textContent = requestDateLabelOriginal;
+  }
+
+  function togglePhoneRequestFields(isPhone){
+    if (isPhone){
+      setRequestDateLabelText('預約日期');
+      if (requestDateHintEl) requestDateHintEl.style.display = 'none';
+      if (requestTimeWrap) requestTimeWrap.style.display = '';
+    }else{
+      restoreRequestDateLabelText();
+      if (requestDateHintEl){
+        if (requestDateHintOriginal) requestDateHintEl.textContent = requestDateHintOriginal;
+        requestDateHintEl.style.display = '';
+      }
+      if (requestTimeWrap) requestTimeWrap.style.display = 'none';
+      if (requestTimeInput) requestTimeInput.value = '';
+    }
+  }
+
+  function isPhoneConsultCart(list){
+    const cart = Array.isArray(list) ? list : [];
+    return cart.some(item => isPhoneConsultService(item));
+  }
+
   function applyRequestDateVisibility(cart){
     if (!requestDateWrap) return;
     const list = Array.isArray(cart) ? cart : [];
-    const shouldShow = list.some(item => isCandleService(item));
+    const showForPhone = isPhoneConsultCart(list);
+    const shouldShow = showForPhone || list.some(item => isCandleService(item));
     requestDateWrap.style.display = shouldShow ? '' : 'none';
     if (!shouldShow && requestDateInput) requestDateInput.value = '';
+    if (!shouldShow){
+      togglePhoneRequestFields(false);
+      return;
+    }
+    togglePhoneRequestFields(showForPhone);
   }
 
   function isCheckoutPhotoRequired(){
@@ -550,6 +663,12 @@
     memberPerkHintEl.style.display = 'none';
   }
 
+  function getCartItemOptionLabel(item){
+    const base = item.optionName || '標準服務';
+    if (item.addonSummary) return `${base} + ${item.addonSummary}`;
+    return base;
+  }
+
   function renderCartPanel(){
     if (!cartListEl) return;
     const cart = loadCart();
@@ -562,7 +681,7 @@
             ${sanitizeImageUrl(item.image) ? `<img src="${escapeHtml(sanitizeImageUrl(item.image))}" alt="">` : ''}
             <div>
               <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
-              <div class="meta">${escapeHtml(item.optionName||'標準服務')}${(!isDonationService(item) && !item.qtyEnabled && getItemQty(item) > 1) ? ` × ${getItemQty(item)}` : ''}</div>
+              <div class="meta">${escapeHtml(getCartItemOptionLabel(item))}${(!isDonationService(item) && !item.qtyEnabled && getItemQty(item) > 1) ? ` × ${getItemQty(item)}` : ''}</div>
               ${(item.qtyEnabled || isDonationService(item)) ? `
                 <div class="svc-cart-qty">
                   <button type="button" class="svc-cart-qty-btn" data-qty="dec" data-uid="${escapeHtml(item.uid||'')}">-</button>
@@ -610,6 +729,7 @@
     if (checkoutForm){
       checkoutForm.reset();
     }
+    togglePhoneRequestFields(false);
     applyPhotoRequirement(true, '');
     setCheckoutStep(1);
     setRequestDateMin();
@@ -661,7 +781,12 @@
         return null;
       }
     }
-    return { name, nameEn, phone: phoneDigits, email, birth, requestDate, note };
+    let finalRequestDate = requestDate;
+    if (isPhoneConsultCart(loadCart())){
+      const time = requestTimeInput ? String(requestTimeInput.value || '').trim() : '';
+      if (requestDate && time) finalRequestDate = `${requestDate} ${time}`;
+    }
+    return { name, nameEn, phone: phoneDigits, email, birth, requestDate: finalRequestDate, note };
   }
 
   async function ensureReceiptUploaded(){
@@ -716,7 +841,7 @@
     setCheckoutStep(3);
     if (checkoutStep3OrderId) checkoutStep3OrderId.textContent = orderId || '—';
     const summary = lastCartSnapshot.map(item=>{
-      const opt = item.optionName ? `｜${item.optionName}` : '';
+      const opt = item.optionName ? `｜${getCartItemOptionLabel(item)}` : '';
       return `${item.serviceName || '服務'}${opt}`;
     }).join('、');
     if (checkoutStep3Service) checkoutStep3Service.textContent = summary || (checkoutServiceName ? checkoutServiceName.textContent : '服務');
@@ -781,6 +906,57 @@
       btn.addEventListener('click', () => openServiceDetail(service));
     }
     return card;
+  }
+
+  function setPromoPack(next){
+    const pack = next === 'zh' ? 'zh' : 'en';
+    __PHONE_PACK__ = pack;
+    promoPills.forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.pack === pack);
+    });
+  }
+
+  function applyPhonePackSelection(service, pack){
+    if (!detailVariant || !service) return;
+    const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
+    if (!options.length) return;
+    let match = null;
+    if (pack === 'zh'){
+      match = options.find(opt => /中文/.test(String(opt.name || ''))) ||
+        options.find(opt => Number(opt.price || 0) === 4000);
+    }else{
+      match = options.find(opt => /英文/.test(String(opt.name || ''))) ||
+        options.find(opt => Number(opt.price || 0) === 3500);
+    }
+    if (match){
+      detailVariant.value = match.name;
+      updateDetailPrice();
+    }
+  }
+
+  function initPhonePromo(services){
+    if (!promoSection) return;
+    const target = findPhoneConsultService(services);
+    if (!target){
+      promoSection.style.display = 'none';
+      return;
+    }
+    if (promoSection.__bound) return;
+    __PHONE_SVC_ID__ = resolveServiceId(target);
+    promoSection.style.display = '';
+    setPromoPack(__PHONE_PACK__);
+    promoPills.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        setPromoPack(btn.dataset.pack);
+      });
+    });
+    if (promoCta){
+      promoCta.addEventListener('click', ()=>{
+        openServiceDetail(target);
+        applyPhonePackSelection(target, __PHONE_PACK__);
+      });
+    }
+    promoSection.__bound = true;
   }
 
   function scheduleLimitedTimer(){
@@ -891,7 +1067,8 @@
     const base = Number(detailDataset.price || 0);
     const variant = getVariantSelection(detailDataset);
     const diff = variant ? Number(variant.price||0) : 0;
-    const unit = base + diff;
+    const addon = isPhoneConsultService(detailDataset) && isPhoneAddonChecked() ? 500 : 0;
+    const unit = base + diff + addon;
     const qtyEnabled = isQtyEnabled(detailDataset);
     const qty = qtyEnabled && detailQtyInput ? Math.max(1, Number(detailQtyInput.value||1) || 1) : 1;
     const fee = qtyEnabled ? getServiceFee(detailDataset) : 0;
@@ -906,6 +1083,32 @@
         detailPriceHint.style.display = 'none';
       }
     }
+  }
+
+  function syncPhoneAddonRow(service){
+    const row = document.getElementById('svcAddonSummary');
+    if (!isPhoneConsultService(service)){
+      if (row){
+        const input = row.querySelector('input[type="checkbox"]');
+        if (input) input.checked = false;
+        row.remove();
+      }
+      return;
+    }
+    if (!detailOptionsWrap) return;
+    if (row){
+      const input = row.querySelector('input[type="checkbox"]');
+      if (input) input.checked = false;
+      row.style.display = '';
+      return;
+    }
+    const label = document.createElement('label');
+    label.id = 'svcAddonSummary';
+    label.className = 'svc-addon-row';
+    label.innerHTML = '<input type="checkbox" id="svcAddonSummaryCheck"><span>加購：轉譯＋重點摘要整理（+NT$500）</span>';
+    detailOptionsWrap.appendChild(label);
+    const input = label.querySelector('input[type="checkbox"]');
+    if (input) input.addEventListener('change', updateDetailPrice);
   }
   function setDetailQty(next){
     if (!detailQtyInput) return;
@@ -1031,6 +1234,7 @@
       }
     }
     populateVariantSelect(service);
+    syncPhoneAddonRow(service);
     updateDetailPrice();
     openDialog(detailDialog);
     updateLimitedCountdowns(detailDialog);
@@ -1056,6 +1260,9 @@
       alert('請先選擇服務項目');
       return null;
     }
+    const addonChecked = isPhoneConsultService(detail) && isPhoneAddonChecked();
+    const addonSummary = addonChecked ? '加購：轉譯＋重點摘要整理(+500)' : '';
+    const addonPrice = addonChecked ? 500 : 0;
     const svcId = resolveServiceId(detail);
     const qtyEnabled = isQtyEnabled(detail);
     const qty = qtyEnabled && detailQtyInput ? Math.max(1, Number(detailQtyInput.value||1) || 1) : 1;
@@ -1069,7 +1276,9 @@
       serviceName: detail.name || '服務',
       basePrice: Number(detail.price||0),
       optionName: variant ? variant.name : '',
-      optionPrice: variant ? Number(variant.price||0) : 0,
+      optionPrice: (variant ? Number(variant.price||0) : 0) + addonPrice,
+      addonSummary,
+      addonPrice,
       qty,
       qtyEnabled,
       qtyLabel,
@@ -1161,10 +1370,17 @@
     applyPhotoRequirement(photoRequired, serviceName);
     applyRequestDateVisibility(cart);
     const selectedOpts = [];
-    cart.filter(it => it.optionName).forEach(it => {
+    cart.forEach(it => {
       const qty = getItemQty(it);
-      for (let i=0;i<qty;i++){
-        selectedOpts.push({ name: it.optionName, price: it.optionPrice });
+      if (it.optionName){
+        for (let i=0;i<qty;i++){
+          selectedOpts.push({ name: it.optionName, price: it.optionPrice });
+        }
+      }
+      if (it.addonSummary){
+        for (let i=0;i<qty;i++){
+          selectedOpts.push({ name: it.addonSummary, price: it.addonPrice || 0 });
+        }
       }
     });
     const baseCount = cart.filter(it => !it.optionName).reduce((sum, it)=> sum + getItemQty(it), 0) || 0;
@@ -1181,7 +1397,7 @@
       const lines = cart.map(item => {
         const qty = getItemQty(item);
         const unit = Number(item.basePrice||0)+Number(item.optionPrice||0);
-        const label = escapeHtml(item.optionName || '標準服務') + (qty > 1 ? ` × ${qty}` : '');
+        const label = escapeHtml(getCartItemOptionLabel(item)) + (qty > 1 ? ` × ${qty}` : '');
         return `<li>${label}｜${formatTWD(unit * qty)}</li>`;
       });
       const fee = getCartFee(cart);
@@ -2051,8 +2267,16 @@
 
   document.addEventListener('DOMContentLoaded', async ()=>{
     const services = await fetchServices();
-    serviceItems = Array.isArray(services) ? services : [];
+    const allServices = Array.isArray(services) ? services : [];
+    __IS_ADMIN_VIEWER__ = await isAdminViewer();
+    const visibleServices = __IS_ADMIN_VIEWER__ ? allServices : allServices.filter(svc => !isPhoneConsultService(svc));
+    serviceItems = visibleServices;
     bindHotToggle();
+    if (__IS_ADMIN_VIEWER__){
+      initPhonePromo(allServices);
+    }else if (promoSection){
+      promoSection.style.display = 'none';
+    }
     renderHotServices(serviceItems);
     renderList(serviceItems);
     openServiceFromUrl();
