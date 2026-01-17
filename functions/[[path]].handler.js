@@ -5961,33 +5961,6 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }
     return json({ ok:false, error:'method not allowed' }, 405);
   }
-    const ip = getClientIp(request) || '0.0.0.0';
-    const allowed = await checkRateLimit(env, `rl:igcover:${ip}`, 40, 60);
-    if (!allowed) {
-      return new Response(JSON.stringify({ ok:false, error:'rate_limited' }), { status:429, headers });
-    }
-    try{
-      const resp = await fetch(target, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'en-US,en;q=0.9'
-        }
-      });
-      if (!resp.ok) {
-        return new Response(JSON.stringify({ ok:false, error:'fetch_failed' }), { status:502, headers });
-      }
-      const html = await resp.text();
-      const cover = extractMetaImage(html);
-      if (!cover) {
-        return new Response(JSON.stringify({ ok:false, error:'not_found' }), { status:404, headers });
-      }
-      headers['Cache-Control'] = 'public, max-age=3600';
-      return new Response(JSON.stringify({ ok:true, cover }), { status:200, headers });
-    }catch(err){
-      return new Response(JSON.stringify({ ok:false, error:'fetch_error' }), { status:502, headers });
-    }
-  }
 
   if (pathname === '/api/foods/meta') {
     if (request.method === 'GET'){

@@ -230,7 +230,11 @@
   };
 
   const renderError = (message)=>{
-    grid.innerHTML = `<div class="empty">載入失敗：${esc(message)}</div>`;
+    grid.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = `載入失敗：${message}`;
+    grid.appendChild(empty);
     if (loadMoreBtn) loadMoreBtn.disabled = true;
   };
 

@@ -261,12 +261,16 @@
   }
   function tdPrice(p){
     const td = el("td");
-    td.innerHTML = `NT$ ${Number(p.basePrice||0).toLocaleString()}`;
+    td.textContent = `NT$ ${Number(p.basePrice||0).toLocaleString()}`;
     return td;
   }
   function tdSold(p){
     const td = el("td");
-    td.innerHTML = `<span class="badge ${p.sold>0?'green':'gray'}">${Number(p.sold||0)}</span>`;
+    td.textContent = '';
+    const badge = document.createElement('span');
+    badge.className = `badge ${p.sold > 0 ? 'green' : 'gray'}`;
+    badge.textContent = String(Number(p.sold || 0));
+    td.appendChild(badge);
     return td;
   }
   function tdTools(p){

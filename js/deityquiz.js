@@ -72,7 +72,12 @@ document.addEventListener("DOMContentLoaded", () => {
     resultPrimary.textContent = `${first[0]}（${first[1]} 分）`;
     resultSecondary.textContent = second ? `${second[0]}（${second[1]} 分）` : "—";
     resultGap.textContent = second ? `${first[1] - second[1]} 分` : "—";
-    breakdownList.innerHTML = breakdownItems.map((item) => `<li>${item}</li>`).join("");
+    breakdownList.textContent = "";
+    breakdownItems.forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = String(item || "");
+      breakdownList.appendChild(li);
+    });
   }
 
   stageButtons.forEach((button) => {

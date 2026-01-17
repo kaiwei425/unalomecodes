@@ -2031,7 +2031,11 @@ function renderNearbyList(list){
     deduped.push(entry);
   });
   if (!deduped.length){
-    nearbyList.innerHTML = `<div class="nearby-empty">${t('nearbyEmpty')}</div>`;
+    nearbyList.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'nearby-empty';
+    empty.textContent = t('nearbyEmpty');
+    nearbyList.appendChild(empty);
     return 0;
   }
   nearbyList.innerHTML = deduped.map(entry=>{

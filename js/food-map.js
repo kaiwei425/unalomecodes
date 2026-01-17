@@ -1201,7 +1201,11 @@ function setImagePreviewFromFile(previewEl, sizeEl, file){
   if (prev) URL.revokeObjectURL(prev);
   const blobUrl = URL.createObjectURL(file);
   previewEl.dataset.blobUrl = blobUrl;
-  previewEl.innerHTML = `<img src="${blobUrl}" alt="">`;
+  previewEl.textContent = '';
+  const img = document.createElement('img');
+  img.src = blobUrl;
+  img.alt = '';
+  previewEl.appendChild(img);
   if (sizeEl){
     const img = new Image();
     img.onload = ()=>{ sizeEl.textContent = `${img.naturalWidth} x ${img.naturalHeight}`; };
@@ -3527,7 +3531,11 @@ function renderNearbyList(list){
     deduped.push(entry);
   });
   if (!deduped.length){
-    nearbyList.innerHTML = `<div class="nearby-empty">${t('nearbyEmpty')}</div>`;
+    nearbyList.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'nearby-empty';
+    empty.textContent = t('nearbyEmpty');
+    nearbyList.appendChild(empty);
     return 0;
   }
   nearbyList.innerHTML = deduped.map(entry=>{

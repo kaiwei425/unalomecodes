@@ -8,7 +8,11 @@
     if (!listEl) return;
     listEl.innerHTML = '';
     if (!items.length){
-      listEl.innerHTML = `<div class="empty-msg">${emptyText}</div>`;
+    listEl.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty-msg';
+    empty.textContent = emptyText;
+    listEl.appendChild(empty);
       return;
     }
     items.forEach(order=>{
