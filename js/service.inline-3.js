@@ -304,17 +304,17 @@
         meta.className = 'guardian-meta';
         const strong = document.createElement('strong');
         strong.textContent = `守護神：${name}`;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'fortune-btn';
-        btn.dataset.fortuneBtn = '1';
-        btn.textContent = '領取日籤';
-        meta.append(strong, btn);
+        const fortuneBtn = document.createElement('button');
+        fortuneBtn.type = 'button';
+        fortuneBtn.className = 'fortune-btn';
+        fortuneBtn.dataset.fortuneBtn = '1';
+        fortuneBtn.textContent = '領取日籤';
+        meta.append(strong, fortuneBtn);
         badge.append(img, meta);
         badge.style.display = 'flex';
-        const btn = badge.querySelector('[data-fortune-btn]');
-        if (btn){
-          btn.addEventListener('click', openFortuneDialog);
+        const actionBtn = badge.querySelector('[data-fortune-btn]');
+        if (actionBtn){
+          actionBtn.addEventListener('click', openFortuneDialog);
         }
       }
       if (window.authState && typeof window.authState.onProfile === 'function'){
