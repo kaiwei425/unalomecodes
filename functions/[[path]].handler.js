@@ -3470,7 +3470,7 @@ function parseCookies(request){
 
 // === Slots: required KV bindings + env (Pages -> Settings -> Functions) ===
 // KV bindings: SERVICE_SLOTS_KV, SERVICE_SLOT_HOLDS_KV
-// Env (txt): SLOT_TZ=Asia/Bangkok, SLOT_HOLD_TTL_MIN=15, SLOT_DAYS_AHEAD=14, SLOT_STEP_MIN=30, SLOT_DAILY_WINDOWS="10:00-12:00,14:00-18:00"
+// Env (txt): SLOT_TZ=Asia/Bangkok, SLOT_HOLD_TTL_MIN=15, SLOT_DAYS_AHEAD=14, SLOT_STEP_MIN=30, SLOT_DAILY_WINDOWS="13:00-20:00"
 // Optional: PHONE_CONSULT_SERVICE_MATCH="電話|phone|翻譯|translation|泰文"
 // Manual tests:
 // (1) GET /api/service/slots => enabled=false unless published
@@ -3505,7 +3505,7 @@ function getSlotConfig(env){
   const holdTtlMin = Math.max(5, Number(env?.SLOT_HOLD_TTL_MIN || 15) || 15);
   const daysAhead = Math.max(1, Math.min(31, Number(env?.SLOT_DAYS_AHEAD || 14) || 14));
   const stepMin = Math.max(5, Number(env?.SLOT_STEP_MIN || 30) || 30);
-  const windowsStr = String(env?.SLOT_DAILY_WINDOWS || '10:00-12:00,14:00-18:00');
+  const windowsStr = String(env?.SLOT_DAILY_WINDOWS || '13:00-20:00');
   return { tz, holdTtlMin, daysAhead, stepMin, windowsStr };
 }
 function buildSlotKey(serviceId, dateStr, hhmmNoColon){
