@@ -1563,7 +1563,14 @@
         hideSlotPicker('目前暫無可預約時段');
         return;
       }
-      const items = normalizeSlots(data);
+      let items = normalizeSlots(data);
+      if (!items.length){
+        const retry = await fetchSlots(serviceId, '', 30);
+        const retryData = retry.data || {};
+        if (retry.res.ok && retryData && retryData.ok !== false){
+          items = normalizeSlots(retryData);
+        }
+      }
       if (!items.length){
         hideSlotPicker('目前暫無可預約時段');
         return;

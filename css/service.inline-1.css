@@ -109,6 +109,7 @@ body.service-view .svc-pack{
   background:#fff;
   display:grid;
   gap:12px;
+  text-align:left;
 }
 body.service-view .svc-pack-head{display:grid;gap:4px;}
 body.service-view .svc-pack-title{font-weight:800;font-size:15px;color:#0f172a;}
@@ -146,6 +147,9 @@ body.service-view .svc-pack-addon label{
   font-size:13px;
   font-weight:700;
   color:#0f172a;
+  margin-left:0;
+  margin-right:auto;
+  align-self:flex-start;
 }
 body.service-view .svc-pack-addon input{margin:2px 0 0;}
 body.service-view .svc-pack-addon .addon-text{

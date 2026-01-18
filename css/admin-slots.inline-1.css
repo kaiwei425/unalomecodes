@@ -43,13 +43,14 @@ body.admin-slots-view .slot-actions{
 }
 body.admin-slots-view .slot-controls{
   display:grid;
-  grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;
+  grid-template-columns:minmax(0,1fr) minmax(160px,260px) auto;
   gap:12px;
   align-items:center;
 }
 body.admin-slots-view .slot-controls .btn{
   height:40px;
   white-space:nowrap;
+  justify-self:start;
 }
 body.admin-slots-view .slot-field{
   display:flex;
@@ -58,10 +59,10 @@ body.admin-slots-view .slot-field{
   font-size:13px;
   font-weight:700;
   color:var(--admin-muted);
-  min-width:220px;
+  min-width:0;
 }
 body.admin-slots-view .slot-controls input{
-  min-width:220px;
+  min-width:0;
   padding:10px 12px;
   border-radius:12px;
   border:1px solid var(--admin-border);
@@ -73,7 +74,7 @@ body.admin-slots-view .slot-controls input{
   -webkit-appearance:auto;
 }
 body.admin-slots-view #dateInput{
-  min-width:220px;
+  min-width:0;
   display:block;
   visibility:visible;
   opacity:1;
