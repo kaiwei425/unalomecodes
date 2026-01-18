@@ -344,7 +344,7 @@
   });
   btnSave.addEventListener('click', async ()=>{
     const data = readForm();
-    if (!data.name || !data.price){
+    if (!data.name || Number.isNaN(data.price)){
       formMsg.textContent = '請填寫名稱與價格';
       return;
     }

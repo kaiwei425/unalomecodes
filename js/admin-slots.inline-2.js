@@ -17,6 +17,7 @@
       label_range: '日期範圍',
       label_day: '日期',
       label_slots: '時段',
+      label_service_auto: '已自動帶入 serviceId',
       msg_loading: '載入中…',
       msg_done: '完成',
       msg_saved: '已儲存',
@@ -71,6 +72,7 @@
       label_range: 'Date range',
       label_day: 'Date',
       label_slots: 'Slots',
+      label_service_auto: 'serviceId auto-filled',
       msg_loading: 'Loading…',
       msg_done: 'Done',
       msg_saved: 'Saved',
@@ -132,6 +134,8 @@
     });
     var svcInput = document.getElementById('serviceIdInput') || document.querySelector('input[name="serviceId"]');
     if (svcInput) svcInput.placeholder = t('ph_service_id');
+    var svcHint = document.getElementById('serviceIdHint');
+    if (svcHint && svcHint.dataset.auto === '1') svcHint.textContent = t('label_service_auto');
     var btnZh = document.getElementById('langZh');
     var btnEn = document.getElementById('langEn');
     if (btnZh) btnZh.classList.toggle('is-active', ADMIN_LANG === 'zh');
@@ -151,6 +155,11 @@
     input.name = 'serviceId';
     input.placeholder = '輸入 serviceId';
     label.appendChild(input);
+    var hint = document.createElement('div');
+    hint.id = 'serviceIdHint';
+    hint.className = 'muted';
+    hint.style.marginTop = '4px';
+    label.appendChild(hint);
     wrap.insertBefore(label, wrap.firstChild);
   }
 
@@ -183,8 +192,29 @@
   var rescheduleCursor = '';
   var rescheduleBusy = false;
 
+  function applyServiceIdAutoFill(){
+    if (!serviceIdInput) return;
+    fetch('/api/service/phone-consult/config', { credentials:'include', cache:'no-store' })
+      .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
+      .then(function(result){
+        if (!result.ok || !serviceIdInput) return;
+        var svcId = String(result.data.serviceId || '').trim();
+        if (!svcId) return;
+        serviceIdInput.value = svcId;
+        serviceIdInput.readOnly = true;
+        serviceIdInput.dataset.auto = '1';
+        var hint = document.getElementById('serviceIdHint');
+        if (hint){
+          hint.dataset.auto = '1';
+          hint.textContent = t('label_service_auto');
+        }
+      })
+      .catch(function(){});
+  }
+
   if (langZh) langZh.addEventListener('click', function(){ setLang('zh'); });
   if (langEn) langEn.addEventListener('click', function(){ setLang('en'); });
+  applyServiceIdAutoFill();
 
   function setStatus(msg, isError){
     if (!statusEl) return;
