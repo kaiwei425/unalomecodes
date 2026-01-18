@@ -66,12 +66,15 @@ body.admin-slots-view .slot-date-nav{
   align-items:center;
   justify-content:flex-start;
   gap:8px;
+  position:relative;
+  z-index:2;
 }
 body.admin-slots-view .slot-date-nav .btn{
   height:40px;
   min-width:40px;
   border-radius:12px;
   padding:0 10px;
+  pointer-events:auto;
 }
 body.admin-slots-view .slot-date-nav .date-label{
   min-width:120px;

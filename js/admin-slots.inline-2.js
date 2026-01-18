@@ -327,6 +327,24 @@
     setTzHint();
   }
 
+  function bindDateNav(){
+    if (slotPrevDay && !slotPrevDay.__bound){
+      slotPrevDay.__bound = true;
+      slotPrevDay.addEventListener('click', function(){
+        setCurrentDate(addDays(getDateValue(), -1));
+        loadSlots();
+      });
+    }
+    if (slotNextDay && !slotNextDay.__bound){
+      slotNextDay.__bound = true;
+      slotNextDay.addEventListener('click', function(){
+        slotNextDay.disabled = false;
+        setCurrentDate(addDays(getDateValue(), 1));
+        loadSlots();
+      });
+    }
+  }
+
   function setTzHint(){
     if (!slotTzHint) return;
     const now = new Date();
@@ -856,16 +874,11 @@
     if (btnRescheduleLoad) btnRescheduleLoad.addEventListener('click', function(){ loadReschedules(true); });
     if (btnRescheduleMore) btnRescheduleMore.addEventListener('click', function(){ loadReschedules(false); });
     if (rescheduleStatus) rescheduleStatus.addEventListener('change', function(){ loadReschedules(true); });
-    if (slotPrevDay) slotPrevDay.addEventListener('click', function(){
-      setCurrentDate(addDays(getDateValue(), -1));
-      loadSlots();
-    });
-    if (slotNextDay) slotNextDay.addEventListener('click', function(){
-      if (slotNextDay) slotNextDay.disabled = false;
-      setCurrentDate(addDays(getDateValue(), 1));
-      loadSlots();
-    });
+    bindDateNav();
     loadReschedules(true);
     loadPublishedSlots(getServiceIdValue());
   });
+
+  initDateNav();
+  bindDateNav();
 })();
