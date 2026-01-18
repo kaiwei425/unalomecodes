@@ -175,7 +175,10 @@
         if (rect.width < 40){
           existing.style.minWidth = '220px';
           existing.style.display = 'block';
+          existing.style.visibility = 'visible';
         }
+        existing.removeAttribute('min');
+        existing.removeAttribute('max');
       }catch(_){}
       return;
     }
@@ -185,6 +188,8 @@
     var input = document.createElement('input');
     input.type = 'date';
     input.id = 'dateInput';
+    input.removeAttribute('min');
+    input.removeAttribute('max');
     label.appendChild(input);
     var btn = document.getElementById('btnLoad');
     if (btn && btn.parentNode === wrap){

@@ -48,6 +48,7 @@ body.admin-slots-view .slot-controls label{
   font-size:13px;
   font-weight:700;
   color:var(--admin-muted);
+  min-width:220px;
 }
 body.admin-slots-view .slot-controls input{
   min-width:220px;
@@ -55,10 +56,13 @@ body.admin-slots-view .slot-controls input{
   border-radius:12px;
   border:1px solid var(--admin-border);
   background:#fff;
+  width:100%;
+  display:block;
 }
 body.admin-slots-view #dateInput{
   min-width:220px;
   display:block;
+  visibility:visible;
 }
 body.admin-slots-view .slot-actions{
   margin-top:12px;
