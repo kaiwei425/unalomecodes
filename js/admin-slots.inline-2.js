@@ -195,6 +195,7 @@
   var slotDateLabel = document.getElementById('slotDateLabel');
   var slotPrevDay = document.getElementById('slotPrevDay');
   var slotNextDay = document.getElementById('slotNextDay');
+  var slotTzHint = document.getElementById('slotTzHint');
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
@@ -323,6 +324,19 @@
   function initDateNav(){
     todayISO = todayStr();
     setCurrentDate(todayISO);
+    setTzHint();
+  }
+
+  function setTzHint(){
+    if (!slotTzHint) return;
+    const now = new Date();
+    try{
+      const bkk = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Bangkok', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
+      const tpe = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
+      slotTzHint.textContent = `時區提示：曼谷 ${bkk} / 台北 ${tpe}`;
+    }catch(_){
+      slotTzHint.textContent = '時區提示：曼谷時間（UTC+7）/ 台北時間（UTC+8）';
+    }
   }
 
   function addDays(dateStr, delta){

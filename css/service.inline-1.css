@@ -99,6 +99,7 @@ body.service-view .svc-slot-btn.is-blocked{background:#fef3c7;color:#b45309;}
 body.service-view .svc-slot-state{font-size:12px;color:#64748b;}
 body.service-view .svc-slot-state.ok{color:#166534;}
 body.service-view .svc-slot-state.err{color:#b91c1c;}
+body.service-view .svc-slot-tz{font-size:12px;color:#94a3b8;margin-top:6px;}
 body.service-view .svc-slot-actions{margin-top:10px;}
 body.service-view .svc-slot-actions .btn{width:100%;}
 body.service-view .svc-pack{

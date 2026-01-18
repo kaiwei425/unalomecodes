@@ -36,18 +36,19 @@
             <div id="adminSlotsWarning" class="muted" style="display:none;padding:10px 12px;border:1px solid rgba(15,23,42,.12);border-radius:12px;background:#fff7ed;color:#7c2d12;margin-bottom:10px;">
               ⚠️ Slot changes affect customer bookings and notifications.
             </div>
-            <div class="slot-controls">
-              <div class="slot-field">
-                <div id="serviceIdDisplay" class="muted" style="font-weight:700;">Service ID: —</div>
-                <input type="text" id="serviceIdInput" placeholder="輸入 serviceId" style="display:none;">
-              </div>
-              <div class="slot-field slot-date-nav">
-                <button type="button" class="btn" id="slotPrevDay" aria-label="前一天">←</button>
-                <div id="slotDateLabel" class="date-label"></div>
-                <button type="button" class="btn" id="slotNextDay" aria-label="後一天">→</button>
-              </div>
-              <button class="btn" id="btnLoad" data-i18n="btn_load">載入時段</button>
+          <div class="slot-controls">
+            <div class="slot-field">
+              <div id="serviceIdDisplay" class="muted" style="font-weight:700;">Service ID: —</div>
+              <input type="text" id="serviceIdInput" placeholder="輸入 serviceId" style="display:none;">
             </div>
+            <div class="slot-field slot-date-nav">
+              <button type="button" class="btn" id="slotPrevDay" aria-label="前一天">←</button>
+              <div id="slotDateLabel" class="date-label"></div>
+              <button type="button" class="btn" id="slotNextDay" aria-label="後一天">→</button>
+            </div>
+            <button class="btn" id="btnLoad" data-i18n="btn_load">載入時段</button>
+          </div>
+          <div id="slotTzHint" class="slot-tz-hint muted"></div>
           <div class="slot-actions">
             <button class="btn primary" id="btnPublish" data-i18n="btn_publish">開放選取時段</button>
             <button class="btn" id="btnUnpublish" data-i18n="btn_unpublish">取消開放</button>

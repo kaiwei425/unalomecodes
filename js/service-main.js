@@ -126,6 +126,7 @@
   const slotGridEl = document.getElementById('svcSlotGrid');
   const slotStateEl = document.getElementById('svcSlotState');
   const slotHintEl = document.getElementById('svcSlotHint');
+  const slotTzHintEl = document.getElementById('svcSlotTzHint');
   const slotMoreBtn = document.getElementById('svcSlotMore');
   const consultPackWrap = document.getElementById('svcConsultPack');
   const consultPackPills = Array.from(document.querySelectorAll('#svcConsultPack .svc-pack-pill'));
@@ -1569,6 +1570,9 @@
     resetSlotState();
     slotSection.style.display = '';
     slotHintEl.textContent = '僅顯示可開放預約時段，（保留 15 分鐘）';
+    if (slotTzHintEl){
+      slotTzHintEl.textContent = getTzHintText();
+    }
     const serviceId = resolveServiceId(service);
     restoreHoldForService(serviceId);
     try{
@@ -1622,6 +1626,17 @@
       setSlotStateText('');
     }catch(_){
       hideSlotPicker('目前暫無可預約時段');
+    }
+  }
+
+  function getTzHintText(){
+    const now = new Date();
+    try{
+      const bkk = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Bangkok', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
+      const tpe = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
+      return `時區提示：曼谷 ${bkk} / 台北 ${tpe}`;
+    }catch(_){
+      return '時區提示：曼谷時間（UTC+7）/ 台北時間（UTC+8）';
     }
   }
 

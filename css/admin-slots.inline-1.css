@@ -114,6 +114,11 @@ body.admin-slots-view .slot-legend{
   flex-wrap:wrap;
   gap:12px;
 }
+body.admin-slots-view .slot-tz-hint{
+  margin-top:8px;
+  font-size:12px;
+  color:var(--admin-muted);
+}
 body.admin-slots-view .slot-legend span{
   display:inline-flex;
   align-items:center;
