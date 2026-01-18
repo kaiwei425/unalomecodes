@@ -997,7 +997,7 @@
     const savedKey = getConsultPackKeyFromStorage();
     const defaultKey = savedKey === 'en' || savedKey === 'zh' ? savedKey : 'zh';
     CONSULT_ADDON = getConsultAddonFromStorage();
-    if (consultAddonInput) consultAddonInput.checked = CONSULT_ADDON;
+    if (consultAddonInput) consultAddonInput.value = CONSULT_ADDON ? '1' : '0';
     applyConsultPack(defaultKey);
     consultPackPills.forEach(btn=>{
       if (btn.__bound) return;
@@ -1009,7 +1009,7 @@
     if (consultAddonInput && !consultAddonInput.__bound){
       consultAddonInput.__bound = true;
       consultAddonInput.addEventListener('change', ()=>{
-        CONSULT_ADDON = !!consultAddonInput.checked;
+        CONSULT_ADDON = String(consultAddonInput.value || '0') === '1';
         saveConsultState(CONSULT_PACK ? CONSULT_PACK.key : defaultKey, CONSULT_ADDON);
         updateDetailPrice();
       });
@@ -1156,6 +1156,16 @@
     return [];
   }
 
+  function buildSlotsUrl(qs){
+    try{
+      const url = new URL('/api/service/slots', window.location.origin);
+      url.search = qs.toString();
+      return url.toString();
+    }catch(_){
+      return '/api/service/slots?' + qs.toString();
+    }
+  }
+
   async function fetchSlots(serviceId, dateFrom, days){
     const qs = new URLSearchParams();
     qs.set('serviceId', serviceId);
@@ -1167,12 +1177,23 @@
       timer = setTimeout(()=> controller.abort(), 5000);
     }
     try{
-      const res = await fetch(`/api/service/slots?${qs.toString()}`, {
+      let res = await fetch(buildSlotsUrl(qs), {
         credentials:'include',
         cache:'no-store',
         signal: controller ? controller.signal : undefined
       });
-      const data = await res.json().catch(()=>({}));
+      let data = await res.json().catch(()=>({}));
+      if (!res.ok){
+        try{
+          const fallbackUrl = '/slots?' + qs.toString();
+          const fallbackRes = await fetch(fallbackUrl, { credentials:'include', cache:'no-store' });
+          const fallbackData = await fallbackRes.json().catch(()=>({}));
+          if (fallbackRes.ok){
+            res = fallbackRes;
+            data = fallbackData;
+          }
+        }catch(_){}
+      }
       return { res, data };
     }finally{
       if (timer) clearTimeout(timer);
