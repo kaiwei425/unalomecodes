@@ -18,6 +18,7 @@
       label_day: '日期',
       label_slots: '時段',
       label_service_auto: '已自動帶入 serviceId',
+      label_select: '選取',
       msg_loading: '載入中…',
       msg_done: '完成',
       msg_saved: '已儲存',
@@ -73,6 +74,7 @@
       label_day: 'Date',
       label_slots: 'Slots',
       label_service_auto: 'serviceId auto-filled',
+      label_select: 'Select',
       msg_loading: 'Loading…',
       msg_done: 'Done',
       msg_saved: 'Saved',
@@ -371,10 +373,6 @@
       var action = '';
       if (status === 'free' && !enabled){
         action = 'publish';
-      }else if (status === 'free' && enabled){
-        action = 'block';
-      }else if (status === 'blocked'){
-        action = 'unblock';
       }
       if (action){
         var labelWrap = document.createElement('label');
@@ -386,7 +384,7 @@
         checkbox.setAttribute('data-slot-key', slot.slotKey || '');
         checkbox.setAttribute('data-action', action);
         var text = document.createElement('span');
-        text.textContent = '選取';
+        text.textContent = t('label_select');
         labelWrap.appendChild(checkbox);
         labelWrap.appendChild(text);
         card.appendChild(labelWrap);

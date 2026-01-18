@@ -58,11 +58,15 @@ body.admin-slots-view .slot-controls input{
   background:#fff;
   width:100%;
   display:block;
+  height:40px;
+  appearance:auto;
+  -webkit-appearance:auto;
 }
 body.admin-slots-view #dateInput{
   min-width:220px;
   display:block;
   visibility:visible;
+  opacity:1;
 }
 body.admin-slots-view .slot-actions{
   margin-top:12px;

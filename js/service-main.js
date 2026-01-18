@@ -1488,7 +1488,11 @@
       renderSlotGrid(items[0]);
       const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled === true && String(slot.status || '') === 'free'));
       if (!hasFree){
-        hideSlotPicker('目前暫無可預約時段');
+        setSlotStateText('目前暫無可預約時段', true);
+        if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+          detailAddBtn.disabled = true;
+          detailAddBtn.textContent = '目前無法預約';
+        }
         return;
       }
       if (detailAddBtn && detailAddBtn.textContent !== '已結束'){

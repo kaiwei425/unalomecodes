@@ -48,12 +48,13 @@
             </div>
           <div class="slot-actions">
             <button class="btn primary" id="btnPublish" data-i18n="btn_publish">開放選取時段</button>
-            <button class="btn" id="btnBlock" data-i18n="btn_block">關閉選取時段</button>
-            <button class="btn" id="btnUnblock" data-i18n="btn_unblock">解除關閉</button>
-            <button class="btn" id="btnSelectAll" type="button" data-i18n="btn_select_all">全選</button>
-            <button class="btn" id="btnClearSel" type="button" data-i18n="btn_clear">清除</button>
           </div>
-          <div class="slot-legend">🟢 可預約｜🟡 保留中｜🔴 已預約｜⚫ 已關閉</div>
+          <div class="slot-legend">
+            <span>🟢 <span data-i18n="status_free">可預約</span></span>
+            <span>🟡 <span data-i18n="status_held">保留中</span></span>
+            <span>🔴 <span data-i18n="status_booked">已預約</span></span>
+            <span>⚫ <span data-i18n="status_blocked">已關閉</span></span>
+          </div>
         </div>
         <div class="panel panel-slots">
           <div id="slotGrid" class="slot-grid"></div>
