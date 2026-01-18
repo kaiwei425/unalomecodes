@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="後台時段管理頁（僅限 owner / booking）。">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/slots">
+<title>unalomecodes | 懂玩泰國 - 後台 slots</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<link rel="stylesheet" href="/css/admin-slots.inline-1.css">
+<script src="/js/admin-guard.js" defer></script>
+<script src="/js/admin-shell.js" defer></script>
+</head>
+<body class="admin-view admin-slots-view">
+  <div class="wrap" data-admin-page="slots">
+    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
+    <div class="page">
+      <div class="page-head">
+        <div class="page-title">
+          <h1 data-i18n="slots_title">時段管理</h1>
+          <div class="page-sub" data-i18n="slots_sub">Manage published slots for booking</div>
+        </div>
+        <div class="page-actions">
+          <div class="langToggle">
+            <button type="button" id="langZh" data-i18n="lang_zh">中文</button>
+            <button type="button" id="langEn" data-i18n="lang_en">EN</button>
+          </div>
+        </div>
+      </div>
+        <div id="slotsGuard" class="card muted" style="display:none;"></div>
+        <div class="page-body">
+          <div class="panel panel-controls">
+            <div id="adminSlotsWarning" class="muted" style="display:none;padding:10px 12px;border:1px solid rgba(15,23,42,.12);border-radius:12px;background:#fff7ed;color:#7c2d12;margin-bottom:10px;">
+              ⚠️ Slot changes affect customer bookings and notifications.
+            </div>
+            <div class="slot-controls">
+              <label data-i18n="label_service">服務 ID
+                <input type="text" id="serviceIdInput" placeholder="輸入 serviceId">
+              </label>
+            <label data-i18n="label_day">日期
+              <input type="date" id="dateInput">
+            </label>
+            <button class="btn" id="btnLoad" data-i18n="btn_load">載入時段</button>
+          </div>
+          <div class="slot-actions">
+            <button class="btn primary" id="btnPublish" data-i18n="btn_publish">開放選取時段</button>
+            <button class="btn" id="btnBlock" data-i18n="btn_block">關閉選取時段</button>
+            <button class="btn" id="btnUnblock" data-i18n="btn_unblock">解除關閉</button>
+            <button class="btn" id="btnSelectAll" type="button" data-i18n="btn_select_all">全選</button>
+            <button class="btn" id="btnClearSel" type="button" data-i18n="btn_clear">清除</button>
+          </div>
+          <div class="slot-legend">🟢 可預約｜🟡 保留中｜🔴 已預約｜⚫ 已關閉</div>
+        </div>
+        <div class="panel panel-slots">
+          <div id="slotGrid" class="slot-grid"></div>
+        </div>
+        <div class="panel panel-reschedule">
+          <div class="slot-actions" style="justify-content:space-between;align-items:center;">
+            <div class="muted" data-i18n="reschedule_title">改期申請 / Reschedule Requests</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <select id="rescheduleStatus">
+                <option value="" data-i18n="reschedule_status_all">全部</option>
+                <option value="pending" data-i18n="reschedule_status_pending">待審核</option>
+                <option value="approved" data-i18n="reschedule_status_approved">已核准</option>
+                <option value="rejected" data-i18n="reschedule_status_rejected">已婉拒</option>
+              </select>
+              <button class="btn" id="btnRescheduleLoad" type="button" data-i18n="btn_reschedule_load">載入申請</button>
+              <button class="btn" id="btnRescheduleMore" type="button" data-i18n="btn_reschedule_more" style="display:none">更多</button>
+            </div>
+          </div>
+          <div id="rescheduleList" class="muted"></div>
+        </div>
+        <div class="panel panel-status">
+          <div id="slotStatus" class="muted"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/js/admin-slots.inline-2.js"></script>
+</body>
+</html>

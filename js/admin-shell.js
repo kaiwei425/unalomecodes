@@ -7,6 +7,8 @@
 
     var navItems = [
       { href: '/admin', label: '總覽', icon: '🏠', group: 'extra' },
+      { href: '/admin/dashboard', label: '營運 Dashboard', icon: '📊', group: 'main' },
+      { href: '/admin/slots', label: '時段管理', icon: '🗓️', group: 'main' },
       { href: '/admin/fulfillment', label: '出貨工作台', icon: '📦', group: 'main' },
       // 營運（由上到下的排序）
       { href: '/admin/orders', label: '商品訂單', icon: '🧾', group: 'primary' },
@@ -19,7 +21,9 @@
       { href: '/admin/traffic', label: '流量監控', icon: '📈', group: 'extra' },
       { href: '/admin/audit-logs', label: '審計日誌', icon: '📋', group: 'extra' },
       { href: '/admin/admin-roles', label: '權限管理', icon: '🛡️', group: 'extra' },
-      { href: '/admin/admin-guide', label: '管理員手冊', icon: '📘', group: 'extra' }
+      { href: '/admin/admin-guide', label: '管理員手冊', icon: '📘', group: 'extra' },
+      { href: '/admin/phone-consult-template', label: '電話算命模板', icon: '🧩', group: 'extra' },
+      { href: '/admin/staff-manual', label: 'Staff Manual', icon: '📝', group: 'extra' }
     ];
 
     function renderShell(items, adminInfo){
@@ -178,19 +182,33 @@
 
     ready.then(function(info){
       var role = (info && info.role) ? info.role : '';
+      var path = location.pathname.replace(/\/$/, '');
+      if (!path) path = '/admin';
       var finalItems = navItems.slice();
       if (role === 'fulfillment'){
         var allow = new Set(['/admin/fulfillment','/admin/orders','/admin/service-orders']);
         finalItems = navItems.filter(function(item){
           return allow.has(item.href);
         });
-      } else if (role === 'owner'){
+      } else if (role === 'booking'){
+        var allowBooking = new Set(['/admin/slots','/admin/staff-manual']);
         finalItems = navItems.filter(function(item){
-          return item.href !== '/admin/fulfillment';
+          return allowBooking.has(item.href);
         });
+        if (wrap && path !== '/admin/slots' && path !== '/admin/staff-manual'){
+          wrap.innerHTML = '<div class="card">此頁不開放 booking 權限。</div>';
+        }
+      } else if (role === 'owner'){
+        finalItems = navItems.slice();
       } else if (role !== 'owner'){
         finalItems = navItems.filter(function(item){
-          return item.href !== '/admin/audit-logs' && item.href !== '/admin/fulfillment' && item.href !== '/admin/admin-guide' && item.href !== '/admin/admin-roles';
+          return item.href !== '/admin/audit-logs' &&
+            item.href !== '/admin/fulfillment' &&
+            item.href !== '/admin/admin-guide' &&
+            item.href !== '/admin/admin-roles' &&
+            item.href !== '/admin/slots' &&
+            item.href !== '/admin/dashboard' &&
+            item.href !== '/admin/phone-consult-template';
         });
       }
       renderShell(finalItems, info);

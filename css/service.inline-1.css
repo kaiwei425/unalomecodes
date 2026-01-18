@@ -1,4 +1,146 @@
 body.service-view{background:var(--bg);color:var(--fg);}
+body.service-view .svc-preview-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#0f172a;
+  color:#f8fafc;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.4px;
+  margin:8px 0 12px;
+}
+body.service-view .svc-launch-toggle{
+  margin-top:6px;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.12);
+  background:#f8fafc;
+  display:grid;
+  gap:8px;
+  max-width:520px;
+}
+body.service-view .svc-launch-toggle .toggle-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+body.service-view .svc-launch-toggle .toggle-label{
+  font-size:13px;
+  font-weight:700;
+  color:#0f172a;
+}
+body.service-view .svc-launch-toggle select{
+  border:1px solid rgba(15,23,42,.18);
+  border-radius:8px;
+  padding:6px 8px;
+  background:#fff;
+  font-size:12px;
+}
+body.service-view .svc-launch-toggle textarea{
+  width:100%;
+  border:1px solid rgba(15,23,42,.12);
+  border-radius:8px;
+  padding:8px;
+  font-size:12px;
+  resize:vertical;
+}
+body.service-view .svc-launch-toggle .toggle-hint{
+  font-size:11px;
+  color:#64748b;
+}
+body.service-view .svc-slot-section{
+  margin-top:14px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#f8fafc;
+  display:grid;
+  gap:10px;
+}
+body.service-view .svc-slot-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+body.service-view .svc-slot-title{font-weight:800;font-size:14px;color:#0f172a;}
+body.service-view .svc-slot-hint{font-size:12px;color:#64748b;}
+body.service-view .svc-slot-days{display:flex;gap:8px;flex-wrap:wrap;}
+body.service-view .svc-slot-day{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#334155;
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+body.service-view .svc-slot-day.is-active{background:#0f172a;color:#fff;border-color:#0f172a;}
+body.service-view .svc-slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;}
+body.service-view .svc-slot-btn{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+body.service-view .svc-slot-btn.is-held{background:#0f172a;color:#fff;border-color:#0f172a;}
+body.service-view .svc-slot-btn.is-disabled,
+body.service-view .svc-slot-btn.is-booked,
+body.service-view .svc-slot-btn.is-blocked{
+  cursor:not-allowed;
+  opacity:.6;
+}
+body.service-view .svc-slot-btn.is-disabled{background:#f1f5f9;color:#64748b;}
+body.service-view .svc-slot-btn.is-booked{background:#dbeafe;color:#1e3a8a;}
+body.service-view .svc-slot-btn.is-blocked{background:#fef3c7;color:#b45309;}
+body.service-view .svc-slot-state{font-size:12px;color:#64748b;}
+body.service-view .svc-slot-state.ok{color:#166534;}
+body.service-view .svc-slot-state.err{color:#b91c1c;}
+body.service-view .svc-pack{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  display:grid;
+  gap:12px;
+}
+body.service-view .svc-pack-head{display:grid;gap:4px;}
+body.service-view .svc-pack-title{font-weight:800;font-size:15px;color:#0f172a;}
+body.service-view .svc-pack-sub{font-size:12px;color:#64748b;}
+body.service-view .svc-pack-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+body.service-view .svc-pack-pill{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px;
+  background:#f8fafc;
+  cursor:pointer;
+  display:grid;
+  gap:6px;
+  text-align:left;
+}
+body.service-view .svc-pack-pill.is-active{
+  background:#0f172a;
+  color:#fff;
+  border-color:#0f172a;
+}
+body.service-view .svc-pack-pill.is-active .pill-price{color:#fff;}
+body.service-view .pill-title{font-weight:700;font-size:13px;}
+body.service-view .pill-price{font-weight:800;font-size:14px;color:#0f172a;}
+body.service-view .svc-pack-addon label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:700;
+  color:#0f172a;
+}
+body.service-view .svc-pack-addon input{margin:0;}
+body.service-view .svc-pack-addon .addon-hint{font-size:12px;color:#64748b;margin-top:6px;line-height:1.6;}
+body.service-view .svc-pack-policy{font-size:12px;color:#64748b;display:grid;gap:4px;}
 body.service-view .svc-promo{margin:14px 0 18px;}
 body.service-view .svc-promo-card{
   display:grid;

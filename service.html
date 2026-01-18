@@ -138,6 +138,19 @@
       </aside>
 
       <div class="main service-main">
+        <div id="svcAdminPreviewBadge" class="svc-preview-badge" style="display:none">ADMIN PREVIEW</div>
+        <div id="svcLaunchToggle" class="svc-launch-toggle" style="display:none">
+          <div class="toggle-row">
+            <div class="toggle-label">Phone Consult 上線模式</div>
+            <select id="phoneLaunchMode">
+              <option value="admin_only">Admin only</option>
+              <option value="allowlist">Allowlist</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
+          <textarea id="phoneAllowlist" rows="3" style="display:none" placeholder="allowlist emails, comma or newline separated"></textarea>
+          <div class="toggle-hint">此開關僅 owner 可見，儲存在本機（localStorage），不需重新部署</div>
+        </div>
         <section id="svcPromoPhone" class="svc-promo" style="display:none">
           <div class="svc-promo-card">
             <div class="svc-promo-left">
@@ -160,7 +173,7 @@
                 </div>
               </div>
               <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
-              <div class="svc-promo-mini">不需填寫想問的主題，依現場解讀進行</div>
+              <div class="svc-promo-mini">可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問</div>
             </div>
           </div>
         </section>
@@ -289,6 +302,31 @@
     </div>
   </dialog>
 
+  <dialog id="svcRescheduleDialog" class="svc-dialog">
+    <header>
+      <div style="font-weight:800;font-size:18px;">申請改期 / Request Reschedule</div>
+      <button type="button" class="btn ghost" id="svcRescheduleClose">關閉</button>
+    </header>
+    <div class="svc-dialog-body">
+      <section class="svc-slot-section" id="svcRescheduleSlotSection">
+        <div class="svc-slot-head">
+          <div class="svc-slot-title">可預約時段</div>
+          <div id="svcRescheduleSlotHint" class="svc-slot-hint"></div>
+        </div>
+        <div id="svcRescheduleDays" class="svc-slot-days"></div>
+        <div id="svcRescheduleGrid" class="svc-slot-grid"></div>
+        <div id="svcRescheduleState" class="svc-slot-state"></div>
+      </section>
+      <div class="svc-field">
+        <label class="svc-label" for="svcRescheduleNote">備註（可選）</label>
+        <textarea id="svcRescheduleNote" class="svc-input" rows="3" placeholder="想補充的事項"></textarea>
+      </div>
+    </div>
+    <footer>
+      <button type="button" class="btn primary" id="svcRescheduleSubmit">送出改期申請</button>
+    </footer>
+  </dialog>
+
   <dialog id="svcDetail" class="svc-dialog">
     <div class="closeBar">
       <strong id="svcDetailTitle">服務名稱</strong>
@@ -327,6 +365,45 @@
           <div id="svcDetailPriceHint" style="font-size:12px;color:#6b7280;margin-top:6px;display:none;"></div>
         </div>
         <div style="margin-top:16px;font-weight:800;font-size:20px;color:#0f172a;">NT$ <span id="svcDetailPrice">0</span></div>
+        <div id="svcConsultPack" class="svc-pack" style="display:none">
+          <div class="svc-pack-head">
+            <div class="svc-pack-title">電話算命方案</div>
+            <div class="svc-pack-sub">泰國老師（僅泰文）｜方案已含即時翻譯</div>
+          </div>
+          <div class="svc-pack-grid">
+            <button class="svc-pack-pill" data-pack="zh">
+              <div class="pill-title">中文翻譯</div>
+              <div class="pill-price">NT$ 4,000</div>
+            </button>
+            <button class="svc-pack-pill" data-pack="en">
+              <div class="pill-title">英文翻譯</div>
+              <div class="pill-price">NT$ 3,500</div>
+            </button>
+          </div>
+          <div class="svc-pack-addon">
+            <label>
+              <input type="checkbox" id="svcConsultAddonSummary">
+              加購：轉譯＋重點摘要整理
+              <strong>+ NT$ 500</strong>
+            </label>
+            <div class="addon-hint">
+              可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問
+            </div>
+          </div>
+          <div class="svc-pack-policy">
+            <div>・改期需於預約時間 48 小時前提出</div>
+            <div>・可自行全程錄音</div>
+          </div>
+        </div>
+        <section id="svcSlotSection" class="svc-slot-section" style="display:none">
+          <div class="svc-slot-head">
+            <div class="svc-slot-title">可預約時段</div>
+            <div id="svcSlotHint" class="svc-slot-hint"></div>
+          </div>
+          <div id="svcSlotDays" class="svc-slot-days"></div>
+          <div id="svcSlotGrid" class="svc-slot-grid"></div>
+          <div id="svcSlotState" class="svc-slot-state"></div>
+        </section>
         <div style="margin-top:12px;">
           <button id="svcDetailAddCart" class="btn primary" style="width:100%;">加入購物車</button>
         </div>
@@ -494,6 +571,17 @@
           <div class="svc-step-title">訂單送出成功</div>
           <p class="svc-bank-hint">我們已收到匯款資料並建立祈福訂單，請保留以下資訊或截圖備查。</p>
         </div>
+        <div id="svcBookingNotice" style="display:none;margin:12px 0;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+          <div style="font-weight:700;margin-bottom:6px;">【服務須知 / Important Notice】</div>
+          <div style="font-size:13px;line-height:1.7;color:#0f172a;">
+            <div>• 本服務為預約制</div>
+            <div>• 可於 48 小時前申請改期</div>
+            <div>• 本服務不提供退款</div>
+            <div>• 通話時可直接提問</div>
+            <div>• 若需整理問題可事先準備</div>
+            <div style="margin-top:6px;color:#475569;">This is a scheduled phone consultation service. Reschedule requests must be submitted at least 48 hours in advance. No refunds after booking. You may ask questions directly during the call. Please prepare your questions in advance if you need them organized.</div>
+          </div>
+        </div>
         <div class="svc-step3-card">
           <div><span style="font-size:12px;color:#6b7280;">訂單編號</span><strong id="svcStep3OrderId">SVXXXXXX</strong></div>
           <div>服務內容：<span id="svcStep3Service">—</span></div>
@@ -502,6 +590,10 @@
           <div>聯絡人：<span id="svcStep3Buyer">—</span></div>
         </div>
         <div class="svc-bank-hint">之後可透過左側「祈福進度查詢」輸入手機與訂單末五碼（英數）查詢最新進度。</div>
+        <div id="svcStep3RescheduleWrap" style="margin-top:12px;display:none;">
+          <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
+          <button type="button" class="btn primary" id="svcStep3Reschedule">申請改期 / Request Reschedule</button>
+        </div>
         <div class="svc-step-actions">
           <button type="button" class="btn" id="svcStep3Lookup">查詢進度</button>
           <button type="button" class="btn primary" id="svcStep3Close">完成</button>
@@ -520,8 +612,30 @@
         <div style="color:#6b7280;font-size:13px;">訂單編號</div>
         <div id="svcSuccessId" class="order-id">SVXXXXXX</div>
       </div>
+      <div class="svc-notice" id="svcSuccessNotice" style="display:none;margin-top:12px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+        <h4 style="margin:0 0 8px;font-size:14px;">服務須知 / Important Notice</h4>
+        <ul style="margin:0 0 10px 18px;padding:0;line-height:1.7;">
+          <li>本服務為預約制</li>
+          <li>可於 48 小時前申請改期</li>
+          <li>本服務不提供退款</li>
+          <li>通話時可直接提問</li>
+          <li>若需整理問題可事先準備</li>
+        </ul>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0;">
+        <ul class="en" style="margin:0 0 0 18px;padding:0;line-height:1.7;color:#475569;">
+          <li>This is a scheduled phone consultation</li>
+          <li>Reschedule must be requested at least 48 hours in advance</li>
+          <li>No refunds after booking</li>
+          <li>You may ask questions directly during the call</li>
+          <li>Please prepare your questions in advance if needed</li>
+        </ul>
+      </div>
       <div id="svcSuccessHint" style="font-size:14px;color:#374151;line-height:1.7;">
         我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。
+      </div>
+      <div id="svcSuccessRescheduleWrap" style="margin-top:12px;display:none;">
+        <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
+        <button type="button" class="btn primary" id="svcSuccessReschedule">申請改期 / Request Reschedule</button>
       </div>
     </div>
     <footer>
@@ -535,6 +649,34 @@
   <script src="/js/track.js"></script>
   <script src="/js/service-main.js"></script>
   <script src="/js/service.inline-2.js"></script>
-  <script src="/js/service.inline-3.js"></script>
+  <script>
+    (function(){
+      function loadOptionalScript(src){
+        return new Promise(function(resolve){
+          try{
+            var s = document.createElement('script');
+            s.src = src;
+            s.defer = true;
+            s.onload = function(){ resolve(true); };
+            s.onerror = function(){
+              console.warn('[optional] failed to load', src);
+              resolve(false);
+            };
+            document.head.appendChild(s);
+          }catch(e){
+            console.warn('[optional] script injection error', src, e);
+            resolve(false);
+          }
+        });
+      }
+      if (document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', function(){
+          loadOptionalScript('/js/service.inline-3.js');
+        });
+      }else{
+        loadOptionalScript('/js/service.inline-3.js');
+      }
+    })();
+  </script>
 </body>
 </html>

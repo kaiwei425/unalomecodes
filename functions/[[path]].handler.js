@@ -590,7 +590,32 @@ function getAdminPermissions(role){
   if (r === 'fulfillment'){
     return ['orders.view','orders.status_update','orders.qna.view','proof.view','service_orders.result_upload'];
   }
+  if (r === 'booking'){
+    return ['slots.view','slots.manage'];
+  }
   // default deny for unknown/empty roles
+  return [];
+}
+function normalizeRole(role){
+  return String(role || '').trim().toLowerCase();
+}
+function sanitizePermissionsForRole(role, perms){
+  const r = normalizeRole(role);
+  const list = Array.isArray(perms) ? perms.map(p=>String(p || '').trim()).filter(Boolean) : [];
+  if (r === 'owner'){
+    return ['*'];
+  }
+  if (r === 'booking'){
+    const allow = new Set(['slots.view','slots.manage']);
+    return list.filter(p => allow.has(p));
+  }
+  if (r === 'fulfillment'){
+    const allow = new Set(['orders.view','orders.status_update','orders.qna.view','proof.view','service_orders.result_upload']);
+    return list.filter(p => allow.has(p));
+  }
+  if (r === 'custom'){
+    return list.filter(p => p !== '*');
+  }
   return [];
 }
 async function getAdminPermissionsForEmail(email, env, roleOverride){
@@ -642,6 +667,19 @@ async function requireAdminPermission(request, env, perm){
   }
   return null;
 }
+async function requireAdminSlotsManage(request, env){
+  const guard = await requireAdminWrite(request, env);
+  if (guard) return guard;
+  const adminSession = await getAdminSession(request, env);
+  if (!adminSession || !adminSession.email) return null;
+  const role = await getAdminRole(adminSession.email, env);
+  if (role === 'owner') return null;
+  const allowed = await hasAdminPermission(adminSession, env, 'slots.manage');
+  if (!allowed){
+    return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  return null;
+}
 async function isAdmin(request, env){
   try{
     const fromCookie = await getAdminSession(request, env);
@@ -649,6 +687,35 @@ async function isAdmin(request, env){
     const key = (request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key') || '').trim();
     return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
   }catch(e){ return false; }
+}
+function normalizeEmail(val){
+  return String(val || '').trim().toLowerCase();
+}
+function getPhoneConsultConfig(env){
+  const modeRaw = String(env?.PHONE_CONSULT_LAUNCH_MODE || 'admin').trim().toLowerCase();
+  const mode = (modeRaw === 'public' || modeRaw === 'allowlist' || modeRaw === 'admin') ? modeRaw : 'admin';
+  const serviceId = String(env?.PHONE_CONSULT_SERVICE_ID || '').trim();
+  const allowlistRaw = String(env?.PHONE_CONSULT_ALLOWLIST || '').trim();
+  return { mode, serviceId, allowlistRaw };
+}
+function isAllowlisted(email, env){
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
+  const raw = String(env?.PHONE_CONSULT_ALLOWLIST || '').trim();
+  if (!raw) return false;
+  const list = raw.split(/[\n,]+/g).map(s => normalizeEmail(s)).filter(Boolean);
+  return list.includes(normalized);
+}
+async function getViewerEmailFromSession(request, env){
+  try{
+    const user = await getSessionUser(request, env);
+    return normalizeEmail(user && user.email ? user.email : '');
+  }catch(_){
+    return '';
+  }
+}
+async function isOwnerOrAdminSession(request, env){
+  return await isAdmin(request, env);
 }
 function collectAllowedOrigins(env, request, extraRaw){
   const allow = new Set();
@@ -3401,6 +3468,346 @@ function parseCookies(request){
   return obj;
 }
 
+// === Slots: required KV bindings + env (Pages -> Settings -> Functions) ===
+// KV bindings: SERVICE_SLOTS_KV, SERVICE_SLOT_HOLDS_KV
+// Env (txt): SLOT_TZ=Asia/Bangkok, SLOT_HOLD_TTL_MIN=15, SLOT_DAYS_AHEAD=14, SLOT_STEP_MIN=30, SLOT_DAILY_WINDOWS="10:00-12:00,14:00-18:00"
+// Optional: PHONE_CONSULT_SERVICE_MATCH="電話|phone|翻譯|translation|泰文"
+// Manual tests:
+// (1) GET /api/service/slots => enabled=false unless published
+// (2) POST /api/service/slot/hold (logged-out) => 401
+// (3) POST /api/service/slot/hold on unpublished slot => 409 slot_not_published
+// (4) Hold same slot twice within TTL => 409 slot_unavailable
+// (5) POST /api/service/order with slotKey+slotHoldToken => booked
+// (6) Wait > TTL then order => 409 slot_hold_expired
+// (7) Admin publish/block/unblock via /api/admin/service/slots/* and verify status/enabled
+// === Reschedule: required KV + env ===
+// KV binding: SERVICE_RESCHEDULE_KV
+// Env (txt): RESCHEDULE_RULE_HOURS=48, RESCHEDULE_INDEX_LIMIT=2000, RESCHEDULE_NOTIFY_EMAIL (optional)
+function parseTimeToMinutes(input){
+  const raw = String(input || '').trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+function minutesToHHMM(min){
+  const total = Number(min);
+  if (!Number.isFinite(total)) return '';
+  const h = Math.floor(total / 60) % 24;
+  const m = Math.floor(total % 60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function getSlotConfig(env){
+  const tz = String(env?.SLOT_TZ || 'Asia/Bangkok');
+  const holdTtlMin = Math.max(5, Number(env?.SLOT_HOLD_TTL_MIN || 15) || 15);
+  const daysAhead = Math.max(1, Math.min(31, Number(env?.SLOT_DAYS_AHEAD || 14) || 14));
+  const stepMin = Math.max(5, Number(env?.SLOT_STEP_MIN || 30) || 30);
+  const windowsStr = String(env?.SLOT_DAILY_WINDOWS || '10:00-12:00,14:00-18:00');
+  return { tz, holdTtlMin, daysAhead, stepMin, windowsStr };
+}
+function buildSlotKey(serviceId, dateStr, hhmmNoColon){
+  return `slot:${serviceId}:${dateStr}:${hhmmNoColon}`;
+}
+function parseSlotKey(slotKey){
+  const raw = String(slotKey || '').trim();
+  const match = raw.match(/^slot:([^:]+):(\d{4}-\d{2}-\d{2}):(\d{4})$/);
+  if (!match) return null;
+  const hh = match[3].slice(0,2);
+  const mm = match[3].slice(2,4);
+  return { serviceId: match[1], dateStr: match[2], hhmm: `${hh}:${mm}` };
+}
+function nowMs(){
+  return Date.now();
+}
+function getTodayDateStr(tz){
+  try{
+    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit' });
+    return fmt.format(new Date());
+  }catch(_){
+    return new Date().toISOString().split('T')[0];
+  }
+}
+function addDaysDateStr(dateStr, offset){
+  const base = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) return '';
+  base.setUTCDate(base.getUTCDate() + offset);
+  return base.toISOString().split('T')[0];
+}
+function parseDailyWindows(windowsStr, stepMin){
+  const list = String(windowsStr || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  const out = [];
+  list.forEach(range=>{
+    const parts = range.split('-').map(s=>s.trim());
+    if (parts.length !== 2) return;
+    const startMin = parseTimeToMinutes(parts[0]);
+    const endMin = parseTimeToMinutes(parts[1]);
+    if (startMin === null || endMin === null) return;
+    if (endMin <= startMin) return;
+    out.push({ startMin, endMin, stepMin });
+  });
+  return out;
+}
+function resolveSlotEnabled(record){
+  if (!record) return false;
+  if (typeof record.enabled === 'boolean') return record.enabled;
+  if (record.status === 'held' || record.status === 'booked') return true;
+  return false;
+}
+function resolveSlotStatus(record, now){
+  if (!record) return 'free';
+  if (record.status === 'blocked') return 'blocked';
+  if (record.status === 'booked') return 'booked';
+  if (record.status === 'held'){
+    const heldUntil = Number(record.heldUntil || 0);
+    if (heldUntil > now) return 'held';
+  }
+  return 'free';
+}
+function resolveHoldUserId(svcUser, request){
+  if (svcUser && svcUser.id) return String(svcUser.id);
+  if (svcUser && svcUser.email) return String(svcUser.email).toLowerCase();
+  return getClientIp(request) || '';
+}
+async function cleanupExpiredHolds(env){
+  const holdsKv = env?.SERVICE_SLOT_HOLDS_KV;
+  const slotsKv = env?.SERVICE_SLOTS_KV;
+  if (!holdsKv || !slotsKv || typeof holdsKv.list !== 'function') return;
+  const now = nowMs();
+  let cursor = undefined;
+  let loops = 0;
+  try{
+    do{
+      const listing = await holdsKv.list({ prefix:'hold:', limit:100, cursor });
+      const keys = listing && Array.isArray(listing.keys) ? listing.keys : [];
+      for (const key of keys){
+        const name = key && key.name ? key.name : '';
+        if (!name) continue;
+        let raw = null;
+        try{ raw = await holdsKv.get(name); }catch(_){}
+        if (!raw) continue;
+        let rec = null;
+        try{ rec = JSON.parse(raw); }catch(_){}
+        if (!rec) continue;
+        const exp = Number(rec.holdExpiresAt || rec.expiresAt || 0);
+        if (!exp || exp > now) continue;
+        const slotKey = String(rec.slotKey || '');
+        const holdToken = name.replace(/^hold:/, '');
+        if (slotKey){
+          try{
+            const slotRaw = await slotsKv.get(slotKey);
+            if (slotRaw){
+              const slotRec = JSON.parse(slotRaw);
+              if (slotRec && slotRec.status === 'held' && slotRec.holdToken === holdToken){
+                slotRec.status = 'free';
+                slotRec.holdToken = '';
+                slotRec.heldUntil = 0;
+                slotRec.holdExpiresAt = 0;
+                slotRec.holdBy = '';
+                await slotsKv.put(slotKey, JSON.stringify(slotRec));
+                try{
+                  await auditAppend(env, {
+                    ts: new Date().toISOString(),
+                    action: 'slot_hold_released',
+                    actorEmail: '',
+                    actorRole: 'system',
+                    ip: '',
+                    ua: '',
+                    targetType: 'service_slot',
+                    targetId: slotKey,
+                    orderId: '',
+                    slotKey,
+                    meta: { slotKey, orderId:'', userId: rec.userId || rec.holdBy || '' }
+                  });
+                }catch(err){
+                  console.warn('audit slot_hold_released failed', err);
+                }
+              }
+            }
+          }catch(_){}
+        }
+        try{ await holdsKv.delete(name); }catch(_){}
+        try{
+          await auditAppend(env, {
+            ts: new Date().toISOString(),
+            action: 'slot_hold_expired',
+            actorEmail: '',
+            actorRole: 'system',
+            ip: '',
+            ua: '',
+            targetType: 'service_slot',
+            targetId: slotKey,
+            orderId: '',
+            slotKey,
+            meta: { slotKey, orderId:'', userId: rec.userId || rec.holdBy || '' }
+          });
+        }catch(err){
+          console.warn('audit slot_hold_expired failed', err);
+        }
+      }
+      cursor = listing && listing.cursor ? listing.cursor : '';
+      loops++;
+    }while(cursor && loops < 20);
+  }catch(err){
+    console.warn('cleanupExpiredHolds failed', err);
+  }
+}
+async function hasActiveHoldForUser(env, userId){
+  const holdsKv = env?.SERVICE_SLOT_HOLDS_KV;
+  if (!holdsKv || typeof holdsKv.list !== 'function') return null;
+  const now = nowMs();
+  let cursor = undefined;
+  let loops = 0;
+  try{
+    do{
+      const listing = await holdsKv.list({ prefix:'hold:', limit:100, cursor });
+      const keys = listing && Array.isArray(listing.keys) ? listing.keys : [];
+      for (const key of keys){
+        const name = key && key.name ? key.name : '';
+        if (!name) continue;
+        let raw = null;
+        try{ raw = await holdsKv.get(name); }catch(_){}
+        if (!raw) continue;
+        let rec = null;
+        try{ rec = JSON.parse(raw); }catch(_){}
+        if (!rec) continue;
+        const exp = Number(rec.holdExpiresAt || rec.expiresAt || 0);
+        const holdUser = String(rec.userId || rec.holdBy || '').toLowerCase();
+        if (exp > now && holdUser && userId && holdUser === String(userId).toLowerCase()){
+          return rec;
+        }
+      }
+      cursor = listing && listing.cursor ? listing.cursor : '';
+      loops++;
+    }while(cursor && loops < 20);
+  }catch(err){
+    console.warn('hasActiveHoldForUser failed', err);
+  }
+  return null;
+}
+function getRescheduleConfig(env){
+  const ruleHours = Math.max(1, Number(env?.RESCHEDULE_RULE_HOURS || 48) || 48);
+  const indexLimit = Math.max(100, Number(env?.RESCHEDULE_INDEX_LIMIT || 2000) || 2000);
+  return { ruleHours, indexLimit };
+}
+function getRescheduleNotifyEmails(env){
+  const raw = String(env?.RESCHEDULE_NOTIFY_EMAIL || env?.ORDER_NOTIFY_EMAIL || env?.ADMIN_EMAIL || '').trim();
+  return raw.split(',').map(s=>s.trim()).filter(Boolean);
+}
+function parseSlotStartToMs(slotStart){
+  const raw = String(slotStart || '').trim();
+  if (!raw) return 0;
+  const iso = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? 0 : ms;
+}
+function buildRescheduleId(){
+  return `rsch_${makeToken(12)}`;
+}
+async function updateRescheduleIndex(env, requestId){
+  const kv = env?.SERVICE_RESCHEDULE_KV;
+  if (!kv) return false;
+  const cfg = getRescheduleConfig(env);
+  const idxKey = 'reschedule:index';
+  let idxRaw = await kv.get(idxKey);
+  let list = [];
+  if (idxRaw){
+    try{ list = String(idxRaw).split('\n').filter(Boolean); }catch(_){}
+  }
+  list = [requestId].concat(list.filter(id => id !== requestId)).slice(0, cfg.indexLimit);
+  await kv.put(idxKey, list.join('\n'));
+  return true;
+}
+function buildRescheduleEmail(payload){
+  const esc = escapeHtmlEmail;
+  const type = payload?.type || 'requested';
+  const orderId = payload?.orderId || '';
+  const currentSlot = payload?.currentSlot || '';
+  const desiredSlot = payload?.desiredSlot || '';
+  const createdAt = payload?.createdAt || '';
+  const note = payload?.note || '';
+  const adminUrl = payload?.adminUrl || '';
+  const reason = payload?.reason || '';
+  const subjectBase = type === 'approved'
+    ? '改期已核准 / Reschedule Approved'
+    : type === 'rejected'
+      ? '改期已婉拒 / Reschedule Rejected'
+      : '改期申請通知 / Reschedule Request';
+  const subject = `[Unalomecodes] ${subjectBase}`;
+  const zhBlock = `
+---\n【中文】
+訂單編號：${orderId}
+原時段：${currentSlot}
+申請改期至：${desiredSlot}
+申請時間：${createdAt}
+${note ? `備註：${note}\n` : ''}${reason ? `原因：${reason}\n` : ''}${adminUrl ? `請至後台處理：\n${adminUrl}\n` : ''}`.trim();
+  const enBlock = `
+---
+[English]
+Order ID: ${orderId}
+Original slot: ${currentSlot}
+Requested slot: ${desiredSlot}
+Request time: ${createdAt}
+${note ? `Note: ${note}\n` : ''}${reason ? `Reason: ${reason}\n` : ''}${adminUrl ? `Please review in admin panel:\n${adminUrl}\n` : ''}`.trim();
+  const text = `${zhBlock}\n\n${enBlock}`.trim();
+  const zhHtml = `
+<div style="margin:0 0 16px;">
+  <strong>【中文】</strong><br>
+  訂單編號：${esc(orderId)}<br>
+  原時段：${esc(currentSlot)}<br>
+  申請改期至：${esc(desiredSlot)}<br>
+  申請時間：${esc(createdAt)}<br>
+  ${note ? `備註：${esc(note)}<br>` : ''}${reason ? `原因：${esc(reason)}<br>` : ''}${adminUrl ? `請至後台處理：<br><a href="${esc(adminUrl)}" target="_blank" rel="noopener">${esc(adminUrl)}</a>` : ''}
+</div>`;
+  const enHtml = `
+<div style="margin:16px 0 0;">
+  <strong>[English]</strong><br>
+  Order ID: ${esc(orderId)}<br>
+  Original slot: ${esc(currentSlot)}<br>
+  Requested slot: ${esc(desiredSlot)}<br>
+  Request time: ${esc(createdAt)}<br>
+  ${note ? `Note: ${esc(note)}<br>` : ''}${reason ? `Reason: ${esc(reason)}<br>` : ''}${adminUrl ? `Please review in admin panel:<br><a href="${esc(adminUrl)}" target="_blank" rel="noopener">${esc(adminUrl)}</a>` : ''}
+</div>`;
+  const html = `<div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:14px;">${zhHtml}${enHtml}</div>`;
+  return { subject, html, text };
+}
+function buildBilingualOrderEmail(order, zhHtml, zhText, opts = {}){
+  const esc = escapeHtmlEmail;
+  const fmt = formatCurrencyTWD;
+  const id = order?.id || '';
+  const status = order?.status || '';
+  const amount = fmt(order?.amount || 0);
+  const method = order?.method || '';
+  const lookup = opts.lookupUrl || '';
+  const enLines = [
+    '[English]',
+    `Order ID: ${id}`,
+    status ? `Status: ${status}` : '',
+    method ? `Method: ${method}` : '',
+    `Total: ${amount}`,
+    lookup ? `Order lookup: ${lookup}` : ''
+  ].filter(Boolean);
+  const enHtml = `
+<div style="margin:16px 0 0;">
+  <strong>[English]</strong><br>
+  Order ID: ${esc(id)}<br>
+  ${status ? `Status: ${esc(status)}<br>` : ''}${method ? `Method: ${esc(method)}<br>` : ''}Total: ${esc(amount)}<br>
+  ${lookup ? `Order lookup: <a href="${esc(lookup)}" target="_blank" rel="noopener">${esc(lookup)}</a>` : ''}
+</div>`;
+  const html = `<div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:14px;">
+    <div><strong>【中文】</strong></div>
+    ${zhHtml}
+    ${enHtml}
+  </div>`;
+  const text = `【中文】\n${zhText}\n\n${enLines.join('\n')}`.trim();
+  return { html, text };
+}
+
 async function getSessionUser(request, env){
   if (!env || !env.SESSION_SECRET) return null;
   const cookies = parseCookies(request);
@@ -5073,8 +5480,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       let body = {};
       try{ body = await request.json(); }catch(_){ body = {}; }
       const email = String(body.email || '').trim().toLowerCase();
-      const role = String(body.role || '').trim().toLowerCase();
-      const perms = Array.isArray(body.permissions) ? body.permissions.filter(Boolean) : [];
+      const role = normalizeRole(body.role);
+      const safePerms = sanitizePermissionsForRole(role, body.permissions);
       if (!email){
         return new Response(JSON.stringify({ ok:false, error:'missing_email' }), { status:400, headers: jsonHeadersFor(request, env) });
       }
@@ -5085,8 +5492,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }catch(_){}
       }else{
         await kv.put(`admin:role:${email}`, role);
-        if (role === 'custom'){
-          await kv.put(`admin:perms:${email}`, JSON.stringify(perms));
+        if (safePerms.length){
+          await kv.put(`admin:perms:${email}`, JSON.stringify(safePerms));
         }else{
           await kv.delete(`admin:perms:${email}`);
         }
@@ -5100,9 +5507,650 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         if (role) next.unshift(email);
         await kv.put(idxKey, JSON.stringify(next.slice(0, 500)));
       }catch(_){}
-      return new Response(JSON.stringify({ ok:true, email, role, permissions: role === 'custom' ? perms : [] }), { status:200, headers: jsonHeadersFor(request, env) });
+      return new Response(JSON.stringify({ ok:true, email, role, permissions: role === 'custom' ? safePerms : [] }), { status:200, headers: jsonHeadersFor(request, env) });
     }
     return new Response(JSON.stringify({ ok:false, error:'method_not_allowed' }), { status:405, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/slots/publish' && request.method === 'POST') {
+    await cleanupExpiredHolds(env);
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    let body = null;
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const updated = [];
+    const skipped = [];
+    let targets = [];
+    if (Array.isArray(body.slotKeys) && body.slotKeys.length){
+      targets = body.slotKeys.map(k=>String(k||'').trim()).filter(Boolean);
+    }else{
+      const serviceId = String(body.serviceId || '').trim();
+      const date = String(body.date || '').trim();
+      const times = Array.isArray(body.times) ? body.times : [];
+      if (!serviceId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !times.length){
+        return new Response(JSON.stringify({ ok:false, error:'invalid_payload' }), { status:400, headers: jsonHeadersFor(request, env) });
+      }
+      times.forEach(time=>{
+        const minutes = parseTimeToMinutes(time);
+        if (minutes === null){
+          skipped.push({ slotKey:'', reason:'invalid_time' });
+          return;
+        }
+        const hhmm = minutesToHHMM(minutes);
+        const slotKey = buildSlotKey(serviceId, date, hhmm.replace(':',''));
+        targets.push(slotKey);
+      });
+    }
+    for (const slotKey of targets){
+      const parsed = parseSlotKey(slotKey);
+      if (!parsed){
+        skipped.push({ slotKey, reason:'invalid_slot' });
+        continue;
+      }
+      let existing = null;
+      try{
+        const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
+        if (raw) existing = JSON.parse(raw);
+      }catch(_){}
+      if (existing && (existing.status === 'booked' || existing.status === 'held')){
+        skipped.push({ slotKey, reason: existing.status });
+        continue;
+      }
+      const record = {
+        serviceId: parsed.serviceId,
+        slotKey,
+        date: parsed.dateStr,
+        time: parsed.hhmm,
+        enabled: true,
+        status: 'free',
+        heldUntil: 0,
+        holdToken: '',
+        bookedOrderId: ''
+      };
+      await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(record));
+      updated.push(slotKey);
+    }
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'slots_publish',
+        ...actor,
+        targetType: 'service_slots',
+        targetId: 'bulk',
+        orderId: '',
+        slotKey: '',
+        meta: { count: updated.length }
+      });
+      const adminSession = await getAdminSession(request, env);
+      if (!adminSession){
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'admin_override',
+          actorEmail: '',
+          actorRole: 'admin_key',
+          ip: getClientIp(request) || '',
+          ua: request.headers.get('User-Agent') || '',
+          targetType: 'service_slots',
+          targetId: 'bulk',
+          orderId: '',
+          slotKey: '',
+          meta: { count: updated.length }
+        });
+      }
+    }catch(err){
+      console.warn('audit slots_publish failed', err);
+    }
+    return new Response(JSON.stringify({ ok:true, updated, skipped }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/slots/block' && request.method === 'POST') {
+    await cleanupExpiredHolds(env);
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    let body = null;
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const slotKeys = Array.isArray(body.slotKeys) ? body.slotKeys.map(k=>String(k||'').trim()).filter(Boolean) : [];
+    if (!slotKeys.length){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_payload' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const blocked = body.blocked === true;
+    const updated = [];
+    const skipped = [];
+    const now = nowMs();
+    for (const slotKey of slotKeys){
+      const parsed = parseSlotKey(slotKey);
+      if (!parsed){
+        skipped.push({ slotKey, reason:'invalid_slot' });
+        continue;
+      }
+      let existing = null;
+      try{
+        const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
+        if (raw) existing = JSON.parse(raw);
+      }catch(_){}
+      const status = resolveSlotStatus(existing, now);
+      if (status === 'booked'){
+        skipped.push({ slotKey, reason:'booked' });
+        continue;
+      }
+      if (status === 'held'){
+        skipped.push({ slotKey, reason:'held' });
+        continue;
+      }
+      const record = {
+        serviceId: parsed.serviceId,
+        slotKey,
+        date: parsed.dateStr,
+        time: parsed.hhmm,
+        enabled: blocked ? false : true,
+        status: blocked ? 'blocked' : 'free',
+        heldUntil: 0,
+        holdToken: '',
+        bookedOrderId: ''
+      };
+      await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(record));
+      updated.push(slotKey);
+    }
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'slots_block',
+        ...actor,
+        targetType: 'service_slots',
+        targetId: 'bulk',
+        orderId: '',
+        slotKey: '',
+        meta: { blocked, count: updated.length }
+      });
+      const adminSession = await getAdminSession(request, env);
+      if (!adminSession){
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'admin_override',
+          actorEmail: '',
+          actorRole: 'admin_key',
+          ip: getClientIp(request) || '',
+          ua: request.headers.get('User-Agent') || '',
+          targetType: 'service_slots',
+          targetId: 'bulk',
+          orderId: '',
+          slotKey: '',
+          meta: { blocked, count: updated.length }
+        });
+      }
+    }catch(err){
+      console.warn('audit slots_block failed', err);
+    }
+    return new Response(JSON.stringify({ ok:true, updated, skipped }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/phone-consult-template' && request.method === 'POST') {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+    const ownerOnly = await isOwnerAdmin(request, env);
+    if (!ownerOnly){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+    const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
+    if (!store){
+      return new Response(JSON.stringify({ ok:false, error:'SERVICE_PRODUCTS 未綁定' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const idxKey = 'SERVICE_PRODUCT_INDEX';
+    const templateKey = 'SERVICE_PRODUCT_PHONE_CONSULT_ID';
+    let pinnedId = '';
+    try{
+      pinnedId = String(await store.get(templateKey) || '').trim();
+    }catch(_){}
+    if (pinnedId){
+      try{
+        const raw = await store.get(pinnedId);
+        if (raw){
+          const item = JSON.parse(raw);
+          const existedId = String(item.id || pinnedId).trim();
+          try{
+            const actor = await buildAuditActor(request, env);
+            await auditAppend(env, {
+              ts: new Date().toISOString(),
+              action: 'phone_consult_template_create',
+              ...actor,
+              targetType: 'service_product',
+              targetId: existedId,
+              meta: { existed: true }
+            });
+          }catch(_){}
+          return new Response(JSON.stringify({ ok:true, existed:true, serviceId: existedId }), { status:200, headers: jsonHeadersFor(request, env) });
+        }
+      }catch(_){}
+    }
+    let list = [];
+    try{
+      const idxRaw = await store.get(idxKey);
+      if (idxRaw) list = JSON.parse(idxRaw) || [];
+    }catch(_){}
+    if ((!Array.isArray(list) || !list.length) && store.list){
+      try{
+        const iter = await store.list({ prefix:'svc:' });
+        list = iter.keys.map(k => k.name);
+      }catch(_){}
+    }
+    let existedItem = null;
+    for (const key of list){
+      try{
+        const raw = await store.get(key);
+        if (!raw) continue;
+        const item = JSON.parse(raw);
+        const name = String(item.name || '').toLowerCase();
+        const metaType = String(item?.meta?.type || '').toLowerCase();
+        if (metaType === 'phone_consult' || name.includes('phone consultation') || name.includes('電話算命')){
+          existedItem = item;
+          break;
+        }
+      }catch(_){}
+    }
+    if (existedItem){
+      const existedId = String(existedItem.id || '').trim() || '';
+      try{
+        const actor = await buildAuditActor(request, env);
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'phone_consult_template_create',
+          ...actor,
+          targetType: 'service_product',
+          targetId: existedId,
+          meta: { existed: true }
+        });
+      }catch(_){}
+      try{ await store.put(templateKey, existedId); }catch(_){}
+      return new Response(JSON.stringify({ ok:true, existed:true, serviceId: existedId }), { status:200, headers: jsonHeadersFor(request, env) });
+    }
+    let newId = '';
+    for (let i=0;i<5;i++){
+      const candidate = 'SVT' + crypto.randomUUID().replace(/-/g,'').slice(0,8);
+      const raw = await store.get(candidate);
+      if (!raw){
+        newId = candidate;
+        break;
+      }
+    }
+    if (!newId){
+      return new Response(JSON.stringify({ ok:false, error:'cannot_generate_id' }), { status:500, headers: jsonHeadersFor(request, env) });
+    }
+    const nowIso = new Date().toISOString();
+    const payload = {
+      id: newId,
+      name: '電話算命預約 Phone Consultation',
+      description: '方案：中文翻譯 4000、英文翻譯 3500。可先整理想詢問的問題，通話時由翻譯人員協助老師回覆。改期需於 48 小時前申請。可自行全程錄音，可加購「轉譯加重點摘要整理」+500。\nPackages: Chinese translation 4000, English translation 3500. Prepare questions in advance; the interpreter will assist during the call. Reschedule at least 48 hours before. Call recording is allowed. Add-on: transcription + summary +500.',
+      includes: [
+        '方案：中文翻譯 4000、英文翻譯 3500',
+        '說明：可先整理問題，通話時由翻譯協助向老師提問',
+        '改期：48 小時前可申請改期',
+        '錄音：可自行全程錄音；可加購「轉譯加重點摘要整理」+500',
+        'Packages: Chinese 4000, English 3500',
+        'Prepare questions in advance; interpreter assists during the call',
+        'Reschedule at least 48 hours before',
+        'Call recording allowed; add-on transcription + summary +500'
+      ],
+      price: 0,
+      options: [
+        { name:'中文翻譯', price:4000 },
+        { name:'英文翻譯', price:3500 }
+      ],
+      meta: {
+        type: 'phone_consult',
+        version: 1,
+        requiresSlot: true,
+        rescheduleHours: 48
+      },
+      active: true,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+    await store.put(newId, JSON.stringify(payload));
+    try{
+      let existing = [];
+      const idxRaw = await store.get(idxKey);
+      if (idxRaw) existing = JSON.parse(idxRaw) || [];
+      existing = [newId].concat(existing.filter(x => x !== newId)).slice(0,200);
+      await store.put(idxKey, JSON.stringify(existing));
+    }catch(_){}
+    try{ await store.put(templateKey, newId); }catch(_){}
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'phone_consult_template_create',
+        ...actor,
+        targetType: 'service_product',
+        targetId: newId,
+        meta: { existed: false }
+      });
+    }catch(_){}
+    return new Response(JSON.stringify({ ok:true, existed:false, serviceId: newId }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/reschedule-requests' && request.method === 'GET') {
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_RESCHEDULE_KV){
+      return new Response(JSON.stringify({ ok:false, error:'reschedule_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const statusFilter = String(url.searchParams.get('status') || '').trim().toLowerCase();
+    const cursor = String(url.searchParams.get('cursor') || '').trim();
+    const limitRaw = Number(url.searchParams.get('limit') || 50);
+    const limit = Math.max(1, Math.min(100, Number.isFinite(limitRaw) ? limitRaw : 50));
+    const idxRaw = await env.SERVICE_RESCHEDULE_KV.get('reschedule:index');
+    const ids = idxRaw ? String(idxRaw).split('\n').filter(Boolean) : [];
+    let start = 0;
+    if (cursor){
+      const idx = ids.indexOf(cursor);
+      if (idx >= 0) start = idx + 1;
+    }
+    const items = [];
+    let nextCursor = '';
+    for (let i = start; i < ids.length; i++){
+      if (items.length >= limit){
+        nextCursor = ids[i];
+        break;
+      }
+      const id = ids[i];
+      let raw = null;
+      try{ raw = await env.SERVICE_RESCHEDULE_KV.get(`reschedule:${id}`); }catch(_){}
+      if (!raw) continue;
+      let rec = null;
+      try{ rec = JSON.parse(raw); }catch(_){}
+      if (!rec) continue;
+      if (statusFilter && String(rec.status || '').toLowerCase() !== statusFilter) continue;
+      items.push(rec);
+    }
+    return new Response(JSON.stringify({ ok:true, items, nextCursor }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/reschedule-approve' && request.method === 'POST') {
+    await cleanupExpiredHolds(env);
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_RESCHEDULE_KV){
+      return new Response(JSON.stringify({ ok:false, error:'reschedule_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const store = env.SERVICE_ORDERS || env.ORDERS;
+    if (!store){
+      return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeadersFor(request, env) });
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){}
+    const requestId = String(body.requestId || '').trim();
+    const orderId = String(body.orderId || '').trim();
+    const newSlotKey = String(body.newSlotKey || '').trim();
+    if (!requestId || !orderId || !newSlotKey){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_payload' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const reqRaw = await env.SERVICE_RESCHEDULE_KV.get(`reschedule:${requestId}`);
+    if (!reqRaw){
+      return new Response(JSON.stringify({ ok:false, error:'request_not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+    }
+    let reqRec = null;
+    try{ reqRec = JSON.parse(reqRaw); }catch(_){}
+    if (!reqRec || String(reqRec.status || '') !== 'pending'){
+      return new Response(JSON.stringify({ ok:false, error:'ALREADY_REQUESTED' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    if (String(reqRec.orderId || '') !== orderId){
+      return new Response(JSON.stringify({ ok:false, error:'order_mismatch' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const orderRaw = await store.get(orderId);
+    if (!orderRaw){
+      return new Response(JSON.stringify({ ok:false, error:'order_not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+    }
+    let order = null;
+    try{ order = JSON.parse(orderRaw); }catch(_){}
+    if (!order){
+      return new Response(JSON.stringify({ ok:false, error:'order_not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+    }
+    const cfg = getRescheduleConfig(env);
+    const slotStartMs = parseSlotStartToMs(order.slotStart || '');
+    if (!slotStartMs){
+      return new Response(JSON.stringify({ ok:false, error:'missing_slot_start' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    if (Date.now() > (slotStartMs - cfg.ruleHours * 3600 * 1000)){
+      return new Response(JSON.stringify({ ok:false, error:'TOO_LATE' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+    const parsed = parseSlotKey(newSlotKey);
+    if (!parsed || String(parsed.serviceId) !== String(order.serviceId || '').trim()){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_slot' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const slotRaw = await env.SERVICE_SLOTS_KV.get(newSlotKey);
+    if (!slotRaw){
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    let slotRec = null;
+    try{ slotRec = JSON.parse(slotRaw); }catch(_){}
+    const enabled = resolveSlotEnabled(slotRec);
+    const nowSlot = nowMs();
+    const status = resolveSlotStatus(slotRec, nowSlot);
+    if (!enabled){
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    if (status === 'held'){
+      if (Number(slotRec.heldUntil || 0) <= nowSlot){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_EXPIRED' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    if (status !== 'free'){
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    const oldSlotKey = String(order.slotKey || '').trim();
+    if (oldSlotKey && oldSlotKey !== newSlotKey){
+      try{
+        const oldRaw = await env.SERVICE_SLOTS_KV.get(oldSlotKey);
+        if (oldRaw){
+          const oldRec = JSON.parse(oldRaw);
+          oldRec.status = 'free';
+          oldRec.bookedOrderId = '';
+          oldRec.heldUntil = 0;
+          oldRec.holdToken = '';
+          oldRec.enabled = true;
+          await env.SERVICE_SLOTS_KV.put(oldSlotKey, JSON.stringify(oldRec));
+          try{
+            const adminSession = await getAdminSession(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'slot_release',
+        actorEmail: adminSession ? String(adminSession.email || '') : '',
+        actorRole: adminSession ? await getAdminRole(adminSession.email, env) : 'admin_key',
+        ip: getClientIp(request) || '',
+        ua: request.headers.get('User-Agent') || '',
+        targetType: 'service_slot',
+        targetId: oldSlotKey,
+        orderId,
+        slotKey: oldSlotKey,
+        meta: { orderId, slotKey: oldSlotKey }
+      });
+          }catch(err){
+            console.warn('audit slot_release failed', err);
+          }
+        }
+      }catch(_){}
+    }
+    slotRec.status = 'booked';
+    slotRec.bookedOrderId = orderId;
+    slotRec.heldUntil = 0;
+    slotRec.holdToken = '';
+    slotRec.enabled = true;
+    await env.SERVICE_SLOTS_KV.put(newSlotKey, JSON.stringify(slotRec));
+    order.slotKey = newSlotKey;
+    order.slotStart = `${parsed.dateStr} ${parsed.hhmm}`;
+    order.requestDate = order.slotStart;
+    order.updatedAt = new Date().toISOString();
+    await store.put(orderId, JSON.stringify(order));
+    reqRec.status = 'approved';
+    reqRec.updatedAt = new Date().toISOString();
+    reqRec.desiredSlotKey = newSlotKey;
+    const adminSession = await getAdminSession(request, env);
+    reqRec.approvedBy = adminSession ? String(adminSession.email || '') : 'admin_key';
+    await env.SERVICE_RESCHEDULE_KV.put(`reschedule:${requestId}`, JSON.stringify(reqRec));
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'reschedule_approved',
+        ...actor,
+        targetType: 'service_order',
+        targetId: orderId,
+        orderId,
+        slotKey: newSlotKey,
+        meta: { requestId, newSlotKey, slotKey: newSlotKey, orderId }
+      });
+      if (!adminSession){
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'admin_override',
+          actorEmail: '',
+          actorRole: 'admin_key',
+          ip: getClientIp(request) || '',
+          ua: request.headers.get('User-Agent') || '',
+          targetType: 'service_order',
+          targetId: orderId,
+          orderId,
+          slotKey: newSlotKey,
+          meta: { requestId, slotKey: newSlotKey, orderId }
+        });
+      }
+    }catch(err){
+      console.warn('audit reschedule_approved failed', err);
+    }
+    const adminTo = getRescheduleNotifyEmails(env);
+    const customerEmail = String(order?.buyer?.email || '').trim();
+    const base = (env.SITE_URL || env.PUBLIC_SITE_URL || new URL(request.url).origin || '').replace(/\/$/, '');
+    const adminUrl = base ? `${base}/admin/slots` : '';
+    const email = buildRescheduleEmail({
+      type: 'approved',
+      orderId,
+      currentSlot: reqRec.currentSlotKey || '',
+      desiredSlot: newSlotKey,
+      createdAt: reqRec.createdAt || '',
+      note: reqRec.note || '',
+      adminUrl
+    });
+    try{
+      if (adminTo.length){
+        await sendEmailMessage(env, { to: adminTo, subject: email.subject, html: email.html, text: email.text });
+      }
+      if (customerEmail){
+        await sendEmailMessage(env, { to: [customerEmail], subject: email.subject, html: email.html, text: email.text });
+      }
+    }catch(err){
+      console.error('reschedule approve email failed', err);
+    }
+    return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/reschedule-reject' && request.method === 'POST') {
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_RESCHEDULE_KV){
+      return new Response(JSON.stringify({ ok:false, error:'reschedule_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const store = env.SERVICE_ORDERS || env.ORDERS;
+    if (!store){
+      return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeadersFor(request, env) });
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){}
+    const requestId = String(body.requestId || '').trim();
+    const orderId = String(body.orderId || '').trim();
+    const reason = String(body.reason || '').trim();
+    if (!requestId || !orderId){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_payload' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const reqRaw = await env.SERVICE_RESCHEDULE_KV.get(`reschedule:${requestId}`);
+    if (!reqRaw){
+      return new Response(JSON.stringify({ ok:false, error:'request_not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+    }
+    let reqRec = null;
+    try{ reqRec = JSON.parse(reqRaw); }catch(_){}
+    if (!reqRec || String(reqRec.status || '') !== 'pending'){
+      return new Response(JSON.stringify({ ok:false, error:'ALREADY_REQUESTED' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    if (String(reqRec.orderId || '') !== orderId){
+      return new Response(JSON.stringify({ ok:false, error:'order_mismatch' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    reqRec.status = 'rejected';
+    reqRec.updatedAt = new Date().toISOString();
+    reqRec.rejectedReason = reason;
+    const adminSession = await getAdminSession(request, env);
+    reqRec.rejectedBy = adminSession ? String(adminSession.email || '') : 'admin_key';
+    await env.SERVICE_RESCHEDULE_KV.put(`reschedule:${requestId}`, JSON.stringify(reqRec));
+    let order = null;
+    try{
+      const orderRaw = await store.get(orderId);
+      order = orderRaw ? JSON.parse(orderRaw) : null;
+    }catch(_){}
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'reschedule_rejected',
+        ...actor,
+        targetType: 'service_order',
+        targetId: orderId,
+        orderId,
+        slotKey: String(reqRec.desiredSlotKey || ''),
+        meta: { requestId, reason, orderId, slotKey: String(reqRec.desiredSlotKey || '') }
+      });
+      if (!adminSession){
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'admin_override',
+          actorEmail: '',
+          actorRole: 'admin_key',
+          ip: getClientIp(request) || '',
+          ua: request.headers.get('User-Agent') || '',
+          targetType: 'service_order',
+          targetId: orderId,
+          orderId,
+          slotKey: String(reqRec.desiredSlotKey || ''),
+          meta: { requestId, orderId, slotKey: String(reqRec.desiredSlotKey || '') }
+        });
+      }
+    }catch(err){
+      console.warn('audit reschedule_rejected failed', err);
+    }
+    const adminTo = getRescheduleNotifyEmails(env);
+    const customerEmail = String(order?.buyer?.email || '').trim();
+    const base = (env.SITE_URL || env.PUBLIC_SITE_URL || new URL(request.url).origin || '').replace(/\/$/, '');
+    const adminUrl = base ? `${base}/admin/slots` : '';
+    const email = buildRescheduleEmail({
+      type: 'rejected',
+      orderId,
+      currentSlot: reqRec.currentSlotKey || '',
+      desiredSlot: reqRec.desiredSlotKey || '',
+      createdAt: reqRec.createdAt || '',
+      note: reqRec.note || '',
+      reason,
+      adminUrl
+    });
+    try{
+      if (adminTo.length){
+        await sendEmailMessage(env, { to: adminTo, subject: email.subject, html: email.html, text: email.text });
+      }
+      if (customerEmail){
+        await sendEmailMessage(env, { to: [customerEmail], subject: email.subject, html: email.html, text: email.text });
+      }
+    }catch(err){
+      console.error('reschedule reject email failed', err);
+    }
+    return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/fortune-stats' && request.method === 'GET') {
@@ -8608,8 +9656,16 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://unalomecodes.com';
     const imageHost = ctx.imageHost || defaultImageHost || origin;
     const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext, blessingDone: isBlessingDone };
-    const { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
-    const { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
+    let { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
+    let { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
+    if (ctx.bilingual){
+      const wrappedCustomer = buildBilingualOrderEmail(order, customerHtml, customerText, { lookupUrl });
+      const wrappedAdmin = buildBilingualOrderEmail(order, adminHtml, adminText, { lookupUrl });
+      customerHtml = wrappedCustomer.html;
+      customerText = wrappedCustomer.text;
+      adminHtml = wrappedAdmin.html;
+      adminText = wrappedAdmin.text;
+    }
     const tasks = [];
     if (notifyCustomer && customerEmail) {
       tasks.push(sendEmailMessage(env, {
@@ -9179,6 +10235,34 @@ if ((pathname === '/api/admin/cron/release-holds' || pathname === '/api/cron/rel
   return new Response(JSON.stringify(result), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
+if (pathname === '/api/service/phone-consult/config' && request.method === 'GET') {
+  const cfg = getPhoneConsultConfig(env);
+  const rawMode = String(env?.PHONE_CONSULT_LAUNCH_MODE || '').trim().toLowerCase();
+  const modeValid = rawMode === 'admin' || rawMode === 'allowlist' || rawMode === 'public';
+  let enabled = true;
+  let reason = null;
+  if (!cfg.serviceId){
+    enabled = false;
+    reason = 'missing_service_id';
+  }else if (!modeValid){
+    enabled = false;
+    reason = 'invalid_launch_mode';
+  }
+  const isAdminViewer = await isOwnerOrAdminSession(request, env);
+  const viewerEmail = await getViewerEmailFromSession(request, env);
+  const allowlisted = isAllowlisted(viewerEmail, env);
+  const payload = {
+    ok: true,
+    mode: cfg.mode,
+    serviceId: cfg.serviceId,
+    isAdmin: !!isAdminViewer,
+    allowlisted: !!allowlisted,
+    enabled,
+    reason
+  };
+  return new Response(JSON.stringify(payload), { status:200, headers: jsonHeadersFor(request, env) });
+}
+
 if (pathname === '/api/service/products' && request.method === 'GET') {
   const store = env.SERVICE_PRODUCTS || env.PRODUCTS;
   if (!store){
@@ -9326,10 +10410,345 @@ if (pathname === '/api/service/products' && request.method === 'DELETE') {
   return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
 }
 
-if (pathname === '/api/service/order' && request.method === 'POST') {
+if (pathname === '/api/service/slots' && request.method === 'GET') {
+  await cleanupExpiredHolds(env);
+  if (!env?.SERVICE_SLOTS_KV){
+    return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+  }
+  const serviceId = String(url.searchParams.get('serviceId') || '').trim();
+  if (!serviceId){
+    return new Response(JSON.stringify({ ok:false, error:'missing_service_id' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const cfg = getSlotConfig(env);
+  const daysRaw = Number(url.searchParams.get('days') || cfg.daysAhead);
+  const days = Math.max(1, Math.min(31, Number.isFinite(daysRaw) ? daysRaw : cfg.daysAhead));
+  const dateFromParam = String(url.searchParams.get('dateFrom') || '').trim();
+  const dateFrom = /^\d{4}-\d{2}-\d{2}$/.test(dateFromParam) ? dateFromParam : getTodayDateStr(cfg.tz);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom)){
+    return new Response(JSON.stringify({ ok:false, error:'invalid_date_from' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const windows = parseDailyWindows(cfg.windowsStr, cfg.stepMin);
+  const now = nowMs();
+  const items = [];
+  for (let i=0;i<days;i++){
+    const dateStr = addDaysDateStr(dateFrom, i);
+    if (!dateStr) continue;
+    const slots = [];
+    for (const win of windows){
+      for (let t=win.startMin; t<win.endMin; t+=cfg.stepMin){
+        const time = minutesToHHMM(t);
+        const hhmmNoColon = time.replace(':','');
+        const slotKey = buildSlotKey(serviceId, dateStr, hhmmNoColon);
+        let status = 'free';
+        let enabled = false;
+        try{
+          const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
+          if (raw){
+            const rec = JSON.parse(raw);
+            enabled = resolveSlotEnabled(rec);
+            status = resolveSlotStatus(rec, now);
+            if (rec && rec.status === 'held' && status === 'free'){
+              try{ await env.SERVICE_SLOTS_KV.delete(slotKey); }catch(_){}
+            }
+          }
+        }catch(_){}
+        slots.push({ slotKey, time, status, enabled });
+      }
+    }
+    items.push({ date: dateStr, slots });
+  }
+  return new Response(JSON.stringify({ ok:true, serviceId, dateFrom, days, items }), { status:200, headers: jsonHeadersFor(request, env) });
+}
+
+if (pathname === '/api/service/slot/hold' && request.method === 'POST') {
+  await cleanupExpiredHolds(env);
+  if (!env?.SERVICE_SLOTS_KV){
+    return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+  }
+  if (!env?.SERVICE_SLOT_HOLDS_KV){
+    return new Response(JSON.stringify({ ok:false, error:'holds_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+  }
   const svcUser = await getSessionUser(request, env);
   if (!svcUser) {
-    return new Response(JSON.stringify({ ok:false, error:'請先登入後再送出訂單' }), { status:401, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:false, error:'UNAUTHORIZED' }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  let body = null;
+  try{
+    body = await request.json();
+  }catch(_){
+    body = {};
+  }
+  const serviceId = String(body.serviceId || '').trim();
+  const slotKey = String(body.slotKey || '').trim();
+  if (!serviceId || !slotKey){
+    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const parsed = parseSlotKey(slotKey);
+  if (!parsed || parsed.serviceId !== serviceId){
+    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const now = nowMs();
+  const holdUserId = resolveHoldUserId(svcUser, request);
+  const existingHold = await hasActiveHoldForUser(env, holdUserId);
+  if (existingHold){
+    try{
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'slot_hold_rejected',
+        actorEmail: String(svcUser.email || ''),
+        actorRole: 'user',
+        ip: getClientIp(request) || '',
+        ua: request.headers.get('User-Agent') || '',
+        targetType: 'service_slot',
+        targetId: slotKey,
+        orderId: '',
+        slotKey,
+        meta: { slotKey, orderId:'', userId: holdUserId, reason: 'HOLD_LIMIT_REACHED' }
+      });
+    }catch(err){
+      console.warn('audit slot_hold_rejected failed', err);
+    }
+    return new Response(JSON.stringify({ ok:false, error:'HOLD_LIMIT_REACHED' }), { status:409, headers: jsonHeadersFor(request, env) });
+  }
+  let enabled = false;
+  try{
+    const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
+    if (raw){
+      const rec = JSON.parse(raw);
+      enabled = resolveSlotEnabled(rec);
+      const status = resolveSlotStatus(rec, now);
+      if (status === 'blocked'){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+      if (!enabled){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+      if (status === 'booked'){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+      if (status === 'held'){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+    }else{
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+  }catch(_){}
+  const cfg = getSlotConfig(env);
+  const holdTtlMs = cfg.holdTtlMin * 60 * 1000;
+  const heldUntil = now + holdTtlMs;
+  const holdToken = (crypto && crypto.randomUUID) ? crypto.randomUUID() : makeToken(24);
+  const slotRecord = {
+    serviceId,
+    slotKey,
+    date: parsed.dateStr,
+    time: parsed.hhmm,
+    enabled: true,
+    status: 'held',
+    heldUntil,
+    holdToken,
+    bookedOrderId: '',
+    holdBy: holdUserId,
+    holdExpiresAt: heldUntil
+  };
+  await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(slotRecord));
+  const holdKey = `hold:${holdToken}`;
+  const holdRecord = { serviceId, slotKey, expiresAt: heldUntil, holdExpiresAt: heldUntil, holdBy: holdUserId, userId: holdUserId, createdAt: new Date().toISOString() };
+  await env.SERVICE_SLOT_HOLDS_KV.put(holdKey, JSON.stringify(holdRecord), { expirationTtl: Math.ceil(cfg.holdTtlMin * 60) });
+  try{
+    await auditAppend(env, {
+      ts: new Date().toISOString(),
+      action: 'slot_hold_created',
+      actorEmail: String(svcUser.email || ''),
+      actorRole: 'user',
+      ip: getClientIp(request) || '',
+      ua: request.headers.get('User-Agent') || '',
+      targetType: 'service_slot',
+      targetId: slotKey,
+      orderId: '',
+      slotKey,
+      meta: { orderId:'', slotKey, userId: holdUserId }
+    });
+  }catch(err){
+    console.warn('audit slot_hold_created failed', err);
+  }
+  return new Response(JSON.stringify({
+    ok:true,
+    holdToken,
+    slotKey,
+    heldUntil,
+    expiresInSec: Math.max(0, Math.floor((heldUntil - now) / 1000))
+  }), { status:200, headers: jsonHeadersFor(request, env) });
+}
+
+if (pathname === '/api/service/order/reschedule-request' && request.method === 'POST') {
+  await cleanupExpiredHolds(env);
+  if (!env?.SERVICE_RESCHEDULE_KV){
+    return new Response(JSON.stringify({ ok:false, error:'reschedule_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+  }
+  const store = env.SERVICE_ORDERS || env.ORDERS;
+  if (!store){
+    return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeadersFor(request, env) });
+  }
+  let body = {};
+  try{
+    body = await request.json();
+  }catch(_){}
+  const orderId = String(body.orderId || '').trim();
+  if (!orderId){
+    return new Response(JSON.stringify({ ok:false, error:'missing_order_id' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const orderRaw = await store.get(orderId);
+  if (!orderRaw){
+    return new Response(JSON.stringify({ ok:false, error:'order_not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+  }
+  let order = null;
+  try{ order = JSON.parse(orderRaw); }catch(_){}
+  if (!order){
+    return new Response(JSON.stringify({ ok:false, error:'order_not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+  }
+  const svcUser = await getSessionUser(request, env);
+  let authed = false;
+  if (svcUser){
+    const uid = String(svcUser.id || '').trim();
+    const userEmail = String(svcUser.email || '').trim().toLowerCase();
+    const orderUid = String(order?.buyer?.uid || '').trim();
+    const orderEmail = String(order?.buyer?.email || order?.email || '').trim().toLowerCase();
+    if (uid && orderUid && uid === orderUid) authed = true;
+    if (!authed && userEmail && orderEmail && userEmail === orderEmail) authed = true;
+  }
+  if (!authed){
+    const inputPhone = String(body.phone || '').trim();
+    const transferLast5 = String(body.transferLast5 || '').trim();
+    const normInput = normalizeTWPhoneStrict(inputPhone);
+    const normOrder = normalizeTWPhoneStrict(order?.buyer?.phone || '');
+    if (!inputPhone || !transferLast5 || !normInput || !normOrder || normInput !== normOrder || String(order.transferLast5 || '').trim() !== transferLast5){
+      return new Response(JSON.stringify({ ok:false, error:'UNAUTHORIZED' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+  }
+  const statusLabel = String(order.status || '').trim();
+  if (/已完成|完成|已取消|取消/i.test(statusLabel)){
+    return new Response(JSON.stringify({ ok:false, error:'TOO_LATE' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  const cfg = getRescheduleConfig(env);
+  const slotStartMs = parseSlotStartToMs(order.slotStart || '');
+  if (!slotStartMs){
+    return new Response(JSON.stringify({ ok:false, error:'missing_slot_start' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  if (Date.now() > (slotStartMs - cfg.ruleHours * 3600 * 1000)){
+    return new Response(JSON.stringify({ ok:false, error:'TOO_LATE' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  try{
+    const idxRaw = await env.SERVICE_RESCHEDULE_KV.get('reschedule:index');
+    const ids = idxRaw ? String(idxRaw).split('\n').filter(Boolean) : [];
+    for (const id of ids){
+      const raw = await env.SERVICE_RESCHEDULE_KV.get(`reschedule:${id}`);
+      if (!raw) continue;
+      let rec = null;
+      try{ rec = JSON.parse(raw); }catch(_){}
+      if (!rec) continue;
+      if (String(rec.orderId || '') === orderId && String(rec.status || '') === 'pending'){
+        return new Response(JSON.stringify({ ok:false, error:'ALREADY_REQUESTED' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+    }
+  }catch(err){
+    console.warn('reschedule duplicate check failed', err);
+  }
+  const desiredSlotKey = String(body.desiredSlotKey || body.slotKey || '').trim();
+  if (desiredSlotKey){
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const parsed = parseSlotKey(desiredSlotKey);
+    if (!parsed || String(parsed.serviceId) !== String(order.serviceId || '').trim()){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_slot' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const slotRaw = await env.SERVICE_SLOTS_KV.get(desiredSlotKey);
+    if (!slotRaw){
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    let slotRec = null;
+    try{ slotRec = JSON.parse(slotRaw); }catch(_){}
+    const enabled = resolveSlotEnabled(slotRec);
+    const status = resolveSlotStatus(slotRec, nowMs());
+    if (!enabled){
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    if (status !== 'free'){
+      return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+  }
+  const nowIso = new Date().toISOString();
+  const actor = {
+    email: svcUser ? String(svcUser.email || '') : '',
+    phone: svcUser ? String(svcUser.phone || '') : String(body.phone || ''),
+    uid: svcUser ? String(svcUser.id || '') : ''
+  };
+  const buyer = order && order.buyer ? order.buyer : {};
+  const record = {
+    id: buildRescheduleId(),
+    orderId,
+    serviceId: String(order.serviceId || '').trim(),
+    currentSlotKey: String(order.slotKey || '').trim(),
+    desiredSlotKey,
+    note: String(body.note || '').trim(),
+    status: 'pending',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    customerName: String(buyer.name || '').trim(),
+    customerEmail: String(buyer.email || '').trim(),
+    customerPhone: String(buyer.phone || '').trim(),
+    actor,
+    approvedBy: '',
+    rejectedBy: ''
+  };
+  await env.SERVICE_RESCHEDULE_KV.put(`reschedule:${record.id}`, JSON.stringify(record));
+  await updateRescheduleIndex(env, record.id);
+  try{
+    const actorInfo = await buildAuditActor(request, env);
+    await auditAppend(env, Object.assign({
+      ts: nowIso,
+      action: 'reschedule_requested',
+      targetType: 'service_order',
+      targetId: orderId,
+      orderId,
+      slotKey: desiredSlotKey,
+      meta: { requestId: record.id, desiredSlotKey, slotKey: desiredSlotKey, orderId }
+    }, actorInfo || { actorEmail: actor.email || '', actorRole: 'user', ip: getClientIp(request) || '', ua: request.headers.get('User-Agent') || '' }));
+  }catch(err){
+    console.warn('audit reschedule_requested failed', err);
+  }
+  const adminTo = getRescheduleNotifyEmails(env);
+  if (adminTo.length){
+    const base = (env.SITE_URL || env.PUBLIC_SITE_URL || new URL(request.url).origin || '').replace(/\/$/, '');
+    const adminUrl = base ? `${base}/admin/slots` : '';
+    const email = buildRescheduleEmail({
+      type: 'requested',
+      orderId,
+      currentSlot: record.currentSlotKey || '',
+      desiredSlot: record.desiredSlotKey || '',
+      createdAt: record.createdAt,
+      note: record.note,
+      adminUrl
+    });
+    try{
+      await sendEmailMessage(env, {
+        to: adminTo,
+        subject: email.subject,
+        html: email.html,
+        text: email.text
+      });
+    }catch(err){
+      console.error('reschedule email failed', err);
+    }
+  }
+  return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeadersFor(request, env) });
+}
+
+if (pathname === '/api/service/order' && request.method === 'POST') {
+  await cleanupExpiredHolds(env);
+  const svcUser = await getSessionUser(request, env);
+  if (!svcUser) {
+    return new Response(JSON.stringify({ ok:false, error:'UNAUTHORIZED' }), { status:401, headers: jsonHeaders });
   }
   const svcUserRecord = await ensureUserRecord(env, svcUser);
   try{
@@ -9376,7 +10795,58 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     const transferMemo = String(body.transferMemo||'').trim();
     const transferBank = String(body.transferBank||'').trim();
     const transferAccount = String(body.transferAccount||'').trim();
-    const orderId = await generateServiceOrderId(env);
+    const slotKey = String(body.slotKey||'').trim();
+    const slotHoldToken = String(body.slotHoldToken||'').trim();
+    let orderId = '';
+    let slotStart = '';
+    if (slotKey){
+      const parsedSlot = parseSlotKey(slotKey);
+      if (parsedSlot){
+        slotStart = `${parsedSlot.dateStr} ${parsedSlot.hhmm}`;
+      }
+    }
+    if (slotKey && slotHoldToken){
+      if (!env?.SERVICE_SLOTS_KV || !env?.SERVICE_SLOT_HOLDS_KV){
+        return new Response(JSON.stringify({ ok:false, error:'slot_required_but_not_configured' }), { status:400, headers: jsonHeaders });
+      }
+      const now = nowMs();
+      const holdKey = `hold:${slotHoldToken}`;
+      const holdRaw = await env.SERVICE_SLOT_HOLDS_KV.get(holdKey);
+      if (!holdRaw){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_EXPIRED' }), { status:409, headers: jsonHeaders });
+      }
+      let hold = null;
+      try{ hold = JSON.parse(holdRaw); }catch(_){}
+      const holdExpires = Number(hold && (hold.holdExpiresAt || hold.expiresAt) || 0);
+      if (!hold || hold.serviceId !== serviceId || hold.slotKey !== slotKey || holdExpires <= now){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_EXPIRED' }), { status:409, headers: jsonHeaders });
+      }
+      const slotRaw = await env.SERVICE_SLOTS_KV.get(slotKey);
+      if (!slotRaw){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_EXPIRED' }), { status:409, headers: jsonHeaders });
+      }
+      let slotRec = null;
+      try{ slotRec = JSON.parse(slotRaw); }catch(_){}
+      if (!slotRec || slotRec.status !== 'held' || slotRec.holdToken !== slotHoldToken){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeaders });
+      }
+      if (Number(slotRec.holdExpiresAt || slotRec.heldUntil || 0) <= now){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_EXPIRED' }), { status:409, headers: jsonHeaders });
+      }
+      if (hold && slotRec.holdBy && hold.holdBy && String(slotRec.holdBy) !== String(hold.holdBy)){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_CONFLICT' }), { status:409, headers: jsonHeaders });
+      }
+      orderId = await generateServiceOrderId(env);
+      slotRec.status = 'booked';
+      slotRec.bookedOrderId = orderId;
+      slotRec.heldUntil = 0;
+      slotRec.holdToken = '';
+      slotRec.holdBy = '';
+      slotRec.holdExpiresAt = 0;
+      await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(slotRec));
+      try{ await env.SERVICE_SLOT_HOLDS_KV.delete(holdKey); }catch(_){}
+    }
+    if (!orderId) orderId = await generateServiceOrderId(env);
     const buyer = {
       name,
       nameEn: String(body.nameEn || body.buyer_name_en || body.buyer_nameEn || body.buyer?.nameEn || '').trim(),
@@ -9473,6 +10943,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       }),
       note: String(body.note||'').trim(),
       requestDate: String(body.requestDate||'').trim(),
+      slotKey: slotKey || '',
+      slotStart: slotStart || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       resultToken: makeToken(24),
@@ -9510,9 +10982,45 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       }
     }
     try{
-      await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created' });
+      await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:true });
     }catch(err){
       console.error('service order email error', err);
+    }
+    try{
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'order_created',
+        actorEmail: String(buyer.email || ''),
+        actorRole: 'user',
+        ip: getClientIp(request) || '',
+        ua: request.headers.get('User-Agent') || '',
+        targetType: 'service_order',
+        targetId: order.id,
+        orderId: order.id,
+        slotKey: slotKey || '',
+        meta: { orderId: order.id, slotKey: slotKey || '' }
+      });
+    }catch(err){
+      console.warn('audit order_created failed', err);
+    }
+    if (slotKey){
+      try{
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'slot_confirmed',
+          actorEmail: String(buyer.email || ''),
+          actorRole: 'user',
+          ip: getClientIp(request) || '',
+          ua: request.headers.get('User-Agent') || '',
+          targetType: 'service_slot',
+          targetId: slotKey,
+          orderId: order.id,
+          slotKey,
+          meta: { orderId: order.id, slotKey }
+        });
+      }catch(err){
+        console.warn('audit slot_confirmed failed', err);
+      }
     }
     // 會員折扣關閉，無需記錄使用
     try{
