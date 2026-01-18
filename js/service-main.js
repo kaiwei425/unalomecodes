@@ -68,6 +68,8 @@
   const contactEmailInput = checkoutForm ? checkoutForm.querySelector('input[name="email"]') : null;
   const contactBirthInput = checkoutForm ? checkoutForm.querySelector('input[name="birth"]') : null;
   const contactNoteInput = checkoutForm ? checkoutForm.querySelector('textarea[name="note"]') : null;
+  const contactNameEnWrap = contactNameEnInput ? contactNameEnInput.closest('label') : null;
+  const contactBirthWrap = contactBirthInput ? contactBirthInput.closest('label') : null;
   const contactPhotoInput = document.getElementById('svcContactPhoto');
   const contactPhotoName = document.getElementById('svcContactPhotoName');
   const contactPhotoWrap = document.getElementById('svcContactPhotoWrap');
@@ -140,6 +142,7 @@
   let __PHONE_SVC_ID__ = null;
   let requestDateLabelOriginal = '';
   let requestDateHintOriginal = '';
+  let notePlaceholderOriginal = '';
   let CONSULT_PACK = null;
   let CONSULT_ADDON = false;
   let CURRENT_DETAIL_SLOT = {
@@ -372,6 +375,7 @@
 
   function isRitualPhotoRequired(service){
     if (!service) return true;
+    if (isPhoneConsultService(service)) return false;
     if (Object.prototype.hasOwnProperty.call(service, 'ritualPhotoRequired')) return !!service.ritualPhotoRequired;
     if (Object.prototype.hasOwnProperty.call(service, 'photoRequired')) return !!service.photoRequired;
     if (Object.prototype.hasOwnProperty.call(service, 'requirePhoto')) return !!service.requirePhoto;
@@ -708,6 +712,35 @@
       checkoutRitualPhoto = { url:'', name:'' };
       if (contactPhotoInput) contactPhotoInput.value = '';
       if (contactPhotoName) contactPhotoName.textContent = '';
+    }
+  }
+
+  function applyPhoneConsultCheckoutFields(isPhone, serviceName, photoRequired){
+    if (contactNameEnWrap){
+      contactNameEnWrap.style.display = isPhone ? 'none' : '';
+      if (contactNameEnInput) {
+        contactNameEnInput.required = !isPhone;
+        if (isPhone) contactNameEnInput.value = '';
+      }
+    }
+    if (contactBirthWrap){
+      contactBirthWrap.style.display = isPhone ? 'none' : '';
+      if (contactBirthInput){
+        contactBirthInput.required = !isPhone;
+        if (isPhone) contactBirthInput.value = '';
+      }
+    }
+    if (contactNoteInput){
+      if (!notePlaceholderOriginal) notePlaceholderOriginal = contactNoteInput.placeholder || '';
+      contactNoteInput.placeholder = isPhone
+        ? '可以把要問的問題先整理在這裡，或是預約成功後 至會員中心我的訂單內 問與答 留言欲提問問題'
+        : notePlaceholderOriginal;
+      contactNoteInput.required = false;
+    }
+    if (isPhone){
+      applyPhotoRequirement(false, serviceName);
+    }else{
+      applyPhotoRequirement(!!photoRequired, serviceName);
     }
   }
 
@@ -1526,7 +1559,7 @@
     if (checkoutForm){
       checkoutForm.reset();
     }
-    applyPhotoRequirement(true, '');
+    applyPhoneConsultCheckoutFields(false, '', true);
     setCheckoutStep(1);
     setRequestDateMin();
   }
@@ -1537,8 +1570,9 @@
       const cart = loadCart();
       if (cart && cart.length){
         const serviceName = cart[0].serviceName || '';
+        const isPhone = cart.some(item => isPhoneConsultService(item));
         const photoRequired = cart.some(item => isRitualPhotoRequired(item));
-        applyPhotoRequirement(photoRequired, serviceName);
+        applyPhoneConsultCheckoutFields(isPhone, serviceName, photoRequired);
       }
     }catch(_){}
     const fd = new FormData(checkoutForm);
@@ -1553,7 +1587,9 @@
       alert('請輸入聯絡人姓名');
       return null;
     }
-    if (!nameEn){
+    const cart = loadCart();
+    const isPhone = Array.isArray(cart) && cart.some(item => isPhoneConsultService(item));
+    if (!isPhone && !nameEn){
       alert('請輸入英文姓名');
       return null;
     }
@@ -1566,11 +1602,11 @@
       alert('請輸入 Email');
       return null;
     }
-    if (!birth){
+    if (!isPhone && !birth){
       alert('請填寫生日');
       return null;
     }
-    if (isCheckoutPhotoRequired()){
+    if (!isPhone && isCheckoutPhotoRequired()){
       if (!contactPhotoInput || !contactPhotoInput.files || !contactPhotoInput.files[0]){
         alert('請上傳祈福用照片');
         if (contactPhotoInput) contactPhotoInput.focus();
@@ -2260,9 +2296,10 @@
     if (sync.changed) saveCart(finalCart);
     const svcId = finalCart[0].serviceId || '';
     lastCartSnapshot = finalCart.map(item => Object.assign({}, item));
+    const isPhone = finalCart.some(item => isPhoneConsultService(item));
     const photoRequired = finalCart.some(item => isRitualPhotoRequired(item));
     const serviceName = finalCart[0] && finalCart[0].serviceName ? finalCart[0].serviceName : '';
-    applyPhotoRequirement(photoRequired, serviceName);
+    applyPhoneConsultCheckoutFields(isPhone, serviceName, photoRequired);
     applyRequestDateVisibility(cart);
     const selectedOpts = [];
     finalCart.forEach(it => {

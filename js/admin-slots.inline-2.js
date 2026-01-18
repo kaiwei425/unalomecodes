@@ -138,11 +138,30 @@
     if (btnEn) btnEn.classList.toggle('is-active', ADMIN_LANG === 'en');
   }
 
+  function ensureServiceIdInput(){
+    if (document.getElementById('serviceIdInput')) return;
+    var wrap = document.querySelector('.slot-controls');
+    if (!wrap) return;
+    var label = document.createElement('label');
+    label.setAttribute('data-i18n', 'label_service');
+    label.textContent = '服務 ID';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'serviceIdInput';
+    input.name = 'serviceId';
+    input.placeholder = '輸入 serviceId';
+    label.appendChild(input);
+    wrap.insertBefore(label, wrap.firstChild);
+  }
+
   function setLang(lang){
     ADMIN_LANG = (lang === 'en') ? 'en' : 'zh';
     try{ localStorage.setItem('adminLang', ADMIN_LANG); }catch(_){}
     applyI18n();
   }
+  ADMIN_LANG = detectDefaultLang();
+  ensureServiceIdInput();
+  applyI18n();
   var guardEl = document.getElementById('slotsGuard');
   var statusEl = document.getElementById('slotStatus');
   var serviceIdInput = document.getElementById('serviceIdInput');
@@ -164,8 +183,6 @@
   var rescheduleCursor = '';
   var rescheduleBusy = false;
 
-  ADMIN_LANG = detectDefaultLang();
-  applyI18n();
   if (langZh) langZh.addEventListener('click', function(){ setLang('zh'); });
   if (langEn) langEn.addEventListener('click', function(){ setLang('en'); });
 
