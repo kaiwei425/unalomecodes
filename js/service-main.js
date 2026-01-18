@@ -1467,7 +1467,7 @@
     }
     resetSlotState();
     slotSection.style.display = '';
-    slotHintEl.textContent = '僅顯示已開放時段，先選先贏（保留 15 分鐘）';
+    slotHintEl.textContent = '僅顯示可開放預約時段，（保留 15 分鐘）';
     const serviceId = resolveServiceId(service);
     restoreHoldForService(serviceId);
     try{
