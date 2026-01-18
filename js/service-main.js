@@ -145,6 +145,7 @@
   let notePlaceholderOriginal = '';
   let CONSULT_PACK = null;
   let CONSULT_ADDON = false;
+  const PHONE_BASE_PRICE = 3500;
   let CURRENT_DETAIL_SLOT = {
     serviceId: '',
     slotKey: '',
@@ -960,6 +961,15 @@
     return { key:'zh', label:'中文翻譯', price: 4000 };
   }
 
+  function getPhoneBasePrice(){
+    return PHONE_BASE_PRICE;
+  }
+
+  function getConsultPackDelta(pack){
+    if (!pack) return 0;
+    return pack.key === 'zh' ? 500 : 0;
+  }
+
   function applyConsultPack(key){
     CONSULT_PACK = resolveConsultPack(key);
     consultPackPills.forEach(btn=>{
@@ -1723,7 +1733,7 @@
         <div class="name">${escapeHtml(service.name||'服務')}</div>
         ${limitedRow}
         <div class="meta"><span class="badge badge-sold">已售出：${sold}</span></div>
-        <div class="price">${formatTWD(service.price)}</div>
+        <div class="price">${formatTWD(isPhoneConsultService(service) ? getPhoneBasePrice() : service.price)}</div>
         <div class="cta">
           <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
         </div>
@@ -1895,6 +1905,13 @@
 
   function populateVariantSelect(service){
     if (!detailVariant) return;
+    if (isPhoneConsultService(service)){
+      if (detailOptionsWrap) detailOptionsWrap.style.display = 'none';
+      detailVariant.innerHTML = '';
+      detailVariant.disabled = true;
+      detailVariant.value = '';
+      return;
+    }
     const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
     if (!options.length){
       detailOptionsWrap.style.display = 'none';
@@ -1911,6 +1928,7 @@
 
   function getVariantSelection(service){
     if (!detailVariant) return null;
+    if (isPhoneConsultService(service)) return null;
     const options = Array.isArray(service.options) ? service.options.filter(opt => opt && opt.name) : [];
     if (!options.length) return null;
     const val = detailVariant.value;
@@ -1927,9 +1945,9 @@
     const diff = variant ? Number(variant.price||0) : 0;
     let unit = base + diff;
     if (isPhoneConsultService(detailDataset)){
-      const packPrice = CONSULT_PACK ? Number(CONSULT_PACK.price || 0) : 0;
-      unit = base <= 100 ? packPrice : base + packPrice;
-      if (CONSULT_ADDON) unit += 500;
+      const pack = CONSULT_PACK || resolveConsultPack('en');
+      const packDelta = getConsultPackDelta(pack);
+      unit = getPhoneBasePrice() + packDelta + (CONSULT_ADDON ? 500 : 0);
     }else{
       unit = base + diff;
     }
@@ -2158,7 +2176,8 @@
     if (!detail) return null;
     const options = Array.isArray(detail.options) ? detail.options.filter(opt=>opt && opt.name) : [];
     const variant = options.length ? getVariantSelection(detail) : null;
-    if (options.length && !variant){
+    const isPhone = isPhoneConsultService(detail);
+    if (options.length && !variant && !isPhone){
       alert('請先選擇服務項目');
       return null;
     }
@@ -2172,8 +2191,7 @@
     const feeLabel = qtyEnabled ? getServiceFeeLabel(detail) : '';
     const qtyLabel = qtyEnabled ? getServiceQtyLabel(detail) : '';
     const photoRequired = isRitualPhotoRequired(detail);
-    const isPhone = isPhoneConsultService(detail);
-    const basePrice = Number(detail.price||0);
+    const basePrice = isPhone ? getPhoneBasePrice() : Number(detail.price||0);
     const slotKey = isPhone ? CURRENT_DETAIL_SLOT.slotKey : '';
     const slotHoldToken = isPhone ? CURRENT_DETAIL_SLOT.slotHoldToken : '';
     const slotStart = isPhone ? CURRENT_DETAIL_SLOT.slotStart : '';
@@ -2183,14 +2201,14 @@
     const consultAddonPrice = isPhone && CONSULT_ADDON ? 500 : 0;
     let optionPrice = variant ? Number(variant.price||0) : 0;
     if (isPhone && consultPack){
-      optionPrice = (basePrice <= 100 ? (consultPackPrice - basePrice) : consultPackPrice);
+      optionPrice = getConsultPackDelta(consultPack);
     }
     return {
       uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
       serviceId: svcId,
       serviceName: detail.name || '服務',
       basePrice: basePrice,
-      optionName: variant ? variant.name : '',
+      optionName: isPhone ? (consultPack ? consultPack.label : '') : (variant ? variant.name : ''),
       optionPrice: optionPrice + addonPrice + consultAddonPrice,
       addonSummary,
       addonPrice,
@@ -2206,7 +2224,7 @@
       slotHoldUntilMs,
       consultPackKey: consultPack ? consultPack.key : '',
       consultPackLabel: consultPack ? consultPack.label : '',
-      consultPackPrice: consultPackPrice,
+      consultPackPrice: isPhone ? (basePrice + optionPrice) : consultPackPrice,
       consultAddonSummary: !!CONSULT_ADDON,
       consultAddonPrice: consultAddonPrice,
       image: (Array.isArray(detail.gallery) && detail.gallery[0]) || detail.cover || ''

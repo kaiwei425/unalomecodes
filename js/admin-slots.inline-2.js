@@ -270,6 +270,15 @@
     return new Date().toISOString().split('T')[0];
   }
 
+  function getDateValue(){
+    var val = dateInput ? dateInput.value : '';
+    if (!val){
+      val = todayStr();
+      if (dateInput) dateInput.value = val;
+    }
+    return val;
+  }
+
   function fetchAdmin(){
     return fetch('/api/auth/admin/me', { credentials:'include', cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
@@ -533,13 +542,13 @@
 
   function loadSlots(){
     var serviceId = getServiceIdValue();
-    var date = dateInput ? dateInput.value : '';
+    var date = getDateValue();
     if (!serviceId){
-      setStatus(t('msg_failed'), true);
+      setStatus('缺少 serviceId', true);
       return;
     }
     if (!date){
-      setStatus(t('msg_failed'), true);
+      setStatus('請選擇日期', true);
       return;
     }
     setStatus(t('msg_loading'));
@@ -551,6 +560,8 @@
           var err = (result.data && result.data.error) || '';
           if (result.data && result.data.error === 'slots_kv_not_configured'){
             setStatus(t('hint_kv_missing'), true);
+          }else if (result.data && result.data.error === 'missing_service_id'){
+            setStatus('缺少 serviceId', true);
           }else if (result.data && result.data.error === 'forbidden_role'){
             setStatus(t('msg_forbidden'), true);
           }else{
