@@ -38,6 +38,8 @@
   position:sticky;
   top:0;
   height:100vh;
+  overflow-y:auto;
+  overscroll-behavior:contain;
 }
 
 .admin-brand{
@@ -160,6 +162,44 @@
   flex:1;
   min-width:0;
   padding:24px 28px;
+}
+
+.admin-shell-applied .btn{
+  appearance:none;
+  border:1px solid var(--admin-border);
+  background:var(--admin-surface-2);
+  color:var(--admin-text);
+  border-radius:999px;
+  padding:9px 14px;
+  font-weight:800;
+  font-size:13px;
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.admin-shell-applied .btn:hover{
+  background:var(--admin-surface);
+  box-shadow:var(--admin-shadow-soft);
+  transform:translateY(-1px);
+}
+.admin-shell-applied .btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  transform:none;
+  box-shadow:none;
+}
+.admin-shell-applied .btn.primary{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+.admin-shell-applied .btn.primary:hover{
+  background:#0f172a;
+  border-color:#0f172a;
+}
+.admin-shell-applied .btn.gold{
+  background:#fff7ed;
+  border-color:#fed7aa;
+  color:#9a3412;
 }
 
 .admin-main .wrap{
