@@ -320,6 +320,11 @@
     updateDateNav();
   }
 
+  function initDateNav(){
+    todayISO = todayStr();
+    setCurrentDate(todayISO);
+  }
+
   function addDays(dateStr, delta){
     var d = new Date(String(dateStr || '') + 'T00:00:00');
     if (Number.isNaN(d.getTime())) return todayStr();
@@ -819,7 +824,7 @@
         }
       }
     }catch(_){}
-    setCurrentDate(todayStr());
+    initDateNav();
     if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
@@ -842,6 +847,7 @@
       loadSlots();
     });
     if (slotNextDay) slotNextDay.addEventListener('click', function(){
+      if (slotNextDay) slotNextDay.disabled = false;
       setCurrentDate(addDays(getDateValue(), 1));
       loadSlots();
     });
