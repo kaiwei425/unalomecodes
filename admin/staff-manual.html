@@ -13,79 +13,86 @@
 </head>
 <body class="admin-view staff-manual-view">
   <div class="wrap" data-admin-page="staff-manual">
-    <h1 data-i18n="manual_title">工作人員操作手冊 / Staff Manual</h1>
-    <div id="staffManualGuard" class="card" style="display:none;">無權限</div>
-    <div id="staffManualContent">
-      <section class="card">
-        <h2 data-i18n="section_role">1. 角色說明（Role Overview）</h2>
-        <ul>
-          <li><span data-i18n="role_owner">Owner：管理全部</span><div class="muted" data-i18n="role_owner_en">Owner: Full access</div></li>
-          <li><span data-i18n="role_booking">Booking：管理時段、處理改期</span><div class="muted" data-i18n="role_booking_en">Booking: Manage slots and reschedules</div></li>
-          <li><span data-i18n="role_fulfillment">Fulfillment：不可操作電話諮詢</span><div class="muted" data-i18n="role_fulfillment_en">Fulfillment: No access to phone consult</div></li>
-        </ul>
-      </section>
-
-      <section class="card">
-        <h2 data-i18n="section_flow">2. Phone Consult 流程圖（文字版）</h2>
-        <ol>
-          <li data-i18n="flow_1">Owner 建立 slot</li>
-          <li data-i18n="flow_2">使用者預約 → hold</li>
-          <li data-i18n="flow_3">成立訂單</li>
-          <li data-i18n="flow_4">通話完成</li>
-          <li data-i18n="flow_5">若需改期 → 申請 → 管理員處理</li>
-        </ol>
-        <div class="muted" data-i18n="flow_en">Owner creates slots → user holds a slot → order created → call completed → reschedule request (if needed) → admin handles.</div>
-      </section>
-
-      <section class="card">
-        <h2 data-i18n="section_slot">3. 時段管理規則</h2>
-        <ul>
-          <li data-i18n="slot_rule_1">一次只能 hold 一個 slot</li>
-          <li data-i18n="slot_rule_2">Slot 有效時間（系統控制）</li>
-          <li data-i18n="slot_rule_3">過期自動釋放</li>
-          <li data-i18n="slot_rule_4">不可手動修改訂單 slot</li>
-        </ul>
-        <div class="muted" data-i18n="slot_rule_en">Only one hold per user. Hold TTL is system-controlled and expires automatically. Do not manually edit order slots.</div>
-      </section>
-
-      <section class="card">
-        <h2 data-i18n="section_reschedule">4. 改期處理規則</h2>
-        <ul>
-          <li data-i18n="reschedule_rule_1">僅限 48 小時前</li>
-          <li data-i18n="reschedule_rule_2">一筆訂單只能申請一次</li>
-          <li data-i18n="reschedule_rule_3">可 Approve / Reject</li>
-          <li data-i18n="reschedule_rule_4">會寄雙語通知信</li>
-        </ul>
-        <div class="muted" data-i18n="reschedule_rule_en">Requests must be 48+ hours before the slot, one request per order. Approve or reject; bilingual emails are sent automatically.</div>
-      </section>
-
-      <section class="card">
-        <h2 style="color:#b91c1c;" data-i18n="section_forbidden">5. 禁止事項（紅字）</h2>
-        <ul style="color:#b91c1c;">
-          <li data-i18n="forbidden_1">不可私下改 slot</li>
-          <li data-i18n="forbidden_2">不可代客人建立訂單</li>
-          <li data-i18n="forbidden_3">不可刪除歷史訂單</li>
-          <li data-i18n="forbidden_4">不可修改付款資料</li>
-        </ul>
-        <div class="muted" data-i18n="forbidden_en">Do not modify slots privately, create orders on behalf of customers, delete order history, or edit payment data.</div>
-      </section>
-
-      <section class="card">
-        <h2 data-i18n="section_faq">6. 常見問題（FAQ）</h2>
-        <div>
-          <strong data-i18n="faq_q1">為什麼 slot 不能選？</strong>
-          <div class="muted" data-i18n="faq_a1">可能未發布、已滿、或已被保留。</div>
+    <div class="page">
+      <div class="page-head">
+        <div class="page-title">
+          <h1 data-i18n="manual_title">工作人員操作手冊 / Staff Manual</h1>
+          <div class="page-sub">Phone consult operation guide for staff</div>
         </div>
-        <div style="margin-top:8px;">
-          <strong data-i18n="faq_q2">為什麼不能改期？</strong>
-          <div class="muted" data-i18n="faq_a2">已超過 48 小時限制或已送出改期申請。</div>
-        </div>
-        <div style="margin-top:8px;">
-          <strong data-i18n="faq_q3">為什麼我看不到電話算命？</strong>
-          <div class="muted" data-i18n="faq_a3">非 admin/booking 或目前無可用時段。</div>
-        </div>
-        <div class="muted" style="margin-top:8px;" data-i18n="faq_en">FAQ: Slots may be unpublished, full, or held. Reschedule may be too late or already requested. Visibility depends on role and availability.</div>
-      </section>
+      </div>
+      <div id="staffManualGuard" class="card" style="display:none;">無權限</div>
+      <div id="staffManualContent" class="page-body">
+        <section class="panel">
+          <h2 data-i18n="section_role">1. 角色說明（Role Overview）</h2>
+          <ul>
+            <li><span data-i18n="role_owner">Owner：管理全部</span><div class="muted" data-i18n="role_owner_en">Owner: Full access</div></li>
+            <li><span data-i18n="role_booking">Booking：管理時段、處理改期</span><div class="muted" data-i18n="role_booking_en">Booking: Manage slots and reschedules</div></li>
+            <li><span data-i18n="role_fulfillment">Fulfillment：不可操作電話諮詢</span><div class="muted" data-i18n="role_fulfillment_en">Fulfillment: No access to phone consult</div></li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2 data-i18n="section_flow">2. Phone Consult 流程圖（文字版）</h2>
+          <ol>
+            <li data-i18n="flow_1">Owner 建立 slot</li>
+            <li data-i18n="flow_2">使用者預約 → hold</li>
+            <li data-i18n="flow_3">成立訂單</li>
+            <li data-i18n="flow_4">通話完成</li>
+            <li data-i18n="flow_5">若需改期 → 申請 → 管理員處理</li>
+          </ol>
+          <div class="muted" data-i18n="flow_en">Owner creates slots → user holds a slot → order created → call completed → reschedule request (if needed) → admin handles.</div>
+        </section>
+
+        <section class="panel">
+          <h2 data-i18n="section_slot">3. 時段管理規則</h2>
+          <ul>
+            <li data-i18n="slot_rule_1">一次只能 hold 一個 slot</li>
+            <li data-i18n="slot_rule_2">Slot 有效時間（系統控制）</li>
+            <li data-i18n="slot_rule_3">過期自動釋放</li>
+            <li data-i18n="slot_rule_4">不可手動修改訂單 slot</li>
+          </ul>
+          <div class="muted" data-i18n="slot_rule_en">Only one hold per user. Hold TTL is system-controlled and expires automatically. Do not manually edit order slots.</div>
+        </section>
+
+        <section class="panel">
+          <h2 data-i18n="section_reschedule">4. 改期處理規則</h2>
+          <ul>
+            <li data-i18n="reschedule_rule_1">僅限 48 小時前</li>
+            <li data-i18n="reschedule_rule_2">一筆訂單只能申請一次</li>
+            <li data-i18n="reschedule_rule_3">可 Approve / Reject</li>
+            <li data-i18n="reschedule_rule_4">會寄雙語通知信</li>
+          </ul>
+          <div class="muted" data-i18n="reschedule_rule_en">Requests must be 48+ hours before the slot, one request per order. Approve or reject; bilingual emails are sent automatically.</div>
+        </section>
+
+        <section class="panel">
+          <h2 style="color:#b91c1c;" data-i18n="section_forbidden">5. 禁止事項（紅字）</h2>
+          <ul style="color:#b91c1c;">
+            <li data-i18n="forbidden_1">不可私下改 slot</li>
+            <li data-i18n="forbidden_2">不可代客人建立訂單</li>
+            <li data-i18n="forbidden_3">不可刪除歷史訂單</li>
+            <li data-i18n="forbidden_4">不可修改付款資料</li>
+          </ul>
+          <div class="muted" data-i18n="forbidden_en">Do not modify slots privately, create orders on behalf of customers, delete order history, or edit payment data.</div>
+        </section>
+
+        <section class="panel">
+          <h2 data-i18n="section_faq">6. 常見問題（FAQ）</h2>
+          <div>
+            <strong data-i18n="faq_q1">為什麼 slot 不能選？</strong>
+            <div class="muted" data-i18n="faq_a1">可能未發布、已滿、或已被保留。</div>
+          </div>
+          <div style="margin-top:8px;">
+            <strong data-i18n="faq_q2">為什麼不能改期？</strong>
+            <div class="muted" data-i18n="faq_a2">已超過 48 小時限制或已送出改期申請。</div>
+          </div>
+          <div style="margin-top:8px;">
+            <strong data-i18n="faq_q3">為什麼我看不到電話算命？</strong>
+            <div class="muted" data-i18n="faq_a3">非 admin/booking 或目前無可用時段。</div>
+          </div>
+          <div class="muted" style="margin-top:8px;" data-i18n="faq_en">FAQ: Slots may be unpublished, full, or held. Reschedule may be too late or already requested. Visibility depends on role and availability.</div>
+        </section>
+      </div>
     </div>
   </div>
   <script src="/js/staff-manual.inline.js"></script>

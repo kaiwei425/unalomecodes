@@ -14,15 +14,20 @@
 <script src="/js/admin-shell.js" defer></script>
 </head>
 <body class="admin-view admin-fulfillment-view">
-  <div class="wrap">
-    <div class="backLink"><a class="backBtn" href="/admin">← 返回主選單</a></div>
-    <h1>出貨工作台</h1>
-
-    <div class="card">
-      <h2>📦 待出貨訂單</h2>
-      <div class="muted" id="physicalStatus">載入中...</div>
-      <div style="overflow:auto;">
-        <table id="physicalTable">
+  <div class="wrap" data-admin-page="fulfillment">
+    <div class="page">
+      <div class="page-head">
+        <div class="page-title">
+          <h1>出貨工作台</h1>
+          <div class="page-sub">Fulfillment queue for physical + service orders</div>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="panel">
+          <h2>📦 待出貨訂單</h2>
+          <div class="muted" id="physicalStatus">載入中...</div>
+          <div class="table-wrap">
+            <table id="physicalTable">
           <thead>
             <tr>
               <th style="min-width:180px">訂單編號</th>
@@ -32,16 +37,16 @@
             </tr>
           </thead>
           <tbody id="physicalBody"></tbody>
-        </table>
-      </div>
-      <div class="muted" id="physicalEmpty" style="display:none;">目前沒有待處理任務</div>
-    </div>
+            </table>
+          </div>
+          <div class="muted" id="physicalEmpty" style="display:none;">目前沒有待處理任務</div>
+        </div>
 
-    <div class="card" style="margin-top:16px;">
-      <h2>🧘‍♂️ 服務訂單工作列</h2>
-      <div class="muted" id="serviceStatus">載入中...</div>
-      <div style="overflow:auto;">
-        <table id="serviceTable">
+        <div class="panel">
+          <h2>🧘‍♂️ 服務訂單工作列</h2>
+          <div class="muted" id="serviceStatus">載入中...</div>
+          <div class="table-wrap">
+            <table id="serviceTable">
           <thead>
             <tr>
               <th style="min-width:180px">訂單編號</th>
@@ -52,9 +57,11 @@
             </tr>
           </thead>
           <tbody id="serviceBody"></tbody>
-        </table>
+            </table>
+          </div>
+          <div class="muted" id="serviceEmpty" style="display:none;">目前沒有待處理任務</div>
+        </div>
       </div>
-      <div class="muted" id="serviceEmpty" style="display:none;">目前沒有待處理任務</div>
     </div>
   </div>
 
