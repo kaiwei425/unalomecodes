@@ -18,6 +18,7 @@
       label_day: '日期',
       label_slots: '時段',
       label_service_auto: '已自動帶入 serviceId',
+      label_service_id: 'Service ID',
       label_select: '選取',
       msg_loading: '載入中…',
       msg_done: '完成',
@@ -74,6 +75,7 @@
       label_day: 'Date',
       label_slots: 'Slots',
       label_service_auto: 'serviceId auto-filled',
+      label_service_id: 'Service ID',
       label_select: 'Select',
       msg_loading: 'Loading…',
       msg_done: 'Done',
@@ -131,15 +133,18 @@
 
   function applyI18n(){
     document.querySelectorAll('[data-i18n]').forEach(function(node){
+      if (node.children && node.children.length) return;
       var key = node.getAttribute('data-i18n');
       if (key) node.textContent = t(key);
     });
     var svcInput = document.getElementById('serviceIdInput') || document.querySelector('input[name="serviceId"]');
     if (svcInput) svcInput.placeholder = t('ph_service_id');
     var svcDisplay = document.getElementById('serviceIdDisplay');
-    if (svcDisplay && svcDisplay.dataset.auto === '1') svcDisplay.textContent = t('label_service_auto') + ': ' + (svcDisplay.dataset.value || '');
+    if (svcDisplay && svcDisplay.dataset.auto === '1') svcDisplay.textContent = t('label_service_id') + ': ' + (svcDisplay.dataset.value || '');
     var svcHint = document.getElementById('serviceIdHint');
     if (svcHint && svcHint.dataset.auto === '1') svcHint.textContent = t('label_service_auto');
+    var dateEl = document.getElementById('dateInput');
+    if (dateEl) dateEl.setAttribute('aria-label', t('label_day'));
     var btnZh = document.getElementById('langZh');
     var btnEn = document.getElementById('langEn');
     if (btnZh) btnZh.classList.toggle('is-active', ADMIN_LANG === 'zh');
@@ -150,21 +155,20 @@
     if (document.getElementById('serviceIdInput')) return;
     var wrap = document.querySelector('.slot-controls');
     if (!wrap) return;
-    var label = document.createElement('label');
-    label.setAttribute('data-i18n', 'label_service');
-    label.textContent = '服務 ID';
+    var field = document.createElement('div');
+    field.className = 'slot-field';
     var input = document.createElement('input');
     input.type = 'text';
     input.id = 'serviceIdInput';
     input.name = 'serviceId';
     input.placeholder = '輸入 serviceId';
-    label.appendChild(input);
+    field.appendChild(input);
     var hint = document.createElement('div');
     hint.id = 'serviceIdHint';
     hint.className = 'muted';
     hint.style.marginTop = '4px';
-    label.appendChild(hint);
-    wrap.insertBefore(label, wrap.firstChild);
+    field.appendChild(hint);
+    wrap.insertBefore(field, wrap.firstChild);
   }
 
   function ensureDateInput(){
@@ -184,20 +188,20 @@
       }catch(_){}
       return;
     }
-    var label = document.createElement('label');
-    label.setAttribute('data-i18n', 'label_day');
-    label.textContent = '日期';
+    var field = document.createElement('div');
+    field.className = 'slot-field';
     var input = document.createElement('input');
     input.type = 'date';
     input.id = 'dateInput';
     input.removeAttribute('min');
     input.removeAttribute('max');
-    label.appendChild(input);
+    input.setAttribute('aria-label', t('label_day'));
+    field.appendChild(input);
     var btn = document.getElementById('btnLoad');
     if (btn && btn.parentNode === wrap){
-      wrap.insertBefore(label, btn);
+      wrap.insertBefore(field, btn);
     }else{
-      wrap.appendChild(label);
+      wrap.appendChild(field);
     }
   }
 
@@ -263,13 +267,12 @@
             hint.dataset.auto = '1';
             hint.textContent = t('label_service_auto');
           }
-        }else{
-          var display = ensureServiceIdDisplay();
-          if (display){
-            display.dataset.auto = '1';
-            display.dataset.value = svcId;
-            display.textContent = t('label_service_auto') + ': ' + svcId;
-          }
+        }
+        var display = ensureServiceIdDisplay();
+        if (display){
+          display.dataset.auto = '1';
+          display.dataset.value = svcId;
+          display.textContent = t('label_service_id') + ': ' + svcId;
         }
       })
       .catch(function(){});
