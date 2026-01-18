@@ -174,6 +174,7 @@
   var guardEl = document.getElementById('slotsGuard');
   var statusEl = document.getElementById('slotStatus');
   var serviceIdInput = document.getElementById('serviceIdInput');
+  var autoServiceId = '';
   var dateInput = document.getElementById('dateInput');
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
@@ -192,21 +193,40 @@
   var rescheduleCursor = '';
   var rescheduleBusy = false;
 
+  function ensureServiceIdDisplay(){
+    var wrap = document.querySelector('.slot-controls');
+    if (!wrap) return null;
+    var display = document.getElementById('serviceIdDisplay');
+    if (display) return display;
+    display = document.createElement('div');
+    display.id = 'serviceIdDisplay';
+    display.className = 'muted';
+    display.style.fontWeight = '700';
+    display.style.marginTop = '4px';
+    wrap.insertBefore(display, wrap.firstChild);
+    return display;
+  }
+
   function applyServiceIdAutoFill(){
-    if (!serviceIdInput) return;
     fetch('/api/service/phone-consult/config', { credentials:'include', cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
       .then(function(result){
-        if (!result.ok || !serviceIdInput) return;
+        if (!result.ok) return;
         var svcId = String(result.data.serviceId || '').trim();
         if (!svcId) return;
-        serviceIdInput.value = svcId;
-        serviceIdInput.readOnly = true;
-        serviceIdInput.dataset.auto = '1';
-        var hint = document.getElementById('serviceIdHint');
-        if (hint){
-          hint.dataset.auto = '1';
-          hint.textContent = t('label_service_auto');
+        autoServiceId = svcId;
+        if (serviceIdInput){
+          serviceIdInput.value = svcId;
+          serviceIdInput.readOnly = true;
+          serviceIdInput.dataset.auto = '1';
+          var hint = document.getElementById('serviceIdHint');
+          if (hint){
+            hint.dataset.auto = '1';
+            hint.textContent = t('label_service_auto');
+          }
+        }else{
+          var display = ensureServiceIdDisplay();
+          if (display) display.textContent = 'Service ID: ' + svcId;
         }
       })
       .catch(function(){});
@@ -505,8 +525,14 @@
     Array.from(nodes).forEach(function(node){ node.checked = false; });
   }
 
+  function getServiceIdValue(){
+    var val = serviceIdInput ? serviceIdInput.value.trim() : '';
+    if (val) return val;
+    return autoServiceId || '';
+  }
+
   function loadSlots(){
-    var serviceId = serviceIdInput ? serviceIdInput.value.trim() : '';
+    var serviceId = getServiceIdValue();
     var date = dateInput ? dateInput.value : '';
     if (!serviceId){
       setStatus(t('msg_failed'), true);
