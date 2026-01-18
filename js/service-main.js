@@ -129,7 +129,7 @@
   const slotMoreBtn = document.getElementById('svcSlotMore');
   const consultPackWrap = document.getElementById('svcConsultPack');
   const consultPackPills = Array.from(document.querySelectorAll('#svcConsultPack .svc-pack-pill'));
-  const consultAddonInput = document.getElementById('svcConsultAddonSummary');
+  let consultAddonInput = document.getElementById('svcConsultAddonSummary');
   const CART_KEY = 'svcCartItems';
   const SLOT_HOLD_KEY_PREFIX = 'svcSlotHold:';
   const SLOT_AVAIL_TTL_MS = 60 * 1000;
@@ -993,11 +993,12 @@
       clearConsultState();
       return;
     }
+    ensureConsultAddonUI();
     consultPackWrap.style.display = '';
     const savedKey = getConsultPackKeyFromStorage();
     const defaultKey = savedKey === 'en' || savedKey === 'zh' ? savedKey : 'zh';
     CONSULT_ADDON = getConsultAddonFromStorage();
-    if (consultAddonInput) consultAddonInput.value = CONSULT_ADDON ? '1' : '0';
+    setConsultAddonValue(CONSULT_ADDON);
     applyConsultPack(defaultKey);
     consultPackPills.forEach(btn=>{
       if (btn.__bound) return;
@@ -1009,7 +1010,7 @@
     if (consultAddonInput && !consultAddonInput.__bound){
       consultAddonInput.__bound = true;
       consultAddonInput.addEventListener('change', ()=>{
-        CONSULT_ADDON = String(consultAddonInput.value || '0') === '1';
+        CONSULT_ADDON = getConsultAddonValue();
         saveConsultState(CONSULT_PACK ? CONSULT_PACK.key : defaultKey, CONSULT_ADDON);
         updateDetailPrice();
       });
@@ -1177,22 +1178,15 @@
       timer = setTimeout(()=> controller.abort(), 5000);
     }
     try{
-      let res = await fetch(buildSlotsUrl(qs), {
+      const url = buildSlotsUrl(qs);
+      const res = await fetch(url, {
         credentials:'include',
         cache:'no-store',
         signal: controller ? controller.signal : undefined
       });
-      let data = await res.json().catch(()=>({}));
+      const data = await res.json().catch(()=>({}));
       if (!res.ok){
-        try{
-          const fallbackUrl = '/slots?' + qs.toString();
-          const fallbackRes = await fetch(fallbackUrl, { credentials:'include', cache:'no-store' });
-          const fallbackData = await fallbackRes.json().catch(()=>({}));
-          if (fallbackRes.ok){
-            res = fallbackRes;
-            data = fallbackData;
-          }
-        }catch(_){}
+        console.warn('[slots] fetch failed', res.status, url, data);
       }
       return { res, data };
     }finally{
@@ -3582,3 +3576,38 @@
     openServiceFromUrl();
   });
 })();
+  function ensureConsultAddonUI(){
+    if (!consultAddonInput) return;
+    if (consultAddonInput.tagName === 'SELECT') return;
+    const wrap = consultAddonInput.closest('.svc-pack-addon');
+    if (!wrap) return;
+    const hint = wrap.querySelector('.addon-hint');
+    const hintNode = hint ? hint.cloneNode(true) : null;
+    wrap.innerHTML = '';
+    const label = document.createElement('label');
+    label.className = 'addon-label';
+    label.textContent = '加購（選填）';
+    const select = document.createElement('select');
+    select.id = 'svcConsultAddonSummary';
+    select.className = 'svc-addon-select';
+    select.innerHTML = '<option value="0">不加購</option><option value="1">加購：轉譯＋重點摘要整理 + NT$ 500</option>';
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    if (hintNode) wrap.appendChild(hintNode);
+    consultAddonInput = select;
+  }
+
+  function getConsultAddonValue(){
+    if (!consultAddonInput) return false;
+    if (consultAddonInput.tagName === 'SELECT') return String(consultAddonInput.value || '0') === '1';
+    return !!consultAddonInput.checked;
+  }
+
+  function setConsultAddonValue(on){
+    if (!consultAddonInput) return;
+    if (consultAddonInput.tagName === 'SELECT'){
+      consultAddonInput.value = on ? '1' : '0';
+    }else{
+      consultAddonInput.checked = !!on;
+    }
+  }
