@@ -331,18 +331,24 @@
   function bindDateNav(){
     if (slotPrevDay && !slotPrevDay.__bound){
       slotPrevDay.__bound = true;
-      slotPrevDay.onclick = function(){
+      slotPrevDay.type = 'button';
+      slotPrevDay.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
         setCurrentDate(addDays(getDateValue(), -1));
         loadSlots();
-      };
+      }, true);
     }
     if (slotNextDay && !slotNextDay.__bound){
       slotNextDay.__bound = true;
-      slotNextDay.onclick = function(){
+      slotNextDay.type = 'button';
+      slotNextDay.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
         slotNextDay.disabled = false;
         setCurrentDate(addDays(getDateValue(), 1));
         loadSlots();
-      };
+      }, true);
     }
   }
 
