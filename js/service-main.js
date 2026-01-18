@@ -975,6 +975,42 @@
     return pack.key === 'zh' ? 500 : 0;
   }
 
+  function ensureConsultAddonUI(){
+    if (!consultAddonInput) return;
+    if (consultAddonInput.tagName === 'SELECT') return;
+    const wrap = consultAddonInput.closest('.svc-pack-addon');
+    if (!wrap) return;
+    const hint = wrap.querySelector('.addon-hint');
+    const hintNode = hint ? hint.cloneNode(true) : null;
+    wrap.innerHTML = '';
+    const label = document.createElement('label');
+    label.className = 'addon-label';
+    label.textContent = '加購（選填）';
+    const select = document.createElement('select');
+    select.id = 'svcConsultAddonSummary';
+    select.className = 'svc-addon-select';
+    select.innerHTML = '<option value="0">不加購</option><option value="1">加購：轉譯＋重點摘要整理 + NT$ 500</option>';
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    if (hintNode) wrap.appendChild(hintNode);
+    consultAddonInput = select;
+  }
+
+  function getConsultAddonValue(){
+    if (!consultAddonInput) return false;
+    if (consultAddonInput.tagName === 'SELECT') return String(consultAddonInput.value || '0') === '1';
+    return !!consultAddonInput.checked;
+  }
+
+  function setConsultAddonValue(on){
+    if (!consultAddonInput) return;
+    if (consultAddonInput.tagName === 'SELECT'){
+      consultAddonInput.value = on ? '1' : '0';
+    }else{
+      consultAddonInput.checked = !!on;
+    }
+  }
+
   function applyConsultPack(key){
     CONSULT_PACK = resolveConsultPack(key);
     consultPackPills.forEach(btn=>{
@@ -3591,38 +3627,3 @@
     openServiceFromUrl();
   });
 })();
-  function ensureConsultAddonUI(){
-    if (!consultAddonInput) return;
-    if (consultAddonInput.tagName === 'SELECT') return;
-    const wrap = consultAddonInput.closest('.svc-pack-addon');
-    if (!wrap) return;
-    const hint = wrap.querySelector('.addon-hint');
-    const hintNode = hint ? hint.cloneNode(true) : null;
-    wrap.innerHTML = '';
-    const label = document.createElement('label');
-    label.className = 'addon-label';
-    label.textContent = '加購（選填）';
-    const select = document.createElement('select');
-    select.id = 'svcConsultAddonSummary';
-    select.className = 'svc-addon-select';
-    select.innerHTML = '<option value="0">不加購</option><option value="1">加購：轉譯＋重點摘要整理 + NT$ 500</option>';
-    wrap.appendChild(label);
-    wrap.appendChild(select);
-    if (hintNode) wrap.appendChild(hintNode);
-    consultAddonInput = select;
-  }
-
-  function getConsultAddonValue(){
-    if (!consultAddonInput) return false;
-    if (consultAddonInput.tagName === 'SELECT') return String(consultAddonInput.value || '0') === '1';
-    return !!consultAddonInput.checked;
-  }
-
-  function setConsultAddonValue(on){
-    if (!consultAddonInput) return;
-    if (consultAddonInput.tagName === 'SELECT'){
-      consultAddonInput.value = on ? '1' : '0';
-    }else{
-      consultAddonInput.checked = !!on;
-    }
-  }
