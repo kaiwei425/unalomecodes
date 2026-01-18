@@ -134,6 +134,8 @@
     });
     var svcInput = document.getElementById('serviceIdInput') || document.querySelector('input[name="serviceId"]');
     if (svcInput) svcInput.placeholder = t('ph_service_id');
+    var svcDisplay = document.getElementById('serviceIdDisplay');
+    if (svcDisplay && svcDisplay.dataset.auto === '1') svcDisplay.textContent = t('label_service_auto') + ': ' + (svcDisplay.dataset.value || '');
     var svcHint = document.getElementById('serviceIdHint');
     if (svcHint && svcHint.dataset.auto === '1') svcHint.textContent = t('label_service_auto');
     var btnZh = document.getElementById('langZh');
@@ -163,6 +165,35 @@
     wrap.insertBefore(label, wrap.firstChild);
   }
 
+  function ensureDateInput(){
+    var existing = document.getElementById('dateInput');
+    var wrap = document.querySelector('.slot-controls');
+    if (!wrap) return;
+    if (existing){
+      try{
+        var rect = existing.getBoundingClientRect();
+        if (rect.width < 40){
+          existing.style.minWidth = '220px';
+          existing.style.display = 'block';
+        }
+      }catch(_){}
+      return;
+    }
+    var label = document.createElement('label');
+    label.setAttribute('data-i18n', 'label_day');
+    label.textContent = '日期';
+    var input = document.createElement('input');
+    input.type = 'date';
+    input.id = 'dateInput';
+    label.appendChild(input);
+    var btn = document.getElementById('btnLoad');
+    if (btn && btn.parentNode === wrap){
+      wrap.insertBefore(label, btn);
+    }else{
+      wrap.appendChild(label);
+    }
+  }
+
   function setLang(lang){
     ADMIN_LANG = (lang === 'en') ? 'en' : 'zh';
     try{ localStorage.setItem('adminLang', ADMIN_LANG); }catch(_){}
@@ -170,6 +201,7 @@
   }
   ADMIN_LANG = detectDefaultLang();
   ensureServiceIdInput();
+  ensureDateInput();
   applyI18n();
   var guardEl = document.getElementById('slotsGuard');
   var statusEl = document.getElementById('slotStatus');
@@ -226,7 +258,11 @@
           }
         }else{
           var display = ensureServiceIdDisplay();
-          if (display) display.textContent = 'Service ID: ' + svcId;
+          if (display){
+            display.dataset.auto = '1';
+            display.dataset.value = svcId;
+            display.textContent = t('label_service_auto') + ': ' + svcId;
+          }
         }
       })
       .catch(function(){});

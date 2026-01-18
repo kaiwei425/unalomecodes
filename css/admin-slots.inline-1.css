@@ -56,6 +56,10 @@ body.admin-slots-view .slot-controls input{
   border:1px solid var(--admin-border);
   background:#fff;
 }
+body.admin-slots-view #dateInput{
+  min-width:220px;
+  display:block;
+}
 body.admin-slots-view .slot-actions{
   margin-top:12px;
 }
