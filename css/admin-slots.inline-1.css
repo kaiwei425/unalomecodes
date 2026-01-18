@@ -45,7 +45,7 @@ body.admin-slots-view .slot-controls{
   display:grid;
   grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;
   gap:12px;
-  align-items:end;
+  align-items:center;
 }
 body.admin-slots-view .slot-controls .btn{
   height:40px;
@@ -77,6 +77,14 @@ body.admin-slots-view #dateInput{
   display:block;
   visibility:visible;
   opacity:1;
+}
+@media (max-width:900px){
+  body.admin-slots-view .slot-controls{
+    grid-template-columns:1fr;
+  }
+  body.admin-slots-view .slot-controls .btn{
+    width:100%;
+  }
 }
 body.admin-slots-view .slot-actions{
   margin-top:12px;

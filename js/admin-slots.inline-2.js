@@ -10,6 +10,7 @@
       btn_load: '載入時段',
       btn_publish: '開放選取時段',
       btn_unpublish: '取消開放',
+      btn_reopen: '重新開放',
       btn_block: '關閉選取時段',
       btn_unblock: '解除關閉',
       btn_select_all: '全選',
@@ -70,6 +71,7 @@
       btn_load: 'Load slots',
       btn_publish: 'Publish selected',
       btn_unpublish: 'Unpublish selected',
+      btn_reopen: 'Reopen selected',
       btn_block: 'Block selected',
       btn_unblock: 'Unblock selected',
       btn_select_all: 'Select all',
@@ -228,6 +230,7 @@
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
+  var btnReopen = document.getElementById('btnReopen');
   var btnUnblock = document.getElementById('btnUnblock');
   var btnSelectAll = document.getElementById('btnSelectAll');
   var btnClearSel = document.getElementById('btnClearSel');
@@ -385,6 +388,8 @@
         action = 'publish';
       }else if (status === 'free' && enabled){
         action = 'block';
+      }else if (status === 'blocked'){
+        action = 'unblock';
       }
       if (action){
         var labelWrap = document.createElement('label');
@@ -734,10 +739,12 @@
     }
     setStatus(t('msg_loading'));
     if (blocked) setButtonBusy(btnUnpublish, true);
+    if (!blocked) setButtonBusy(btnReopen, true);
     if (!blocked) setButtonBusy(btnUnblock, true);
     postAction('/api/admin/service/slots/block', { slotKeys: slotKeys, blocked: blocked })
       .then(function(result){
         setButtonBusy(btnUnpublish, false);
+        setButtonBusy(btnReopen, false);
         setButtonBusy(btnUnblock, false);
         if (!result.ok){
           var err = (result.data && result.data.error) || '';
@@ -757,6 +764,7 @@
       })
       .catch(function(){
         setButtonBusy(btnUnpublish, false);
+        setButtonBusy(btnReopen, false);
         setButtonBusy(btnUnblock, false);
         setStatus(t('msg_failed'), true);
       });
@@ -787,6 +795,7 @@
     if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
+    if (btnReopen) btnReopen.addEventListener('click', function(){ handleBlock(false); });
     if (btnSelectAll) btnSelectAll.addEventListener('click', function(){
       getSelectableSlotButtons().forEach(function(btn){
         selectSlotButton(btn, true);
