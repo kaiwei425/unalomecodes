@@ -9,6 +9,7 @@
       hint_kv_missing: '尚未設定 KV 綁定',
       btn_load: '載入時段',
       btn_publish: '開放選取時段',
+      btn_unpublish: '取消開放',
       btn_block: '關閉選取時段',
       btn_unblock: '解除關閉',
       btn_select_all: '全選',
@@ -66,6 +67,7 @@
       hint_kv_missing: 'KV binding is not configured',
       btn_load: 'Load slots',
       btn_publish: 'Publish selected',
+      btn_unpublish: 'Unpublish selected',
       btn_block: 'Block selected',
       btn_unblock: 'Unblock selected',
       btn_select_all: 'Select all',
@@ -221,7 +223,7 @@
   var dateInput = document.getElementById('dateInput');
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
-  var btnBlock = document.getElementById('btnBlock');
+  var btnUnpublish = document.getElementById('btnUnpublish');
   var btnUnblock = document.getElementById('btnUnblock');
   var btnSelectAll = document.getElementById('btnSelectAll');
   var btnClearSel = document.getElementById('btnClearSel');
@@ -376,6 +378,8 @@
       var action = '';
       if (status === 'free' && !enabled){
         action = 'publish';
+      }else if (status === 'free' && enabled){
+        action = 'block';
       }
       if (action){
         var labelWrap = document.createElement('label');
@@ -675,11 +679,11 @@
       return;
     }
     setStatus(t('msg_loading'));
-    if (blocked) setButtonBusy(btnBlock, true);
+    if (blocked) setButtonBusy(btnUnpublish, true);
     if (!blocked) setButtonBusy(btnUnblock, true);
     postAction('/api/admin/service/slots/block', { slotKeys: slotKeys, blocked: blocked })
       .then(function(result){
-        setButtonBusy(btnBlock, false);
+        setButtonBusy(btnUnpublish, false);
         setButtonBusy(btnUnblock, false);
         if (!result.ok){
           var err = (result.data && result.data.error) || '';
@@ -698,7 +702,7 @@
         loadSlots();
       })
       .catch(function(){
-        setButtonBusy(btnBlock, false);
+        setButtonBusy(btnUnpublish, false);
         setButtonBusy(btnUnblock, false);
         setStatus(t('msg_failed'), true);
       });
@@ -728,8 +732,7 @@
     }
     if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
-    if (btnBlock) btnBlock.addEventListener('click', function(){ handleBlock(true); });
-    if (btnUnblock) btnUnblock.addEventListener('click', function(){ handleBlock(false); });
+    if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
     if (btnSelectAll) btnSelectAll.addEventListener('click', function(){
       getSelectableSlotButtons().forEach(function(btn){
         selectSlotButton(btn, true);
