@@ -1666,14 +1666,7 @@
   }
 
   function getTzHintText(){
-    const now = new Date();
-    try{
-      const bkk = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Bangkok', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
-      const tpe = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
-      return `時區提示：曼谷 ${bkk} / 台北 ${tpe}`;
-    }catch(_){
-      return '時區提示：曼谷時間（UTC+7）/ 台北時間（UTC+8）';
-    }
+    return '時段顯示：曼谷時間（UTC+7），台北時間請 +1 小時 / Slot times are Bangkok time (UTC+7); Taipei is +1 hour.';
   }
 
   function renderCartPanel(){

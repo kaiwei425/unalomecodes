@@ -325,36 +325,30 @@
     todayISO = todayStr();
     setCurrentDate(todayISO);
     setTzHint();
+    if (slotNextDay) slotNextDay.disabled = false;
   }
 
   function bindDateNav(){
     if (slotPrevDay && !slotPrevDay.__bound){
       slotPrevDay.__bound = true;
-      slotPrevDay.addEventListener('click', function(){
+      slotPrevDay.onclick = function(){
         setCurrentDate(addDays(getDateValue(), -1));
         loadSlots();
-      });
+      };
     }
     if (slotNextDay && !slotNextDay.__bound){
       slotNextDay.__bound = true;
-      slotNextDay.addEventListener('click', function(){
+      slotNextDay.onclick = function(){
         slotNextDay.disabled = false;
         setCurrentDate(addDays(getDateValue(), 1));
         loadSlots();
-      });
+      };
     }
   }
 
   function setTzHint(){
     if (!slotTzHint) return;
-    const now = new Date();
-    try{
-      const bkk = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Bangkok', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
-      const tpe = new Intl.DateTimeFormat('zh-Hant', { timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false }).format(now);
-      slotTzHint.textContent = `時區提示：曼谷 ${bkk} / 台北 ${tpe}`;
-    }catch(_){
-      slotTzHint.textContent = '時區提示：曼谷時間（UTC+7）/ 台北時間（UTC+8）';
-    }
+    slotTzHint.textContent = '時段顯示：曼谷時間（UTC+7），台北時間請 +1 小時 / Slot times are Bangkok time (UTC+7); Taipei is +1 hour.';
   }
 
   function addDays(dateStr, delta){
