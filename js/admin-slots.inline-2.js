@@ -151,8 +151,6 @@
     if (svcDisplay && svcDisplay.dataset.auto === '1') svcDisplay.textContent = t('label_service_id') + ': ' + (svcDisplay.dataset.value || '');
     var svcHint = document.getElementById('serviceIdHint');
     if (svcHint && svcHint.dataset.auto === '1') svcHint.textContent = t('label_service_auto');
-    var dateEl = document.getElementById('dateInput');
-    if (dateEl) dateEl.setAttribute('aria-label', t('label_day'));
     var btnZh = document.getElementById('langZh');
     var btnEn = document.getElementById('langEn');
     if (btnZh) btnZh.classList.toggle('is-active', ADMIN_LANG === 'zh');
@@ -179,39 +177,7 @@
     wrap.insertBefore(field, wrap.firstChild);
   }
 
-  function ensureDateInput(){
-    var existing = document.getElementById('dateInput');
-    var wrap = document.querySelector('.slot-controls');
-    if (!wrap) return;
-    if (existing){
-      try{
-        var rect = existing.getBoundingClientRect();
-        if (rect.width < 40){
-          existing.style.minWidth = '220px';
-          existing.style.display = 'block';
-          existing.style.visibility = 'visible';
-        }
-        existing.removeAttribute('min');
-        existing.removeAttribute('max');
-      }catch(_){}
-      return;
-    }
-    var field = document.createElement('div');
-    field.className = 'slot-field';
-    var input = document.createElement('input');
-    input.type = 'date';
-    input.id = 'dateInput';
-    input.removeAttribute('min');
-    input.removeAttribute('max');
-    input.setAttribute('aria-label', t('label_day'));
-    field.appendChild(input);
-    var btn = document.getElementById('btnLoad');
-    if (btn && btn.parentNode === wrap){
-      wrap.insertBefore(field, btn);
-    }else{
-      wrap.appendChild(field);
-    }
-  }
+  function ensureDateInput(){ return; }
 
   function setLang(lang){
     ADMIN_LANG = (lang === 'en') ? 'en' : 'zh';
@@ -226,7 +192,9 @@
   var statusEl = document.getElementById('slotStatus');
   var serviceIdInput = document.getElementById('serviceIdInput');
   var autoServiceId = '';
-  var dateInput = document.getElementById('dateInput');
+  var slotDateLabel = document.getElementById('slotDateLabel');
+  var slotPrevDay = document.getElementById('slotPrevDay');
+  var slotNextDay = document.getElementById('slotNextDay');
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
@@ -261,7 +229,7 @@
   }
 
   function applyServiceIdAutoFill(){
-    fetch('/api/service/phone-consult/config', { credentials:'include', cache:'no-store' })
+    return fetch('/api/service/phone-consult/config', { credentials:'include', cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
       .then(function(result){
         if (!result.ok) return;
@@ -284,6 +252,7 @@
           display.dataset.value = svcId;
           display.textContent = t('label_service_id') + ': ' + svcId;
         }
+        loadPublishedSlots(svcId);
       })
       .catch(function(){});
   }
@@ -322,17 +291,31 @@
     guardEl.style.display = '';
   }
 
+  var currentDate = '';
+
   function todayStr(){
     return new Date().toISOString().split('T')[0];
   }
 
+  function setDateLabel(dateStr){
+    if (slotDateLabel) slotDateLabel.textContent = dateStr || '—';
+  }
+
+  function setCurrentDate(dateStr){
+    currentDate = dateStr || todayStr();
+    setDateLabel(currentDate);
+  }
+
+  function addDays(dateStr, delta){
+    var d = new Date(String(dateStr || '') + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return todayStr();
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().split('T')[0];
+  }
+
   function getDateValue(){
-    var val = dateInput ? dateInput.value : '';
-    if (!val){
-      val = todayStr();
-      if (dateInput) dateInput.value = val;
-    }
-    return val;
+    if (!currentDate) setCurrentDate(todayStr());
+    return currentDate;
   }
 
   function fetchAdmin(){
@@ -789,9 +772,7 @@
         }
       }
     }catch(_){}
-    if (dateInput && !dateInput.value){
-      dateInput.value = todayStr();
-    }
+    setCurrentDate(todayStr());
     if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
@@ -809,6 +790,15 @@
     if (btnRescheduleLoad) btnRescheduleLoad.addEventListener('click', function(){ loadReschedules(true); });
     if (btnRescheduleMore) btnRescheduleMore.addEventListener('click', function(){ loadReschedules(false); });
     if (rescheduleStatus) rescheduleStatus.addEventListener('change', function(){ loadReschedules(true); });
+    if (slotPrevDay) slotPrevDay.addEventListener('click', function(){
+      setCurrentDate(addDays(getDateValue(), -1));
+      loadSlots();
+    });
+    if (slotNextDay) slotNextDay.addEventListener('click', function(){
+      setCurrentDate(addDays(getDateValue(), 1));
+      loadSlots();
+    });
     loadReschedules(true);
+    loadPublishedSlots(getServiceIdValue());
   });
 })();
