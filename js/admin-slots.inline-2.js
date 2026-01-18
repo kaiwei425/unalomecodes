@@ -38,6 +38,8 @@
       reschedule_status_rejected: '已婉拒',
       btn_reschedule_load: '載入申請',
       btn_reschedule_more: '更多',
+      published_title: '已開放時段（含日期）',
+      published_empty: '目前沒有已開放時段。',
       reschedule_empty: '目前沒有改期申請。',
       reschedule_note: '備註',
       reschedule_customer: '客戶',
@@ -96,6 +98,8 @@
       reschedule_status_rejected: 'Rejected',
       btn_reschedule_load: 'Load requests',
       btn_reschedule_more: 'More',
+      published_title: 'Published Slots (with dates)',
+      published_empty: 'No published slots.',
       reschedule_empty: 'No reschedule requests.',
       reschedule_note: 'Note',
       reschedule_customer: 'Customer',
@@ -230,6 +234,7 @@
   var slotGrid = document.getElementById('slotGrid');
   var rescheduleStatus = document.getElementById('rescheduleStatus');
   var rescheduleList = document.getElementById('rescheduleList');
+  var publishedSlots = document.getElementById('publishedSlots');
   var btnRescheduleLoad = document.getElementById('btnRescheduleLoad');
   var btnRescheduleMore = document.getElementById('btnRescheduleMore');
   var adminSlotsWarning = document.getElementById('adminSlotsWarning');
@@ -619,9 +624,58 @@
         var day = result.data.items && result.data.items[0];
         renderSlots(day ? day.slots : []);
         setStatus(t('msg_done') + (day && day.date ? ' ' + day.date : ''));
+        loadPublishedSlots(serviceId);
       })
       .catch(function(){
         setStatus(t('msg_failed'), true);
+      });
+  }
+
+  function loadPublishedSlots(serviceId){
+    if (!publishedSlots) return;
+    if (!serviceId){
+      publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
+      return;
+    }
+    publishedSlots.innerHTML = '<div class="muted">' + t('msg_loading') + '</div>';
+    var url = '/api/service/slots?serviceId=' + encodeURIComponent(serviceId) + '&days=14&dateFrom=' + encodeURIComponent(todayStr());
+    fetch(url, { cache:'no-store' })
+      .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
+      .then(function(result){
+        if (!result.ok){
+          publishedSlots.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
+          return;
+        }
+        var items = Array.isArray(result.data.items) ? result.data.items : [];
+        var list = [];
+        items.forEach(function(day){
+          var date = day.date || '';
+          (day.slots || []).forEach(function(slot){
+            if (slot.enabled === true && String(slot.status || 'free') === 'free'){
+              list.push({ date: date, time: slot.time || '', slotKey: slot.slotKey || '' });
+            }
+          });
+        });
+        if (!list.length){
+          publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
+          return;
+        }
+        publishedSlots.innerHTML = '';
+        list.forEach(function(item){
+          var row = document.createElement('div');
+          row.className = 'published-item';
+          var left = document.createElement('div');
+          left.innerHTML = '<strong>' + item.date + '</strong> ' + item.time;
+          var right = document.createElement('div');
+          right.className = 'muted';
+          right.textContent = t('status_free');
+          row.appendChild(left);
+          row.appendChild(right);
+          publishedSlots.appendChild(row);
+        });
+      })
+      .catch(function(){
+        publishedSlots.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
       });
   }
 

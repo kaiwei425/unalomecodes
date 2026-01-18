@@ -41,6 +41,16 @@ body.admin-slots-view .slot-actions{
   gap:10px;
   align-items:center;
 }
+body.admin-slots-view .slot-controls{
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;
+  gap:12px;
+  align-items:end;
+}
+body.admin-slots-view .slot-controls .btn{
+  height:40px;
+  white-space:nowrap;
+}
 body.admin-slots-view .slot-field{
   display:flex;
   flex-direction:column;
@@ -186,6 +196,27 @@ body.admin-slots-view .langToggle button{
 body.admin-slots-view .langToggle button.is-active{
   background:rgba(0,0,0,.06);
 }
+body.admin-slots-view .panel-published .panel-title{
+  font-weight:700;
+  margin-bottom:8px;
+}
+body.admin-slots-view .published-list{
+  display:grid;
+  gap:6px;
+  font-size:13px;
+  color:var(--admin-muted);
+}
+body.admin-slots-view .published-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 10px;
+  border:1px solid var(--admin-border);
+  border-radius:10px;
+  background:var(--admin-surface);
+}
+body.admin-slots-view .published-item strong{color:var(--admin-text);}
 @media (max-width:900px){
   body.admin-slots-view .page-head{
     flex-direction:column;
