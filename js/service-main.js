@@ -1195,7 +1195,7 @@
       btn.type = 'button';
       btn.className = 'svc-slot-btn';
       const status = String(slot.status || 'free');
-      const enabled = slot.enabled === true;
+      const enabled = slot.enabled !== false;
       btn.textContent = slot.time || '--:--';
       if (!enabled || status !== 'free'){
         btn.classList.add('is-disabled');
@@ -1327,7 +1327,7 @@
       btn.type = 'button';
       btn.className = 'svc-slot-btn';
       const status = String(slot.status || 'free');
-      const enabled = slot.enabled === true;
+      const enabled = slot.enabled !== false;
       btn.textContent = slot.time || '--:--';
       if (!enabled || status !== 'free'){
         btn.classList.add('is-disabled');
@@ -1486,7 +1486,7 @@
       if (slotGridEl) slotGridEl.style.display = '';
       renderSlotDays(items);
       renderSlotGrid(items[0]);
-      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled === true && String(slot.status || '') === 'free'));
+      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
       if (!hasFree){
         setSlotStateText('目前暫無可預約時段', true);
         if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
