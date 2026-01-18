@@ -126,6 +126,7 @@
   const slotGridEl = document.getElementById('svcSlotGrid');
   const slotStateEl = document.getElementById('svcSlotState');
   const slotHintEl = document.getElementById('svcSlotHint');
+  const slotMoreBtn = document.getElementById('svcSlotMore');
   const consultPackWrap = document.getElementById('svcConsultPack');
   const consultPackPills = Array.from(document.querySelectorAll('#svcConsultPack .svc-pack-pill'));
   const consultAddonInput = document.getElementById('svcConsultAddonSummary');
@@ -168,6 +169,9 @@
   let lastLookupTransfer = '';
   let lastLookupResult = [];
   let rescheduleContext = { order:null, serviceId:'', slotKey:'', selectedDate:'', items:[] };
+  let slotItems = [];
+  let slotLastDate = '';
+  const SLOT_DAYS_STEP = 7;
   let limitedTimer = null;
   let serviceItems = [];
   let allServiceItems = [];
@@ -1029,6 +1033,13 @@
       slotStateEl.textContent = '';
       slotStateEl.classList.remove('ok','err');
     }
+    slotItems = [];
+    slotLastDate = '';
+    if (slotMoreBtn){
+      slotMoreBtn.style.display = 'none';
+      slotMoreBtn.disabled = false;
+      slotMoreBtn.textContent = '載入更多';
+    }
   }
 
   function clearSlotFromCart(serviceId){
@@ -1171,10 +1182,13 @@
   function renderSlotDays(items){
     if (!slotDaysEl) return;
     slotDaysEl.innerHTML = '';
+    const active = getActiveSlotDate();
+    let activeDate = '';
     items.forEach((item, idx)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'svc-slot-day' + (idx === 0 ? ' is-active' : '');
+      const isActive = active ? item.date === active : idx === 0;
+      btn.className = 'svc-slot-day' + (isActive ? ' is-active' : '');
       btn.textContent = item.date || '';
       btn.dataset.date = item.date || '';
       btn.addEventListener('click', ()=>{
@@ -1182,8 +1196,79 @@
         btn.classList.add('is-active');
         renderSlotGrid(item);
       });
+      if (isActive && item.date) activeDate = item.date;
       slotDaysEl.appendChild(btn);
     });
+    return activeDate || (items[0] && items[0].date) || '';
+  }
+
+  function getActiveSlotDate(){
+    if (!slotDaysEl) return '';
+    const active = slotDaysEl.querySelector('.svc-slot-day.is-active');
+    return active ? (active.dataset.date || '') : '';
+  }
+
+  function getNextDateStr(dateStr){
+    if (!dateStr) return '';
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }
+
+  function mergeSlotDays(base, extra){
+    const map = new Map();
+    (base || []).forEach(day=>{
+      if (day && day.date) map.set(day.date, day);
+    });
+    (extra || []).forEach(day=>{
+      if (day && day.date && !map.has(day.date)) map.set(day.date, day);
+    });
+    return Array.from(map.values()).sort((a,b)=> String(a.date || '').localeCompare(String(b.date || '')));
+  }
+
+  async function loadMoreSlots(){
+    if (!detailDataset) return;
+    const serviceId = resolveServiceId(detailDataset);
+    if (!serviceId) return;
+    const nextDate = getNextDateStr(slotLastDate);
+    if (!nextDate) return;
+    if (slotMoreBtn){
+      slotMoreBtn.disabled = true;
+      slotMoreBtn.textContent = '載入中…';
+    }
+    try{
+      const result = await fetchSlots(serviceId, nextDate, SLOT_DAYS_STEP);
+      const data = result.data || {};
+      if (!result.res.ok || !data || data.ok === false){
+        setSlotStateText('載入失敗，請稍後再試', true);
+        return;
+      }
+      const moreItems = normalizeSlots(data);
+      if (!moreItems.length){
+        if (slotMoreBtn){
+          slotMoreBtn.disabled = true;
+          slotMoreBtn.textContent = '沒有更多時段';
+        }
+        return;
+      }
+      slotItems = mergeSlotDays(slotItems, moreItems);
+      slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : '';
+      const activeDate = renderSlotDays(slotItems);
+      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+      if (activeItem) renderSlotGrid(activeItem);
+      setSlotStateText('');
+      if (slotMoreBtn){
+        slotMoreBtn.disabled = false;
+        slotMoreBtn.textContent = '載入更多';
+      }
+    }catch(_){
+      setSlotStateText('載入失敗，請稍後再試', true);
+    }finally{
+      if (slotMoreBtn && slotMoreBtn.textContent !== '沒有更多時段'){
+        slotMoreBtn.disabled = false;
+      }
+    }
   }
 
   function renderSlotGrid(item){
@@ -1451,6 +1536,7 @@
   function hideSlotPicker(msg){
     if (slotDaysEl) slotDaysEl.style.display = 'none';
     if (slotGridEl) slotGridEl.style.display = 'none';
+    if (slotMoreBtn) slotMoreBtn.style.display = 'none';
     setSlotStateText(msg || '目前暫無可預約時段', true);
     if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
       detailAddBtn.disabled = true;
@@ -1471,7 +1557,7 @@
     const serviceId = resolveServiceId(service);
     restoreHoldForService(serviceId);
     try{
-      const result = await fetchSlots(serviceId, '', 7);
+      const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
       const data = result.data || {};
       if (!result.res.ok || !data || data.ok === false){
         hideSlotPicker('目前暫無可預約時段');
@@ -1482,10 +1568,22 @@
         hideSlotPicker('目前暫無可預約時段');
         return;
       }
+      slotItems = items;
+      slotLastDate = items.length ? (items[items.length - 1].date || '') : '';
       if (slotDaysEl) slotDaysEl.style.display = '';
       if (slotGridEl) slotGridEl.style.display = '';
-      renderSlotDays(items);
-      renderSlotGrid(items[0]);
+      const activeDate = renderSlotDays(items);
+      const activeItem = items.find(day => day.date === activeDate) || items[0];
+      if (activeItem) renderSlotGrid(activeItem);
+      if (slotMoreBtn){
+        slotMoreBtn.style.display = '';
+        if (!slotMoreBtn.__bound){
+          slotMoreBtn.__bound = true;
+          slotMoreBtn.addEventListener('click', loadMoreSlots);
+        }
+        slotMoreBtn.disabled = false;
+        slotMoreBtn.textContent = '載入更多';
+      }
       const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
       if (!hasFree){
         setSlotStateText('目前暫無可預約時段', true);

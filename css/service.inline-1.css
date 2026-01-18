@@ -99,6 +99,8 @@ body.service-view .svc-slot-btn.is-blocked{background:#fef3c7;color:#b45309;}
 body.service-view .svc-slot-state{font-size:12px;color:#64748b;}
 body.service-view .svc-slot-state.ok{color:#166534;}
 body.service-view .svc-slot-state.err{color:#b91c1c;}
+body.service-view .svc-slot-actions{margin-top:10px;}
+body.service-view .svc-slot-actions .btn{width:100%;}
 body.service-view .svc-pack{
   margin-top:12px;
   padding:12px;
@@ -130,9 +132,14 @@ body.service-view .svc-pack-pill.is-active{
 body.service-view .svc-pack-pill.is-active .pill-price{color:#fff;}
 body.service-view .pill-title{font-weight:700;font-size:13px;}
 body.service-view .pill-price{font-weight:800;font-size:14px;color:#0f172a;}
+body.service-view .svc-pack-addon{
+  text-align:left;
+  display:grid;
+  justify-items:start;
+}
 body.service-view .svc-pack-addon label{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:flex-start;
   gap:10px;
   width:100%;
@@ -140,10 +147,7 @@ body.service-view .svc-pack-addon label{
   font-weight:700;
   color:#0f172a;
 }
-body.service-view .svc-pack-addon{
-  text-align:left;
-}
-body.service-view .svc-pack-addon input{margin:0;}
+body.service-view .svc-pack-addon input{margin:2px 0 0;}
 body.service-view .svc-pack-addon .addon-text{
   flex:1 1 auto;
   min-width:180px;
