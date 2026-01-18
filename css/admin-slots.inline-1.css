@@ -61,6 +61,28 @@ body.admin-slots-view .slot-field{
   color:var(--admin-muted);
   min-width:0;
 }
+body.admin-slots-view .slot-date-nav{
+  flex-direction:row;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+}
+body.admin-slots-view .slot-date-nav .btn{
+  height:40px;
+  min-width:40px;
+  border-radius:12px;
+  padding:0 10px;
+}
+body.admin-slots-view .slot-date-nav .date-label{
+  min-width:120px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--admin-border);
+  background:#fff;
+  font-weight:800;
+  color:var(--admin-text);
+  text-align:center;
+}
 body.admin-slots-view .slot-controls input{
   min-width:0;
   padding:10px 12px;
@@ -72,12 +94,6 @@ body.admin-slots-view .slot-controls input{
   height:40px;
   appearance:auto;
   -webkit-appearance:auto;
-}
-body.admin-slots-view #dateInput{
-  min-width:0;
-  display:block;
-  visibility:visible;
-  opacity:1;
 }
 @media (max-width:900px){
   body.admin-slots-view .slot-controls{
