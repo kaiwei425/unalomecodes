@@ -292,6 +292,8 @@
   }
 
   var currentDate = '';
+  var todayISO = '';
+  var PUBLISHED_CACHE_KEY = 'adminSlotsPublishedCache';
 
   function todayStr(){
     return new Date().toISOString().split('T')[0];
@@ -301,9 +303,21 @@
     if (slotDateLabel) slotDateLabel.textContent = dateStr || '—';
   }
 
+  function clampToToday(dateStr){
+    if (!todayISO) todayISO = todayStr();
+    return dateStr < todayISO ? todayISO : dateStr;
+  }
+
+  function updateDateNav(){
+    if (!slotPrevDay || !slotNextDay) return;
+    if (!todayISO) todayISO = todayStr();
+    slotPrevDay.disabled = currentDate <= todayISO;
+  }
+
   function setCurrentDate(dateStr){
-    currentDate = dateStr || todayStr();
+    currentDate = clampToToday(dateStr || todayStr());
     setDateLabel(currentDate);
+    updateDateNav();
   }
 
   function addDays(dateStr, delta){
@@ -316,6 +330,44 @@
   function getDateValue(){
     if (!currentDate) setCurrentDate(todayStr());
     return currentDate;
+  }
+
+  function renderPublishedList(list){
+    if (!publishedSlots) return;
+    if (!Array.isArray(list) || !list.length){
+      publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
+      return;
+    }
+    publishedSlots.innerHTML = '';
+    list.forEach(function(item){
+      var row = document.createElement('div');
+      row.className = 'published-item';
+      var left = document.createElement('div');
+      left.innerHTML = '<strong>' + item.date + '</strong> ' + item.time;
+      var right = document.createElement('div');
+      right.className = 'muted';
+      right.textContent = t('status_free');
+      row.appendChild(left);
+      row.appendChild(right);
+      publishedSlots.appendChild(row);
+    });
+  }
+
+  function loadPublishedCache(){
+    try{
+      var raw = sessionStorage.getItem(PUBLISHED_CACHE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      return Array.isArray(data) ? data : null;
+    }catch(_){
+      return null;
+    }
+  }
+
+  function savePublishedCache(list){
+    try{
+      sessionStorage.setItem(PUBLISHED_CACHE_KEY, JSON.stringify(list || []));
+    }catch(_){}
   }
 
   function fetchAdmin(){
@@ -625,7 +677,12 @@
       publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
       return;
     }
-    publishedSlots.innerHTML = '<div class="muted">' + t('msg_loading') + '</div>';
+    var cached = loadPublishedCache();
+    if (cached && cached.length){
+      renderPublishedList(cached);
+    }else{
+      publishedSlots.innerHTML = '<div class="muted">' + t('msg_loading') + '</div>';
+    }
     var url = '/api/service/slots?serviceId=' + encodeURIComponent(serviceId) + '&days=14&dateFrom=' + encodeURIComponent(todayStr());
     fetch(url, { cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
@@ -646,21 +703,11 @@
         });
         if (!list.length){
           publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
+          savePublishedCache([]);
           return;
         }
-        publishedSlots.innerHTML = '';
-        list.forEach(function(item){
-          var row = document.createElement('div');
-          row.className = 'published-item';
-          var left = document.createElement('div');
-          left.innerHTML = '<strong>' + item.date + '</strong> ' + item.time;
-          var right = document.createElement('div');
-          right.className = 'muted';
-          right.textContent = t('status_free');
-          row.appendChild(left);
-          row.appendChild(right);
-          publishedSlots.appendChild(row);
-        });
+        savePublishedCache(list);
+        renderPublishedList(list);
       })
       .catch(function(){
         publishedSlots.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
