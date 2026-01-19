@@ -151,32 +151,78 @@
           <textarea id="phoneAllowlist" rows="3" style="display:none" placeholder="allowlist emails, comma or newline separated"></textarea>
           <div class="toggle-hint">此開關僅 owner 可見，儲存在本機（localStorage），不需重新部署</div>
         </div>
-        <section id="svcPromoPhone" class="svc-promo" style="display:none">
-          <div class="svc-promo-card">
-            <div class="svc-promo-left">
-              <div class="svc-promo-kicker">NEW</div>
-              <h2 class="svc-promo-title">電話算命預約（含即時翻譯）</h2>
-              <div class="svc-promo-sub">泰國老師（泰文）× 中文 / 英文即時翻譯｜可自行全程錄音</div>
-              <ul class="svc-promo-bullets">
-                <li>電話進行，不需視訊</li>
-                <li>方案價格：中文 NT$ 4,000｜英文 NT$ 3,500</li>
-                <li>可加購「轉譯＋重點摘要整理」+NT$500</li>
-              </ul>
-              <div class="svc-promo-note">改期需在預約時間 48 小時前提出</div>
-            </div>
-            <div class="svc-promo-right">
-              <div class="svc-promo-pack">
-                <div class="svc-pack-label">選擇翻譯方案</div>
-                <div class="svc-pack-pills">
-                  <button type="button" class="svc-pill" data-pack="en">英文翻譯 NT$3500</button>
-                  <button type="button" class="svc-pill" data-pack="zh">中文翻譯 NT$4000</button>
-                </div>
-              </div>
-              <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
-              <div class="svc-promo-mini">可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問</div>
-            </div>
-          </div>
-        </section>
+<section id="svcPromoPhone" class="svc-promo" style="display:none">
+  <div class="svc-promo-card">
+    <div class="svc-promo-left">
+      <div class="svc-promo-media">
+        <img id="svcPromoImg" alt="電話算命預約">
+      </div>
+      <div id="svcPromoKicker" class="svc-promo-kicker">NEW</div>
+      <h2 id="svcPromoTitle" class="svc-promo-title">電話算命預約（含即時翻譯）</h2>
+      <div id="svcPromoSub" class="svc-promo-sub">泰國老師（泰文）× 中文 / 英文即時翻譯｜可自行全程錄音</div>
+      <ul id="svcPromoBullets" class="svc-promo-bullets">
+        <li>電話進行，不需視訊</li>
+        <li>方案價格：中文 NT$ 4,000｜英文 NT$ 3,500</li>
+        <li>可加購「轉譯＋重點摘要整理」+NT$500</li>
+      </ul>
+      <div id="svcPromoNote" class="svc-promo-note">改期需在預約時間 48 小時前提出</div>
+    </div>
+    <div class="svc-promo-right">
+      <div class="svc-promo-pack">
+        <div id="svcPromoPackLabel" class="svc-pack-label">選擇翻譯方案</div>
+        <div class="svc-pack-pills">
+          <button type="button" class="svc-pill" data-pack="en" id="svcPromoPackEn">英文翻譯 NT$3500</button>
+          <button type="button" class="svc-pill" data-pack="zh" id="svcPromoPackZh">中文翻譯 NT$4000</button>
+        </div>
+      </div>
+      <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
+      <div id="svcPromoMini" class="svc-promo-mini">可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問</div>
+    </div>
+  </div>
+  <div id="svcPromoAdmin" class="svc-promo-admin" style="display:none">
+    <div class="svc-promo-admin-head">Admin 編輯</div>
+    <div class="svc-promo-admin-grid">
+      <label>小標
+        <input type="text" id="promoKickerInput">
+      </label>
+      <label>標題
+        <input type="text" id="promoTitleInput">
+      </label>
+      <label>副標
+        <textarea id="promoSubInput" rows="2"></textarea>
+      </label>
+      <label>重點列表（每行一條）
+        <textarea id="promoBulletsInput" rows="3"></textarea>
+      </label>
+      <label>提醒
+        <input type="text" id="promoNoteInput">
+      </label>
+      <label>方案標題
+        <input type="text" id="promoPackLabelInput">
+      </label>
+      <label>英文方案文字
+        <input type="text" id="promoPackEnInput">
+      </label>
+      <label>中文方案文字
+        <input type="text" id="promoPackZhInput">
+      </label>
+      <label>CTA 按鈕文字
+        <input type="text" id="promoCtaInput">
+      </label>
+      <label>補充文字
+        <textarea id="promoMiniInput" rows="2"></textarea>
+      </label>
+      <label>照片 URL
+        <input type="text" id="promoImageInput" placeholder="https://...">
+      </label>
+    </div>
+    <div class="svc-promo-admin-actions">
+      <button type="button" class="btn" id="promoReset">還原</button>
+      <button type="button" class="btn primary" id="promoSave">儲存</button>
+    </div>
+    <div class="svc-promo-admin-hint muted">僅管理員可見，儲存後會寫回服務商品設定。</div>
+  </div>
+</section>
         <section id="svcHotSection" class="hot-section" style="display:none;">
           <div class="hot-head">
             <div class="hot-title">熱賣中服務</div>

@@ -117,6 +117,31 @@
   const promoSection = document.getElementById('svcPromoPhone');
   const promoCta = document.getElementById('svcPromoCta');
   const promoPills = Array.from(document.querySelectorAll('#svcPromoPhone .svc-pill'));
+  const promoMediaEl = document.querySelector('#svcPromoPhone .svc-promo-media');
+  const promoKickerEl = document.getElementById('svcPromoKicker');
+  const promoTitleEl = document.getElementById('svcPromoTitle');
+  const promoSubEl = document.getElementById('svcPromoSub');
+  const promoBulletsEl = document.getElementById('svcPromoBullets');
+  const promoNoteEl = document.getElementById('svcPromoNote');
+  const promoPackLabelEl = document.getElementById('svcPromoPackLabel');
+  const promoPackEnEl = document.getElementById('svcPromoPackEn');
+  const promoPackZhEl = document.getElementById('svcPromoPackZh');
+  const promoMiniEl = document.getElementById('svcPromoMini');
+  const promoImgEl = document.getElementById('svcPromoImg');
+  const promoAdminEl = document.getElementById('svcPromoAdmin');
+  const promoKickerInput = document.getElementById('promoKickerInput');
+  const promoTitleInput = document.getElementById('promoTitleInput');
+  const promoSubInput = document.getElementById('promoSubInput');
+  const promoBulletsInput = document.getElementById('promoBulletsInput');
+  const promoNoteInput = document.getElementById('promoNoteInput');
+  const promoPackLabelInput = document.getElementById('promoPackLabelInput');
+  const promoPackEnInput = document.getElementById('promoPackEnInput');
+  const promoPackZhInput = document.getElementById('promoPackZhInput');
+  const promoCtaInput = document.getElementById('promoCtaInput');
+  const promoMiniInput = document.getElementById('promoMiniInput');
+  const promoImageInput = document.getElementById('promoImageInput');
+  const promoSaveBtn = document.getElementById('promoSave');
+  const promoResetBtn = document.getElementById('promoReset');
   const adminPreviewBadge = document.getElementById('svcAdminPreviewBadge');
   const launchToggle = document.getElementById('svcLaunchToggle');
   const launchModeSelect = document.getElementById('phoneLaunchMode');
@@ -141,6 +166,7 @@
   let ADMIN_PREVIEW_MODE = false;
   let ADMIN_ME = { ok:false, role:'', at:0 };
   let __PHONE_PACK__ = 'en';
+  let __PHONE_PROMO_SERVICE__ = null;
   let __PHONE_SVC_ID__ = null;
   let requestDateLabelOriginal = '';
   let requestDateHintOriginal = '';
@@ -1967,6 +1993,135 @@
     }
   }
 
+  function getPromoDefaults(){
+    const bullets = promoBulletsEl ? Array.from(promoBulletsEl.querySelectorAll('li')).map(li => li.textContent.trim()).filter(Boolean) : [];
+    return {
+      kicker: promoKickerEl ? promoKickerEl.textContent.trim() : '',
+      title: promoTitleEl ? promoTitleEl.textContent.trim() : '',
+      sub: promoSubEl ? promoSubEl.textContent.trim() : '',
+      bullets,
+      note: promoNoteEl ? promoNoteEl.textContent.trim() : '',
+      packLabel: promoPackLabelEl ? promoPackLabelEl.textContent.trim() : '',
+      packEn: promoPackEnEl ? promoPackEnEl.textContent.trim() : '',
+      packZh: promoPackZhEl ? promoPackZhEl.textContent.trim() : '',
+      cta: promoCta ? promoCta.textContent.trim() : '',
+      mini: promoMiniEl ? promoMiniEl.textContent.trim() : '',
+      imageUrl: promoImgEl ? promoImgEl.getAttribute('src') || '' : ''
+    };
+  }
+
+  function getPromoData(service){
+    const base = getPromoDefaults();
+    const meta = service && service.meta && service.meta.promo ? service.meta.promo : {};
+    const cover = service ? (service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '') : '';
+    const merged = Object.assign({}, base, meta);
+    if (!merged.imageUrl && cover) merged.imageUrl = cover;
+    return merged;
+  }
+
+  function applyPromoContent(data){
+    if (!data) return;
+    if (promoKickerEl) promoKickerEl.textContent = data.kicker || '';
+    if (promoTitleEl) promoTitleEl.textContent = data.title || '';
+    if (promoSubEl) promoSubEl.textContent = data.sub || '';
+    if (promoNoteEl) promoNoteEl.textContent = data.note || '';
+    if (promoPackLabelEl) promoPackLabelEl.textContent = data.packLabel || '';
+    if (promoPackEnEl) promoPackEnEl.textContent = data.packEn || '';
+    if (promoPackZhEl) promoPackZhEl.textContent = data.packZh || '';
+    if (promoCta) promoCta.textContent = data.cta || '查看並預約';
+    if (promoMiniEl) promoMiniEl.textContent = data.mini || '';
+    if (promoBulletsEl){
+      promoBulletsEl.innerHTML = '';
+      (data.bullets || []).forEach(text=>{
+        if (!text) return;
+        const li = document.createElement('li');
+        li.textContent = text;
+        promoBulletsEl.appendChild(li);
+      });
+    }
+    if (promoImgEl){
+      const url = data.imageUrl || '';
+      if (promoMediaEl) promoMediaEl.style.display = url ? '' : 'none';
+      if (url) promoImgEl.setAttribute('src', url);
+    }
+  }
+
+  function fillPromoForm(data){
+    if (!data) return;
+    if (promoKickerInput) promoKickerInput.value = data.kicker || '';
+    if (promoTitleInput) promoTitleInput.value = data.title || '';
+    if (promoSubInput) promoSubInput.value = data.sub || '';
+    if (promoBulletsInput) promoBulletsInput.value = (data.bullets || []).join('\n');
+    if (promoNoteInput) promoNoteInput.value = data.note || '';
+    if (promoPackLabelInput) promoPackLabelInput.value = data.packLabel || '';
+    if (promoPackEnInput) promoPackEnInput.value = data.packEn || '';
+    if (promoPackZhInput) promoPackZhInput.value = data.packZh || '';
+    if (promoCtaInput) promoCtaInput.value = data.cta || '';
+    if (promoMiniInput) promoMiniInput.value = data.mini || '';
+    if (promoImageInput) promoImageInput.value = data.imageUrl || '';
+  }
+
+  function readPromoForm(){
+    return {
+      kicker: promoKickerInput ? promoKickerInput.value.trim() : '',
+      title: promoTitleInput ? promoTitleInput.value.trim() : '',
+      sub: promoSubInput ? promoSubInput.value.trim() : '',
+      bullets: promoBulletsInput ? promoBulletsInput.value.split('\n').map(x=>x.trim()).filter(Boolean) : [],
+      note: promoNoteInput ? promoNoteInput.value.trim() : '',
+      packLabel: promoPackLabelInput ? promoPackLabelInput.value.trim() : '',
+      packEn: promoPackEnInput ? promoPackEnInput.value.trim() : '',
+      packZh: promoPackZhInput ? promoPackZhInput.value.trim() : '',
+      cta: promoCtaInput ? promoCtaInput.value.trim() : '',
+      mini: promoMiniInput ? promoMiniInput.value.trim() : '',
+      imageUrl: promoImageInput ? promoImageInput.value.trim() : ''
+    };
+  }
+
+  async function savePromoForService(service, promo){
+    const id = resolveServiceId(service);
+    if (!id) return false;
+    const meta = Object.assign({}, service.meta || {}, { promo });
+    const res = await fetch('/api/service/products', {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify({ id, meta })
+    });
+    const data = await res.json().catch(()=>null);
+    if (!res.ok || !data || data.ok === false) return false;
+    service.meta = meta;
+    return true;
+  }
+
+  function initPromoAdmin(service){
+    if (!promoAdminEl) return;
+    if (!ADMIN_PREVIEW_MODE){
+      promoAdminEl.style.display = 'none';
+      return;
+    }
+    promoAdminEl.style.display = '';
+    const data = getPromoData(service);
+    fillPromoForm(data);
+    if (promoResetBtn && !promoResetBtn.__bound){
+      promoResetBtn.__bound = true;
+      promoResetBtn.addEventListener('click', ()=>{
+        fillPromoForm(getPromoData(service));
+        applyPromoContent(getPromoData(service));
+      });
+    }
+    if (promoSaveBtn && !promoSaveBtn.__bound){
+      promoSaveBtn.__bound = true;
+      promoSaveBtn.addEventListener('click', async ()=>{
+        const next = readPromoForm();
+        applyPromoContent(next);
+        const ok = await savePromoForService(service, next);
+        if (!ok){
+          alert('儲存失敗，請稍後再試');
+        }
+      });
+    }
+  }
+
   function initPhonePromo(services){
     if (!promoSection) return;
     const target = findPhoneConsultService(services);
@@ -1976,7 +2131,10 @@
     }
     if (promoSection.__bound) return;
     __PHONE_SVC_ID__ = resolveServiceId(target);
+    __PHONE_PROMO_SERVICE__ = target;
     promoSection.style.display = '';
+    applyPromoContent(getPromoData(target));
+    initPromoAdmin(target);
     setPromoPack(__PHONE_PACK__);
     promoPills.forEach(btn=>{
       btn.addEventListener('click', ()=>{
