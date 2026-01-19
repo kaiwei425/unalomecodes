@@ -136,18 +136,27 @@ body.service-view .pill-title{font-weight:700;font-size:13px;}
 body.service-view .pill-price{font-weight:800;font-size:14px;color:#0f172a;}
 body.service-view .svc-pack-addon{
   text-align:left;
-  display:grid;
-  justify-items:start;
-  gap:6px;
+  display:block;
 }
-body.service-view .svc-pack-addon label{
+body.service-view .svc-pack-addon .addon-label{
   display:block;
   width:100%;
   font-size:13px;
   font-weight:700;
   color:#0f172a;
+  margin:0 0 6px 0;
+  text-align:left;
+}
+body.service-view .svc-pack-addon label:not(.addon-label){
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
   margin:0;
   text-align:left;
+}
+body.service-view .svc-pack-addon label:not(.addon-label) input{
+  margin:0;
 }
 body.service-view .svc-pack-addon .svc-addon-select{
   width:100%;

@@ -301,7 +301,9 @@
   }
 
   function setDateLabel(dateStr){
-    if (slotDateLabel) slotDateLabel.textContent = dateStr || '—';
+    if (!slotDateLabel) return;
+    slotDateLabel.textContent = dateStr || '—';
+    slotDateLabel.dataset.date = dateStr || '';
   }
 
   function clampToToday(dateStr){
@@ -313,8 +315,8 @@
     const next = clampToToday(dateStr || todayStr());
     if (currentDate !== next){
       currentDate = next;
-      setDateLabel(currentDate);
     }
+    setDateLabel(currentDate);
   }
 
   function initDateNav(){
@@ -349,10 +351,17 @@
   }
 
   function addDays(dateStr, delta){
-    var d = new Date(String(dateStr || '') + 'T00:00:00');
-    if (Number.isNaN(d.getTime())) return todayStr();
-    d.setDate(d.getDate() + delta);
-    return d.toISOString().split('T')[0];
+    var raw = String(dateStr || '');
+    var parts = raw.split('-');
+    if (parts.length !== 3) return todayStr();
+    var y = Number(parts[0]);
+    var m = Number(parts[1]);
+    var d = Number(parts[2]);
+    if (!y || !m || !d) return todayStr();
+    var base = new Date(y, m - 1, d);
+    if (Number.isNaN(base.getTime())) return todayStr();
+    base.setDate(base.getDate() + delta);
+    return base.toISOString().split('T')[0];
   }
 
   function setTzHint(){
@@ -361,6 +370,9 @@
   }
 
   function getDateValue(){
+    if (slotDateLabel && slotDateLabel.dataset.date){
+      return slotDateLabel.dataset.date;
+    }
     if (!currentDate) setCurrentDate(todayStr());
     return currentDate;
   }
@@ -695,9 +707,10 @@
           return;
         }
         var day = result.data.items && result.data.items[0];
-        if (day && day.date) setCurrentDate(day.date);
+        var shownDate = (day && day.date) ? day.date : date;
+        if (shownDate) setCurrentDate(shownDate);
         renderSlots(day ? day.slots : []);
-        setStatus(t('msg_done') + (day && day.date ? ' ' + day.date : ''));
+        setStatus(t('msg_done') + (shownDate ? ' ' + shownDate : ''));
         loadPublishedSlots(serviceId);
       })
       .catch(function(){
