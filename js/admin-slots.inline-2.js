@@ -192,7 +192,9 @@
   var statusEl = document.getElementById('slotStatus');
   var serviceIdInput = document.getElementById('serviceIdInput');
   var autoServiceId = '';
-  var dateInput = document.getElementById('dateInput');
+  var slotDateLabel = document.getElementById('slotDateLabel');
+  var slotPrevDay = document.getElementById('slotPrevDay');
+  var slotNextDay = document.getElementById('slotNextDay');
   var slotTzHint = document.getElementById('slotTzHint');
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
@@ -298,36 +300,57 @@
     return new Date().toISOString().split('T')[0];
   }
 
+  function setDateLabel(dateStr){
+    if (slotDateLabel) slotDateLabel.textContent = dateStr || '—';
+  }
+
   function clampToToday(dateStr){
     if (!todayISO) todayISO = todayStr();
     return dateStr < todayISO ? todayISO : dateStr;
   }
 
   function setCurrentDate(dateStr){
-    currentDate = clampToToday(dateStr || todayStr());
-    if (dateInput) dateInput.value = currentDate;
+    const next = clampToToday(dateStr || todayStr());
+    if (currentDate !== next){
+      currentDate = next;
+      setDateLabel(currentDate);
+    }
   }
 
   function initDateNav(){
     todayISO = todayStr();
-    if (dateInput){
-      dateInput.min = todayISO;
-      if (!dateInput.value) dateInput.value = todayISO;
-      currentDate = dateInput.value;
-    }else if (!currentDate){
-      setCurrentDate(todayISO);
-    }
+    if (!currentDate) setCurrentDate(todayISO);
     setTzHint();
   }
 
   function bindDateNav(){
-    if (dateInput && !dateInput.__bound){
-      dateInput.__bound = true;
-      dateInput.addEventListener('change', function(){
-        setCurrentDate(dateInput.value);
+    if (slotPrevDay && !slotPrevDay.__bound){
+      slotPrevDay.__bound = true;
+      slotPrevDay.type = 'button';
+      slotPrevDay.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        setCurrentDate(addDays(getDateValue(), -1));
         loadSlots();
       });
     }
+    if (slotNextDay && !slotNextDay.__bound){
+      slotNextDay.__bound = true;
+      slotNextDay.type = 'button';
+      slotNextDay.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        setCurrentDate(addDays(getDateValue(), 1));
+        loadSlots();
+      });
+    }
+  }
+
+  function addDays(dateStr, delta){
+    var d = new Date(String(dateStr || '') + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return todayStr();
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().split('T')[0];
   }
 
   function setTzHint(){
@@ -336,7 +359,6 @@
   }
 
   function getDateValue(){
-    if (dateInput && dateInput.value) return clampToToday(dateInput.value);
     if (!currentDate) setCurrentDate(todayStr());
     return currentDate;
   }
@@ -851,6 +873,4 @@
     loadPublishedSlots(getServiceIdValue());
   });
 
-  initDateNav();
-  bindDateNav();
 })();

@@ -41,8 +41,10 @@
               <div id="serviceIdDisplay" class="muted" style="font-weight:700;">Service ID: —</div>
               <input type="text" id="serviceIdInput" placeholder="輸入 serviceId" style="display:none;">
             </div>
-            <div class="slot-field">
-              <input type="date" id="dateInput" aria-label="日期">
+            <div class="slot-field slot-date-nav">
+              <button type="button" class="btn" id="slotPrevDay" aria-label="前一天">←</button>
+              <div id="slotDateLabel" class="date-label"></div>
+              <button type="button" class="btn" id="slotNextDay" aria-label="後一天">→</button>
             </div>
             <button class="btn" id="btnLoad" data-i18n="btn_load">載入時段</button>
           </div>
