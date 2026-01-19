@@ -374,7 +374,10 @@
     var base = new Date(y, m - 1, d);
     if (Number.isNaN(base.getTime())) return todayStr();
     base.setDate(base.getDate() + delta);
-    return base.toISOString().split('T')[0];
+    var yy = base.getFullYear();
+    var mm = String(base.getMonth() + 1).padStart(2, '0');
+    var dd = String(base.getDate()).padStart(2, '0');
+    return yy + '-' + mm + '-' + dd;
   }
 
   function setTzHint(){
