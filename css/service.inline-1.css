@@ -86,7 +86,22 @@ body.service-view .svc-slot-btn{
   font-weight:700;
   cursor:pointer;
 }
-body.service-view .svc-slot-btn.is-held{background:#0f172a;color:#fff;border-color:#0f172a;}
+body.service-view .svc-slot-btn.is-held{
+  background:#0f172a;
+  color:#fff;
+  border-color:#0f172a;
+  position:relative;
+  padding-right:56px;
+}
+body.service-view .svc-slot-btn.is-held::after{
+  content:'✓ 已選擇';
+  position:absolute;
+  right:8px;
+  top:6px;
+  font-size:10px;
+  font-weight:700;
+  color:#e2e8f0;
+}
 body.service-view .svc-slot-btn.is-disabled,
 body.service-view .svc-slot-btn.is-booked,
 body.service-view .svc-slot-btn.is-blocked{

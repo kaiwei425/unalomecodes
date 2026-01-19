@@ -151,10 +151,13 @@
 
   function applyI18n(){
     document.querySelectorAll('[data-i18n]').forEach(function(node){
-      if (node.children && node.children.length) return;
       var key = node.getAttribute('data-i18n');
       if (key) node.textContent = t(key);
     });
+    var consultTitle = document.querySelector('[data-i18n="consult_title"]');
+    if (consultTitle) consultTitle.textContent = t('consult_title');
+    var consultReload = document.getElementById('btnConsultReload');
+    if (consultReload) consultReload.textContent = t('btn_consult_reload');
     var svcInput = document.getElementById('serviceIdInput') || document.querySelector('input[name="serviceId"]');
     if (svcInput) svcInput.placeholder = t('ph_service_id');
     var svcDisplay = document.getElementById('serviceIdDisplay');

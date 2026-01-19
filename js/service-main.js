@@ -189,7 +189,9 @@
     slotHoldToken: '',
     slotStart: '',
     holdUntilMs: 0,
-    timerId: null
+    timerId: null,
+    pendingSlotKey: '',
+    pendingSlotStart: ''
   };
   let detailDataset = null;
   let lastDetailService = null;
@@ -970,10 +972,12 @@
     const next = email || uid || 'anon';
     if (HOLD_OWNER_KEY !== next){
       HOLD_OWNER_KEY = next;
-      CURRENT_DETAIL_SLOT.slotKey = '';
-      CURRENT_DETAIL_SLOT.slotHoldToken = '';
-      CURRENT_DETAIL_SLOT.slotStart = '';
-      CURRENT_DETAIL_SLOT.holdUntilMs = 0;
+    CURRENT_DETAIL_SLOT.slotKey = '';
+    CURRENT_DETAIL_SLOT.slotHoldToken = '';
+    CURRENT_DETAIL_SLOT.slotStart = '';
+    CURRENT_DETAIL_SLOT.holdUntilMs = 0;
+    CURRENT_DETAIL_SLOT.pendingSlotKey = '';
+    CURRENT_DETAIL_SLOT.pendingSlotStart = '';
       // 清除購物車中的時段資料，避免不同帳號看到倒數
       const cart = loadCart();
       if (Array.isArray(cart) && cart.length){
@@ -1295,6 +1299,54 @@
     slotStateEl.classList.toggle('ok', !isError && !!msg);
   }
 
+  function parseSlotKeyDateTime(slotKey){
+    const raw = String(slotKey || '');
+    const match = raw.match(/slot:[^:]+:(\d{4}-\d{2}-\d{2}):(\d{4})/);
+    if (!match) return { date:'', time:'' };
+    const time = match[2] ? (match[2].slice(0,2) + ':' + match[2].slice(2,4)) : '';
+    return { date: match[1] || '', time };
+  }
+
+  function getPendingSlotForHold(){
+    const slotKey = CURRENT_DETAIL_SLOT.pendingSlotKey || '';
+    if (!slotKey) return null;
+    let date = '';
+    let time = '';
+    if (CURRENT_DETAIL_SLOT.pendingSlotStart){
+      const parts = CURRENT_DETAIL_SLOT.pendingSlotStart.split(' ');
+      date = parts[0] || '';
+      time = parts[1] || '';
+    }
+    if (!date || !time){
+      const parsed = parseSlotKeyDateTime(slotKey);
+      date = date || parsed.date;
+      time = time || parsed.time;
+    }
+    return { slotKey, __date: date, time };
+  }
+
+  async function requestHold(serviceId, slotKey){
+    if (!serviceId || !slotKey) return { ok:false, error:'missing' };
+    try{
+      const res = await fetch('/api/service/slot/hold', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'include',
+        body: JSON.stringify({ serviceId, slotKey })
+      });
+      const data = await res.json().catch(()=>({}));
+      if (res.status === 401){
+        return { ok:false, error:'UNAUTHORIZED' };
+      }
+      if (!res.ok || !data || data.ok === false){
+        return { ok:false, error:(data && data.error) || 'SLOT_CONFLICT' };
+      }
+      return { ok:true, data };
+    }catch(_){
+      return { ok:false, error:'network_error' };
+    }
+  }
+
   async function releaseHoldOnServer(serviceId, slotKey, slotHoldToken){
     if (!serviceId || !slotKey || !slotHoldToken){
       return { ok:true, released:false, reason:'missing' };
@@ -1486,6 +1538,36 @@
     }
   }
 
+  function setPendingSlot(slot){
+    if (!slot || !slot.slotKey) return;
+    const date = slot.__date || slot.date || '';
+    const start = date ? `${date} ${slot.time || ''}`.trim() : '';
+    CURRENT_DETAIL_SLOT.pendingSlotKey = slot.slotKey;
+    CURRENT_DETAIL_SLOT.pendingSlotStart = start;
+    if (slotGridEl){
+      Array.from(slotGridEl.querySelectorAll('.svc-slot-btn')).forEach(btn=>{
+        const key = btn.dataset.slotKey || '';
+        btn.classList.toggle('is-held', key && key === slot.slotKey);
+      });
+    }
+    if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+      detailAddBtn.disabled = false;
+      detailAddBtn.textContent = '加入購物車';
+    }
+    if (start){
+      setSlotStateText(`已選擇 ${start}，按加入購物車後保留 15 分鐘`, false);
+    }else{
+      setSlotStateText('已選擇時段，按加入購物車後保留 15 分鐘', false);
+    }
+  }
+
+  function updateAddBtnStateForSlot(){
+    if (!detailAddBtn || detailAddBtn.textContent === '已結束') return;
+    const hasSelection = !!(CURRENT_DETAIL_SLOT.slotHoldToken || CURRENT_DETAIL_SLOT.pendingSlotKey);
+    detailAddBtn.disabled = !hasSelection;
+    detailAddBtn.textContent = '加入購物車';
+  }
+
   function renderSlotGrid(item){
     if (!slotGridEl) return;
     slotGridEl.innerHTML = '';
@@ -1497,19 +1579,26 @@
       const status = String(slot.status || 'free');
       const enabled = slot.enabled !== false;
       btn.textContent = slot.time || '--:--';
+      if (slot.slotKey) btn.dataset.slotKey = slot.slotKey;
       if (!enabled || status !== 'free'){
         btn.classList.add('is-disabled');
         if (status === 'booked') btn.classList.add('is-booked');
         if (status === 'blocked') btn.classList.add('is-blocked');
       }
-      if (CURRENT_DETAIL_SLOT.slotKey && slot.slotKey === CURRENT_DETAIL_SLOT.slotKey){
+      if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && slot.slotKey === CURRENT_DETAIL_SLOT.slotKey){
         btn.classList.add('is-held');
         btn.classList.add('is-disabled');
         btn.disabled = true;
+      }else if (CURRENT_DETAIL_SLOT.pendingSlotKey && slot.slotKey === CURRENT_DETAIL_SLOT.pendingSlotKey){
+        btn.classList.add('is-held');
       }
       btn.addEventListener('click', ()=>{
         if (!enabled || status !== 'free') return;
-        holdSlot(Object.assign({ __date: item.date || '' }, slot));
+        if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && CURRENT_DETAIL_SLOT.slotKey !== slot.slotKey){
+          setSlotStateText('已有保留時段，請先按修改時間', true);
+          return;
+        }
+        setPendingSlot(Object.assign({ __date: item.date || '' }, slot));
       });
       slotGridEl.appendChild(btn);
     });
@@ -1528,6 +1617,8 @@
         CURRENT_DETAIL_SLOT.slotKey = '';
         CURRENT_DETAIL_SLOT.slotHoldToken = '';
         CURRENT_DETAIL_SLOT.holdUntilMs = 0;
+        CURRENT_DETAIL_SLOT.pendingSlotKey = '';
+        CURRENT_DETAIL_SLOT.pendingSlotStart = '';
         setSlotStateText('保留已到期，請重新選擇', true);
         if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
           detailAddBtn.disabled = true;
@@ -1544,14 +1635,14 @@
   }
 
   async function holdSlot(slot){
-    if (!slot || !slot.slotKey || !detailDataset) return;
+    if (!slot || !slot.slotKey || !detailDataset) return false;
     const serviceId = resolveServiceId(detailDataset);
     setSlotStateText('保留中…', false);
     if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && CURRENT_DETAIL_SLOT.slotKey !== slot.slotKey){
       const released = await releaseHoldOnServer(serviceId, CURRENT_DETAIL_SLOT.slotKey, CURRENT_DETAIL_SLOT.slotHoldToken);
       if (!released.ok){
         setSlotStateText('目前無法釋放原本時段，請稍後再試', true);
-        return;
+        return false;
       }
       if (released.released || released.reason === 'hold_not_found'){
         clearHoldFromStorage(serviceId);
@@ -1572,13 +1663,16 @@
       const data = await res.json().catch(()=>({}));
       if (res.status === 401){
         setSlotStateText(mapUserErrorMessage('UNAUTHORIZED') || '請先登入後再預約時段', true);
-        return;
+        if (window.authState && typeof window.authState.login === 'function'){
+          window.authState.login();
+        }
+        return false;
       }
       if (!res.ok || !data || data.ok === false){
         const err = (data && data.error) || 'SLOT_CONFLICT';
         const msg = mapUserErrorMessage(err) || '此時段目前無法預約，請稍後再試';
         setSlotStateText(msg, true);
-        return;
+        return false;
       }
       CURRENT_DETAIL_SLOT.serviceId = serviceId;
       CURRENT_DETAIL_SLOT.slotKey = data.slotKey || slot.slotKey;
@@ -1586,6 +1680,8 @@
       CURRENT_DETAIL_SLOT.holdUntilMs = Number(data.heldUntil || 0) || 0;
       const slotDate = slot.__date || slot.date || '';
       CURRENT_DETAIL_SLOT.slotStart = slotDate ? `${slotDate} ${slot.time || ''}`.trim() : '';
+      CURRENT_DETAIL_SLOT.pendingSlotKey = '';
+      CURRENT_DETAIL_SLOT.pendingSlotStart = '';
       saveHoldToStorage(serviceId, {
         serviceId,
         slotKey: CURRENT_DETAIL_SLOT.slotKey,
@@ -1603,8 +1699,10 @@
           btn.classList.toggle('is-held', btn.textContent === slot.time);
         });
       }
+      return true;
     }catch(_){
       setSlotStateText('保留失敗，請稍後再試', true);
+      return false;
     }
   }
 
@@ -1799,6 +1897,7 @@
       const activeItem = cached.find(day => day.date === activeDate) || cached[0];
       if (activeItem) renderSlotGrid(activeItem);
       setSlotStateText('顯示最近時段', false);
+      updateAddBtnStateForSlot();
     }
     try{
       const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
@@ -1851,9 +1950,8 @@
           detailAddBtn.disabled = true;
           detailAddBtn.textContent = '目前無法預約';
         }
-      }else if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
-        detailAddBtn.disabled = false;
-        detailAddBtn.textContent = '加入購物車';
+      }else{
+        updateAddBtnStateForSlot();
       }
       if (hasFree) setSlotStateText('');
       return;
@@ -2851,10 +2949,10 @@
     const qtyLabel = qtyEnabled ? getServiceQtyLabel(detail) : '';
     const photoRequired = isRitualPhotoRequired(detail);
     const basePrice = isPhone ? getPhoneBasePrice() : Number(detail.price||0);
-    const slotKey = isPhone ? CURRENT_DETAIL_SLOT.slotKey : '';
+    const slotKey = isPhone ? (CURRENT_DETAIL_SLOT.slotHoldToken ? CURRENT_DETAIL_SLOT.slotKey : CURRENT_DETAIL_SLOT.pendingSlotKey) : '';
     const slotHoldToken = isPhone ? CURRENT_DETAIL_SLOT.slotHoldToken : '';
-    const slotStart = isPhone ? CURRENT_DETAIL_SLOT.slotStart : '';
-    const slotHoldUntilMs = isPhone ? CURRENT_DETAIL_SLOT.holdUntilMs : 0;
+    const slotStart = isPhone ? (CURRENT_DETAIL_SLOT.slotHoldToken ? CURRENT_DETAIL_SLOT.slotStart : CURRENT_DETAIL_SLOT.pendingSlotStart) : '';
+    const slotHoldUntilMs = isPhone ? (CURRENT_DETAIL_SLOT.slotHoldToken ? CURRENT_DETAIL_SLOT.holdUntilMs : 0) : 0;
     const consultPack = isPhone ? (CONSULT_PACK || resolveConsultPack('zh')) : null;
     const consultPackPrice = consultPack ? Number(consultPack.price || 0) : 0;
     const consultAddonPrice = isPhone && CONSULT_ADDON ? 500 : 0;
@@ -2904,7 +3002,7 @@
     try{ localStorage.removeItem('__svcBackToDetailId__'); }catch(_){}
   }
 
-  function addPendingServiceToCart(){
+  async function addPendingServiceToCart(){
     let pending = null;
     try{
       const raw = localStorage.getItem('__svcPendingAddToCart__');
@@ -2912,6 +3010,36 @@
     }catch(_){}
     try{ localStorage.removeItem('__svcPendingAddToCart__'); }catch(_){}
     if (!pending) return false;
+    if (isPhoneConsultService(pending)){
+      if (!pending.slotKey){
+        alert('請先選擇預約時段');
+        return false;
+      }
+      if (!pending.slotHoldToken){
+        const holdRes = await requestHold(pending.serviceId, pending.slotKey);
+        if (!holdRes.ok){
+          if (holdRes.error === 'UNAUTHORIZED' && window.authState && typeof window.authState.login === 'function'){
+            window.authState.login();
+            return false;
+          }
+          alert('無法保留時段，請重新選擇');
+          return false;
+        }
+        pending.slotHoldToken = holdRes.data.holdToken || '';
+        pending.slotHoldUntilMs = Number(holdRes.data.heldUntil || 0) || 0;
+        if (!pending.slotStart){
+          const parsed = parseSlotKeyDateTime(pending.slotKey);
+          pending.slotStart = parsed.date && parsed.time ? `${parsed.date} ${parsed.time}` : '';
+        }
+        saveHoldToStorage(pending.serviceId, {
+          serviceId: pending.serviceId,
+          slotKey: pending.slotKey,
+          slotHoldToken: pending.slotHoldToken,
+          slotStart: pending.slotStart,
+          holdUntilMs: pending.slotHoldUntilMs
+        });
+      }
+    }
     let cart = loadCart();
     cart = ensureSingleService(cart, pending.serviceId);
     if (cart === null) return false;
@@ -2927,20 +3055,21 @@
     if (cartPanel) openDialog(cartPanel);
   }
 
-  function addCurrentSelection(){
+  async function addCurrentSelection(){
     if (!detailDataset) return;
     const limitedTs = parseLimitedUntil(detailDataset && detailDataset.limitedUntil);
     if (limitedTs && Date.now() >= limitedTs){
       alert('此服務已結束上架');
       return;
     }
-    if (isPhoneConsultService(detailDataset) && !CURRENT_DETAIL_SLOT.slotHoldToken){
+    const isPhone = isPhoneConsultService(detailDataset);
+    if (isPhone && !CURRENT_DETAIL_SLOT.slotHoldToken && !CURRENT_DETAIL_SLOT.pendingSlotKey){
       setSlotStateText('請先選擇預約時段', true);
       return;
     }
-    const item = buildServiceCartItem(detailDataset);
-    if (!item) return;
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+      const item = buildServiceCartItem(detailDataset);
+      if (!item) return;
       closeDialog(detailDialog);
       if (cartPanel) closeDialog(cartPanel);
       stashPendingService(item);
@@ -2951,6 +3080,17 @@
       }
       return;
     }
+    if (isPhone && !CURRENT_DETAIL_SLOT.slotHoldToken){
+      const pending = getPendingSlotForHold();
+      if (!pending){
+        setSlotStateText('請先選擇預約時段', true);
+        return;
+      }
+      const ok = await holdSlot(pending);
+      if (!ok) return;
+    }
+    const item = buildServiceCartItem(detailDataset);
+    if (!item) return;
     let cart = loadCart();
     cart = ensureSingleService(cart, item.serviceId);
     if (cart === null) return;
@@ -3312,7 +3452,13 @@
     if (window.authState && typeof window.authState.isLoggedIn === 'function' && window.authState.isLoggedIn()){
       if (localStorage.getItem('__addSvcPendingAfterLogin') === '1'){
         const added = addPendingServiceToCart();
-        if (added !== false) localStorage.removeItem('__addSvcPendingAfterLogin');
+        if (added && typeof added.then === 'function'){
+          added.then(res=>{
+            if (res !== false) localStorage.removeItem('__addSvcPendingAfterLogin');
+          });
+        }else if (added !== false){
+          localStorage.removeItem('__addSvcPendingAfterLogin');
+        }
       }
       if (localStorage.getItem('__openSvcCartAfterLogin') === '1'){
         openServiceCartPanel();
