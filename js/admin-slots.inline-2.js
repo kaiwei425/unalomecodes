@@ -37,6 +37,7 @@
       btn_reschedule_load: '載入申請',
       btn_reschedule_more: '更多',
       published_title: '已開放時段（含日期）',
+      btn_published_refresh: '重新整理已開放時段',
       published_empty: '目前沒有已開放時段。',
       reschedule_empty: '目前沒有改期申請。',
       reschedule_note: '備註',
@@ -95,6 +96,7 @@
       btn_reschedule_load: 'Load requests',
       btn_reschedule_more: 'More',
       published_title: 'Published Slots (with dates)',
+      btn_published_refresh: 'Refresh published slots',
       published_empty: 'No published slots.',
       reschedule_empty: 'No reschedule requests.',
       reschedule_note: 'Note',
@@ -193,6 +195,7 @@
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
+  var btnPublishedRefresh = document.getElementById('btnPublishedRefresh');
   var btnSelectAll = document.getElementById('btnSelectAll');
   var btnClearSel = document.getElementById('btnClearSel');
   var slotGrid = document.getElementById('slotGrid');
@@ -742,10 +745,11 @@
       });
   }
 
-  function loadPublishedSlots(serviceId){
+  function loadPublishedSlots(serviceId, done){
     if (!publishedSlots) return;
     if (!serviceId){
       publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
+      if (typeof done === 'function') done();
       return;
     }
     var cached = loadPublishedCache();
@@ -767,6 +771,7 @@
       .then(function(result){
         if (!result.ok){
           publishedSlots.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
+          if (typeof done === 'function') done();
           return;
         }
         var items = Array.isArray(result.data.items) ? result.data.items : [];
@@ -782,13 +787,16 @@
         if (!list.length){
           publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
           savePublishedCache([]);
+          if (typeof done === 'function') done();
           return;
         }
         savePublishedCache(list);
         renderPublishedList(list);
+        if (typeof done === 'function') done();
       })
       .catch(function(){
         publishedSlots.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
+        if (typeof done === 'function') done();
       });
   }
 
@@ -908,6 +916,12 @@
     if (btnRescheduleLoad) btnRescheduleLoad.addEventListener('click', function(){ loadReschedules(true); });
     if (btnRescheduleMore) btnRescheduleMore.addEventListener('click', function(){ loadReschedules(false); });
     if (rescheduleStatus) rescheduleStatus.addEventListener('change', function(){ loadReschedules(true); });
+    if (btnPublishedRefresh) btnPublishedRefresh.addEventListener('click', function(){
+      setButtonBusy(btnPublishedRefresh, true);
+      loadPublishedSlots(getServiceIdValue(), function(){
+        setButtonBusy(btnPublishedRefresh, false);
+      });
+    });
     bindDateNav();
     autoLoadTodayIfReady();
     loadReschedules(true);

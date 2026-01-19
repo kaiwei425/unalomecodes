@@ -789,7 +789,7 @@
     if (contactNoteInput){
       if (!notePlaceholderOriginal) notePlaceholderOriginal = contactNoteInput.placeholder || '';
       contactNoteInput.placeholder = isPhone
-        ? '可先將要問的問題寫在這裡，或之後至會員中心 我的訂單 問與答內留言問題'
+        ? '可先將想詢問的問題整理在這裡；或於預約成功後，至會員中心「我的訂單 → 問與答」留言。'
         : notePlaceholderOriginal;
       contactNoteInput.required = false;
     }
@@ -1296,13 +1296,13 @@
 
   function mapUserErrorMessage(code){
     const key = String(code || '').toUpperCase();
-    if (key === 'SLOT_CONFLICT') return '此時段已被他人預約';
+    if (key === 'SLOT_CONFLICT') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
     if (key === 'SLOT_EXPIRED') return '此時段已過期，請重新選擇';
     if (key === 'TOO_LATE') return '已超過可改期時間';
     if (key === 'ALREADY_REQUESTED') return '已送出改期申請';
     if (key === 'UNAUTHORIZED') return '請先登入';
     if (key === 'SLOT_NOT_PUBLISHED') return '此時段尚未開放';
-    if (key === 'SLOT_UNAVAILABLE') return '此時段已被他人預約';
+    if (key === 'SLOT_UNAVAILABLE') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
     if (key === 'SLOT_HOLD_EXPIRED') return '此時段已過期，請重新選擇';
     return '';
   }
@@ -1536,7 +1536,7 @@
       }
       if (!res.ok || !data || data.ok === false){
         const err = (data && data.error) || 'SLOT_CONFLICT';
-        const msg = mapUserErrorMessage(err) || '此時段已被預約';
+        const msg = mapUserErrorMessage(err) || '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
         setSlotStateText(msg, true);
         return;
       }
@@ -1767,7 +1767,7 @@
         if (!cached || !cached.length){
           hideSlotPicker('目前暫無可預約時段');
         }else{
-          setSlotStateText('時段載入中斷，已顯示最近資料', true);
+          setSlotStateText('已顯示最近時段資料', false);
         }
         return;
       }
@@ -1821,7 +1821,7 @@
       if (!cached || !cached.length){
         hideSlotPicker('目前暫無可預約時段');
       }else{
-        setSlotStateText('時段載入中斷，已顯示最近資料', true);
+        setSlotStateText('已顯示最近時段資料', false);
       }
     }
   }
