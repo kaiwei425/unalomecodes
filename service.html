@@ -153,6 +153,7 @@
         </div>
 <section id="svcPromoPhone" class="svc-promo" style="display:none">
   <div class="svc-promo-card">
+    <button type="button" id="promoEditToggle" class="svc-promo-edit" style="display:none">編輯</button>
     <div class="svc-promo-left">
       <div class="svc-promo-media">
         <img id="svcPromoImg" alt="電話算命預約">
@@ -214,6 +215,12 @@
       </label>
       <label>照片 URL
         <input type="text" id="promoImageInput" placeholder="https://...">
+      </label>
+      <label>圖片位置 X（0-100）
+        <input type="number" id="promoImagePosXInput" min="0" max="100" step="1" placeholder="50">
+      </label>
+      <label>圖片位置 Y（0-100）
+        <input type="number" id="promoImagePosYInput" min="0" max="100" step="1" placeholder="50">
       </label>
     </div>
     <div class="svc-promo-admin-actions">

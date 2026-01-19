@@ -170,6 +170,7 @@ body.service-view .svc-pack-addon .addon-hint{font-size:12px;color:#64748b;margi
 body.service-view .svc-pack-policy{font-size:12px;color:#64748b;display:grid;gap:4px;}
 body.service-view .svc-promo{margin:14px 0 18px;}
 body.service-view .svc-promo-card{
+  position:relative;
   display:grid;
   gap:16px;
   padding:20px;
@@ -221,6 +222,19 @@ body.service-view .svc-promo-note{
   font-size:12px;
 }
 body.service-view .svc-promo-right{display:flex;flex-direction:column;gap:12px;justify-content:center;}
+body.service-view .svc-promo-edit{
+  position:absolute;
+  top:12px;
+  right:12px;
+  border:1px solid rgba(15,23,42,.12);
+  background:#fff;
+  color:#0f172a;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
 body.service-view .svc-pack-label{font-size:12px;color:#64748b;font-weight:700;margin-bottom:6px;}
 body.service-view .svc-pack-pills{display:flex;flex-wrap:wrap;gap:8px;}
 body.service-view .svc-pill{
@@ -236,7 +250,13 @@ body.service-view .svc-pill{
 }
 body.service-view .svc-pill:hover{transform:translateY(-1px);border-color:#93c5fd;box-shadow:0 10px 18px rgba(59,130,246,.2);}
 body.service-view .svc-pill.active{background:#1e3a8a;color:#fff;border-color:#1e3a8a;box-shadow:0 12px 22px rgba(30,58,138,.3);}
-body.service-view .svc-promo-cta{width:100%;}
+body.service-view .svc-promo-cta{
+  width:100%;
+  padding:12px 16px;
+  font-size:15px;
+  border-radius:14px;
+  min-height:52px;
+}
 body.service-view .svc-promo-mini{font-size:12px;color:#64748b;line-height:1.6;}
 body.service-view .svc-promo-admin{
   margin-top:12px;

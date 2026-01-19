@@ -140,6 +140,9 @@
   const promoCtaInput = document.getElementById('promoCtaInput');
   const promoMiniInput = document.getElementById('promoMiniInput');
   const promoImageInput = document.getElementById('promoImageInput');
+  const promoImagePosXInput = document.getElementById('promoImagePosXInput');
+  const promoImagePosYInput = document.getElementById('promoImagePosYInput');
+  const promoEditToggle = document.getElementById('promoEditToggle');
   const promoSaveBtn = document.getElementById('promoSave');
   const promoResetBtn = document.getElementById('promoReset');
   const adminPreviewBadge = document.getElementById('svcAdminPreviewBadge');
@@ -164,6 +167,7 @@
   let PHONE_CONSULT_CFG_AT = 0;
   let __IS_ADMIN_VIEWER__ = false;
   let ADMIN_PREVIEW_MODE = false;
+  let ADMIN_ROLE = '';
   let ADMIN_ME = { ok:false, role:'', at:0 };
   let __PHONE_PACK__ = 'en';
   let __PHONE_PROMO_SERVICE__ = null;
@@ -174,6 +178,8 @@
   let CONSULT_PACK = null;
   let CONSULT_ADDON = false;
   const PHONE_BASE_PRICE = 3500;
+  let PHONE_BASE_PRICE_OVERRIDE = 0;
+  let CONSULT_PACK_PRICES = { en: 3500, zh: 4000 };
   let CURRENT_DETAIL_SLOT = {
     serviceId: '',
     slotKey: '',
@@ -987,18 +993,18 @@
 
   function resolveConsultPack(key){
     if (key === 'en'){
-      return { key:'en', label:'英文翻譯', price: 3500 };
+      return { key:'en', label:'英文翻譯', price: Number(CONSULT_PACK_PRICES.en || PHONE_BASE_PRICE) };
     }
-    return { key:'zh', label:'中文翻譯', price: 4000 };
+    return { key:'zh', label:'中文翻譯', price: Number(CONSULT_PACK_PRICES.zh || (PHONE_BASE_PRICE + 500)) };
   }
 
   function getPhoneBasePrice(){
-    return PHONE_BASE_PRICE;
+    return PHONE_BASE_PRICE_OVERRIDE || PHONE_BASE_PRICE;
   }
 
   function getConsultPackDelta(pack){
     if (!pack) return 0;
-    return pack.key === 'zh' ? 500 : 0;
+    return pack.key === 'zh' ? (Number(CONSULT_PACK_PRICES.zh || 0) - getPhoneBasePrice()) : 0;
   }
 
   function ensureConsultAddonUI(){
@@ -1020,6 +1026,24 @@
     wrap.appendChild(select);
     if (hintNode) wrap.appendChild(hintNode);
     consultAddonInput = select;
+  }
+
+  function syncConsultPackPrices(service){
+    if (!service) return;
+    const options = Array.isArray(service.options) ? service.options : [];
+    const enOpt = options.find(opt => /英文/.test(String(opt.name || '')));
+    const zhOpt = options.find(opt => /中文/.test(String(opt.name || '')));
+    const base = Number((enOpt && enOpt.price) || service.price || PHONE_BASE_PRICE);
+    if (Number.isFinite(base) && base > 0){
+      PHONE_BASE_PRICE_OVERRIDE = base;
+    }
+    const zh = Number((zhOpt && zhOpt.price) || (base + 500));
+    CONSULT_PACK_PRICES = { en: base, zh: zh };
+    consultPackPills.forEach(btn=>{
+      const price = btn.dataset.pack === 'zh' ? CONSULT_PACK_PRICES.zh : CONSULT_PACK_PRICES.en;
+      const priceEl = btn.querySelector('.pill-price');
+      if (priceEl) priceEl.textContent = formatTWD(price);
+    });
   }
 
   function getConsultAddonValue(){
@@ -1057,6 +1081,7 @@
       return;
     }
     ensureConsultAddonUI();
+    syncConsultPackPrices(service);
     consultPackWrap.style.display = '';
     const savedKey = getConsultPackKeyFromStorage();
     const defaultKey = savedKey === 'en' || savedKey === 'zh' ? savedKey : 'zh';
@@ -1993,6 +2018,14 @@
     }
   }
 
+  function normalizePromoPos(val){
+    const num = Number(val);
+    if (!Number.isFinite(num)) return '';
+    if (num < 0) return 0;
+    if (num > 100) return 100;
+    return Math.round(num);
+  }
+
   function getPromoDefaults(){
     const bullets = promoBulletsEl ? Array.from(promoBulletsEl.querySelectorAll('li')).map(li => li.textContent.trim()).filter(Boolean) : [];
     return {
@@ -2006,7 +2039,9 @@
       packZh: promoPackZhEl ? promoPackZhEl.textContent.trim() : '',
       cta: promoCta ? promoCta.textContent.trim() : '',
       mini: promoMiniEl ? promoMiniEl.textContent.trim() : '',
-      imageUrl: promoImgEl ? promoImgEl.getAttribute('src') || '' : ''
+      imageUrl: promoImgEl ? promoImgEl.getAttribute('src') || '' : '',
+      imagePosX: '',
+      imagePosY: ''
     };
   }
 
@@ -2016,6 +2051,28 @@
     const cover = service ? (service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '') : '';
     const merged = Object.assign({}, base, meta);
     if (!merged.imageUrl && cover) merged.imageUrl = cover;
+    const optList = Array.isArray(service && service.options) ? service.options : [];
+    if (!merged.packEn || !merged.packZh){
+      const enOpt = optList.find(opt => /英文/.test(String(opt.name || '')));
+      const zhOpt = optList.find(opt => /中文/.test(String(opt.name || '')));
+      if (!merged.packEn && enOpt){
+        merged.packEn = `英文翻譯 NT$${Number(enOpt.price || 0)}`;
+      }
+      if (!merged.packZh && zhOpt){
+        merged.packZh = `中文翻譯 NT$${Number(zhOpt.price || 0)}`;
+      }
+    }else{
+      const enOpt = optList.find(opt => /英文/.test(String(opt.name || '')));
+      const zhOpt = optList.find(opt => /中文/.test(String(opt.name || '')));
+      if (enOpt && merged.packEn){
+        merged.packEn = String(merged.packEn).replace(/NT\$\s*[\d,]+/i, `NT$${Number(enOpt.price || 0)}`);
+      }
+      if (zhOpt && merged.packZh){
+        merged.packZh = String(merged.packZh).replace(/NT\$\s*[\d,]+/i, `NT$${Number(zhOpt.price || 0)}`);
+      }
+    }
+    merged.imagePosX = normalizePromoPos(merged.imagePosX);
+    merged.imagePosY = normalizePromoPos(merged.imagePosY);
     return merged;
   }
 
@@ -2043,6 +2100,15 @@
       const url = data.imageUrl || '';
       if (promoMediaEl) promoMediaEl.style.display = url ? '' : 'none';
       if (url) promoImgEl.setAttribute('src', url);
+      const posX = normalizePromoPos(data.imagePosX);
+      const posY = normalizePromoPos(data.imagePosY);
+      if (posX !== '' || posY !== ''){
+        const x = posX === '' ? 50 : posX;
+        const y = posY === '' ? 50 : posY;
+        promoImgEl.style.objectPosition = `${x}% ${y}%`;
+      }else{
+        promoImgEl.style.objectPosition = '';
+      }
     }
   }
 
@@ -2059,6 +2125,8 @@
     if (promoCtaInput) promoCtaInput.value = data.cta || '';
     if (promoMiniInput) promoMiniInput.value = data.mini || '';
     if (promoImageInput) promoImageInput.value = data.imageUrl || '';
+    if (promoImagePosXInput) promoImagePosXInput.value = data.imagePosX !== '' ? data.imagePosX : '';
+    if (promoImagePosYInput) promoImagePosYInput.value = data.imagePosY !== '' ? data.imagePosY : '';
   }
 
   function readPromoForm(){
@@ -2073,7 +2141,9 @@
       packZh: promoPackZhInput ? promoPackZhInput.value.trim() : '',
       cta: promoCtaInput ? promoCtaInput.value.trim() : '',
       mini: promoMiniInput ? promoMiniInput.value.trim() : '',
-      imageUrl: promoImageInput ? promoImageInput.value.trim() : ''
+      imageUrl: promoImageInput ? promoImageInput.value.trim() : '',
+      imagePosX: normalizePromoPos(promoImagePosXInput ? promoImagePosXInput.value : ''),
+      imagePosY: normalizePromoPos(promoImagePosYInput ? promoImagePosYInput.value : '')
     };
   }
 
@@ -2095,13 +2165,26 @@
 
   function initPromoAdmin(service){
     if (!promoAdminEl) return;
-    if (!ADMIN_PREVIEW_MODE){
+    if (!ADMIN_PREVIEW_MODE || ADMIN_ROLE !== 'owner'){
+      if (promoEditToggle) promoEditToggle.style.display = 'none';
       promoAdminEl.style.display = 'none';
       return;
     }
-    promoAdminEl.style.display = '';
+    if (promoEditToggle){
+      promoEditToggle.style.display = '';
+      promoEditToggle.textContent = '編輯';
+    }
+    promoAdminEl.style.display = 'none';
     const data = getPromoData(service);
     fillPromoForm(data);
+    if (promoEditToggle && !promoEditToggle.__bound){
+      promoEditToggle.__bound = true;
+      promoEditToggle.addEventListener('click', ()=>{
+        const next = promoAdminEl.style.display === 'none' ? '' : 'none';
+        promoAdminEl.style.display = next;
+        promoEditToggle.textContent = next === 'none' ? '編輯' : '收起';
+      });
+    }
     if (promoResetBtn && !promoResetBtn.__bound){
       promoResetBtn.__bound = true;
       promoResetBtn.addEventListener('click', ()=>{
@@ -2133,6 +2216,7 @@
     __PHONE_SVC_ID__ = resolveServiceId(target);
     __PHONE_PROMO_SERVICE__ = target;
     promoSection.style.display = '';
+    syncConsultPackPrices(target);
     applyPromoContent(getPromoData(target));
     initPromoAdmin(target);
     setPromoPack(__PHONE_PACK__);
@@ -3610,6 +3694,8 @@
     const services = await fetchServices();
     const allServices = Array.isArray(services) ? services : [];
     const cfg = await loadPhoneConsultConfig();
+    const adminMe = await getAdminMe();
+    ADMIN_ROLE = adminMe && adminMe.ok ? adminMe.role : '';
     ADMIN_PREVIEW_MODE = !!(cfg && cfg.isAdmin);
     __IS_ADMIN_VIEWER__ = ADMIN_PREVIEW_MODE;
     console.log('[admin-preview]', { enabled: ADMIN_PREVIEW_MODE, ts: new Date().toISOString() });
