@@ -254,6 +254,7 @@
           display.textContent = t('label_service_id') + ': ' + svcId;
         }
         loadPublishedSlots(svcId);
+        autoLoadTodayIfReady();
       })
       .catch(function(){});
   }
@@ -272,6 +273,14 @@
 
   function setStatusOk(msg){
     setStatus(msg, false);
+  }
+
+  function autoLoadTodayIfReady(){
+    var serviceId = getServiceIdValue();
+    if (!serviceId) return;
+    var today = todayStr();
+    setCurrentDate(today);
+    loadSlots(today);
   }
 
   function setButtonBusy(btn, busy){
@@ -729,7 +738,8 @@
         var shownDate = (day && day.date) ? day.date : date;
         if (shownDate) setCurrentDate(shownDate);
         renderSlots(day ? day.slots : []);
-        setStatus(t('msg_done') + (shownDate ? ' ' + shownDate : ''));
+        setStatus('已更新' + (shownDate ? ' ' + shownDate : ''));
+        setTimeout(function(){ setStatus(''); }, 1800);
         loadPublishedSlots(serviceId);
       })
       .catch(function(){
@@ -907,6 +917,7 @@
     if (btnRescheduleMore) btnRescheduleMore.addEventListener('click', function(){ loadReschedules(false); });
     if (rescheduleStatus) rescheduleStatus.addEventListener('change', function(){ loadReschedules(true); });
     bindDateNav();
+    autoLoadTodayIfReady();
     loadReschedules(true);
     loadPublishedSlots(getServiceIdValue());
   });
