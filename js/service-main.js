@@ -179,6 +179,7 @@
   let notePlaceholderOriginal = '';
   let CONSULT_PACK = null;
   let CONSULT_ADDON = false;
+  let LAST_RELEASE_MSG = '';
   const PHONE_BASE_PRICE = 3500;
   let PHONE_BASE_PRICE_OVERRIDE = 0;
   let CONSULT_PACK_PRICES = { en: 0, zh: 0 };
@@ -1294,6 +1295,27 @@
     slotStateEl.classList.toggle('ok', !isError && !!msg);
   }
 
+  async function releaseHoldOnServer(serviceId, slotKey, slotHoldToken){
+    if (!serviceId || !slotKey || !slotHoldToken){
+      return { ok:true, released:false, reason:'missing' };
+    }
+    try{
+      const res = await fetch('/api/service/slot/release', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'include',
+        body: JSON.stringify({ serviceId, slotKey, slotHoldToken })
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data || data.ok === false){
+        return { ok:false, released:false, error:(data && data.error) || 'release_failed' };
+      }
+      return { ok:true, released:!!data.released, reason:data.reason || '' };
+    }catch(_){
+      return { ok:false, released:false, error:'network_error' };
+    }
+  }
+
   function mapUserErrorMessage(code){
     const key = String(code || '').toUpperCase();
     if (key === 'SLOT_CONFLICT') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
@@ -1525,6 +1547,21 @@
     if (!slot || !slot.slotKey || !detailDataset) return;
     const serviceId = resolveServiceId(detailDataset);
     setSlotStateText('保留中…', false);
+    if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && CURRENT_DETAIL_SLOT.slotKey !== slot.slotKey){
+      const released = await releaseHoldOnServer(serviceId, CURRENT_DETAIL_SLOT.slotKey, CURRENT_DETAIL_SLOT.slotHoldToken);
+      if (!released.ok){
+        setSlotStateText('目前無法釋放原本時段，請稍後再試', true);
+        return;
+      }
+      if (released.released || released.reason === 'hold_not_found'){
+        clearHoldFromStorage(serviceId);
+        clearSlotFromCart(serviceId);
+        CURRENT_DETAIL_SLOT.slotKey = '';
+        CURRENT_DETAIL_SLOT.slotHoldToken = '';
+        CURRENT_DETAIL_SLOT.holdUntilMs = 0;
+        CURRENT_DETAIL_SLOT.slotStart = '';
+      }
+    }
     try{
       const res = await fetch('/api/service/slot/hold', {
         method:'POST',
@@ -2774,6 +2811,10 @@
     initConsultPackUI(service);
     updateDetailPrice();
     initSlotPicker(service);
+    if (LAST_RELEASE_MSG){
+      setSlotStateText(LAST_RELEASE_MSG, true);
+      LAST_RELEASE_MSG = '';
+    }
     openDialog(detailDialog);
     updateLimitedCountdowns(detailDialog);
     scheduleLimitedTimer();
@@ -3625,14 +3666,24 @@
     });
   }
   if (slotChangeBtn){
-    slotChangeBtn.addEventListener('click', ()=>{
+    slotChangeBtn.addEventListener('click', async ()=>{
       const cart = loadCart();
       const phoneItem = cart.find(it => isPhoneConsultService(it));
       if (!phoneItem) return;
       const serviceId = phoneItem.serviceId;
-      clearHoldFromStorage(serviceId);
-      clearSlotFromCart(serviceId);
-      resetSlotState();
+      slotChangeBtn.disabled = true;
+      const oldText = slotChangeBtn.textContent;
+      slotChangeBtn.textContent = '釋放中…';
+      const releaseRes = await releaseHoldOnServer(serviceId, phoneItem.slotKey, phoneItem.slotHoldToken);
+      if (releaseRes.ok && (releaseRes.released || releaseRes.reason === 'hold_not_found')){
+        clearHoldFromStorage(serviceId);
+        clearSlotFromCart(serviceId);
+        resetSlotState();
+      }else{
+        LAST_RELEASE_MSG = '目前無法釋放原本時段，請稍後再試';
+      }
+      slotChangeBtn.disabled = false;
+      slotChangeBtn.textContent = oldText;
       SKIP_AUTO_RESUME = true;
       closeDialog(checkoutDialog);
       const target = allServiceItems.find(s => String(resolveServiceId(s)) === String(serviceId || ''));

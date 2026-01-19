@@ -10580,6 +10580,86 @@ if (pathname === '/api/service/slot/hold' && request.method === 'POST') {
   }), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
+if (pathname === '/api/service/slot/release' && request.method === 'POST') {
+  await cleanupExpiredHolds(env);
+  if (!env?.SERVICE_SLOTS_KV){
+    return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+  }
+  if (!env?.SERVICE_SLOT_HOLDS_KV){
+    return new Response(JSON.stringify({ ok:false, error:'holds_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+  }
+  const svcUser = await getSessionUser(request, env);
+  if (!svcUser) {
+    return new Response(JSON.stringify({ ok:false, error:'UNAUTHORIZED' }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  let body = null;
+  try{
+    body = await request.json();
+  }catch(_){
+    body = {};
+  }
+  const serviceId = String(body.serviceId || '').trim();
+  const slotKey = String(body.slotKey || '').trim();
+  const slotHoldToken = String(body.slotHoldToken || body.holdToken || '').trim();
+  if (!serviceId || !slotKey || !slotHoldToken){
+    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const parsed = parseSlotKey(slotKey);
+  if (!parsed || parsed.serviceId !== serviceId){
+    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  const holdKey = `hold:${slotHoldToken}`;
+  const holdRaw = await env.SERVICE_SLOT_HOLDS_KV.get(holdKey);
+  if (!holdRaw){
+    return new Response(JSON.stringify({ ok:true, released:false, reason:'hold_not_found' }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+  let hold = null;
+  try{ hold = JSON.parse(holdRaw); }catch(_){}
+  const holdBy = String((hold && (hold.userId || hold.holdBy)) || '').toLowerCase();
+  const requester = String(resolveHoldUserId(svcUser, request) || '').toLowerCase();
+  if (!hold || !holdBy || holdBy !== requester){
+    return new Response(JSON.stringify({ ok:false, error:'forbidden' }), { status:403, headers: jsonHeadersFor(request, env) });
+  }
+  if (String(hold.slotKey || '') !== slotKey){
+    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+  }
+  try{
+    const slotRaw = await env.SERVICE_SLOTS_KV.get(slotKey);
+    if (slotRaw){
+      let slotRec = null;
+      try{ slotRec = JSON.parse(slotRaw); }catch(_){}
+      if (slotRec && slotRec.status === 'held' && slotRec.holdToken === slotHoldToken){
+        slotRec.status = 'free';
+        slotRec.holdToken = '';
+        slotRec.heldUntil = 0;
+        slotRec.holdExpiresAt = 0;
+        slotRec.holdBy = '';
+        slotRec.enabled = true;
+        await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(slotRec));
+      }
+    }
+  }catch(_){}
+  try{ await env.SERVICE_SLOT_HOLDS_KV.delete(holdKey); }catch(_){}
+  try{
+    await auditAppend(env, {
+      ts: new Date().toISOString(),
+      action: 'slot_hold_released',
+      actorEmail: String(svcUser.email || ''),
+      actorRole: 'user',
+      ip: getClientIp(request) || '',
+      ua: request.headers.get('User-Agent') || '',
+      targetType: 'service_slot',
+      targetId: slotKey,
+      orderId: '',
+      slotKey,
+      meta: { slotKey, orderId:'', userId: requester }
+    });
+  }catch(err){
+    console.warn('audit slot_hold_released failed', err);
+  }
+  return new Response(JSON.stringify({ ok:true, released:true }), { status:200, headers: jsonHeadersFor(request, env) });
+}
+
 if (pathname === '/api/service/order/reschedule-request' && request.method === 'POST') {
   await cleanupExpiredHolds(env);
   if (!env?.SERVICE_RESCHEDULE_KV){
