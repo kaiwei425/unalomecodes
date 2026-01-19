@@ -1305,6 +1305,8 @@
     if (key === 'SLOT_UNAVAILABLE') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
     if (key === 'SLOT_HOLD_EXPIRED') return '此時段已過期，請重新選擇';
     if (key === 'HOLD_LIMIT_REACHED') return '你已有一筆時段保留中，請先完成訂單或等待 15 分鐘後再試';
+    if (key === 'INVALID_SLOT') return '時段資訊不一致，請重新整理後再試';
+    if (key === 'SLOT_REQUIRED_BUT_NOT_CONFIGURED') return '目前無法預約此時段，請稍後再試';
     return '';
   }
 
