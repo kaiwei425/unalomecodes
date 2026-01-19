@@ -323,7 +323,12 @@
 
   function initDateNav(){
     todayISO = todayStr();
-    setCurrentDate(todayISO);
+    if (!currentDate){
+      setCurrentDate(todayISO);
+    }else{
+      setDateLabel(currentDate);
+      updateDateNav();
+    }
     setTzHint();
     if (slotNextDay) slotNextDay.disabled = false;
   }
