@@ -192,9 +192,7 @@
   var statusEl = document.getElementById('slotStatus');
   var serviceIdInput = document.getElementById('serviceIdInput');
   var autoServiceId = '';
-  var slotDateLabel = document.getElementById('slotDateLabel');
-  var slotPrevDay = document.getElementById('slotPrevDay');
-  var slotNextDay = document.getElementById('slotNextDay');
+  var dateInput = document.getElementById('dateInput');
   var slotTzHint = document.getElementById('slotTzHint');
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
@@ -300,60 +298,35 @@
     return new Date().toISOString().split('T')[0];
   }
 
-  function setDateLabel(dateStr){
-    if (slotDateLabel) slotDateLabel.textContent = dateStr || '—';
-  }
-
   function clampToToday(dateStr){
     if (!todayISO) todayISO = todayStr();
     return dateStr < todayISO ? todayISO : dateStr;
   }
 
-  function updateDateNav(){
-    if (!slotPrevDay || !slotNextDay) return;
-    if (!todayISO) todayISO = todayStr();
-    slotPrevDay.disabled = currentDate <= todayISO;
-  }
-
   function setCurrentDate(dateStr){
     currentDate = clampToToday(dateStr || todayStr());
-    setDateLabel(currentDate);
-    updateDateNav();
+    if (dateInput) dateInput.value = currentDate;
   }
 
   function initDateNav(){
     todayISO = todayStr();
-    if (!currentDate){
+    if (dateInput){
+      dateInput.min = todayISO;
+      if (!dateInput.value) dateInput.value = todayISO;
+      currentDate = dateInput.value;
+    }else if (!currentDate){
       setCurrentDate(todayISO);
-    }else{
-      setDateLabel(currentDate);
-      updateDateNav();
     }
     setTzHint();
-    if (slotNextDay) slotNextDay.disabled = false;
   }
 
   function bindDateNav(){
-    if (slotPrevDay && !slotPrevDay.__bound){
-      slotPrevDay.__bound = true;
-      slotPrevDay.type = 'button';
-      slotPrevDay.addEventListener('click', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        setCurrentDate(addDays(getDateValue(), -1));
+    if (dateInput && !dateInput.__bound){
+      dateInput.__bound = true;
+      dateInput.addEventListener('change', function(){
+        setCurrentDate(dateInput.value);
         loadSlots();
-      }, true);
-    }
-    if (slotNextDay && !slotNextDay.__bound){
-      slotNextDay.__bound = true;
-      slotNextDay.type = 'button';
-      slotNextDay.addEventListener('click', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        slotNextDay.disabled = false;
-        setCurrentDate(addDays(getDateValue(), 1));
-        loadSlots();
-      }, true);
+      });
     }
   }
 
@@ -362,14 +335,8 @@
     slotTzHint.textContent = '時段顯示：曼谷時間（UTC+7），台北時間請 +1 小時 / Slot times are Bangkok time (UTC+7); Taipei is +1 hour.';
   }
 
-  function addDays(dateStr, delta){
-    var d = new Date(String(dateStr || '') + 'T00:00:00');
-    if (Number.isNaN(d.getTime())) return todayStr();
-    d.setDate(d.getDate() + delta);
-    return d.toISOString().split('T')[0];
-  }
-
   function getDateValue(){
+    if (dateInput && dateInput.value) return clampToToday(dateInput.value);
     if (!currentDate) setCurrentDate(todayStr());
     return currentDate;
   }
