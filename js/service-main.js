@@ -1304,6 +1304,7 @@
     if (key === 'SLOT_NOT_PUBLISHED') return '此時段尚未開放';
     if (key === 'SLOT_UNAVAILABLE') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
     if (key === 'SLOT_HOLD_EXPIRED') return '此時段已過期，請重新選擇';
+    if (key === 'HOLD_LIMIT_REACHED') return '你已有一筆時段保留中，請先完成訂單或等待 15 分鐘後再試';
     return '';
   }
 
@@ -1536,7 +1537,7 @@
       }
       if (!res.ok || !data || data.ok === false){
         const err = (data && data.error) || 'SLOT_CONFLICT';
-        const msg = mapUserErrorMessage(err) || '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
+        const msg = mapUserErrorMessage(err) || '此時段目前無法預約，請稍後再試';
         setSlotStateText(msg, true);
         return;
       }
