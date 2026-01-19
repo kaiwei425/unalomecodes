@@ -173,11 +173,17 @@ body.service-view .svc-promo-card{
   position:relative;
   display:grid;
   gap:16px;
-  padding:20px;
+  padding:18px;
   border:1px solid var(--line);
   border-radius:16px;
   background:#fff;
-  box-shadow:0 16px 30px rgba(15,23,42,0.08);
+  box-shadow:0 12px 24px rgba(15,23,42,0.08);
+  align-items:start;
+}
+@media (min-width: 900px){
+  body.service-view .svc-promo-card{
+    grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+  }
 }
 @media(min-width:820px){
   body.service-view .svc-promo-card{grid-template-columns:1.2fr .8fr;align-items:stretch;}
@@ -223,7 +229,13 @@ body.service-view .svc-promo-note{
   color:#92400e;
   font-size:12px;
 }
-body.service-view .svc-promo-right{display:flex;flex-direction:column;gap:12px;justify-content:center;}
+body.service-view .svc-promo-right{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  justify-content:flex-start;
+  align-items:stretch;
+}
 body.service-view .svc-promo-edit{
   position:absolute;
   top:12px;
@@ -259,6 +271,7 @@ body.service-view .svc-promo-cta{
   font-size:15px;
   border-radius:14px;
   min-height:52px;
+  box-shadow:0 8px 18px rgba(16,149,214,.25);
 }
 body.service-view .svc-promo-mini{font-size:12px;color:#64748b;line-height:1.6;}
 body.service-view .svc-promo-admin{

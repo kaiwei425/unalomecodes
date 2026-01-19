@@ -42,6 +42,7 @@
   const checkoutSummary = document.getElementById('svcCartSummary');
   const checkoutTotal = document.getElementById('svcCartTotal');
   const checkoutBackBtn = document.getElementById('svcCartBack');
+  const slotChangeBtn = document.getElementById('svcSlotChangeBtn');
   const checkoutNextBtn = document.getElementById('svcCartNext');
   const checkoutSubmitBtn = document.getElementById('svcBankSubmit');
   const checkoutServiceIdInput = document.getElementById('svcCartServiceId');
@@ -161,6 +162,7 @@
   let consultAddonInput = document.getElementById('svcConsultAddonSummary');
   const CART_KEY = 'svcCartItems';
   const SLOT_HOLD_KEY_PREFIX = 'svcSlotHold:';
+  let HOLD_OWNER_KEY = 'anon';
   const SLOT_AVAIL_TTL_MS = 60 * 1000;
   const __SLOT_AVAIL_CACHE = new Map();
   let PHONE_CONSULT_CFG = null;
@@ -205,6 +207,8 @@
   let slotItems = [];
   let slotLastDate = '';
   const SLOT_DAYS_STEP = 7;
+  const SLOT_CACHE_PREFIX = 'svcSlotCache:';
+  let SKIP_AUTO_RESUME = false;
   let limitedTimer = null;
   let serviceItems = [];
   let allServiceItems = [];
@@ -947,8 +951,44 @@
     return base;
   }
 
+  function getHoldOwnerKey(){
+    try{
+      if (window.authState && typeof window.authState.getProfile === 'function'){
+        const p = window.authState.getProfile();
+        const email = p && p.email ? String(p.email).trim().toLowerCase() : '';
+        const uid = p && (p.id || p.uid) ? String(p.id || p.uid).trim() : '';
+        return email || uid || 'anon';
+      }
+    }catch(_){}
+    return 'anon';
+  }
+
+  function updateHoldOwnerKey(profile){
+    const email = profile && profile.email ? String(profile.email).trim().toLowerCase() : '';
+    const uid = profile && (profile.id || profile.uid) ? String(profile.id || profile.uid).trim() : '';
+    const next = email || uid || 'anon';
+    if (HOLD_OWNER_KEY !== next){
+      HOLD_OWNER_KEY = next;
+      CURRENT_DETAIL_SLOT.slotKey = '';
+      CURRENT_DETAIL_SLOT.slotHoldToken = '';
+      CURRENT_DETAIL_SLOT.slotStart = '';
+      CURRENT_DETAIL_SLOT.holdUntilMs = 0;
+      // 清除購物車中的時段資料，避免不同帳號看到倒數
+      const cart = loadCart();
+      if (Array.isArray(cart) && cart.length){
+        const cleaned = cart.map(item=>{
+          if (!isPhoneConsultService(item)) return item;
+          return Object.assign({}, item, { slotKey:'', slotHoldToken:'', slotStart:'', slotHoldUntilMs: 0 });
+        });
+        saveCart(cleaned);
+        renderCartPanel();
+      }
+    }
+  }
+
   function holdStorageKey(serviceId){
-    return SLOT_HOLD_KEY_PREFIX + String(serviceId || '').trim();
+    const owner = HOLD_OWNER_KEY || getHoldOwnerKey();
+    return SLOT_HOLD_KEY_PREFIX + owner + ':' + String(serviceId || '').trim();
   }
 
   function saveHoldToStorage(serviceId, hold){
@@ -975,6 +1015,27 @@
       if (!serviceId) return;
       localStorage.removeItem(holdStorageKey(serviceId));
     }catch(_){}
+  }
+
+  function saveSlotCache(serviceId, items){
+    try{
+      if (!serviceId) return;
+      const key = SLOT_CACHE_PREFIX + String(serviceId || '').trim();
+      sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), items: items || [] }));
+    }catch(_){}
+  }
+
+  function loadSlotCache(serviceId){
+    try{
+      if (!serviceId) return null;
+      const key = SLOT_CACHE_PREFIX + String(serviceId || '').trim();
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data && Array.isArray(data.items) ? data.items : null;
+    }catch(_){
+      return null;
+    }
   }
 
   function getConsultPackKeyFromStorage(){
@@ -1018,7 +1079,9 @@
 
   function getConsultPackDelta(pack){
     if (!pack) return 0;
-    return pack.key === 'zh' ? (Number(CONSULT_PACK_PRICES.zh || 0) - getPhoneBasePrice()) : 0;
+    const target = pack.key === 'zh' ? Number(CONSULT_PACK_PRICES.zh || 0) : Number(CONSULT_PACK_PRICES.en || 0);
+    if (!Number.isFinite(target) || target <= 0) return 0;
+    return target - getPhoneBasePrice();
   }
 
   function ensureConsultAddonUI(){
@@ -1049,10 +1112,11 @@
     const zhOpt = options.find(opt => /中文/.test(String(opt.name || '')));
     const enPrice = readOptionPrice(enOpt);
     const zhPrice = readOptionPrice(zhOpt);
-    const base = Number.isFinite(enPrice) ? enPrice : 0;
+    const serviceBase = parsePriceValue(service.price);
+    const base = Number.isFinite(enPrice) ? enPrice : (Number.isFinite(serviceBase) ? serviceBase : 0);
     PHONE_BASE_PRICE_OVERRIDE = base;
     CONSULT_PACK_PRICES = {
-      en: Number.isFinite(enPrice) ? enPrice : 0,
+      en: Number.isFinite(enPrice) ? enPrice : base,
       zh: Number.isFinite(zhPrice) ? zhPrice : 0
     };
     consultPackPills.forEach(btn=>{
@@ -1162,6 +1226,17 @@
     if (changed) saveCart(next);
   }
 
+  function getActiveHold(serviceId){
+    const hold = loadHoldFromStorage(serviceId);
+    if (!hold) return null;
+    const until = Number(hold.holdUntilMs || 0);
+    if (!until || Date.now() >= until){
+      clearHoldFromStorage(serviceId);
+      return null;
+    }
+    return hold;
+  }
+
   function syncHoldWithCart(cart){
     const list = Array.isArray(cart) ? cart : [];
     if (!list.length) return { cart: list, changed: false };
@@ -1170,8 +1245,8 @@
       if (!item || !isPhoneConsultService(item)) return item;
       const serviceId = String(item.serviceId || '').trim();
       if (!serviceId) return item;
-      const hold = loadHoldFromStorage(serviceId);
-      if (hold && Number(hold.holdUntilMs || 0) > Date.now()){
+      const hold = getActiveHold(serviceId);
+      if (hold){
         if (!item.slotHoldToken && hold.slotHoldToken){
           changed = true;
           return Object.assign({}, item, {
@@ -1233,13 +1308,9 @@
   }
 
   function restoreHoldForService(serviceId){
-    const hold = loadHoldFromStorage(serviceId);
+    const hold = getActiveHold(serviceId);
     if (!hold) return false;
     const until = Number(hold.holdUntilMs || 0);
-    if (!until || Date.now() >= until){
-      clearHoldFromStorage(serviceId);
-      return false;
-    }
     CURRENT_DETAIL_SLOT.serviceId = String(hold.serviceId || serviceId || '');
     CURRENT_DETAIL_SLOT.slotKey = String(hold.slotKey || '');
     CURRENT_DETAIL_SLOT.slotHoldToken = String(hold.slotHoldToken || '');
@@ -1678,11 +1749,26 @@
     }
     const serviceId = resolveServiceId(service);
     restoreHoldForService(serviceId);
+    const cached = loadSlotCache(serviceId);
+    if (cached && cached.length){
+      slotItems = cached;
+      slotLastDate = cached.length ? (cached[cached.length - 1].date || '') : '';
+      if (slotDaysEl) slotDaysEl.style.display = '';
+      if (slotGridEl) slotGridEl.style.display = '';
+      const activeDate = renderSlotDays(cached);
+      const activeItem = cached.find(day => day.date === activeDate) || cached[0];
+      if (activeItem) renderSlotGrid(activeItem);
+      setSlotStateText('顯示最近時段', false);
+    }
     try{
       const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
       const data = result.data || {};
       if (!result.res.ok || !data || data.ok === false){
-        hideSlotPicker('目前暫無可預約時段');
+        if (!cached || !cached.length){
+          hideSlotPicker('目前暫無可預約時段');
+        }else{
+          setSlotStateText('時段載入中斷，已顯示最近資料', true);
+        }
         return;
       }
       let items = normalizeSlots(data);
@@ -1694,10 +1780,15 @@
         }
       }
       if (!items.length){
-        hideSlotPicker('目前暫無可預約時段');
+        if (!cached || !cached.length){
+          hideSlotPicker('目前暫無可預約時段');
+        }else{
+          setSlotStateText('目前暫無可預約時段', true);
+        }
         return;
       }
       slotItems = items;
+      saveSlotCache(serviceId, items);
       slotLastDate = items.length ? (items[items.length - 1].date || '') : '';
       if (slotDaysEl) slotDaysEl.style.display = '';
       if (slotGridEl) slotGridEl.style.display = '';
@@ -1713,22 +1804,25 @@
         slotMoreBtn.disabled = false;
         slotMoreBtn.textContent = '載入更多';
       }
-      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
+      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled === true && String(slot.status || '') === 'free'));
       if (!hasFree){
         setSlotStateText('目前暫無可預約時段', true);
         if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
           detailAddBtn.disabled = true;
           detailAddBtn.textContent = '目前無法預約';
         }
-        return;
-      }
-      if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+      }else if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
         detailAddBtn.disabled = false;
         detailAddBtn.textContent = '加入購物車';
       }
-      setSlotStateText('');
+      if (hasFree) setSlotStateText('');
+      return;
     }catch(_){
-      hideSlotPicker('目前暫無可預約時段');
+      if (!cached || !cached.length){
+        hideSlotPicker('目前暫無可預約時段');
+      }else{
+        setSlotStateText('時段載入中斷，已顯示最近資料', true);
+      }
     }
   }
 
@@ -2022,11 +2116,9 @@
     if (!options.length) return;
     let match = null;
     if (pack === 'zh'){
-      match = options.find(opt => /中文/.test(String(opt.name || ''))) ||
-        options.find(opt => Number(opt.price || 0) === 4000);
+      match = options.find(opt => /中文/.test(String(opt.name || '')));
     }else{
-      match = options.find(opt => /英文/.test(String(opt.name || ''))) ||
-        options.find(opt => Number(opt.price || 0) === 3500);
+      match = options.find(opt => /英文/.test(String(opt.name || '')));
     }
     if (match){
       detailVariant.value = match.name;
@@ -2509,6 +2601,37 @@
     }, { passive: false });
   }
 
+  function resumeCheckoutIfHeld(service){
+    if (!isPhoneConsultService(service)) return false;
+    if (SKIP_AUTO_RESUME){
+      SKIP_AUTO_RESUME = false;
+      return false;
+    }
+    const serviceId = resolveServiceId(service);
+    const hold = getActiveHold(serviceId);
+    if (!hold) return false;
+    let cart = loadCart();
+    const idx = cart.findIndex(it => String(it.serviceId || '') === String(serviceId || ''));
+    if (idx >= 0){
+      const item = cart[idx];
+      if (!item.slotHoldToken || !item.slotKey){
+        cart[idx] = Object.assign({}, item, {
+          slotKey: String(hold.slotKey || ''),
+          slotHoldToken: String(hold.slotHoldToken || ''),
+          slotStart: String(hold.slotStart || ''),
+          slotHoldUntilMs: Number(hold.holdUntilMs || 0)
+        });
+        saveCart(cart);
+      }
+    }else{
+      return false;
+    }
+    openCheckoutDialog();
+    if (checkoutDialog) setCheckoutStep(1);
+    if (slotChangeBtn) slotChangeBtn.style.display = '';
+    return true;
+  }
+
   async function openServiceDetail(service){
     detailDataset = service;
     lastDetailService = service;
@@ -2561,6 +2684,7 @@
         return;
       }
     }
+    if (resumeCheckoutIfHeld(service)) return;
     if (detailTitle) detailTitle.textContent = service.name || '服務';
     if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
     const limitedTs = parseLimitedUntil(service && service.limitedUntil);
@@ -2855,6 +2979,10 @@
     }
     const total = cartTotal(finalCart);
     if (checkoutTotal) checkoutTotal.textContent = formatTWD(total);
+    if (slotChangeBtn){
+      const phoneItem = finalCart.find(it => isPhoneConsultService(it));
+      slotChangeBtn.style.display = (phoneItem && phoneItem.slotHoldToken) ? '' : 'none';
+    }
     if (bankAmountInput){
       bankAmountInput.value = 'NT$ ' + Number(total||0).toLocaleString('zh-TW');
       bankAmountInput.dataset.amount = String(total||0);
@@ -3155,11 +3283,12 @@
       try{ console.debug && console.debug('[svc] onProfile', profile); }catch(_){}
       lastProfile = profile;
       fillContactFromProfile(profile);
+      updateHoldOwnerKey(profile);
     });
     if (typeof window.authState.getProfile === 'function'){
       const existingProfile = window.authState.getProfile();
       try{ console.debug && console.debug('[svc] existing profile', existingProfile); }catch(_){}
-      if (existingProfile){ lastProfile = existingProfile; fillContactFromProfile(existingProfile); }
+      if (existingProfile){ lastProfile = existingProfile; fillContactFromProfile(existingProfile); updateHoldOwnerKey(existingProfile); }
     }
   }
 
@@ -3492,6 +3621,23 @@
       if (cartPanel) openDialog(cartPanel);
     });
   }
+  if (slotChangeBtn){
+    slotChangeBtn.addEventListener('click', ()=>{
+      const cart = loadCart();
+      const phoneItem = cart.find(it => isPhoneConsultService(it));
+      if (!phoneItem) return;
+      const serviceId = phoneItem.serviceId;
+      clearHoldFromStorage(serviceId);
+      clearSlotFromCart(serviceId);
+      resetSlotState();
+      SKIP_AUTO_RESUME = true;
+      closeDialog(checkoutDialog);
+      const target = allServiceItems.find(s => String(resolveServiceId(s)) === String(serviceId || ''));
+      if (target){
+        openServiceDetail(target);
+      }
+    });
+  }
   if (checkoutNextBtn){
     checkoutNextBtn.addEventListener('click', async ()=>{
       // 顯示載入中狀態，避免使用者誤以為沒反應
@@ -3745,6 +3891,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', async ()=>{
+    HOLD_OWNER_KEY = getHoldOwnerKey();
     const services = await fetchServices();
     const allServices = Array.isArray(services) ? services : [];
     const cfg = await loadPhoneConsultConfig();
