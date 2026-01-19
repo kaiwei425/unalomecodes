@@ -9,10 +9,7 @@
       hint_kv_missing: '尚未設定 KV 綁定',
       btn_load: '載入時段',
       btn_publish: '開放選取時段',
-      btn_unpublish: '取消開放',
-      btn_reopen: '重新開放',
-      btn_block: '關閉選取時段',
-      btn_unblock: '解除關閉',
+      btn_unpublish: '取消選取時段',
       btn_select_all: '全選',
       btn_clear: '清除',
       label_service: '服務',
@@ -58,7 +55,7 @@
       status_free: '可預約',
       status_held: '暫鎖',
       status_booked: '已預約',
-      status_blocked: '關閉',
+      status_blocked: '未開放',
       status_not_published: '未開放'
     },
     en: {
@@ -71,9 +68,6 @@
       btn_load: 'Load slots',
       btn_publish: 'Publish selected',
       btn_unpublish: 'Unpublish selected',
-      btn_reopen: 'Reopen selected',
-      btn_block: 'Block selected',
-      btn_unblock: 'Unblock selected',
       btn_select_all: 'Select all',
       btn_clear: 'Clear',
       label_service: 'Service',
@@ -119,7 +113,7 @@
       status_free: 'Available',
       status_held: 'Held',
       status_booked: 'Booked',
-      status_blocked: 'Blocked',
+      status_blocked: 'Not published',
       status_not_published: 'Not published'
     }
   };
@@ -199,8 +193,6 @@
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
-  var btnReopen = document.getElementById('btnReopen');
-  var btnUnblock = document.getElementById('btnUnblock');
   var btnSelectAll = document.getElementById('btnSelectAll');
   var btnClearSel = document.getElementById('btnClearSel');
   var slotGrid = document.getElementById('slotGrid');
@@ -478,8 +470,8 @@
         badge.className += ' held';
         label = t('status_held');
       }else if (status === 'blocked'){
-        badge.className += ' blocked';
-        label = t('status_blocked');
+        badge.className += ' free-disabled';
+        label = t('status_not_published');
       }else if (enabled){
         badge.className += ' free-enabled';
         label = t('status_free');
@@ -497,7 +489,7 @@
       }else if (status === 'free' && enabled){
         action = 'block';
       }else if (status === 'blocked'){
-        action = 'unblock';
+        action = 'publish';
       }
       if (action){
         var labelWrap = document.createElement('label');
@@ -757,8 +749,12 @@
       return;
     }
     var cached = loadPublishedCache();
-    if (cached && cached.length){
-      renderPublishedList(cached);
+    if (cached !== null){
+      if (cached.length){
+        renderPublishedList(cached);
+      }else{
+        publishedSlots.innerHTML = '<div class="muted">' + t('published_empty') + '</div>';
+      }
     }else{
       publishedSlots.innerHTML = '<div class="muted">' + t('msg_loading') + '</div>';
     }
@@ -842,7 +838,7 @@
   }
 
   function handleBlock(blocked){
-    if (!confirm(blocked ? '確定要執行【關閉時段】？此動作無法復原' : '確定要執行【解除關閉】？此動作無法復原')) return;
+    if (!confirm(blocked ? '確定要執行【取消選取時段】？此動作無法復原' : '確定要執行【重新開放】？此動作無法復原')) return;
     var action = blocked ? 'block' : 'unblock';
     var slotKeys = collectSlotKeys(action);
     if (!slotKeys.length){
@@ -851,13 +847,9 @@
     }
     setStatus(t('msg_loading'));
     if (blocked) setButtonBusy(btnUnpublish, true);
-    if (!blocked) setButtonBusy(btnReopen, true);
-    if (!blocked) setButtonBusy(btnUnblock, true);
     postAction('/api/admin/service/slots/block', { slotKeys: slotKeys, blocked: blocked })
       .then(function(result){
         setButtonBusy(btnUnpublish, false);
-        setButtonBusy(btnReopen, false);
-        setButtonBusy(btnUnblock, false);
         if (!result.ok){
           var err = (result.data && result.data.error) || '';
           if (err === 'forbidden_role'){
@@ -876,8 +868,6 @@
       })
       .catch(function(){
         setButtonBusy(btnUnpublish, false);
-        setButtonBusy(btnReopen, false);
-        setButtonBusy(btnUnblock, false);
         setStatus(t('msg_failed'), true);
       });
   }
@@ -905,7 +895,6 @@
     if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
-    if (btnReopen) btnReopen.addEventListener('click', function(){ handleBlock(false); });
     if (btnSelectAll) btnSelectAll.addEventListener('click', function(){
       getSelectableSlotButtons().forEach(function(btn){
         selectSlotButton(btn, true);
