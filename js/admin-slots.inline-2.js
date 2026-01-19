@@ -295,6 +295,7 @@
   var currentDate = '';
   var todayISO = '';
   var PUBLISHED_CACHE_KEY = 'adminSlotsPublishedCache';
+  var DEBUG_DATE_NAV = true;
 
   function todayStr(){
     return new Date().toISOString().split('T')[0];
@@ -333,6 +334,10 @@
         e.preventDefault();
         e.stopPropagation();
         var next = addDays(getDateValue(), -1);
+        if (DEBUG_DATE_NAV){
+          console.log('[slots][prev]', { from: getDateValue(), next: next });
+          setStatus('DEBUG: prev → ' + next);
+        }
         setCurrentDate(next);
         loadSlots(next);
       });
@@ -344,6 +349,10 @@
         e.preventDefault();
         e.stopPropagation();
         var next = addDays(getDateValue(), 1);
+        if (DEBUG_DATE_NAV){
+          console.log('[slots][next]', { from: getDateValue(), next: next });
+          setStatus('DEBUG: next → ' + next);
+        }
         setCurrentDate(next);
         loadSlots(next);
       });
@@ -689,6 +698,9 @@
     }
     setStatus(t('msg_loading'));
     var url = '/api/service/slots?serviceId=' + encodeURIComponent(serviceId) + '&days=1&dateFrom=' + encodeURIComponent(date);
+    if (DEBUG_DATE_NAV){
+      console.log('[slots][load]', { date: date, url: url });
+    }
     fetch(url, { cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
       .then(function(result){
@@ -731,6 +743,9 @@
       publishedSlots.innerHTML = '<div class="muted">' + t('msg_loading') + '</div>';
     }
     var url = '/api/service/slots?serviceId=' + encodeURIComponent(serviceId) + '&days=14&dateFrom=' + encodeURIComponent(todayStr());
+    if (DEBUG_DATE_NAV){
+      console.log('[slots][published-load]', { url: url });
+    }
     fetch(url, { cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
       .then(function(result){
