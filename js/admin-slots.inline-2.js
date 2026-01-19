@@ -361,7 +361,11 @@
 
   function addDays(dateStr, delta){
     var raw = String(dateStr || '');
-    var parts = raw.split('-');
+    var norm = raw.replace(/[^\d]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    var parts = norm.split('-');
+    if (DEBUG_DATE_NAV){
+      console.log('[slots][addDays]', { raw: raw, norm: norm, delta: delta });
+    }
     if (parts.length !== 3) return todayStr();
     var y = Number(parts[0]);
     var m = Number(parts[1]);
