@@ -179,7 +179,7 @@
   let CONSULT_ADDON = false;
   const PHONE_BASE_PRICE = 3500;
   let PHONE_BASE_PRICE_OVERRIDE = 0;
-  let CONSULT_PACK_PRICES = { en: 3500, zh: 4000 };
+  let CONSULT_PACK_PRICES = { en: 0, zh: 0 };
   let CURRENT_DETAIL_SLOT = {
     serviceId: '',
     slotKey: '',
@@ -392,6 +392,20 @@
   function formatTWD(num){
     const n = Number(num || 0);
     return 'NT$ ' + n.toLocaleString('zh-TW');
+  }
+
+  function parsePriceValue(raw){
+    if (raw === null || raw === undefined) return NaN;
+    if (typeof raw === 'number') return raw;
+    const txt = String(raw).replace(/[^\d.]/g, '');
+    if (!txt) return NaN;
+    return Number(txt);
+  }
+
+  function readOptionPrice(opt){
+    if (!opt) return NaN;
+    const raw = opt.price ?? opt.amount ?? opt.value ?? opt.cost;
+    return parsePriceValue(raw);
   }
 
   function getItemQty(item){
@@ -993,9 +1007,9 @@
 
   function resolveConsultPack(key){
     if (key === 'en'){
-      return { key:'en', label:'英文翻譯', price: Number(CONSULT_PACK_PRICES.en || PHONE_BASE_PRICE) };
+      return { key:'en', label:'英文翻譯', price: Number(CONSULT_PACK_PRICES.en || 0) };
     }
-    return { key:'zh', label:'中文翻譯', price: Number(CONSULT_PACK_PRICES.zh || (PHONE_BASE_PRICE + 500)) };
+    return { key:'zh', label:'中文翻譯', price: Number(CONSULT_PACK_PRICES.zh || 0) };
   }
 
   function getPhoneBasePrice(){
@@ -1033,12 +1047,14 @@
     const options = Array.isArray(service.options) ? service.options : [];
     const enOpt = options.find(opt => /英文/.test(String(opt.name || '')));
     const zhOpt = options.find(opt => /中文/.test(String(opt.name || '')));
-    const base = Number((enOpt && enOpt.price) || service.price || PHONE_BASE_PRICE);
-    if (Number.isFinite(base) && base > 0){
-      PHONE_BASE_PRICE_OVERRIDE = base;
-    }
-    const zh = Number((zhOpt && zhOpt.price) || (base + 500));
-    CONSULT_PACK_PRICES = { en: base, zh: zh };
+    const enPrice = readOptionPrice(enOpt);
+    const zhPrice = readOptionPrice(zhOpt);
+    const base = Number.isFinite(enPrice) ? enPrice : 0;
+    PHONE_BASE_PRICE_OVERRIDE = base;
+    CONSULT_PACK_PRICES = {
+      en: Number.isFinite(enPrice) ? enPrice : 0,
+      zh: Number.isFinite(zhPrice) ? zhPrice : 0
+    };
     consultPackPills.forEach(btn=>{
       const price = btn.dataset.pack === 'zh' ? CONSULT_PACK_PRICES.zh : CONSULT_PACK_PRICES.en;
       const priceEl = btn.querySelector('.pill-price');
@@ -2056,19 +2072,19 @@
       const enOpt = optList.find(opt => /英文/.test(String(opt.name || '')));
       const zhOpt = optList.find(opt => /中文/.test(String(opt.name || '')));
       if (!merged.packEn && enOpt){
-        merged.packEn = `英文翻譯 NT$${Number(enOpt.price || 0)}`;
+        merged.packEn = `英文翻譯 ${formatTWD(readOptionPrice(enOpt) || 0)}`;
       }
       if (!merged.packZh && zhOpt){
-        merged.packZh = `中文翻譯 NT$${Number(zhOpt.price || 0)}`;
+        merged.packZh = `中文翻譯 ${formatTWD(readOptionPrice(zhOpt) || 0)}`;
       }
     }else{
       const enOpt = optList.find(opt => /英文/.test(String(opt.name || '')));
       const zhOpt = optList.find(opt => /中文/.test(String(opt.name || '')));
       if (enOpt && merged.packEn){
-        merged.packEn = String(merged.packEn).replace(/NT\$\s*[\d,]+/i, `NT$${Number(enOpt.price || 0)}`);
+        merged.packEn = String(merged.packEn).replace(/NT\$\s*[\d,]+/i, formatTWD(readOptionPrice(enOpt) || 0));
       }
       if (zhOpt && merged.packZh){
-        merged.packZh = String(merged.packZh).replace(/NT\$\s*[\d,]+/i, `NT$${Number(zhOpt.price || 0)}`);
+        merged.packZh = String(merged.packZh).replace(/NT\$\s*[\d,]+/i, formatTWD(readOptionPrice(zhOpt) || 0));
       }
     }
     merged.imagePosX = normalizePromoPos(merged.imagePosX);
@@ -2105,7 +2121,7 @@
       if (posX !== '' || posY !== ''){
         const x = posX === '' ? 50 : posX;
         const y = posY === '' ? 50 : posY;
-        promoImgEl.style.objectPosition = `${x}% ${y}%`;
+        setPromoImagePosition(x, y);
       }else{
         promoImgEl.style.objectPosition = '';
       }
@@ -2163,6 +2179,41 @@
     return true;
   }
 
+  function setPromoImagePosition(x, y){
+    if (!promoImgEl) return;
+    const px = Math.max(0, Math.min(100, Number(x)));
+    const py = Math.max(0, Math.min(100, Number(y)));
+    promoImgEl.style.objectPosition = `${px}% ${py}%`;
+    if (promoImagePosXInput) promoImagePosXInput.value = String(Math.round(px));
+    if (promoImagePosYInput) promoImagePosYInput.value = String(Math.round(py));
+  }
+
+  function bindPromoImageDrag(){
+    if (!promoMediaEl || !promoImgEl || promoMediaEl.__bound) return;
+    promoMediaEl.__bound = true;
+    let dragging = false;
+    const onMove = (e) => {
+      if (!dragging) return;
+      const rect = promoMediaEl.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setPromoImagePosition(x, y);
+    };
+    const onUp = () => {
+      dragging = false;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+    promoMediaEl.addEventListener('pointerdown', (e) => {
+      if (!promoAdminEl || promoAdminEl.style.display === 'none') return;
+      dragging = true;
+      promoMediaEl.setPointerCapture && promoMediaEl.setPointerCapture(e.pointerId);
+      onMove(e);
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+  }
+
   function initPromoAdmin(service){
     if (!promoAdminEl) return;
     if (!ADMIN_PREVIEW_MODE || ADMIN_ROLE !== 'owner'){
@@ -2177,12 +2228,15 @@
     promoAdminEl.style.display = 'none';
     const data = getPromoData(service);
     fillPromoForm(data);
+    if (promoMediaEl) promoMediaEl.classList.toggle('is-editing', promoAdminEl.style.display !== 'none');
+    bindPromoImageDrag();
     if (promoEditToggle && !promoEditToggle.__bound){
       promoEditToggle.__bound = true;
       promoEditToggle.addEventListener('click', ()=>{
         const next = promoAdminEl.style.display === 'none' ? '' : 'none';
         promoAdminEl.style.display = next;
         promoEditToggle.textContent = next === 'none' ? '編輯' : '收起';
+        if (promoMediaEl) promoMediaEl.classList.toggle('is-editing', next !== 'none');
       });
     }
     if (promoResetBtn && !promoResetBtn.__bound){

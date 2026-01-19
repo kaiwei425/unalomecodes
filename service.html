@@ -216,13 +216,10 @@
       <label>照片 URL
         <input type="text" id="promoImageInput" placeholder="https://...">
       </label>
-      <label>圖片位置 X（0-100）
-        <input type="number" id="promoImagePosXInput" min="0" max="100" step="1" placeholder="50">
-      </label>
-      <label>圖片位置 Y（0-100）
-        <input type="number" id="promoImagePosYInput" min="0" max="100" step="1" placeholder="50">
-      </label>
+      <input type="hidden" id="promoImagePosXInput">
+      <input type="hidden" id="promoImagePosYInput">
     </div>
+    <div class="svc-promo-admin-hint muted">可直接拖曳上方照片調整顯示位置</div>
     <div class="svc-promo-admin-actions">
       <button type="button" class="btn" id="promoReset">還原</button>
       <button type="button" class="btn primary" id="promoSave">儲存</button>
