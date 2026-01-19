@@ -330,8 +330,9 @@
       slotPrevDay.addEventListener('click', function(e){
         e.preventDefault();
         e.stopPropagation();
-        setCurrentDate(addDays(getDateValue(), -1));
-        loadSlots();
+        var next = addDays(getDateValue(), -1);
+        setCurrentDate(next);
+        loadSlots(next);
       });
     }
     if (slotNextDay && !slotNextDay.__bound){
@@ -340,8 +341,9 @@
       slotNextDay.addEventListener('click', function(e){
         e.preventDefault();
         e.stopPropagation();
-        setCurrentDate(addDays(getDateValue(), 1));
-        loadSlots();
+        var next = addDays(getDateValue(), 1);
+        setCurrentDate(next);
+        loadSlots(next);
       });
     }
   }
@@ -662,9 +664,9 @@
     return autoServiceId || '';
   }
 
-  function loadSlots(){
+  function loadSlots(dateOverride){
     var serviceId = getServiceIdValue();
-    var date = getDateValue();
+    var date = dateOverride || getDateValue();
     if (!serviceId){
       setStatus('缺少 serviceId', true);
       return;
@@ -693,6 +695,7 @@
           return;
         }
         var day = result.data.items && result.data.items[0];
+        if (day && day.date) setCurrentDate(day.date);
         renderSlots(day ? day.slots : []);
         setStatus(t('msg_done') + (day && day.date ? ' ' + day.date : ''));
         loadPublishedSlots(serviceId);

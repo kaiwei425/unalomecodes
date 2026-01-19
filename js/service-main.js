@@ -739,7 +739,7 @@
     if (contactNoteInput){
       if (!notePlaceholderOriginal) notePlaceholderOriginal = contactNoteInput.placeholder || '';
       contactNoteInput.placeholder = isPhone
-        ? '可以把要問的問題先整理在這裡，或是預約成功後 至會員中心我的訂單內 問與答 留言欲提問問題'
+        ? '可先將要問的問題寫在這裡，或之後至會員中心 我的訂單 問與答內留言問題'
         : notePlaceholderOriginal;
       contactNoteInput.required = false;
     }
@@ -1669,6 +1669,27 @@
     return '時段顯示：曼谷時間（UTC+7），台北時間請 +1 小時 / Slot times are Bangkok time (UTC+7); Taipei is +1 hour.';
   }
 
+  function formatTaipeiFromBkk(slotStart){
+    const raw = String(slotStart || '').trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+    if (!match) return '';
+    const y = Number(match[1]);
+    const m = Number(match[2]);
+    const d = Number(match[3]);
+    const hh = Number(match[4]);
+    const mm = Number(match[5]);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || !Number.isFinite(hh) || !Number.isFinite(mm)) return '';
+    const utcMs = Date.UTC(y, m - 1, d, hh - 7, mm);
+    const tpeMs = utcMs + 8 * 3600 * 1000;
+    const dt = new Date(tpeMs);
+    const yy = dt.getUTCFullYear();
+    const mo = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(dt.getUTCDate()).padStart(2, '0');
+    const th = String(dt.getUTCHours()).padStart(2, '0');
+    const tm = String(dt.getUTCMinutes()).padStart(2, '0');
+    return `${yy}-${mo}-${da} ${th}:${tm}`;
+  }
+
   function renderCartPanel(){
     if (!cartListEl) return;
     let cart = loadCart();
@@ -1680,7 +1701,11 @@
     if (!cart.length){
       cartListEl.innerHTML = '<div style="color:#6b7280;">購物車尚無服務。</div>';
     }else{
-      cartListEl.innerHTML = cart.map(item => `
+      cartListEl.innerHTML = cart.map(item => {
+        const tzLine = item.slotStart && isPhoneConsultService(item)
+          ? `<div class="meta" style="color:#dc2626;">台灣時間：${escapeHtml(formatTaipeiFromBkk(item.slotStart))}</div>`
+          : '';
+        return `
         <div class="svc-cart-item">
           <div class="info">
             ${sanitizeImageUrl(item.image) ? `<img src="${escapeHtml(sanitizeImageUrl(item.image))}" alt="">` : ''}
@@ -1688,6 +1713,7 @@
               <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
               <div class="meta">${escapeHtml(getCartItemOptionLabel(item))}${(!isDonationService(item) && !item.qtyEnabled && getItemQty(item) > 1) ? ` × ${getItemQty(item)}` : ''}</div>
               ${item.slotStart ? `<div class="meta">預約時段：${escapeHtml(item.slotStart)}</div>` : ''}
+              ${tzLine}
               ${item.consultPackLabel ? `<div class="meta">方案：${escapeHtml(item.consultPackLabel)}</div>` : ''}
               ${item.consultAddonSummary ? `<div class="meta">加購：轉譯＋摘要</div>` : ''}
               ${(item.qtyEnabled || isDonationService(item)) ? `
@@ -1702,7 +1728,8 @@
           <div class="price">${formatTWD((Number(item.basePrice||0)+Number(item.optionPrice||0)) * getItemQty(item))}</div>
           <button type="button" class="svc-cart-remove" data-remove="${escapeHtml(item.uid||'')}">移除</button>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
     if (cartAmountEl){
       cartAmountEl.textContent = formatTWD(cartTotal(cart));
@@ -2517,9 +2544,12 @@
         const unit = Number(item.basePrice||0)+Number(item.optionPrice||0);
         const label = escapeHtml(getCartItemOptionLabel(item)) + (qty > 1 ? ` × ${qty}` : '');
         const slotLine = item.slotStart ? `<div class="muted">預約時段：${escapeHtml(item.slotStart)}</div>` : '';
+        const tzLine = item.slotStart && isPhoneConsultService(item)
+          ? `<div class="muted" style="color:#dc2626;">台灣時間：${escapeHtml(formatTaipeiFromBkk(item.slotStart))}</div>`
+          : '';
         const packLine = item.consultPackLabel ? `<div class="muted">方案：${escapeHtml(item.consultPackLabel)}</div>` : '';
         const addonLine = item.consultAddonSummary ? `<div class="muted">加購：轉譯＋摘要</div>` : '';
-        return `<li>${label}｜${formatTWD(unit * qty)}${slotLine}${packLine}${addonLine}</li>`;
+        return `<li>${label}｜${formatTWD(unit * qty)}${slotLine}${tzLine}${packLine}${addonLine}</li>`;
       });
       const fee = getCartFee(finalCart);
       if (fee > 0){
