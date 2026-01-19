@@ -1804,7 +1804,7 @@
         slotMoreBtn.disabled = false;
         slotMoreBtn.textContent = '載入更多';
       }
-      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled === true && String(slot.status || '') === 'free'));
+      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
       if (!hasFree){
         setSlotStateText('目前暫無可預約時段', true);
         if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
@@ -1832,7 +1832,7 @@
 
   function formatTaipeiFromBkk(slotStart){
     const raw = String(slotStart || '').trim();
-    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s]+(\d{2}):(\d{2})/);
     if (!match) return '';
     const y = Number(match[1]);
     const m = Number(match[2]);
@@ -3926,7 +3926,7 @@
   });
   function resolveServiceId(service){
     if (!service) return '';
-    return service.id || service._id || service.key || service._key || '';
+    return service.serviceId || service.service_id || service.id || service._id || service.key || service._key || '';
   }
 
   function parseServiceIdFromSearch(){

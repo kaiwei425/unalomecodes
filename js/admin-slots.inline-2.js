@@ -307,7 +307,11 @@
   var DEBUG_DATE_NAV = true;
 
   function todayStr(){
-    return new Date().toISOString().split('T')[0];
+    var d = new Date();
+    var yy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return yy + '-' + mm + '-' + dd;
   }
 
   function setDateLabel(dateStr){
@@ -380,13 +384,10 @@
     var m = Number(parts[1]);
     var d = Number(parts[2]);
     if (!y || !m || !d) return todayStr();
-    var base = new Date(y, m - 1, d);
-    if (Number.isNaN(base.getTime())) return todayStr();
-    base.setDate(base.getDate() + delta);
-    var yy = base.getFullYear();
-    var mm = String(base.getMonth() + 1).padStart(2, '0');
-    var dd = String(base.getDate()).padStart(2, '0');
-    return yy + '-' + mm + '-' + dd;
+    var baseMs = Date.UTC(y, m - 1, d);
+    if (!Number.isFinite(baseMs)) return todayStr();
+    var next = new Date(baseMs + Number(delta || 0) * 86400000);
+    return next.toISOString().slice(0, 10);
   }
 
   function setTzHint(){
@@ -425,7 +426,8 @@
 
   function loadPublishedCache(){
     try{
-      var raw = sessionStorage.getItem(PUBLISHED_CACHE_KEY);
+      var raw = localStorage.getItem(PUBLISHED_CACHE_KEY);
+      if (!raw) raw = sessionStorage.getItem(PUBLISHED_CACHE_KEY);
       if (!raw) return null;
       var data = JSON.parse(raw);
       return Array.isArray(data) ? data : null;
@@ -436,6 +438,7 @@
 
   function savePublishedCache(list){
     try{
+      localStorage.setItem(PUBLISHED_CACHE_KEY, JSON.stringify(list || []));
       sessionStorage.setItem(PUBLISHED_CACHE_KEY, JSON.stringify(list || []));
     }catch(_){}
   }
@@ -738,7 +741,7 @@
         var shownDate = (day && day.date) ? day.date : date;
         if (shownDate) setCurrentDate(shownDate);
         renderSlots(day ? day.slots : []);
-        setStatus('已更新' + (shownDate ? ' ' + shownDate : ''));
+        setStatus('已更新');
         setTimeout(function(){ setStatus(''); }, 1800);
         loadPublishedSlots(serviceId);
       })
