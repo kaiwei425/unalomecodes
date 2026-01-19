@@ -30,6 +30,8 @@
   .role-actions .btn.danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;}
   .status-text{margin-top:12px;color:#475569;font-size:13px;}
   .role-hint{padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid rgba(251,146,60,.25);color:#7c2d12;font-size:13px;}
+  .role-flags{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
+  .role-flag{display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:999px;padding:8px 12px;}
   @media (max-width:900px){.role-row{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -62,6 +64,13 @@
         <div id="permWrap" style="margin-top:16px;">
           <div class="muted">自訂權限（角色為 custom 時生效）</div>
           <div class="perm-grid" id="permGrid"></div>
+        </div>
+
+        <div class="role-flags">
+          <label class="role-flag">
+            <input type="checkbox" id="bookingNotify">
+            booking 通知收件人（狀態更新寄信）
+          </label>
         </div>
 
         <div class="role-actions">

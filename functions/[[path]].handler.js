@@ -691,12 +691,146 @@ async function isAdmin(request, env){
 function normalizeEmail(val){
   return String(val || '').trim().toLowerCase();
 }
+async function getBookingNotifyFlag(email, env){
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return false;
+  const kv = env && env.ADMIN_ROLE_KV;
+  if (!kv) return false;
+  try{
+    const raw = await kv.get(`admin:notify_booking:${normalizedEmail}`);
+    return raw === '1' || raw === 'true';
+  }catch(_){}
+  return false;
+}
+async function setBookingNotifyFlag(email, enabled, env){
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return;
+  const kv = env && env.ADMIN_ROLE_KV;
+  if (!kv) return;
+  try{
+    if (enabled){
+      await kv.put(`admin:notify_booking:${normalizedEmail}`, '1');
+    }else{
+      await kv.delete(`admin:notify_booking:${normalizedEmail}`);
+    }
+  }catch(_){}
+}
+async function getBookingNotifyEmails(env){
+  const kv = env && env.ADMIN_ROLE_KV;
+  if (!kv) return [];
+  let list = [];
+  try{
+    const raw = await kv.get('admin:role:index');
+    list = raw ? (JSON.parse(raw) || []) : [];
+  }catch(_){}
+  if (!Array.isArray(list) || !list.length) return [];
+  const out = [];
+  for (const item of list){
+    const email = normalizeEmail(item);
+    if (!email) continue;
+    const role = await getAdminRole(email, env);
+    if (String(role || '').trim().toLowerCase() !== 'booking') continue;
+    let raw = '';
+    try{ raw = await kv.get(`admin:notify_booking:${email}`) || ''; }catch(_){}
+    if (raw === '1' || raw === 'true') out.push(email);
+  }
+  return Array.from(new Set(out));
+}
 function getPhoneConsultConfig(env){
   const modeRaw = String(env?.PHONE_CONSULT_LAUNCH_MODE || 'admin').trim().toLowerCase();
   const mode = (modeRaw === 'public' || modeRaw === 'allowlist' || modeRaw === 'admin') ? modeRaw : 'admin';
   const serviceId = String(env?.PHONE_CONSULT_SERVICE_ID || '').trim();
   const allowlistRaw = String(env?.PHONE_CONSULT_ALLOWLIST || '').trim();
   return { mode, serviceId, allowlistRaw };
+}
+function isPhoneConsultServiceRecord(svc, serviceId, env){
+  if (!svc) return false;
+  const cfg = getPhoneConsultConfig(env || {});
+  if (cfg.serviceId && serviceId && cfg.serviceId === serviceId) return true;
+  const metaType = String((svc.meta && svc.meta.type) || '').trim().toLowerCase();
+  if (metaType === 'phone_consult') return true;
+  const hay = `${svc.name || ''} ${svc.desc || ''}`.toLowerCase();
+  return /phone|電話|consult|占卜|算命/.test(hay);
+}
+function isPhoneConsultOrder(order, env){
+  if (!order) return false;
+  const cfg = getPhoneConsultConfig(env || {});
+  if (cfg.serviceId && order.serviceId && cfg.serviceId === order.serviceId) return true;
+  const name = String(order.serviceName || '').toLowerCase();
+  return /phone|電話|consult|占卜|算命/.test(name);
+}
+const CONSULT_STAGE_LABELS = {
+  payment_pending: { zh:'訂單成立待確認付款', en:'Payment pending confirmation' },
+  payment_confirmed: { zh:'已確認付款，預約中', en:'Payment confirmed, scheduling' },
+  appointment_confirmed: { zh:'已完成預約', en:'Booking confirmed' },
+  done: { zh:'已完成訂單', en:'Order completed' }
+};
+function normalizeConsultStage(stage){
+  return String(stage || '').trim().toLowerCase();
+}
+function getConsultStageLabel(stage){
+  const key = normalizeConsultStage(stage);
+  return CONSULT_STAGE_LABELS[key] || { zh: stage || '', en: stage || '' };
+}
+function buildConsultStageEmail(order, stage, env){
+  const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+  const label = getConsultStageLabel(stage);
+  const orderId = String(order.id || '').trim();
+  const slotStart = String(order.slotStart || order.requestDate || '').trim();
+  const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || 'https://unalomecodes.com').replace(/\/$/, '');
+  const adminUrl = primarySite + '/admin/slots';
+  const subject = `[${siteName}] 訂單狀態更新 / Order Status Update #${orderId}`;
+  const zh = [
+    '【中文】',
+    `訂單編號：${orderId}`,
+    `預約時段：${slotStart || '—'}`,
+    `目前階段：${label.zh || stage}`,
+    '如有需要請聯繫客服。',
+    `後台連結：${adminUrl}`
+  ].join('<br>');
+  const en = [
+    '[English]',
+    `Order ID: ${orderId}`,
+    `Slot: ${slotStart || '—'}`,
+    `Stage: ${label.en || stage}`,
+    'Please contact support if needed.',
+    `Admin: ${adminUrl}`
+  ].join('<br>');
+  const html = `${zh}<br><br>${en}`;
+  const text = html.replace(/<br>/g, '\n');
+  return { subject, html, text };
+}
+async function sendConsultStageEmails(env, order, stage, internalList){
+  try{
+    const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
+    const fromDefault = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
+    if (!apiKey || !fromDefault) return;
+    const msg = buildConsultStageEmail(order, stage, env);
+    const customerEmail = String(order?.buyer?.email || '').trim();
+    const tasks = [];
+    if (customerEmail){
+      tasks.push(sendEmailMessage(env, {
+        from: fromDefault,
+        to: [customerEmail],
+        subject: msg.subject,
+        html: msg.html,
+        text: msg.text
+      }));
+    }
+    const internal = Array.from(new Set(internalList || [])).filter(Boolean);
+    if (internal.length){
+      tasks.push(sendEmailMessage(env, {
+        from: fromDefault,
+        to: internal,
+        subject: msg.subject,
+        html: msg.html,
+        text: msg.text
+      }));
+    }
+    if (tasks.length) await Promise.allSettled(tasks);
+  }catch(err){
+    console.error('consult stage email error', err);
+  }
 }
 function isAllowlisted(email, env){
   const normalized = normalizeEmail(email);
@@ -5459,7 +5593,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       }
       const role = await getAdminRole(emailParam, env);
       const permissions = await getAdminPermissionsForEmail(emailParam, env, role);
-      return new Response(JSON.stringify({ ok:true, email: emailParam, role, permissions }), { status:200, headers: jsonHeadersFor(request, env) });
+      const bookingNotify = await getBookingNotifyFlag(emailParam, env);
+      return new Response(JSON.stringify({ ok:true, email: emailParam, role, permissions, bookingNotify }), { status:200, headers: jsonHeadersFor(request, env) });
     }
     if (request.method === 'DELETE'){
       if (!emailParam){
@@ -5468,6 +5603,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       try{
         await kv.delete(`admin:role:${emailParam}`);
         await kv.delete(`admin:perms:${emailParam}`);
+        await kv.delete(`admin:notify_booking:${emailParam}`);
         const idxKey = 'admin:role:index';
         const raw = await kv.get(idxKey);
         const list = raw ? (JSON.parse(raw) || []) : [];
@@ -5482,6 +5618,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const email = String(body.email || '').trim().toLowerCase();
       const role = normalizeRole(body.role);
       const safePerms = sanitizePermissionsForRole(role, body.permissions);
+      const bookingNotify = !!body.bookingNotify;
       if (!email){
         return new Response(JSON.stringify({ ok:false, error:'missing_email' }), { status:400, headers: jsonHeadersFor(request, env) });
       }
@@ -5489,6 +5626,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         try{
           await kv.delete(`admin:role:${email}`);
           await kv.delete(`admin:perms:${email}`);
+          await kv.delete(`admin:notify_booking:${email}`);
         }catch(_){}
       }else{
         await kv.put(`admin:role:${email}`, role);
@@ -5496,6 +5634,11 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           await kv.put(`admin:perms:${email}`, JSON.stringify(safePerms));
         }else{
           await kv.delete(`admin:perms:${email}`);
+        }
+        if (role === 'booking'){
+          await setBookingNotifyFlag(email, bookingNotify, env);
+        }else{
+          await setBookingNotifyFlag(email, false, env);
         }
       }
       try{
@@ -5510,6 +5653,90 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       return new Response(JSON.stringify({ ok:true, email, role, permissions: role === 'custom' ? safePerms : [] }), { status:200, headers: jsonHeadersFor(request, env) });
     }
     return new Response(JSON.stringify({ ok:false, error:'method_not_allowed' }), { status:405, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/consult-stage' && request.method === 'POST') {
+    const guard = await requireAdminWrite(request, env);
+    if (guard) return guard;
+    const store = env.SERVICE_ORDERS || env.ORDERS;
+    if (!store){
+      return new Response(JSON.stringify({ ok:false, error:'SERVICE_ORDERS 未綁定' }), { status:500, headers: jsonHeadersFor(request, env) });
+    }
+    let body = {};
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const id = String(body.id || '').trim();
+    const stage = normalizeConsultStage(body.consultStage || body.stage || '');
+    if (!id || !stage){
+      return new Response(JSON.stringify({ ok:false, error:'missing_fields' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const allowedStages = ['payment_pending','payment_confirmed','appointment_confirmed','done'];
+    if (!allowedStages.includes(stage)){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_stage' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const raw = await store.get(id);
+    if (!raw){
+      return new Response(JSON.stringify({ ok:false, error:'not_found' }), { status:404, headers: jsonHeadersFor(request, env) });
+    }
+    const order = JSON.parse(raw);
+    if (!isPhoneConsultOrder(order, env)){
+      return new Response(JSON.stringify({ ok:false, error:'not_phone_consult' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const adminSession = await getAdminSession(request, env);
+    const adminRole = adminSession && adminSession.email ? await getAdminRole(adminSession.email, env) : 'admin_key';
+    if (adminRole && adminRole !== 'owner' && adminRole !== 'booking' && adminRole !== 'admin_key'){
+      return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+    }
+    if (adminRole === 'booking'){
+      if (stage !== 'appointment_confirmed' && stage !== 'done'){
+        return new Response(JSON.stringify({ ok:false, error:'forbidden_stage' }), { status:403, headers: jsonHeadersFor(request, env) });
+      }
+    }
+    const currentStage = normalizeConsultStage(order.consultStage || 'payment_pending');
+    const currentIdx = allowedStages.indexOf(currentStage);
+    const nextIdx = allowedStages.indexOf(stage);
+    if (currentIdx !== -1 && nextIdx < currentIdx){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_transition' }), { status:409, headers: jsonHeadersFor(request, env) });
+    }
+    if (adminRole === 'booking'){
+      if (stage === 'appointment_confirmed' && currentStage !== 'payment_confirmed'){
+        return new Response(JSON.stringify({ ok:false, error:'invalid_transition' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+      if (stage === 'done' && currentStage !== 'appointment_confirmed'){
+        return new Response(JSON.stringify({ ok:false, error:'invalid_transition' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+    }
+    if (order.consultStage && order.consultStage === stage){
+      return new Response(JSON.stringify({ ok:true, unchanged:true }), { status:200, headers: jsonHeadersFor(request, env) });
+    }
+    order.consultStage = stage;
+    order.consultStageAt = new Date().toISOString();
+    order.consultStageBy = {
+      email: adminSession && adminSession.email ? adminSession.email : '',
+      role: adminRole || 'admin_key'
+    };
+    order.updatedAt = new Date().toISOString();
+    await store.put(id, JSON.stringify(order));
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'consult_stage_update',
+        ...actor,
+        targetType: 'service_order',
+        targetId: id,
+        orderId: id,
+        slotKey: order.slotKey || '',
+        meta: { consultStage: stage }
+      });
+    }catch(_){}
+    let internal = [];
+    if (stage === 'payment_confirmed'){
+      internal = await getBookingNotifyEmails(env);
+    }else if (stage === 'appointment_confirmed' || stage === 'done'){
+      internal = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
+    }
+    await sendConsultStageEmails(env, order, stage, internal);
+    return new Response(JSON.stringify({ ok:true, consultStage: stage }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/service/slots/publish' && request.method === 'POST') {
@@ -8556,6 +8783,8 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     let perkInfo = null;
 
     const now = new Date().toISOString();
+    const isPhoneConsult = isPhoneConsultServiceRecord(svc, serviceId, env);
+    const consultStage = isPhoneConsult ? 'payment_pending' : '';
     const order = {
       id: newId,
       productId, productName, price, qty,
@@ -9640,11 +9869,34 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       order?.recipientEmail ||
       ''
     ).trim();
-    const adminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
+    const baseAdminRaw = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
     const channelLabel = channel ? channel : (order.method || '訂單');
     const emailContext = ctx.emailContext || 'order_created';
     const notifyCustomer = ctx.notifyCustomer === false ? false : !!customerEmail;
-    const notifyAdmin = ctx.notifyAdmin === false ? false : adminRaw.length > 0;
+    const isPhoneConsult = isPhoneConsultOrder(order, env);
+    let adminRaw = baseAdminRaw.slice();
+    let forceAdmin = false;
+    let wrapBilingual = !!ctx.bilingual;
+    if (isPhoneConsult && emailContext === 'status_update'){
+      const statusText = String(order.status || '').trim();
+      const isScheduling = statusText.includes('已確認付款') && statusText.includes('預約中');
+      const isBooked = statusText.includes('已完成預約');
+      if (isScheduling){
+        adminRaw = await getBookingNotifyEmails(env);
+        forceAdmin = true;
+      }else if (isBooked){
+        adminRaw = baseAdminRaw.slice();
+        forceAdmin = true;
+      }else{
+        adminRaw = [];
+        forceAdmin = true;
+      }
+      wrapBilingual = true;
+    }
+    adminRaw = Array.from(new Set(adminRaw)).filter(Boolean);
+    const notifyAdmin = forceAdmin
+      ? adminRaw.length > 0
+      : (ctx.notifyAdmin === false ? false : adminRaw.length > 0);
     const statusLabel = (order.status || '').trim();
     const isBlessingDone = statusLabel === '祈福完成';
     const customerSubject = emailContext === 'status_update'
@@ -9658,7 +9910,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext, blessingDone: isBlessingDone };
     let { html: customerHtml, text: customerText } = composeOrderEmail(order, Object.assign({ admin:false }, composeOpts));
     let { html: adminHtml, text: adminText } = composeOrderEmail(order, Object.assign({ admin:true }, composeOpts));
-    if (ctx.bilingual){
+    if (wrapBilingual){
       const wrappedCustomer = buildBilingualOrderEmail(order, customerHtml, customerText, { lookupUrl });
       const wrappedAdmin = buildBilingualOrderEmail(order, adminHtml, adminText, { lookupUrl });
       customerHtml = wrappedCustomer.html;
@@ -11018,6 +11270,9 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       qtyEnabled: svc.qtyEnabled === true,
       qtyLabel: svc.qtyLabel || undefined,
       status: '待處理',
+      consultStage,
+      consultStageAt: consultStage ? new Date().toISOString() : '',
+      consultStageBy: consultStage ? { email: String(buyer.email || ''), role: 'customer' } : undefined,
       buyer: Object.assign({}, buyer, {
         nameEn: String(body?.nameEn || body?.buyer?.nameEn || body?.buyer_name_en || body?.buyer_nameEn || '')
       }),

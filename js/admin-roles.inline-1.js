@@ -4,6 +4,7 @@
   const permGrid = document.getElementById('permGrid');
   const permWrap = document.getElementById('permWrap');
   const statusText = document.getElementById('statusText');
+  const bookingNotify = document.getElementById('bookingNotify');
   const btnLoad = document.getElementById('btnLoad');
   const btnSave = document.getElementById('btnSave');
   const btnRemove = document.getElementById('btnRemove');
@@ -93,6 +94,11 @@
   function updateRoleView(role, perms){
     const r = normalizeRole(role);
     if (!permWrap) return;
+    if (bookingNotify){
+      const enableNotify = (r === 'booking');
+      bookingNotify.disabled = !enableNotify;
+      if (!enableNotify) bookingNotify.checked = false;
+    }
     if (ROLE_PRESETS[r]){
       permWrap.style.display = '';
       renderPerms(getPresetPerms(r), true);
@@ -129,6 +135,10 @@
       roleSel.value = data.role || '';
       const normalizedRole = normalizeRole(roleSel.value);
       updateRoleView(normalizedRole, data.permissions || []);
+      if (bookingNotify){
+        bookingNotify.checked = !!data.bookingNotify;
+        if (normalizedRole !== 'booking') bookingNotify.checked = false;
+      }
       if (!ROLE_PRESETS[normalizedRole]){
         setStatus('已載入權限設定。');
       }
@@ -147,12 +157,13 @@
     const perms = ROLE_PRESETS[role]
       ? ROLE_PRESETS[role].permissions.slice()
       : (role === 'custom' ? collectPerms() : []);
+    const bookingNotifyOn = role === 'booking' && bookingNotify ? !!bookingNotify.checked : false;
     try{
       const res = await fetch('/api/admin/roles', {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
         credentials:'include',
-        body: JSON.stringify({ email, role, permissions: perms })
+        body: JSON.stringify({ email, role, permissions: perms, bookingNotify: bookingNotifyOn })
       });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || !data || !data.ok){
@@ -184,6 +195,7 @@
       roleSel.value = '';
       renderPerms([]);
       updateRoleView('', []);
+      if (bookingNotify) bookingNotify.checked = false;
       setStatus('已移除設定。');
     }catch(err){
       setStatus('移除失敗：' + err.message);

@@ -17,9 +17,26 @@
   const btnReload = document.getElementById('btnReload');
   const btnExport = document.getElementById('btnExport');
   const statusTabs = document.getElementById('statusTabs');
+  const consultTabs = document.getElementById('consultTabs');
   let orders = [];
   let activeStatus = 'pending';
-  const STATUSES = ['待處理','已確認付款，祈福進行中','祈福完成','祈福成果已通知'];
+  let activeConsultStatus = 'all';
+  const STATUSES = [
+    '訂單成立待確認付款 / Payment pending confirmation',
+    '已確認付款，預約中 / Payment confirmed, scheduling',
+    '已完成預約 / Booking confirmed',
+    '已完成訂單 / Order completed',
+    '待處理',
+    '已確認付款，祈福進行中',
+    '祈福完成',
+    '祈福成果已通知'
+  ];
+  const CONSULT_STAGES = [
+    { key:'payment_pending', label:'訂單成立待確認付款 / Payment pending confirmation' },
+    { key:'payment_confirmed', label:'已確認付款，預約中 / Payment confirmed, scheduling' },
+    { key:'appointment_confirmed', label:'已完成預約 / Booking confirmed' },
+    { key:'done', label:'已完成訂單 / Order completed' }
+  ];
   let ADMIN_ROLE = '';
   let IS_FULFILLMENT = false;
 
@@ -99,6 +116,17 @@
   }
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function isPhoneConsultOrder(order){
+    if (!order) return false;
+    if (order.consultStage) return true;
+    const name = String(order.serviceName || '').toLowerCase();
+    return /phone|電話|consult|占卜|算命/.test(name);
+  }
+  function consultStageLabel(stage){
+    const key = String(stage || '').trim().toLowerCase();
+    const found = CONSULT_STAGES.find(item => item.key === key);
+    return found ? found.label : (stage || '');
   }
 
   async function resolveAdminRole(){
@@ -227,10 +255,17 @@
 
   function statusMatches(order, key){
     const raw = String(order && order.status || '').trim();
+    const consultStage = String(order && order.consultStage || '').trim().toLowerCase();
+    if (consultStage){
+      if (key === 'pending') return consultStage === 'payment_pending';
+      if (key === 'paid') return consultStage === 'payment_confirmed';
+      if (key === 'done') return consultStage === 'appointment_confirmed' || consultStage === 'done';
+      return true;
+    }
     if (!raw) return false;
     if (key === 'pending') return raw.includes('待處理') || raw.includes('待確認');
-    if (key === 'paid') return raw.includes('祈福進行中');
-    if (key === 'done') return raw.includes('祈福完成') || raw.includes('成果已通知');
+    if (key === 'paid') return raw.includes('祈福進行中') || raw.includes('已確認付款') || raw.toLowerCase().includes('scheduling');
+    if (key === 'done') return raw.includes('祈福完成') || raw.includes('成果已通知') || raw.includes('已完成預約') || raw.includes('已完成訂單') || raw.toLowerCase().includes('booking confirmed') || raw.toLowerCase().includes('order completed');
     return true;
   }
   function matchesQuery(order, q){
@@ -251,6 +286,23 @@
       el.textContent = String(counts[key] != null ? counts[key] : 0);
     });
   }
+  function updateConsultCounts(q){
+    if (!consultTabs) return;
+    const query = (q || '').trim().toLowerCase();
+    const base = orders.filter(o => matchesQuery(o, query)).filter(o => isPhoneConsultOrder(o));
+    const counts = { payment_pending:0, payment_confirmed:0, appointment_confirmed:0, done:0 };
+    base.forEach(o=>{
+      const stage = String(o.consultStage || '').trim().toLowerCase();
+      if (counts[stage] != null) counts[stage] += 1;
+    });
+    consultTabs.querySelectorAll('[data-consult]').forEach(btn=>{
+      const key = btn.getAttribute('data-consult');
+      if (key === 'all') return;
+      const count = counts[key] != null ? counts[key] : 0;
+      if (!btn.dataset.baseLabel) btn.dataset.baseLabel = btn.textContent.replace(/\s*\(\d+\)$/, '');
+      btn.textContent = btn.dataset.baseLabel + ' (' + count + ')';
+    });
+  }
   function syncStatusTabs(){
     if (!statusTabs) return;
     statusTabs.querySelectorAll('[data-status]').forEach(btn=>{
@@ -258,12 +310,29 @@
       btn.classList.toggle('active', val === activeStatus);
     });
   }
+  function syncConsultTabs(){
+    if (!consultTabs) return;
+    consultTabs.querySelectorAll('[data-consult]').forEach(btn=>{
+      const val = btn.getAttribute('data-consult') || '';
+      btn.classList.toggle('active', val === activeConsultStatus);
+    });
+  }
   function render(){
     const q = (filterInput.value||'').toLowerCase();
     updateStatusCounts(q);
+    updateConsultCounts(q);
+    if (consultTabs){
+      const hasConsult = orders.some(o => isPhoneConsultOrder(o));
+      consultTabs.style.display = hasConsult ? '' : 'none';
+    }
     const view = orders
       .filter(o => matchesQuery(o, q))
-      .filter(o => statusMatches(o, activeStatus));
+      .filter(o => statusMatches(o, activeStatus))
+      .filter(o => {
+        if (!consultTabs || activeConsultStatus === 'all') return true;
+        const stage = String(o.consultStage || '').trim().toLowerCase();
+        return stage && stage === activeConsultStatus;
+      });
     if (!view.length){
       bodyEl.innerHTML = '<div class="muted">沒有符合的訂單。</div>';
       return;
@@ -280,12 +349,15 @@
       const nameEn = IS_FULFILLMENT ? '' : (o.buyer && o.buyer.nameEn ? `<div class="muted">英文：${escapeHtml(o.buyer.nameEn)}</div>` : '');
       const requestDate = escapeHtml(o.requestDate || '—');
       const birthText = IS_FULFILLMENT ? '—' : escapeHtml((o.buyer && o.buyer.birth) || '—');
-      const statusDisabled = IS_FULFILLMENT ? 'disabled' : '';
+      const hasConsultStage = isPhoneConsultOrder(o);
+      const statusDisabled = (IS_FULFILLMENT || hasConsultStage) ? 'disabled' : '';
       const applyHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
+      const consultLocked = (ADMIN_ROLE && ADMIN_ROLE !== 'owner') ? 'disabled' : '';
+      const consultStage = String(o.consultStage || '').trim().toLowerCase();
       const proofHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       const deleteHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       const safeId = escapeHtml(o.id || '');
-      const safeStatus = escapeHtml(o.status || '待處理');
+      const safeStatus = hasConsultStage && consultStage ? escapeHtml(consultStageLabel(consultStage)) : escapeHtml(o.status || '待處理');
       return `
         <div class="order-card" data-id="${safeId}">
           <div class="order-header">
@@ -321,8 +393,16 @@
               ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
             </select>
           </div>
+          ${hasConsultStage ? `
+          <div class="section">
+            <strong>電話算命階段</strong>
+            <select data-id="${safeId}" class="consultStageSel" ${consultLocked}>
+              ${CONSULT_STAGES.map(st => `<option value="${st.key}" ${st.key === consultStage ? 'selected':''}>${st.label}</option>`).join('')}
+            </select>
+          </div>` : ''}
           <div class="actions">
             <button class="btn primary" data-act="apply" data-id="${safeId}" ${applyHidden}>套用</button>
+            ${hasConsultStage ? `<button class="btn" data-act="consult-apply" data-id="${safeId}" ${consultLocked ? 'disabled' : ''}>更新階段</button>` : ''}
             <button class="btn" data-act="view" data-id="${safeId}">明細</button>
             <button class="btn" data-act="qna" data-id="${safeId}">問與答</button>
             <button class="btn" data-act="photo" data-id="${safeId}">顧客照片</button>
@@ -342,6 +422,7 @@
       const data = await authedFetch('/api/service/orders');
       orders = Array.isArray(data.items) ? data.items : [];
       syncStatusTabs();
+      syncConsultTabs();
       render();
       clearQnaUnread();
     }catch(err){
@@ -384,6 +465,30 @@
       }finally{
         btn.disabled = false;
         btn.textContent = '套用';
+      }
+      return;
+    }
+    if (act === 'consult-apply'){
+      const row = btn.closest('.order-card');
+      const sel = row ? row.querySelector('select.consultStageSel') : null;
+      if (!sel) return;
+      const consultStage = sel.value;
+      btn.disabled = true;
+      btn.textContent = '更新中…';
+      try{
+        await authedFetch('/api/admin/service/consult-stage', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ id, consultStage })
+        });
+        const target = orders.find(o=> o.id === id);
+        if (target) target.consultStage = consultStage;
+        render();
+      }catch(err){
+        alert('更新失敗：' + err.message);
+      }finally{
+        btn.disabled = false;
+        btn.textContent = '更新階段';
       }
       return;
     }
@@ -622,6 +727,15 @@
       if (!btn) return;
       activeStatus = btn.getAttribute('data-status') || 'pending';
       syncStatusTabs();
+      render();
+    });
+  }
+  if (consultTabs){
+    consultTabs.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-consult]');
+      if (!btn) return;
+      activeConsultStatus = btn.getAttribute('data-consult') || 'all';
+      syncConsultTabs();
       render();
     });
   }

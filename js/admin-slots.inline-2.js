@@ -39,6 +39,13 @@
       published_title: '已開放時段（含日期）',
       btn_published_refresh: '重新整理已開放時段',
       published_empty: '目前沒有已開放時段。',
+      consult_title: '電話算命預約 / Consult Queue',
+      btn_consult_reload: '重新整理',
+      consult_empty: '目前沒有待處理的電話算命預約。',
+      consult_need_service: '請先選擇 serviceId。',
+      consult_stage: '階段',
+      consult_action_booked: '已完成預約',
+      consult_action_done: '訂單完成',
       reschedule_empty: '目前沒有改期申請。',
       reschedule_note: '備註',
       reschedule_customer: '客戶',
@@ -98,6 +105,13 @@
       published_title: 'Published Slots (with dates)',
       btn_published_refresh: 'Refresh published slots',
       published_empty: 'No published slots.',
+      consult_title: 'Phone Consult Queue',
+      btn_consult_reload: 'Refresh',
+      consult_empty: 'No pending phone consult orders.',
+      consult_need_service: 'Please select a serviceId first.',
+      consult_stage: 'Stage',
+      consult_action_booked: 'Booking confirmed',
+      consult_action_done: 'Order completed',
       reschedule_empty: 'No reschedule requests.',
       reschedule_note: 'Note',
       reschedule_customer: 'Customer',
@@ -204,6 +218,8 @@
   var publishedSlots = document.getElementById('publishedSlots');
   var btnRescheduleLoad = document.getElementById('btnRescheduleLoad');
   var btnRescheduleMore = document.getElementById('btnRescheduleMore');
+  var consultList = document.getElementById('consultList');
+  var btnConsultReload = document.getElementById('btnConsultReload');
   var adminSlotsWarning = document.getElementById('adminSlotsWarning');
   var langZh = document.getElementById('langZh');
   var langEn = document.getElementById('langEn');
@@ -670,6 +686,110 @@
       });
   }
 
+  var CONSULT_STAGE_LABELS = {
+    payment_pending: '訂單成立待確認付款 / Payment pending confirmation',
+    payment_confirmed: '已確認付款，預約中 / Payment confirmed, scheduling',
+    appointment_confirmed: '已完成預約 / Booking confirmed',
+    done: '已完成訂單 / Order completed'
+  };
+
+  function isPhoneConsultOrder(order){
+    if (!order) return false;
+    if (order.consultStage) return true;
+    var name = String(order.serviceName || '').toLowerCase();
+    return /phone|電話|consult|占卜|算命/.test(name);
+  }
+
+  function consultStageLabel(stage){
+    var key = String(stage || '').trim().toLowerCase();
+    return CONSULT_STAGE_LABELS[key] || stage || '';
+  }
+
+  function renderConsultList(items){
+    if (!consultList) return;
+    if (!items.length){
+      consultList.innerHTML = '<div class="muted">' + t('consult_empty') + '</div>';
+      return;
+    }
+    consultList.innerHTML = items.map(function(o){
+      var stage = String(o.consultStage || '').trim().toLowerCase();
+      var slotStart = String(o.slotStart || o.requestDate || '').trim();
+      var name = (o.buyer && o.buyer.name) ? o.buyer.name : '';
+      var phone = (o.buyer && o.buyer.phone) ? o.buyer.phone : '';
+      var meta = [name, phone].filter(Boolean).join('｜');
+      var canBooked = stage === 'payment_confirmed';
+      var canDone = stage === 'appointment_confirmed';
+      return (
+        '<div class="slot-row" data-id="' + (o.id || '') + '">' +
+          '<div class="slot-row-main">' +
+            '<div><strong>#' + (o.id || '') + '</strong></div>' +
+            '<div class="muted">' + (meta || '—') + '</div>' +
+            '<div class="muted">' + t('consult_stage') + '：' + consultStageLabel(stage) + '</div>' +
+            '<div class="muted">' + (slotStart || '—') + '</div>' +
+          '</div>' +
+          '<div class="slot-row-actions">' +
+            '<button class="btn" data-act="consult-booked" data-id="' + (o.id || '') + '"' + (canBooked ? '' : ' disabled') + '>' + t('consult_action_booked') + '</button>' +
+            '<button class="btn" data-act="consult-done" data-id="' + (o.id || '') + '"' + (canDone ? '' : ' disabled') + '>' + t('consult_action_done') + '</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function loadConsultQueue(){
+    if (!consultList) return;
+    var serviceId = getServiceIdValue();
+    if (!serviceId){
+      consultList.innerHTML = '<div class="muted">' + t('consult_need_service') + '</div>';
+      return;
+    }
+    consultList.innerHTML = '<div class="muted">' + t('msg_loading') + '</div>';
+    fetch('/api/service/orders?limit=200', { credentials:'include', cache:'no-store' })
+      .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
+      .then(function(result){
+        if (!result.ok){
+          consultList.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
+          return;
+        }
+        var items = Array.isArray(result.data.items) ? result.data.items : [];
+        var filtered = items.filter(function(o){
+          if (!o) return false;
+          if (o.serviceId && o.serviceId !== serviceId) return false;
+          return isPhoneConsultOrder(o) && o.consultStage;
+        });
+        renderConsultList(filtered);
+      })
+      .catch(function(){
+        consultList.innerHTML = '<div class="muted">' + t('msg_failed') + '</div>';
+      });
+  }
+
+  function updateConsultStage(id, stage, btn){
+    if (!id || !stage) return;
+    if (btn) setButtonBusy(btn, true);
+    fetch('/api/admin/service/consult-stage', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify({ id: id, consultStage: stage })
+    })
+      .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
+      .then(function(result){
+        if (!result.ok){
+          setStatus(t('msg_failed'), true);
+          return;
+        }
+        setStatus(t('msg_saved'));
+        loadConsultQueue();
+      })
+      .catch(function(){
+        setStatus(t('msg_failed'), true);
+      })
+      .finally(function(){
+        if (btn) setButtonBusy(btn, false);
+      });
+  }
+
   function collectSlotKeys(action){
     if (!slotGrid) return [];
     var nodes = slotGrid.querySelectorAll('input[type="checkbox"][data-action="'+action+'"]:checked');
@@ -739,6 +859,7 @@
         setStatus('已更新');
         setTimeout(function(){ setStatus(''); }, 1800);
         loadPublishedSlots(serviceId);
+        loadConsultQueue();
       })
       .catch(function(){
         setStatus(t('msg_failed'), true);
@@ -916,16 +1037,37 @@
     if (btnRescheduleLoad) btnRescheduleLoad.addEventListener('click', function(){ loadReschedules(true); });
     if (btnRescheduleMore) btnRescheduleMore.addEventListener('click', function(){ loadReschedules(false); });
     if (rescheduleStatus) rescheduleStatus.addEventListener('change', function(){ loadReschedules(true); });
+    if (btnConsultReload) btnConsultReload.addEventListener('click', function(){ loadConsultQueue(); });
+    if (consultList){
+      consultList.addEventListener('click', function(e){
+        var btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        var id = btn.getAttribute('data-id');
+        var act = btn.getAttribute('data-act');
+        if (act === 'consult-booked'){
+          updateConsultStage(id, 'appointment_confirmed', btn);
+        }else if (act === 'consult-done'){
+          updateConsultStage(id, 'done', btn);
+        }
+      });
+    }
     if (btnPublishedRefresh) btnPublishedRefresh.addEventListener('click', function(){
       setButtonBusy(btnPublishedRefresh, true);
       loadPublishedSlots(getServiceIdValue(), function(){
         setButtonBusy(btnPublishedRefresh, false);
       });
     });
+    if (serviceIdInput){
+      serviceIdInput.addEventListener('change', function(){
+        loadConsultQueue();
+        loadPublishedSlots(getServiceIdValue());
+      });
+    }
     bindDateNav();
     autoLoadTodayIfReady();
     loadReschedules(true);
     loadPublishedSlots(getServiceIdValue());
+    loadConsultQueue();
   });
 
 })();

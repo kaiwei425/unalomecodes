@@ -26,8 +26,15 @@
     </div>
     <div class="status-tabs" id="statusTabs">
       <button type="button" class="status-tab active" data-status="pending">待確認付款 <span class="tab-count" data-status-count="pending">0</span></button>
-      <button type="button" class="status-tab" data-status="paid">已付款祈福進行中 <span class="tab-count" data-status-count="paid">0</span></button>
-      <button type="button" class="status-tab" data-status="done">祈福完成 <span class="tab-count" data-status-count="done">0</span></button>
+      <button type="button" class="status-tab" data-status="paid">已確認付款／進行中 <span class="tab-count" data-status-count="paid">0</span></button>
+      <button type="button" class="status-tab" data-status="done">已完成 <span class="tab-count" data-status-count="done">0</span></button>
+    </div>
+    <div class="status-tabs" id="consultTabs" style="display:none;">
+      <button type="button" class="status-tab active" data-consult="all">電話算命：全部 / All</button>
+      <button type="button" class="status-tab" data-consult="payment_pending">待確認付款 / Payment pending</button>
+      <button type="button" class="status-tab" data-consult="payment_confirmed">預約中 / Scheduling</button>
+      <button type="button" class="status-tab" data-consult="appointment_confirmed">已完成預約 / Booking confirmed</button>
+      <button type="button" class="status-tab" data-consult="done">訂單完成 / Order completed</button>
     </div>
     <div class="card">
       <div id="ordersBody" class="list"><div class="muted">載入中…</div></div>
