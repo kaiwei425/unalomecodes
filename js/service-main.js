@@ -1168,6 +1168,12 @@
     return (items || []).filter(day => day && day.date && day.date >= minDate);
   }
 
+  function formatSlotDayLabel(dateStr){
+    const match = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return dateStr || '';
+    return `${match[2]}-${match[3]}`;
+  }
+
   function saveConsultState(packKey, addon){
     try{
       if (packKey) localStorage.setItem('svcConsultPack', packKey);
@@ -1562,7 +1568,14 @@
 
   function renderSlotDays(items){
     if (!slotDaysEl) return '';
-    const list = Array.isArray(items) ? items : [];
+    let list = Array.isArray(items) ? items : [];
+    if (!list.length){
+      const minDate = getMinSlotDateStr();
+      slotPlaceholderMode = true;
+      slotItems = minDate ? buildPlaceholderDays(minDate, SLOT_DAYS_STEP) : [];
+      list = slotItems;
+      slotLastDate = list.length ? (list[list.length - 1].date || '') : '';
+    }
     const totalPages = Math.max(1, Math.ceil(list.length / SLOT_DAYS_STEP));
     if (slotDaysPage < 0) slotDaysPage = 0;
     if (slotDaysPage > totalPages - 1) slotDaysPage = totalPages - 1;
@@ -1576,7 +1589,7 @@
       btn.type = 'button';
       const isActive = active ? item.date === active : idx === 0;
       btn.className = 'svc-slot-day' + (isActive ? ' is-active' : '');
-      btn.textContent = item.date || '';
+      btn.textContent = formatSlotDayLabel(item.date || '');
       btn.dataset.date = item.date || '';
       btn.addEventListener('click', ()=>{
         Array.from(slotDaysEl.querySelectorAll('.svc-slot-day')).forEach(node=> node.classList.remove('is-active'));
