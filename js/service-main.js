@@ -128,6 +128,12 @@
   const promoPackEnEl = document.getElementById('svcPromoPackEn');
   const promoPackZhEl = document.getElementById('svcPromoPackZh');
   const promoMiniEl = document.getElementById('svcPromoMini');
+  const promoStoriesEl = document.getElementById('svcPromoStories');
+  const promoStoryMediaEl = document.querySelector('#svcPromoStories .svc-promo-story-media');
+  const promoStoryImgEl = document.getElementById('svcPromoStoryImg');
+  const promoStoryMsgEl = document.getElementById('svcPromoStoryMsg');
+  const promoStoryNameEl = document.getElementById('svcPromoStoryName');
+  const promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
   const promoImgEl = document.getElementById('svcPromoImg');
   const promoAdminEl = document.getElementById('svcPromoAdmin');
   const promoKickerInput = document.getElementById('promoKickerInput');
@@ -176,6 +182,9 @@
   let __PHONE_PACK__ = 'en';
   let __PHONE_PROMO_SERVICE__ = null;
   let __PHONE_SVC_ID__ = null;
+  let promoStoryTimer = null;
+  let promoStoryItems = [];
+  let promoStoryIndex = 0;
   let requestDateLabelOriginal = '';
   let requestDateHintOriginal = '';
   let notePlaceholderOriginal = '';
@@ -215,6 +224,7 @@
   let slotHasMore = true;
   const SLOT_DAYS_STEP = 7;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
+  const SLOT_CACHE_TTL_MS = 30 * 1000;
   let SKIP_AUTO_RESUME = false;
   let limitedTimer = null;
   let serviceItems = [];
@@ -1041,7 +1051,12 @@
       const raw = sessionStorage.getItem(key);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      return data && Array.isArray(data.items) ? data.items : null;
+      if (!data || !Array.isArray(data.items)) return null;
+      if (data.at && (Date.now() - Number(data.at)) > SLOT_CACHE_TTL_MS){
+        sessionStorage.removeItem(key);
+        return null;
+      }
+      return data.items;
     }catch(_){
       return null;
     }
@@ -1061,6 +1076,25 @@
     }catch(_){
       return false;
     }
+  }
+
+  function formatLocalDateStr(date){
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function getMinSlotDateStr(){
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 1);
+    return formatLocalDateStr(d);
+  }
+
+  function filterFutureSlotItems(items){
+    const minDate = getMinSlotDateStr();
+    return (items || []).filter(day => day && day.date && day.date >= minDate);
   }
 
   function saveConsultState(packKey, addon){
@@ -1435,7 +1469,7 @@
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     let timer = null;
     if (controller){
-      timer = setTimeout(()=> controller.abort(), 5000);
+      timer = setTimeout(()=> controller.abort(), 12000);
     }
     try{
       const url = buildSlotsUrl(qs);
@@ -1540,8 +1574,8 @@
         renderSlotDays(slotItems);
         return;
       }
-      slotItems = mergeSlotDays(slotItems, moreItems);
-      slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : '';
+      slotItems = filterFutureSlotItems(mergeSlotDays(slotItems, moreItems));
+      slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
       if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
       const activeDate = renderSlotDays(slotItems);
       const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
@@ -1912,13 +1946,14 @@
     slotDaysPage = 0;
     restoreHoldForService(serviceId);
     const cached = loadSlotCache(serviceId);
-    if (cached && cached.length){
-      slotItems = cached;
-      slotLastDate = cached.length ? (cached[cached.length - 1].date || '') : '';
+    const cachedItems = cached ? filterFutureSlotItems(cached) : [];
+    if (cachedItems && cachedItems.length){
+      slotItems = cachedItems;
+      slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : '';
       if (slotDaysEl) slotDaysEl.style.display = '';
       if (slotGridEl) slotGridEl.style.display = '';
-      const activeDate = renderSlotDays(cached);
-      const activeItem = cached.find(day => day.date === activeDate) || cached[0];
+      const activeDate = renderSlotDays(slotItems);
+      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
       if (activeItem) renderSlotGrid(activeItem);
       setSlotStateText('顯示最近時段', false);
       updateAddBtnStateForSlot();
@@ -1953,7 +1988,7 @@
       const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
       const data = result.data || {};
       if (!result.res.ok || !data || data.ok === false){
-        if (!cached || !cached.length){
+        if (!cachedItems || !cachedItems.length){
           hideSlotPicker('目前暫無可預約時段');
         }else{
           setSlotStateText('已顯示最近時段資料', false);
@@ -1968,8 +2003,9 @@
           items = normalizeSlots(retryData);
         }
       }
+      items = filterFutureSlotItems(items);
       if (!items.length){
-        if (!cached || !cached.length){
+        if (!cachedItems || !cachedItems.length){
           hideSlotPicker('目前暫無可預約時段');
         }else{
           setSlotStateText('目前暫無可預約時段', true);
@@ -2006,7 +2042,7 @@
       if (hasFree) setSlotStateText('');
       return;
     }catch(_){
-      if (!cached || !cached.length){
+      if (!cachedItems || !cachedItems.length){
         hideSlotPicker('目前暫無可預約時段');
       }else{
         setSlotStateText('已顯示最近時段資料', false);
@@ -2539,6 +2575,86 @@
     }
   }
 
+  function stopPromoStoryRotation(){
+    if (promoStoryTimer){
+      clearInterval(promoStoryTimer);
+      promoStoryTimer = null;
+    }
+  }
+
+  function formatStoryTime(ts){
+    try{
+      if (!ts) return '';
+      const date = new Date(ts);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'});
+    }catch(_){
+      return '';
+    }
+  }
+
+  function renderPromoStory(item){
+    if (!promoStoriesEl || !promoStoryMsgEl) return;
+    const imgUrl = sanitizeImageUrl(item && (item.imageUrl || item.image || item.photo || item.pic));
+    if (promoStoryMediaEl && promoStoryImgEl){
+      if (imgUrl){
+        promoStoryImgEl.src = imgUrl;
+        promoStoryImgEl.alt = (item && item.nick) ? String(item.nick) : '';
+        promoStoryMediaEl.style.display = '';
+      }else{
+        promoStoryImgEl.removeAttribute('src');
+        promoStoryImgEl.alt = '';
+        promoStoryMediaEl.style.display = 'none';
+      }
+    }
+    promoStoryMsgEl.textContent = item && item.msg ? String(item.msg) : '';
+    if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
+    if (promoStoryTimeEl) promoStoryTimeEl.textContent = item ? formatStoryTime(item.ts) : '';
+  }
+
+  function startPromoStoryRotation(items){
+    stopPromoStoryRotation();
+    promoStoryItems = Array.isArray(items) ? items : [];
+    promoStoryIndex = 0;
+    if (!promoStoriesEl || !promoStoryItems.length){
+      if (promoStoriesEl) promoStoriesEl.style.display = 'none';
+      return;
+    }
+    promoStoriesEl.style.display = '';
+    renderPromoStory(promoStoryItems[0]);
+    if (promoStoryItems.length <= 1) return;
+    promoStoryTimer = setInterval(()=>{
+      promoStoryIndex = (promoStoryIndex + 1) % promoStoryItems.length;
+      renderPromoStory(promoStoryItems[promoStoryIndex]);
+    }, 7000);
+  }
+
+  async function loadPromoStories(service){
+    if (!promoStoriesEl) return;
+    const serviceId = String((service && resolveServiceId(service)) || __PHONE_SVC_ID__ || '').trim();
+    if (!serviceId){
+      promoStoriesEl.style.display = 'none';
+      return;
+    }
+    try{
+      const cacheBust = Date.now();
+      const res = await fetch(`/api/stories?code=${encodeURIComponent(serviceId)}&_=${cacheBust}`);
+      const data = await res.json().catch(()=>null);
+      if (!res.ok || !data || data.ok === false){
+        promoStoriesEl.style.display = 'none';
+        return;
+      }
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (!items.length){
+        promoStoriesEl.style.display = 'none';
+        return;
+      }
+      startPromoStoryRotation(items.slice(0, 10));
+    }catch(_){
+      promoStoriesEl.style.display = 'none';
+    }
+  }
+
   function initPhonePromo(services){
     if (!promoSection) return;
     const target = findPhoneConsultService(services);
@@ -2553,6 +2669,7 @@
     syncConsultPackPrices(target);
     applyPromoContent(getPromoData(target));
     initPromoAdmin(target);
+    loadPromoStories(target);
     setPromoPack(__PHONE_PACK__);
     promoPills.forEach(btn=>{
       btn.addEventListener('click', ()=>{
