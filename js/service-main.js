@@ -222,6 +222,7 @@
   let slotLastDate = '';
   let slotDaysPage = 0;
   let slotHasMore = true;
+  let slotPlaceholderMode = false;
   const SLOT_DAYS_STEP = 7;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
   const SLOT_CACHE_TTL_MS = 30 * 1000;
@@ -1078,18 +1079,88 @@
     }
   }
 
-  function formatLocalDateStr(date){
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
+  function getTzDateParts(tz, date){
+    try{
+      const fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const parts = fmt.formatToParts(date || new Date());
+      const pick = type => {
+        const found = parts.find(p => p.type === type);
+        return found ? found.value : '';
+      };
+      return {
+        y: Number(pick('year')),
+        m: Number(pick('month')),
+        d: Number(pick('day'))
+      };
+    }catch(_){
+      return null;
+    }
+  }
+
+  function formatDateParts(parts){
+    if (!parts) return '';
+    const y = String(parts.y || '').padStart(4, '0');
+    const m = String(parts.m || '').padStart(2, '0');
+    const d = String(parts.d || '').padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
 
+  function addDaysInTz(tz, days){
+    const parts = getTzDateParts(tz);
+    if (!parts || !parts.y || !parts.m || !parts.d) return '';
+    const baseUtc = Date.UTC(parts.y, parts.m - 1, parts.d);
+    const next = new Date(baseUtc + (days * 86400000));
+    const nextParts = getTzDateParts(tz, next);
+    return formatDateParts(nextParts);
+  }
+
   function getMinSlotDateStr(){
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + 1);
-    return formatLocalDateStr(d);
+    return addDaysInTz('Asia/Bangkok', 1) || (()=> {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().split('T')[0];
+    })();
+  }
+
+  function addDaysToDateStr(dateStr, delta){
+    const match = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '';
+    const y = Number(match[1]);
+    const m = Number(match[2]);
+    const d = Number(match[3]);
+    if (!y || !m || !d) return '';
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + Number(delta || 0));
+    const yy = dt.getUTCFullYear();
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+  }
+
+  function buildPlaceholderSlots(dateStr){
+    const slots = [];
+    for (let h = 13; h <= 19; h += 1){
+      const hh = String(h).padStart(2, '0');
+      slots.push({ slotKey: `slot:placeholder:${dateStr}:${hh}00`, time: `${hh}:00`, status: 'free', enabled: false });
+      slots.push({ slotKey: `slot:placeholder:${dateStr}:${hh}30`, time: `${hh}:30`, status: 'free', enabled: false });
+    }
+    return slots;
+  }
+
+  function buildPlaceholderDays(startDate, count){
+    const list = [];
+    for (let i = 0; i < count; i += 1){
+      const date = addDaysToDateStr(startDate, i);
+      if (!date) continue;
+      list.push({ date, slots: buildPlaceholderSlots(date) });
+    }
+    return list;
   }
 
   function filterFutureSlotItems(items){
@@ -1251,6 +1322,7 @@
     slotLastDate = '';
     slotDaysPage = 0;
     slotHasMore = true;
+    slotPlaceholderMode = false;
     if (slotMoreBtn){
       slotMoreBtn.style.display = 'none';
       slotMoreBtn.disabled = false;
@@ -1551,6 +1623,19 @@
     if (!detailDataset) return;
     const serviceId = resolveServiceId(detailDataset);
     if (!serviceId) return;
+    if (slotPlaceholderMode){
+      const nextDate = addDaysToDateStr(slotLastDate, 1);
+      if (!nextDate) return;
+      const moreItems = buildPlaceholderDays(nextDate, SLOT_DAYS_STEP);
+      slotItems = mergeSlotDays(slotItems, moreItems);
+      slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
+      if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
+      const activeDate = renderSlotDays(slotItems);
+      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+      if (activeItem) renderSlotGrid(activeItem);
+      setSlotStateText('目前暫無可預約時段', true);
+      return;
+    }
     const nextDate = getNextDateStr(slotLastDate);
     if (!nextDate) return;
     if (slotMoreBtn){
@@ -1957,6 +2042,23 @@
       if (activeItem) renderSlotGrid(activeItem);
       setSlotStateText('顯示最近時段', false);
       updateAddBtnStateForSlot();
+    }else{
+      const minDate = getMinSlotDateStr();
+      if (minDate){
+        slotPlaceholderMode = true;
+        slotItems = buildPlaceholderDays(minDate, SLOT_DAYS_STEP);
+        slotLastDate = slotItems.length ? slotItems[slotItems.length - 1].date : '';
+        if (slotDaysEl) slotDaysEl.style.display = '';
+        if (slotGridEl) slotGridEl.style.display = '';
+        const activeDate = renderSlotDays(slotItems);
+        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+        if (activeItem) renderSlotGrid(activeItem);
+        setSlotStateText('目前暫無可預約時段', true);
+        if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+          detailAddBtn.disabled = true;
+          detailAddBtn.textContent = '目前無法預約';
+        }
+      }
     }
     if (slotDaysPrev && !slotDaysPrev.__bound){
       slotDaysPrev.__bound = true;
@@ -1988,6 +2090,25 @@
       const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
       const data = result.data || {};
       if (!result.res.ok || !data || data.ok === false){
+        if (!slotItems.length){
+          const minDate = getMinSlotDateStr();
+          slotPlaceholderMode = true;
+          slotItems = minDate ? buildPlaceholderDays(minDate, SLOT_DAYS_STEP) : [];
+          if (slotItems.length){
+            slotLastDate = slotItems[slotItems.length - 1].date || '';
+            if (slotDaysEl) slotDaysEl.style.display = '';
+            if (slotGridEl) slotGridEl.style.display = '';
+            const activeDate = renderSlotDays(slotItems);
+            const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+            if (activeItem) renderSlotGrid(activeItem);
+            setSlotStateText('目前暫無可預約時段', true);
+            if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+              detailAddBtn.disabled = true;
+              detailAddBtn.textContent = '目前無法預約';
+            }
+            return;
+          }
+        }
         if (!cachedItems || !cachedItems.length){
           hideSlotPicker('目前暫無可預約時段');
         }else{
@@ -2005,13 +2126,29 @@
       }
       items = filterFutureSlotItems(items);
       if (!items.length){
-        if (!cachedItems || !cachedItems.length){
+        slotPlaceholderMode = true;
+        if (!slotItems.length){
+          const minDate = getMinSlotDateStr();
+          slotItems = minDate ? buildPlaceholderDays(minDate, SLOT_DAYS_STEP) : [];
+        }
+        if (!slotItems.length){
           hideSlotPicker('目前暫無可預約時段');
         }else{
+          slotLastDate = slotItems[slotItems.length - 1].date || '';
+          if (slotDaysEl) slotDaysEl.style.display = '';
+          if (slotGridEl) slotGridEl.style.display = '';
+          const activeDate = renderSlotDays(slotItems);
+          const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+          if (activeItem) renderSlotGrid(activeItem);
           setSlotStateText('目前暫無可預約時段', true);
+          if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+            detailAddBtn.disabled = true;
+            detailAddBtn.textContent = '目前無法預約';
+          }
         }
         return;
       }
+      slotPlaceholderMode = false;
       slotItems = items;
       saveSlotCache(serviceId, items);
       slotLastDate = items.length ? (items[items.length - 1].date || '') : '';
@@ -2607,7 +2744,7 @@
         promoStoryMediaEl.style.display = 'none';
       }
     }
-    promoStoryMsgEl.textContent = item && item.msg ? String(item.msg) : '';
+    promoStoryMsgEl.textContent = item && item.msg ? String(item.msg) : '目前尚無留言';
     if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
     if (promoStoryTimeEl) promoStoryTimeEl.textContent = item ? formatStoryTime(item.ts) : '';
   }
@@ -2617,7 +2754,10 @@
     promoStoryItems = Array.isArray(items) ? items : [];
     promoStoryIndex = 0;
     if (!promoStoriesEl || !promoStoryItems.length){
-      if (promoStoriesEl) promoStoriesEl.style.display = 'none';
+      if (promoStoriesEl){
+        promoStoriesEl.style.display = '';
+        renderPromoStory(null);
+      }
       return;
     }
     promoStoriesEl.style.display = '';
