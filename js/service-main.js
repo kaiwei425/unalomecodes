@@ -2843,6 +2843,16 @@
         renderStoryModalItem(promoStoryItems[promoStoryIndex]);
       });
     }
+    if (storyModal && !storyModal.__bound){
+      storyModal.__bound = true;
+      storyModal.addEventListener('click', (event)=>{
+        const target = event.target;
+        if (!target) return;
+        if (target.closest('[data-close-dialog]')){
+          closeDialog(storyModal);
+        }
+      });
+    }
     setPromoPack(__PHONE_PACK__);
     promoPills.forEach(btn=>{
       btn.addEventListener('click', ()=>{
