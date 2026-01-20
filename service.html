@@ -239,6 +239,28 @@
     <div class="svc-promo-admin-hint muted">僅管理員可見，儲存後會寫回服務商品設定。</div>
   </div>
 </section>
+<dialog id="svcStoryModal" class="svc-dialog svc-story-modal">
+  <div class="svc-dialog-body">
+    <div class="svc-story-head">
+      <div class="svc-story-title">顧客反饋</div>
+      <button type="button" class="svc-story-close" data-close-dialog="1" aria-label="關閉">×</button>
+    </div>
+    <div class="svc-story-card">
+      <div class="svc-story-media">
+        <img id="svcStoryModalImg" alt="">
+      </div>
+      <div id="svcStoryModalMsg" class="svc-story-msg"></div>
+      <div class="svc-story-meta">
+        <span id="svcStoryModalName"></span>
+        <span id="svcStoryModalTime"></span>
+      </div>
+    </div>
+    <div class="svc-story-actions">
+      <button type="button" id="svcStoryPrev" class="btn">上一則</button>
+      <button type="button" id="svcStoryNext" class="btn primary">下一則</button>
+    </div>
+  </div>
+</dialog>
         <section id="svcHotSection" class="hot-section" style="display:none;">
           <div class="hot-head">
             <div class="hot-title">熱賣中服務</div>

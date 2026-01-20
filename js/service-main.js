@@ -135,6 +135,13 @@
   const promoStoryMoreBtn = document.getElementById('svcPromoStoryMore');
   const promoStoryNameEl = document.getElementById('svcPromoStoryName');
   const promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
+  const storyModal = document.getElementById('svcStoryModal');
+  const storyModalImg = document.getElementById('svcStoryModalImg');
+  const storyModalMsg = document.getElementById('svcStoryModalMsg');
+  const storyModalName = document.getElementById('svcStoryModalName');
+  const storyModalTime = document.getElementById('svcStoryModalTime');
+  const storyPrevBtn = document.getElementById('svcStoryPrev');
+  const storyNextBtn = document.getElementById('svcStoryNext');
   const promoImgEl = document.getElementById('svcPromoImg');
   const promoAdminEl = document.getElementById('svcPromoAdmin');
   const promoKickerInput = document.getElementById('promoKickerInput');
@@ -2720,11 +2727,9 @@
     }
     const msg = item && item.msg ? String(item.msg) : '目前尚無留言';
     promoStoryMsgEl.textContent = msg;
-    promoStoriesEl.classList.remove('is-expanded');
     if (promoStoryMoreBtn){
-      const shouldShow = msg.length > 120;
-      promoStoryMoreBtn.style.display = shouldShow ? '' : 'none';
-      promoStoryMoreBtn.textContent = '顯示更多';
+      promoStoryMoreBtn.style.display = promoStoryItems.length ? '' : 'none';
+      promoStoryMoreBtn.textContent = '查看全部';
     }
     if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
     if (promoStoryTimeEl) promoStoryTimeEl.textContent = item ? formatStoryTime(item.ts) : '';
@@ -2776,6 +2781,31 @@
     }
   }
 
+  function renderStoryModalItem(item){
+    if (!storyModalMsg) return;
+    const imgUrl = sanitizeImageUrl(item && (item.imageUrl || item.image || item.photo || item.pic));
+    if (storyModalImg){
+      if (imgUrl){
+        storyModalImg.src = imgUrl;
+        storyModalImg.alt = item && item.nick ? String(item.nick) : '';
+        storyModalImg.parentElement.style.display = '';
+      }else{
+        storyModalImg.removeAttribute('src');
+        storyModalImg.alt = '';
+        storyModalImg.parentElement.style.display = 'none';
+      }
+    }
+    storyModalMsg.textContent = item && item.msg ? String(item.msg) : '';
+    if (storyModalName) storyModalName.textContent = item && item.nick ? String(item.nick) : '';
+    if (storyModalTime) storyModalTime.textContent = item ? formatStoryTime(item.ts) : '';
+  }
+
+  function openStoryModal(){
+    if (!storyModal || !promoStoryItems.length) return;
+    renderStoryModalItem(promoStoryItems[promoStoryIndex] || promoStoryItems[0]);
+    openDialog(storyModal);
+  }
+
   function initPhonePromo(services){
     if (!promoSection) return;
     const target = findPhoneConsultService(services);
@@ -2794,9 +2824,23 @@
     if (promoStoryMoreBtn && !promoStoryMoreBtn.__bound){
       promoStoryMoreBtn.__bound = true;
       promoStoryMoreBtn.addEventListener('click', ()=>{
-        if (!promoStoriesEl) return;
-        const expanded = promoStoriesEl.classList.toggle('is-expanded');
-        promoStoryMoreBtn.textContent = expanded ? '收合' : '顯示更多';
+        openStoryModal();
+      });
+    }
+    if (storyPrevBtn && !storyPrevBtn.__bound){
+      storyPrevBtn.__bound = true;
+      storyPrevBtn.addEventListener('click', ()=>{
+        if (!promoStoryItems.length) return;
+        promoStoryIndex = (promoStoryIndex - 1 + promoStoryItems.length) % promoStoryItems.length;
+        renderStoryModalItem(promoStoryItems[promoStoryIndex]);
+      });
+    }
+    if (storyNextBtn && !storyNextBtn.__bound){
+      storyNextBtn.__bound = true;
+      storyNextBtn.addEventListener('click', ()=>{
+        if (!promoStoryItems.length) return;
+        promoStoryIndex = (promoStoryIndex + 1) % promoStoryItems.length;
+        renderStoryModalItem(promoStoryItems[promoStoryIndex]);
       });
     }
     setPromoPack(__PHONE_PACK__);
