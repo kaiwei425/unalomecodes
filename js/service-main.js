@@ -157,6 +157,8 @@
   const slotHintEl = document.getElementById('svcSlotHint');
   const slotTzHintEl = document.getElementById('svcSlotTzHint');
   const slotMoreBtn = document.getElementById('svcSlotMore');
+  const slotDaysPrev = document.getElementById('svcSlotDaysPrev');
+  const slotDaysNext = document.getElementById('svcSlotDaysNext');
   const consultPackWrap = document.getElementById('svcConsultPack');
   const consultPackPills = Array.from(document.querySelectorAll('#svcConsultPack .svc-pack-pill'));
   let consultAddonInput = document.getElementById('svcConsultAddonSummary');
@@ -209,6 +211,8 @@
   let rescheduleContext = { order:null, serviceId:'', slotKey:'', selectedDate:'', items:[] };
   let slotItems = [];
   let slotLastDate = '';
+  let slotDaysPage = 0;
+  let slotHasMore = true;
   const SLOT_DAYS_STEP = 7;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
   let SKIP_AUTO_RESUME = false;
@@ -1199,7 +1203,9 @@
       slotHoldToken: '',
       slotStart: '',
       holdUntilMs: 0,
-      timerId: null
+      timerId: null,
+      pendingSlotKey: '',
+      pendingSlotStart: ''
     };
     if (slotGridEl) slotGridEl.innerHTML = '';
     if (slotDaysEl) slotDaysEl.innerHTML = '';
@@ -1209,6 +1215,8 @@
     }
     slotItems = [];
     slotLastDate = '';
+    slotDaysPage = 0;
+    slotHasMore = true;
     if (slotMoreBtn){
       slotMoreBtn.style.display = 'none';
       slotMoreBtn.disabled = false;
@@ -1447,11 +1455,17 @@
   }
 
   function renderSlotDays(items){
-    if (!slotDaysEl) return;
+    if (!slotDaysEl) return '';
+    const list = Array.isArray(items) ? items : [];
+    const totalPages = Math.max(1, Math.ceil(list.length / SLOT_DAYS_STEP));
+    if (slotDaysPage < 0) slotDaysPage = 0;
+    if (slotDaysPage > totalPages - 1) slotDaysPage = totalPages - 1;
+    const start = slotDaysPage * SLOT_DAYS_STEP;
+    const pageItems = list.slice(start, start + SLOT_DAYS_STEP);
     slotDaysEl.innerHTML = '';
     const active = getActiveSlotDate();
     let activeDate = '';
-    items.forEach((item, idx)=>{
+    pageItems.forEach((item, idx)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
       const isActive = active ? item.date === active : idx === 0;
@@ -1466,7 +1480,12 @@
       if (isActive && item.date) activeDate = item.date;
       slotDaysEl.appendChild(btn);
     });
-    return activeDate || (items[0] && items[0].date) || '';
+    if (slotDaysPrev) slotDaysPrev.disabled = slotDaysPage <= 0;
+    if (slotDaysNext){
+      const atEnd = slotDaysPage >= totalPages - 1;
+      slotDaysNext.disabled = atEnd && !slotHasMore;
+    }
+    return activeDate || (pageItems[0] && pageItems[0].date) || (items[0] && items[0].date) || '';
   }
 
   function getActiveSlotDate(){
@@ -1494,7 +1513,7 @@
     return Array.from(map.values()).sort((a,b)=> String(a.date || '').localeCompare(String(b.date || '')));
   }
 
-  async function loadMoreSlots(){
+  async function loadMoreSlots(targetPage){
     if (!detailDataset) return;
     const serviceId = resolveServiceId(detailDataset);
     if (!serviceId) return;
@@ -1513,14 +1532,17 @@
       }
       const moreItems = normalizeSlots(data);
       if (!moreItems.length){
+        slotHasMore = false;
         if (slotMoreBtn){
           slotMoreBtn.disabled = true;
           slotMoreBtn.textContent = '沒有更多時段';
         }
+        renderSlotDays(slotItems);
         return;
       }
       slotItems = mergeSlotDays(slotItems, moreItems);
       slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : '';
+      if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
       const activeDate = renderSlotDays(slotItems);
       const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
       if (activeItem) renderSlotGrid(activeItem);
@@ -1886,6 +1908,8 @@
       slotTzHintEl.textContent = getTzHintText();
     }
     const serviceId = resolveServiceId(service);
+    slotHasMore = true;
+    slotDaysPage = 0;
     restoreHoldForService(serviceId);
     const cached = loadSlotCache(serviceId);
     if (cached && cached.length){
@@ -1898,6 +1922,32 @@
       if (activeItem) renderSlotGrid(activeItem);
       setSlotStateText('顯示最近時段', false);
       updateAddBtnStateForSlot();
+    }
+    if (slotDaysPrev && !slotDaysPrev.__bound){
+      slotDaysPrev.__bound = true;
+      slotDaysPrev.addEventListener('click', ()=>{
+        if (slotDaysPage <= 0) return;
+        slotDaysPage -= 1;
+        const activeDate = renderSlotDays(slotItems);
+        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[slotDaysPage * SLOT_DAYS_STEP] || slotItems[0];
+        if (activeItem) renderSlotGrid(activeItem);
+      });
+    }
+    if (slotDaysNext && !slotDaysNext.__bound){
+      slotDaysNext.__bound = true;
+      slotDaysNext.addEventListener('click', async ()=>{
+        const totalPages = Math.max(1, Math.ceil(slotItems.length / SLOT_DAYS_STEP));
+        if (slotDaysPage < totalPages - 1){
+          slotDaysPage += 1;
+          const activeDate = renderSlotDays(slotItems);
+          const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[slotDaysPage * SLOT_DAYS_STEP] || slotItems[0];
+          if (activeItem) renderSlotGrid(activeItem);
+          return;
+        }
+        if (slotHasMore){
+          await loadMoreSlots(slotDaysPage + 1);
+        }
+      });
     }
     try{
       const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
