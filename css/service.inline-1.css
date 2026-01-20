@@ -316,7 +316,7 @@ body.service-view .svc-promo-stories{margin-top:12px;padding:12px;border:1px sol
 body.service-view .svc-promo-stories-head{font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;}
 body.service-view .svc-promo-story-media{display:none;margin:0 0 8px;}
 body.service-view .svc-promo-story-media img{width:100%;max-height:160px;object-fit:cover;border-radius:10px;display:block;}
-body.service-view .svc-promo-story-msg{font-size:14px;color:#0f172a;line-height:1.5;min-height:44px;}
+body.service-view .svc-promo-story-msg{font-size:14px;color:#0f172a;line-height:1.6;min-height:44px;white-space:pre-wrap;word-break:break-word;}
 body.service-view .svc-promo-stories:not(.is-expanded) .svc-promo-story-msg{
   display:-webkit-box;
   -webkit-box-orient:vertical;
