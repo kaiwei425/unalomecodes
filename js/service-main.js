@@ -132,6 +132,7 @@
   const promoStoryMediaEl = document.querySelector('#svcPromoStories .svc-promo-story-media');
   const promoStoryImgEl = document.getElementById('svcPromoStoryImg');
   const promoStoryMsgEl = document.getElementById('svcPromoStoryMsg');
+  const promoStoryMoreBtn = document.getElementById('svcPromoStoryMore');
   const promoStoryNameEl = document.getElementById('svcPromoStoryName');
   const promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
   const promoImgEl = document.getElementById('svcPromoImg');
@@ -2717,7 +2718,14 @@
         promoStoryMediaEl.style.display = 'none';
       }
     }
-    promoStoryMsgEl.textContent = item && item.msg ? String(item.msg) : '目前尚無留言';
+    const msg = item && item.msg ? String(item.msg) : '目前尚無留言';
+    promoStoryMsgEl.textContent = msg;
+    promoStoriesEl.classList.remove('is-expanded');
+    if (promoStoryMoreBtn){
+      const shouldShow = msg.length > 120;
+      promoStoryMoreBtn.style.display = shouldShow ? '' : 'none';
+      promoStoryMoreBtn.textContent = '顯示更多';
+    }
     if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
     if (promoStoryTimeEl) promoStoryTimeEl.textContent = item ? formatStoryTime(item.ts) : '';
   }
@@ -2783,6 +2791,14 @@
     applyPromoContent(getPromoData(target));
     initPromoAdmin(target);
     loadPromoStories(target);
+    if (promoStoryMoreBtn && !promoStoryMoreBtn.__bound){
+      promoStoryMoreBtn.__bound = true;
+      promoStoryMoreBtn.addEventListener('click', ()=>{
+        if (!promoStoriesEl) return;
+        const expanded = promoStoriesEl.classList.toggle('is-expanded');
+        promoStoryMoreBtn.textContent = expanded ? '收合' : '顯示更多';
+      });
+    }
     setPromoPack(__PHONE_PACK__);
     promoPills.forEach(btn=>{
       btn.addEventListener('click', ()=>{
