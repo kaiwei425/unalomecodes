@@ -11088,7 +11088,8 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     const serviceId = String(body.serviceId||'').trim();
     const name = String(body.name||'').trim();
     const phone = String(body.phone||'').trim();
-    if (!serviceId || !name || !phone){
+    const email = String(body.email||'').trim();
+    if (!serviceId || !name || !phone || !email){
       return new Response(JSON.stringify({ ok:false, error:'缺少必要欄位' }), { status:400, headers: jsonHeaders });
     }
     const svcStore = env.SERVICE_PRODUCTS || env.PRODUCTS;

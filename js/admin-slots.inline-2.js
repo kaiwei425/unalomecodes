@@ -318,7 +318,7 @@
   var currentDate = '';
   var todayISO = '';
   var PUBLISHED_CACHE_KEY = 'adminSlotsPublishedCache';
-  var DEBUG_DATE_NAV = true;
+  var DEBUG_DATE_NAV = false;
 
   function todayStr(){
     var d = new Date();
@@ -363,7 +363,6 @@
         var next = addDays(getDateValue(), -1);
         if (DEBUG_DATE_NAV){
           console.log('[slots][prev]', { from: getDateValue(), next: next });
-          setStatus('DEBUG: prev → ' + next);
         }
         setCurrentDate(next);
         loadSlots(next);
@@ -378,7 +377,6 @@
         var next = addDays(getDateValue(), 1);
         if (DEBUG_DATE_NAV){
           console.log('[slots][next]', { from: getDateValue(), next: next });
-          setStatus('DEBUG: next → ' + next);
         }
         setCurrentDate(next);
         loadSlots(next);
@@ -388,15 +386,14 @@
 
   function addDays(dateStr, delta){
     var raw = String(dateStr || '');
-    var norm = raw.replace(/[^\d]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-    var parts = norm.split('-');
+    var match = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (DEBUG_DATE_NAV){
-      console.log('[slots][addDays]', { raw: raw, norm: norm, delta: delta });
+      console.log('[slots][addDays]', { raw: raw, delta: delta });
     }
-    if (parts.length !== 3) return todayStr();
-    var y = Number(parts[0]);
-    var m = Number(parts[1]);
-    var d = Number(parts[2]);
+    if (!match) return todayStr();
+    var y = Number(match[1]);
+    var m = Number(match[2]);
+    var d = Number(match[3]);
     if (!y || !m || !d) return todayStr();
     var baseMs = Date.UTC(y, m - 1, d);
     if (!Number.isFinite(baseMs)) return todayStr();

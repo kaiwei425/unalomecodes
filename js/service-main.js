@@ -233,7 +233,7 @@
   let slotPlaceholderMode = false;
   const SLOT_DAYS_STEP = 10;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
-  const SLOT_CACHE_TTL_MS = 5 * 1000;
+  const SLOT_CACHE_TTL_MS = 0;
   let SKIP_AUTO_RESUME = false;
   let limitedTimer = null;
   let serviceItems = [];
@@ -815,7 +815,7 @@
     if (contactNoteInput){
       if (!notePlaceholderOriginal) notePlaceholderOriginal = contactNoteInput.placeholder || '';
       contactNoteInput.placeholder = isPhone
-        ? '可先將想詢問的問題整理在這裡；或於預約成功後，至會員中心「我的訂單 → 問與答」留言。'
+        ? '可先將要問的問題寫在這裡，或之後至會員中心「我的訂單 → 問與答」內留言。'
         : notePlaceholderOriginal;
       contactNoteInput.required = false;
     }
@@ -1519,13 +1519,12 @@
 
   function mapUserErrorMessage(code){
     const key = String(code || '').toUpperCase();
-    if (key === 'SLOT_CONFLICT') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
+    if (key === 'SLOT_CONFLICT' || key === 'SLOT_UNAVAILABLE') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
     if (key === 'SLOT_EXPIRED') return '此時段已過期，請重新選擇';
     if (key === 'TOO_LATE') return '已超過可改期時間';
     if (key === 'ALREADY_REQUESTED') return '已送出改期申請';
     if (key === 'UNAUTHORIZED') return '請先登入';
     if (key === 'SLOT_NOT_PUBLISHED') return '此時段尚未開放';
-    if (key === 'SLOT_UNAVAILABLE') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
     if (key === 'SLOT_HOLD_EXPIRED') return '此時段已過期，請重新選擇';
     if (key === 'HOLD_LIMIT_REACHED') return '你已有一筆時段保留中，請先完成訂單或等待 15 分鐘後再試';
     if (key === 'INVALID_SLOT') return '時段資訊不一致，請重新整理後再試';
@@ -1656,7 +1655,19 @@
       if (day && day.date) map.set(day.date, day);
     });
     (extra || []).forEach(day=>{
-      if (day && day.date && !map.has(day.date)) map.set(day.date, day);
+      if (!day || !day.date) return;
+      if (!map.has(day.date)){
+        map.set(day.date, day);
+        return;
+      }
+      const existing = map.get(day.date);
+      const existingSlots = Array.isArray(existing && existing.slots) ? existing.slots : [];
+      const nextSlots = Array.isArray(day && day.slots) ? day.slots : [];
+      const existingIsPlaceholder = existingSlots.every(slot => String(slot.slotKey || '').startsWith('slot:placeholder'));
+      const nextIsReal = nextSlots.some(slot => !String(slot.slotKey || '').startsWith('slot:placeholder'));
+      if (existingIsPlaceholder && nextIsReal){
+        map.set(day.date, day);
+      }
     });
     return Array.from(map.values()).sort((a,b)=> String(a.date || '').localeCompare(String(b.date || '')));
   }
@@ -1688,17 +1699,28 @@
       const result = await fetchSlots(serviceId, nextDate, SLOT_DAYS_STEP);
       const data = result.data || {};
       if (!result.res.ok || !data || data.ok === false){
-        setSlotStateText('已顯示最近時段資料', false);
+        const fallback = buildPlaceholderDays(nextDate, SLOT_DAYS_STEP);
+        slotItems = mergeSlotDays(slotItems, fallback);
+        slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
+        slotPlaceholderMode = true;
+        if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
+        const activeDate = renderSlotDays(slotItems);
+        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+        if (activeItem) renderSlotGrid(activeItem);
+        setSlotStateText('目前暫無可預約時段', true);
         return;
       }
       const moreItems = normalizeSlots(data);
       if (!moreItems.length){
-        slotHasMore = false;
-        if (slotMoreBtn){
-          slotMoreBtn.disabled = true;
-          slotMoreBtn.textContent = '沒有更多時段';
-        }
-        renderSlotDays(slotItems);
+        const fallback = buildPlaceholderDays(nextDate, SLOT_DAYS_STEP);
+        slotItems = mergeSlotDays(slotItems, fallback);
+        slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
+        slotPlaceholderMode = true;
+        if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
+        const activeDate = renderSlotDays(slotItems);
+        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+        if (activeItem) renderSlotGrid(activeItem);
+        setSlotStateText('目前暫無可預約時段', true);
         return;
       }
       slotItems = filterFutureSlotItems(mergeSlotDays(slotItems, moreItems));
@@ -1713,7 +1735,15 @@
         slotMoreBtn.textContent = '載入更多';
       }
     }catch(_){
-      setSlotStateText('已顯示最近時段資料', false);
+      const fallback = buildPlaceholderDays(nextDate, SLOT_DAYS_STEP);
+      slotItems = mergeSlotDays(slotItems, fallback);
+      slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
+      slotPlaceholderMode = true;
+      if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
+      const activeDate = renderSlotDays(slotItems);
+      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+      if (activeItem) renderSlotGrid(activeItem);
+      setSlotStateText('目前暫無可預約時段', true);
     }finally{
       if (slotMoreBtn && slotMoreBtn.textContent !== '沒有更多時段'){
         slotMoreBtn.disabled = false;
@@ -1754,7 +1784,10 @@
   function renderSlotGrid(item){
     if (!slotGridEl) return;
     slotGridEl.innerHTML = '';
-    const slots = Array.isArray(item && item.slots) ? item.slots : [];
+    let slots = Array.isArray(item && item.slots) ? item.slots : [];
+    if (!slots.length && item && item.date){
+      slots = buildPlaceholderSlots(item.date);
+    }
     slots.forEach(slot=>{
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1767,6 +1800,7 @@
         btn.classList.add('is-disabled');
         if (status === 'booked') btn.classList.add('is-booked');
         if (status === 'blocked') btn.classList.add('is-blocked');
+        if (status === 'held') btn.classList.add('is-held-other');
       }
       if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && slot.slotKey === CURRENT_DETAIL_SLOT.slotKey){
         btn.classList.add('is-held');
@@ -1776,7 +1810,12 @@
         btn.classList.add('is-held');
       }
       btn.addEventListener('click', ()=>{
-        if (!enabled || status !== 'free') return;
+        if (!enabled || status !== 'free'){
+          if (status === 'held'){
+            setSlotStateText(mapUserErrorMessage('SLOT_UNAVAILABLE'), true);
+          }
+          return;
+        }
         if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && CURRENT_DETAIL_SLOT.slotKey !== slot.slotKey){
           setSlotStateText('已有保留時段，請先按修改時間', true);
           return;
@@ -2711,6 +2750,16 @@
     }
   }
 
+  function formatStoryMsgHtml(msg){
+    const raw = String(msg || '').trim();
+    if (!raw) return '目前尚無留言';
+    const escaped = escapeHtml(raw);
+    if (/\r|\n/.test(raw)){
+      return escaped.replace(/\r\n|\r|\n/g, '<br>');
+    }
+    return escaped.replace(/([。！？!?])\s*/g, '$1<br>');
+  }
+
   function renderPromoStory(item){
     if (!promoStoriesEl || !promoStoryMsgEl) return;
     const imgUrl = sanitizeImageUrl(item && (item.imageUrl || item.image || item.photo || item.pic));
@@ -2725,8 +2774,7 @@
         promoStoryMediaEl.style.display = 'none';
       }
     }
-    const msg = item && item.msg ? String(item.msg) : '目前尚無留言';
-    promoStoryMsgEl.textContent = msg;
+    promoStoryMsgEl.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
     if (promoStoryMoreBtn){
       promoStoryMoreBtn.style.display = promoStoryItems.length ? '' : 'none';
       promoStoryMoreBtn.textContent = '查看全部';
@@ -2759,7 +2807,8 @@
     if (!promoStoriesEl) return;
     const serviceId = String((service && resolveServiceId(service)) || __PHONE_SVC_ID__ || '').trim();
     if (!serviceId){
-      promoStoriesEl.style.display = 'none';
+      promoStoriesEl.style.display = '';
+      startPromoStoryRotation([]);
       return;
     }
     try{
@@ -2767,17 +2816,20 @@
       const res = await fetch(`/api/stories?code=${encodeURIComponent(serviceId)}&_=${cacheBust}`);
       const data = await res.json().catch(()=>null);
       if (!res.ok || !data || data.ok === false){
-        promoStoriesEl.style.display = 'none';
+        promoStoriesEl.style.display = '';
+        startPromoStoryRotation([]);
         return;
       }
       const items = Array.isArray(data.items) ? data.items : [];
       if (!items.length){
-        promoStoriesEl.style.display = 'none';
+        promoStoriesEl.style.display = '';
+        startPromoStoryRotation([]);
         return;
       }
       startPromoStoryRotation(items.slice(0, 10));
     }catch(_){
-      promoStoriesEl.style.display = 'none';
+      promoStoriesEl.style.display = '';
+      startPromoStoryRotation([]);
     }
   }
 
@@ -2795,7 +2847,7 @@
         storyModalImg.parentElement.style.display = 'none';
       }
     }
-    storyModalMsg.textContent = item && item.msg ? String(item.msg) : '';
+    storyModalMsg.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
     if (storyModalName) storyModalName.textContent = item && item.nick ? String(item.nick) : '';
     if (storyModalTime) storyModalTime.textContent = item ? formatStoryTime(item.ts) : '';
   }
@@ -2852,6 +2904,15 @@
           closeDialog(storyModal);
         }
       });
+    }
+    if (storyModal && !storyModal.__closeBound){
+      const closeBtn = storyModal.querySelector('[data-close-dialog]');
+      if (closeBtn){
+        storyModal.__closeBound = true;
+        closeBtn.addEventListener('click', ()=>{
+          closeDialog(storyModal);
+        });
+      }
     }
     setPromoPack(__PHONE_PACK__);
     promoPills.forEach(btn=>{
