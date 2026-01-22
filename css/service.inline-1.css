@@ -151,14 +151,27 @@ body.service-view .svc-pack{
   text-align:left;
 }
 body.service-view .svc-wait-overlay{
-  position:fixed;
-  inset:0;
+  border:none;
+  padding:0;
+  background:transparent;
+  max-width:none;
+}
+body.service-view .svc-wait-overlay::backdrop{
   background:rgba(15,23,42,.55);
   backdrop-filter:blur(4px);
+}
+body.service-view .svc-wait-overlay[open],
+body.service-view .svc-wait-overlay[data-fallback-open]{
   display:flex;
   align-items:center;
   justify-content:center;
-  z-index:2000;
+  position:fixed;
+  inset:0;
+  z-index:2001;
+}
+body.service-view .svc-wait-overlay[data-fallback-open]{
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(4px);
 }
 body.service-view .svc-wait-card{
   background:#fff;

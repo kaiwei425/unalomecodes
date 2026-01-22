@@ -1044,12 +1044,20 @@
     if (!waitOverlay) return;
     if (waitTitleEl && title) waitTitleEl.textContent = title;
     if (waitSubEl && sub) waitSubEl.textContent = sub;
-    waitOverlay.style.display = '';
+    if (waitOverlay.tagName === 'DIALOG'){
+      openDialog(waitOverlay);
+    }else{
+      waitOverlay.style.display = '';
+    }
   }
 
   function hideWaitOverlay(){
     if (!waitOverlay) return;
-    waitOverlay.style.display = 'none';
+    if (waitOverlay.tagName === 'DIALOG'){
+      closeDialog(waitOverlay);
+    }else{
+      waitOverlay.style.display = 'none';
+    }
   }
 
   function getHoldOwnerKey(){
