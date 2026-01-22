@@ -1030,18 +1030,18 @@
     const next = email || uid || 'anon';
     if (HOLD_OWNER_KEY !== next){
       HOLD_OWNER_KEY = next;
-    CURRENT_DETAIL_SLOT.slotKey = '';
-    CURRENT_DETAIL_SLOT.slotHoldToken = '';
-    CURRENT_DETAIL_SLOT.slotStart = '';
-    CURRENT_DETAIL_SLOT.holdUntilMs = 0;
-    CURRENT_DETAIL_SLOT.pendingSlotKey = '';
-    CURRENT_DETAIL_SLOT.pendingSlotStart = '';
+      CURRENT_DETAIL_SLOT.slotKey = '';
+      CURRENT_DETAIL_SLOT.slotHoldToken = '';
+      CURRENT_DETAIL_SLOT.slotStart = '';
+      CURRENT_DETAIL_SLOT.holdUntilMs = 0;
+      CURRENT_DETAIL_SLOT.pendingSlotKey = '';
+      CURRENT_DETAIL_SLOT.pendingSlotStart = '';
       // 清除購物車中的時段資料，避免不同帳號看到倒數
       const cart = loadCart();
       if (Array.isArray(cart) && cart.length){
         const cleaned = cart.map(item=>{
           if (!isPhoneConsultService(item)) return item;
-          return Object.assign({}, item, { slotKey:'', slotHoldToken:'', slotStart:'', slotHoldUntilMs: 0 });
+          return Object.assign({}, item, { slotHoldToken:'', slotHoldUntilMs: 0 });
         });
         saveCart(cleaned);
         renderCartPanel();
@@ -1589,6 +1589,24 @@
     return true;
   }
 
+  function restorePendingSlotFromCart(serviceId){
+    const cart = loadCart();
+    if (!Array.isArray(cart) || !cart.length) return false;
+    const item = cart.find(it => isPhoneConsultService(it) && String(it.serviceId || '') === String(serviceId || '') && it.slotKey && !it.slotHoldToken);
+    if (!item) return false;
+    const parsed = parseSlotKeyDateTime(item.slotKey || '');
+    CURRENT_DETAIL_SLOT.serviceId = String(serviceId || '');
+    CURRENT_DETAIL_SLOT.pendingSlotKey = String(item.slotKey || '');
+    CURRENT_DETAIL_SLOT.pendingSlotStart = String(item.slotStart || (parsed.date && parsed.time ? `${parsed.date} ${parsed.time}` : '') || '');
+    if (CURRENT_DETAIL_SLOT.pendingSlotStart){
+      setSlotStateText(`已選擇 ${CURRENT_DETAIL_SLOT.pendingSlotStart}，按填寫預約資料後保留 15 分鐘`, false);
+    }else{
+      setSlotStateText('已選擇時段，按填寫預約資料後保留 15 分鐘', false);
+    }
+    updateAddBtnStateForSlot();
+    return true;
+  }
+
   function normalizeSlots(data){
     if (!data) return [];
     if (Array.isArray(data.slots)) return data.slots;
@@ -1843,6 +1861,7 @@
       }
       if (CURRENT_DETAIL_SLOT.slotHoldToken && CURRENT_DETAIL_SLOT.slotKey && slot.slotKey === CURRENT_DETAIL_SLOT.slotKey){
         btn.classList.add('is-held');
+        btn.classList.add('is-hold');
         btn.classList.add('is-disabled');
         btn.disabled = true;
       }else if (CURRENT_DETAIL_SLOT.pendingSlotKey && slot.slotKey === CURRENT_DETAIL_SLOT.pendingSlotKey){
@@ -2149,7 +2168,10 @@
     const serviceId = resolveServiceId(service);
     slotHasMore = true;
     slotDaysPage = 0;
-    restoreHoldForService(serviceId);
+    const restoredHold = restoreHoldForService(serviceId);
+    if (!restoredHold){
+      restorePendingSlotFromCart(serviceId);
+    }
     const cached = loadSlotCache(serviceId);
     const cachedItems = cached ? filterFutureSlotItems(cached) : [];
     if (cachedItems && cachedItems.length){

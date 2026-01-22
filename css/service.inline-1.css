@@ -103,6 +103,11 @@ body.service-view .svc-slot-btn.is-held{
   position:relative;
   padding-right:56px;
 }
+body.service-view .svc-slot-btn.is-held.is-hold{
+  background:#fef3c7;
+  color:#92400e;
+  border-color:#fbd38d;
+}
 body.service-view .svc-slot-btn.is-held-other{
   background:#fef3c7;
   color:#92400e;
@@ -116,6 +121,9 @@ body.service-view .svc-slot-btn.is-held::after{
   font-size:10px;
   font-weight:700;
   color:#e2e8f0;
+}
+body.service-view .svc-slot-btn.is-held.is-hold::after{
+  color:#92400e;
 }
 body.service-view .svc-slot-btn.is-disabled,
 body.service-view .svc-slot-btn.is-booked,
