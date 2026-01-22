@@ -10014,10 +10014,13 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     let failed = false;
     let sentCustomer = false;
     let sentAdmin = false;
+    const errors = [];
     settled.forEach((res, idx)=>{
       const kind = labeled[idx] && labeled[idx].kind;
       if (res.status === 'rejected'){
         failed = true;
+        const msg = res.reason ? String(res.reason) : 'send_failed';
+        errors.push({ kind, error: msg });
         console.error('[mail] send failed', idx, res.reason);
       }else if (kind === 'customer'){
         sentCustomer = true;
@@ -10025,10 +10028,10 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
         sentAdmin = true;
       }
     });
-    return { ok: !failed, reason: failed ? 'send_failed' : '', sentCustomer, sentAdmin };
+    return { ok: !failed, reason: failed ? 'send_failed' : '', sentCustomer, sentAdmin, errors };
   } catch (err) {
     console.error('sendOrderEmails error', err);
-    return { ok:false, reason:'exception' };
+    return { ok:false, reason:'exception', error: String(err || '') };
   }
 }
 
@@ -11416,7 +11419,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }
     let mailStatus = null;
     try{
-      mailStatus = await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:true });
+      mailStatus = await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:true });
     }catch(err){
       console.error('service order email error', err);
     }
