@@ -172,23 +172,31 @@ body.service-view .svc-promo-limited{
   gap:8px;
   flex-wrap:wrap;
   font-size:12px;
-  color:#b91c1c;
-  background:#fef2f2;
-  border:1px dashed rgba(185,28,28,.35);
+  color:#991b1b;
+  background:#fff5f5;
+  border:1px solid rgba(220,38,38,.15);
   padding:6px 10px;
-  border-radius:10px;
+  border-radius:999px;
   margin-top:8px;
 }
 body.service-view .svc-promo-limited-label{
-  font-weight:700;
+  font-weight:800;
   letter-spacing:.2px;
+  background:#fee2e2;
+  color:#b91c1c;
+  padding:2px 8px;
+  border-radius:999px;
 }
 body.service-view .svc-promo-period{
   color:#7f1d1d;
 }
 body.service-view .svc-promo-countdown{
-  font-weight:700;
+  font-weight:800;
   color:#dc2626;
+  background:#fff;
+  border:1px solid rgba(220,38,38,.2);
+  padding:2px 8px;
+  border-radius:999px;
 }
 body.service-view .svc-price-new{
   color:#dc2626;

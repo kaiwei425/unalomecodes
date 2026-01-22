@@ -2492,9 +2492,7 @@
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    return `${y}/${m}/${day} ${hh}:${mm}`;
+    return `${y}/${m}/${day}`;
   }
 
   function getPromoInfo(service){
@@ -2545,10 +2543,11 @@
       return false;
     }
     const totalSec = Math.floor(remain / 1000);
-    const hrs = Math.floor(totalSec / 3600);
+    const days = Math.floor(totalSec / 86400);
+    const hrs = Math.floor((totalSec % 86400) / 3600);
     const mins = Math.floor((totalSec % 3600) / 60);
     const secs = totalSec % 60;
-    const text = `倒數 ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    const text = `剩餘 ${days}天 ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
     if (promoCountdownEl) promoCountdownEl.textContent = text;
     if (detailPromoCountdownEl) detailPromoCountdownEl.textContent = text;
     return true;
@@ -2574,11 +2573,8 @@
       }
       return;
     }
-    const startText = formatPromoDate(info.start);
     const endText = formatPromoDate(info.end);
-    const periodText = (startText && endText)
-      ? `期間 ${startText} ~ ${endText}`
-      : (endText ? `期間至 ${endText}` : (startText ? `期間 ${startText}` : '期間：限時優惠'));
+    const periodText = endText ? `至 ${endText} 截止` : '限時優惠';
     if (promoPeriodEl) promoPeriodEl.textContent = periodText;
     if (detailPromoPeriodEl) detailPromoPeriodEl.textContent = periodText;
     if (promoLimitedEl) promoLimitedEl.style.display = '';
