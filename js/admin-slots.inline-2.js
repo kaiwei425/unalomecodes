@@ -216,18 +216,12 @@
   var btnSelectAll = document.getElementById('btnSelectAll');
   var btnClearSel = document.getElementById('btnClearSel');
   var slotGrid = document.getElementById('slotGrid');
-  var rescheduleStatus = document.getElementById('rescheduleStatus');
-  var rescheduleList = document.getElementById('rescheduleList');
   var publishedSlots = document.getElementById('publishedSlots');
-  var btnRescheduleLoad = document.getElementById('btnRescheduleLoad');
-  var btnRescheduleMore = document.getElementById('btnRescheduleMore');
   var consultList = document.getElementById('consultList');
   var btnConsultReload = document.getElementById('btnConsultReload');
   var adminSlotsWarning = document.getElementById('adminSlotsWarning');
   var langZh = document.getElementById('langZh');
   var langEn = document.getElementById('langEn');
-  var rescheduleCursor = '';
-  var rescheduleBusy = false;
 
   function ensureServiceIdDisplay(){
     var wrap = document.querySelector('.slot-controls');
@@ -537,153 +531,6 @@
       return match[1] + ' ' + match[2].slice(0,2) + ':' + match[2].slice(2);
     }
     return raw;
-  }
-
-  function renderRescheduleList(items, append){
-    if (!rescheduleList) return;
-    if (!append) rescheduleList.innerHTML = '';
-    if (!Array.isArray(items) || !items.length){
-      if (!append) rescheduleList.innerHTML = '<div class="muted">' + t('reschedule_empty') + '</div>';
-      return;
-    }
-    items.forEach(function(item){
-      var row = document.createElement('div');
-      row.style.border = '1px solid rgba(15,23,42,.08)';
-      row.style.borderRadius = '10px';
-      row.style.padding = '10px 12px';
-      row.style.marginBottom = '10px';
-      var status = String(item.status || 'pending');
-      var statusLabel = status === 'approved'
-        ? t('reschedule_status_approved_badge')
-        : status === 'rejected'
-          ? t('reschedule_status_rejected_badge')
-          : t('reschedule_status_pending_badge');
-      var header = document.createElement('div');
-      header.style.display = 'flex';
-      header.style.justifyContent = 'space-between';
-      header.style.alignItems = 'center';
-      header.style.gap = '10px';
-      var title = document.createElement('div');
-      title.style.display = 'flex';
-      title.style.alignItems = 'center';
-      title.style.gap = '8px';
-      var idText = document.createElement('div');
-      idText.textContent = item.orderId || '';
-      idText.style.fontWeight = '700';
-      var badge = document.createElement('span');
-      badge.className = 'reschedule-badge status-' + status;
-      badge.textContent = statusLabel;
-      title.appendChild(idText);
-      title.appendChild(badge);
-      var created = document.createElement('div');
-      created.className = 'muted';
-      created.textContent = item.createdAt || '';
-      header.appendChild(title);
-      header.appendChild(created);
-      var detail = document.createElement('div');
-      detail.style.marginTop = '8px';
-      detail.innerHTML = ''
-        + (item.customerName ? '<div><strong>' + t('reschedule_customer') + '：</strong>' + String(item.customerName || '') + '</div>' : '')
-        + '<div><strong>' + t('reschedule_slot_change') + '：</strong>' + formatSlotKey(item.currentSlotKey || '') + ' → ' + formatSlotKey(item.desiredSlotKey || '') + '</div>'
-        + (item.note ? '<div><strong>' + t('reschedule_note') + '：</strong>' + String(item.note || '') + '</div>' : '')
-        + (status !== 'pending' ? '<div><strong>' + t('reschedule_handler') + '：</strong>' + String(item.approvedBy || item.rejectedBy || '—') + '</div>' : '')
-        + (status !== 'pending' ? '<div><strong>' + t('reschedule_handled_at') + '：</strong>' + String(item.updatedAt || '—') + '</div>' : '');
-      row.appendChild(header);
-      row.appendChild(detail);
-      if (status === 'pending'){
-        var actions = document.createElement('div');
-        actions.style.display = 'flex';
-        actions.style.gap = '8px';
-        actions.style.marginTop = '8px';
-        var btnApprove = document.createElement('button');
-        btnApprove.className = 'btn primary';
-        btnApprove.type = 'button';
-        btnApprove.textContent = t('reschedule_action_approve');
-        btnApprove.addEventListener('click', function(){
-          if (!confirm('確定要執行【核准改期】？此動作無法復原')) return;
-          if (!item.desiredSlotKey){
-            setStatus(t('msg_failed'), true);
-            return;
-          }
-          setStatus(t('msg_loading'));
-          setButtonBusy(btnApprove, true);
-          postAction('/api/admin/service/reschedule-approve', {
-            requestId: item.id,
-            orderId: item.orderId,
-            newSlotKey: item.desiredSlotKey
-          }).then(function(result){
-            setButtonBusy(btnApprove, false);
-            if (!result.ok){
-              setStatus(t('msg_failed'), true);
-              return;
-            }
-            setStatus(t('msg_saved'));
-            loadReschedules(true);
-          }).catch(function(){
-            setButtonBusy(btnApprove, false);
-            setStatus(t('msg_failed'), true);
-          });
-        });
-        var btnReject = document.createElement('button');
-        btnReject.className = 'btn';
-        btnReject.type = 'button';
-        btnReject.textContent = t('reschedule_action_reject');
-        btnReject.addEventListener('click', function(){
-          if (!confirm('確定要執行【拒絕改期】？此動作無法復原')) return;
-          var reason = prompt(t('reschedule_action_reject'));
-          setStatus(t('msg_loading'));
-          setButtonBusy(btnReject, true);
-          postAction('/api/admin/service/reschedule-reject', {
-            requestId: item.id,
-            orderId: item.orderId,
-            reason: reason || ''
-          }).then(function(result){
-            setButtonBusy(btnReject, false);
-            if (!result.ok){
-              setStatus(t('msg_failed'), true);
-              return;
-            }
-            setStatus(t('msg_saved'));
-            loadReschedules(true);
-          }).catch(function(){
-            setButtonBusy(btnReject, false);
-            setStatus(t('msg_failed'), true);
-          });
-        });
-        actions.appendChild(btnApprove);
-        actions.appendChild(btnReject);
-        row.appendChild(actions);
-      }
-      rescheduleList.appendChild(row);
-    });
-  }
-
-  function loadReschedules(reset){
-    if (rescheduleBusy) return;
-    rescheduleBusy = true;
-    if (reset) rescheduleCursor = '';
-    var status = rescheduleStatus ? rescheduleStatus.value : '';
-    var url = '/api/admin/service/reschedule-requests?limit=20';
-    if (status) url += '&status=' + encodeURIComponent(status);
-    if (rescheduleCursor) url += '&cursor=' + encodeURIComponent(rescheduleCursor);
-    fetch(url, { credentials:'include', cache:'no-store' })
-      .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
-      .then(function(result){
-        rescheduleBusy = false;
-        if (!result.ok){
-          setStatus(t('msg_failed'), true);
-          return;
-        }
-        renderRescheduleList(result.data.items || [], !!rescheduleCursor);
-        rescheduleCursor = result.data.nextCursor || '';
-        if (btnRescheduleMore){
-          btnRescheduleMore.style.display = rescheduleCursor ? '' : 'none';
-        }
-      })
-      .catch(function(){
-        rescheduleBusy = false;
-        setStatus(t('msg_failed'), true);
-      });
   }
 
   var CONSULT_STAGE_LABELS = {
@@ -1034,9 +881,6 @@
       clearSelectedSlots();
       setStatusOk(t('msg_done'));
     });
-    if (btnRescheduleLoad) btnRescheduleLoad.addEventListener('click', function(){ loadReschedules(true); });
-    if (btnRescheduleMore) btnRescheduleMore.addEventListener('click', function(){ loadReschedules(false); });
-    if (rescheduleStatus) rescheduleStatus.addEventListener('change', function(){ loadReschedules(true); });
     if (btnConsultReload) btnConsultReload.addEventListener('click', function(){ loadConsultQueue(); });
     if (consultList){
       consultList.addEventListener('click', function(e){
@@ -1065,7 +909,6 @@
     }
     bindDateNav();
     autoLoadTodayIfReady();
-    loadReschedules(true);
     loadPublishedSlots(getServiceIdValue());
     loadConsultQueue();
   });

@@ -614,18 +614,8 @@
   }
 
   function updateRescheduleButtons(order){
-    const eligible = !!(order && canRequestReschedule(order));
-    if (successRescheduleWrap) successRescheduleWrap.style.display = eligible ? '' : 'none';
-    if (step3RescheduleWrap) step3RescheduleWrap.style.display = eligible ? '' : 'none';
-    const bind = (btn)=>{
-      if (!btn || !eligible || btn.__bound) return;
-      btn.__bound = true;
-      btn.addEventListener('click', ()=>{
-        if (order) openRescheduleDialog(order);
-      });
-    };
-    bind(successRescheduleBtn);
-    bind(step3RescheduleBtn);
+    if (successRescheduleWrap) successRescheduleWrap.style.display = 'none';
+    if (step3RescheduleWrap) step3RescheduleWrap.style.display = 'none';
   }
 
   function updateBookingNotice(order){
@@ -4041,7 +4031,6 @@
         const resultUrl = resolveResultPhoto(order);
         const isPhoneOrder = isPhoneConsultOrder(order);
         const scheduleLabel = isPhoneOrder && order.slotStart ? order.slotStart : (order.requestDate || '—');
-        const canReschedule = canRequestReschedule(order);
         const card = document.createElement('div');
         card.className = 'lookup-card';
         card.innerHTML = `
@@ -4056,11 +4045,7 @@
           <div style="font-size:13px;color:#475569;">生日：${escapeHtml(buyer.birth || '—')}｜指定日期：${escapeHtml(scheduleLabel)}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">總金額：${formatTWD(totalAmount)}</div>
           <div style="font-size:13px;color:#475569;margin-top:6px;">備註：${escapeHtml(order.note || '—')}</div>
-          ${canReschedule ? `
-          <div style="margin-top:12px;">
-            <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
-            <button type="button" class="btn primary" data-reschedule-order="${escapeHtml(order.id || '')}">申請改期 / Request Reschedule</button>
-          </div>` : ''}
+          <div style="margin-top:12px;font-size:12px;color:#64748b;">申請改期請聯繫 LINE 客服。</div>
           ${resultUrl ? `<div style="margin-top:12px;"><button type="button" class="btn primary" data-result-url="${escapeHtml(resultUrl)}">查看祈福成果照片</button></div>` : ''}
           <div style="margin-top:14px;border:1px dashed #cbd5f5;border-radius:12px;padding:12px;background:#f8fbff;">
             <div style="font-size:13px;color:#1e40af;line-height:1.6;">祈福影片檔案較大無法直接上傳，請點下方加入官方 LINE 並輸入訂單資訊（訂單編號、手機或姓名即可），我們將把完整影片傳送給您。</div>
@@ -4983,13 +4968,6 @@
         const url = btn.getAttribute('data-result-url');
         if (!url) return;
         window.open(url, '_blank', 'noopener');
-        return;
-      }
-      const resBtn = e.target.closest('button[data-reschedule-order]');
-      if (resBtn){
-        const orderId = resBtn.getAttribute('data-reschedule-order');
-        const order = (lastLookupResult || []).find(item => String(item.id) === String(orderId));
-        if (order && canRequestReschedule(order)) openRescheduleDialog(order);
       }
     });
   }

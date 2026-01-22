@@ -411,31 +411,6 @@
     </div>
   </dialog>
 
-  <dialog id="svcRescheduleDialog" class="svc-dialog">
-    <header>
-      <div style="font-weight:800;font-size:18px;">申請改期 / Request Reschedule</div>
-      <button type="button" class="btn ghost" id="svcRescheduleClose">關閉</button>
-    </header>
-    <div class="svc-dialog-body">
-      <section class="svc-slot-section" id="svcRescheduleSlotSection">
-        <div class="svc-slot-head">
-          <div class="svc-slot-title">可預約時段</div>
-          <div id="svcRescheduleSlotHint" class="svc-slot-hint"></div>
-        </div>
-        <div id="svcRescheduleDays" class="svc-slot-days"></div>
-        <div id="svcRescheduleGrid" class="svc-slot-grid"></div>
-        <div id="svcRescheduleState" class="svc-slot-state"></div>
-      </section>
-      <div class="svc-field">
-        <label class="svc-label" for="svcRescheduleNote">備註（可選）</label>
-        <textarea id="svcRescheduleNote" class="svc-input" rows="3" placeholder="想補充的事項"></textarea>
-      </div>
-    </div>
-    <footer>
-      <button type="button" class="btn primary" id="svcRescheduleSubmit">送出改期申請</button>
-    </footer>
-  </dialog>
-
   <dialog id="svcDetail" class="svc-dialog">
     <div class="closeBar">
       <strong id="svcDetailTitle">服務名稱</strong>
@@ -719,10 +694,7 @@
         </div>
         <div class="svc-email-notice">已寄出 Email 通知</div>
         <div class="svc-bank-hint">之後可透過左側「祈福進度查詢」輸入手機與訂單末五碼（英數）查詢最新進度。</div>
-        <div id="svcStep3RescheduleWrap" style="margin-top:12px;display:none;">
-          <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
-          <button type="button" class="btn primary" id="svcStep3Reschedule">申請改期 / Request Reschedule</button>
-        </div>
+        <div style="margin-top:12px;font-size:12px;color:#64748b;">申請改期請聯繫 LINE 客服。</div>
         <div class="svc-step-actions">
           <button type="button" class="btn" id="svcStep3Lookup">查詢進度</button>
           <button type="button" class="btn primary" id="svcStep3Close">完成</button>
@@ -763,10 +735,7 @@
         我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。
       </div>
       <div class="svc-email-notice">已寄出 Email 通知</div>
-      <div id="svcSuccessRescheduleWrap" style="margin-top:12px;display:none;">
-        <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
-        <button type="button" class="btn primary" id="svcSuccessReschedule">申請改期 / Request Reschedule</button>
-      </div>
+      <div style="margin-top:12px;font-size:12px;color:#64748b;">申請改期請聯繫 LINE 客服。</div>
     </div>
     <footer>
       <button class="btn" id="svcSuccessLookup">查詢進度</button>
