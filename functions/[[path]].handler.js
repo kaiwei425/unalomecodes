@@ -717,8 +717,8 @@ async function setBookingNotifyFlag(email, enabled, env){
 }
 async function getBookingNotifyEmails(env){
   const kv = env && env.ADMIN_ROLE_KV;
-  const fallbackRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || '').trim();
-  const fallback = fallbackRaw ? fallbackRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const fallbackRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || env?.BOOKING_TO || '').trim();
+  const fallback = fallbackRaw ? fallbackRaw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : [];
   if (!kv) return Array.from(new Set(fallback));
   let list = [];
   try{
@@ -5824,7 +5824,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       const origin = new URL(request.url).origin;
       if (stage === 'payment_confirmed'){
         const bookingEmails = await getBookingNotifyEmails(env);
-        const bookingSet = new Set((bookingEmails || []).map(s => String(s || '').trim()).filter(Boolean));
+        const extraBookingRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || env?.BOOKING_TO || '').trim();
+        const extraBooking = extraBookingRaw ? extraBookingRaw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : [];
+        const bookingSet = new Set((bookingEmails || []).concat(extraBooking).map(s => String(s || '').trim()).filter(Boolean));
         const baseAdmins = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '')
           .split(',').map(s => s.trim()).filter(Boolean);
         const ownerAdmins = baseAdmins.filter(email => !bookingSet.has(String(email || '').trim()));
@@ -5837,7 +5839,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false
         });
         const msg = buildBookingNotifyEmail(order, env);
-        const internal = Array.from(new Set(bookingEmails || [])).filter(Boolean);
+        const internal = Array.from(new Set((bookingEmails || []).concat(extraBooking))).filter(Boolean);
         if (internal.length){
           await sendEmailMessage(env, {
             from: (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim(),
@@ -5846,6 +5848,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             html: msg.html,
             text: msg.text
           });
+        }else{
+          console.warn('[booking] notify skipped: no recipients resolved');
         }
       }else{
         await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false });
