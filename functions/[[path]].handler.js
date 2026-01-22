@@ -10124,7 +10124,12 @@ function composeOrderEmail(order, opts = {}) {
   const phone = (order?.buyer?.phone || order?.buyer?.contact || order?.contact || '').trim();
   const email = (order?.buyer?.email || '').trim();
   const store = (order?.buyer?.store || order?.store || '').trim();
-  const status = order.status || '處理中';
+  let status = order.status || '處理中';
+  const consultStage = String(order?.consultStage || '').trim().toLowerCase();
+  if (consultStage){
+    const label = getConsultStageLabel(consultStage);
+    if (label && label.zh) status = label.zh;
+  }
   const trackingNo = String(
     order.shippingTracking || order.trackingNo || order.tracking || order.trackingNumber
     || (order.shipment && (order.shipment.tracking || order.shipment.trackingNo || order.shipment.trackingNumber))
@@ -10141,20 +10146,19 @@ function composeOrderEmail(order, opts = {}) {
   let items = buildOrderItems(order);
   let shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
   let discountAmount = Math.max(0, Number(order?.coupon?.discount || 0));
+  const itemsSum = items.reduce((sum, it)=> sum + Number(it.total || 0), 0);
   let subtotal = 0;
   if (items.length) {
-    subtotal = items.reduce((s, it) => s + Number(it.total || 0), 0);
+    subtotal = itemsSum;
   } else if (order.price) {
     subtotal = Number(order.price || 0) * Math.max(1, Number(order.qty || 1) || 1);
   }
   if (!subtotal) subtotal = Math.max(0, Number(order.amount || 0) - shippingFee + discountAmount);
   const totalAmount = Math.max(0, Number(order.amount || 0));
   if (isServiceOrder){
-    if (items.length === 1 && totalAmount > 0){
-      items = [Object.assign({}, items[0], { total: totalAmount })];
-    }
-    subtotal = totalAmount;
-    discountAmount = 0;
+    const baseSum = itemsSum > 0 ? itemsSum : (subtotal > 0 ? subtotal : totalAmount);
+    subtotal = baseSum;
+    discountAmount = Math.max(0, baseSum - totalAmount);
     shippingFee = 0;
   }
   const supportEmail = 'bkkaiwei@gmail.com';

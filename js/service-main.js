@@ -83,6 +83,8 @@
   const checkoutStep3OrderId = document.getElementById('svcStep3OrderId');
   const checkoutStep3Service = document.getElementById('svcStep3Service');
   const checkoutStep3Amount = document.getElementById('svcStep3Amount');
+  const checkoutStep3SlotBkk = document.getElementById('svcStep3SlotBkk');
+  const checkoutStep3SlotTpe = document.getElementById('svcStep3SlotTpe');
   const checkoutStep3Last5 = document.getElementById('svcStep3Last5');
   const checkoutStep3Buyer = document.getElementById('svcStep3Buyer');
   const checkoutStep3Lookup = document.getElementById('svcStep3Lookup');
@@ -2565,6 +2567,12 @@
     }).join('、');
     if (checkoutStep3Service) checkoutStep3Service.textContent = summary || (checkoutServiceName ? checkoutServiceName.textContent : '服務');
     if (checkoutStep3Amount) checkoutStep3Amount.textContent = formatTWD(total);
+    if (checkoutStep3SlotBkk || checkoutStep3SlotTpe){
+      const slotItem = lastCartSnapshot.find(item => isPhoneConsultService(item) && item.slotStart);
+      const slotStart = slotItem ? String(slotItem.slotStart || '') : '';
+      if (checkoutStep3SlotBkk) checkoutStep3SlotBkk.textContent = slotStart || '—';
+      if (checkoutStep3SlotTpe) checkoutStep3SlotTpe.textContent = slotStart ? formatTaipeiFromBkk(slotStart) : '—';
+    }
     if (checkoutStep3Last5) checkoutStep3Last5.textContent = lastRemitLast5 || '—';
     if (checkoutStep3Buyer && checkoutContact){
       checkoutStep3Buyer.textContent = `${checkoutContact.name}（${checkoutContact.phone}）`;

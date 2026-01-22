@@ -351,7 +351,7 @@
       const birthText = IS_FULFILLMENT ? '—' : escapeHtml((o.buyer && o.buyer.birth) || '—');
       const hasConsultStage = isPhoneConsultOrder(o);
       const statusDisabled = (IS_FULFILLMENT || hasConsultStage) ? 'disabled' : '';
-      const applyHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
+      const applyHidden = (IS_FULFILLMENT || hasConsultStage) ? 'style="display:none"' : '';
       const consultLocked = (ADMIN_ROLE && ADMIN_ROLE !== 'owner') ? 'disabled' : '';
       const consultStage = String(o.consultStage || '').trim().toLowerCase();
       const proofHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
