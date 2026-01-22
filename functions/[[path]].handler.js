@@ -5820,10 +5820,20 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }catch(_){}
     try{
       const origin = new URL(request.url).origin;
-      const notifyAdmin = stage === 'payment_confirmed' ? false : true;
-      await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin, emailContext:'status_update', bilingual:false });
       if (stage === 'payment_confirmed'){
         const bookingEmails = await getBookingNotifyEmails(env);
+        const bookingSet = new Set((bookingEmails || []).map(s => String(s || '').trim()).filter(Boolean));
+        const baseAdmins = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '')
+          .split(',').map(s => s.trim()).filter(Boolean);
+        const ownerAdmins = baseAdmins.filter(email => !bookingSet.has(String(email || '').trim()));
+        await maybeSendOrderEmails(env, order, {
+          origin,
+          channel:'服務型商品',
+          notifyAdmin: true,
+          adminEmails: ownerAdmins,
+          emailContext:'status_update',
+          bilingual:false
+        });
         const msg = buildBookingNotifyEmail(order, env);
         const internal = Array.from(new Set(bookingEmails || [])).filter(Boolean);
         if (internal.length){
@@ -5835,6 +5845,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             text: msg.text
           });
         }
+      }else{
+        await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false });
       }
     }catch(err){
       console.error('consult stage email error', err);
@@ -10059,7 +10071,12 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     let adminRaw = baseAdminRaw.slice();
     let forceAdmin = false;
     let wrapBilingual = !!ctx.bilingual;
-    if (isPhoneConsult && emailContext === 'status_update'){
+    const overrideAdmins = Array.isArray(ctx.adminEmails) ? ctx.adminEmails.map(s => String(s || '').trim()).filter(Boolean) : null;
+    if (overrideAdmins && overrideAdmins.length){
+      adminRaw = overrideAdmins.slice();
+      forceAdmin = true;
+    }
+    if (!overrideAdmins && isPhoneConsult && emailContext === 'status_update'){
       const statusText = String(order.status || '').trim();
       const isScheduling = statusText.includes('已確認付款') && statusText.includes('預約中');
       const isBooked = statusText.includes('已完成預約');
