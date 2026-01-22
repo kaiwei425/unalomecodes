@@ -1165,10 +1165,10 @@
   }
 
   function getMinSlotDateStr(){
-    return addDaysInTz('Asia/Bangkok', 1) || (()=> {
+    return addDaysInTz('Asia/Bangkok', 0) || (()=> {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() + 1);
+      d.setDate(d.getDate());
       return d.toISOString().split('T')[0];
     })();
   }
