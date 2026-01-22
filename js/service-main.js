@@ -190,6 +190,7 @@
   const slotHintEl = document.getElementById('svcSlotHint');
   const slotTzHintEl = document.getElementById('svcSlotTzHint');
   const slotMoreBtn = document.getElementById('svcSlotMore');
+  const slotRefreshBtn = document.getElementById('svcSlotRefresh');
   const slotDaysPrev = document.getElementById('svcSlotDaysPrev');
   const slotDaysNext = document.getElementById('svcSlotDaysNext');
   const consultPackWrap = document.getElementById('svcConsultPack');
@@ -2176,6 +2177,10 @@
     if (slotTzHintEl){
       slotTzHintEl.textContent = getTzHintText();
     }
+    if (slotRefreshBtn){
+      slotRefreshBtn.disabled = false;
+      slotRefreshBtn.textContent = '重新整理可預約時段';
+    }
     const serviceId = resolveServiceId(service);
     slotHasMore = true;
     slotDaysPage = 0;
@@ -2285,6 +2290,23 @@
       }
     }
     ensurePlaceholderSlots();
+  }
+
+  async function refreshSlotPicker(){
+    if (!detailDataset) return;
+    const serviceId = resolveServiceId(detailDataset);
+    if (!serviceId) return;
+    if (slotRefreshBtn){
+      slotRefreshBtn.disabled = true;
+      slotRefreshBtn.textContent = '更新中…';
+    }
+    clearSlotCache(serviceId);
+    FORCE_SLOT_REFRESH = true;
+    await initSlotPicker(detailDataset);
+    if (slotRefreshBtn){
+      slotRefreshBtn.disabled = false;
+      slotRefreshBtn.textContent = '重新整理可預約時段';
+    }
   }
 
   function getTzHintText(){
@@ -4020,6 +4042,10 @@
   }
   if (detailAddBtn){
     detailAddBtn.addEventListener('click', ()=> addCurrentSelection());
+  }
+  if (slotRefreshBtn && !slotRefreshBtn.__bound){
+    slotRefreshBtn.__bound = true;
+    slotRefreshBtn.addEventListener('click', refreshSlotPicker);
   }
   if (cartFab){
     cartFab.addEventListener('click', ()=>{
