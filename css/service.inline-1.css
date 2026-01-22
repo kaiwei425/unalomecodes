@@ -166,6 +166,30 @@ body.service-view .svc-promo-price{
   font-weight:800;
   margin-top:6px;
 }
+body.service-view .svc-promo-limited{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  font-size:12px;
+  color:#b91c1c;
+  background:#fef2f2;
+  border:1px dashed rgba(185,28,28,.35);
+  padding:6px 10px;
+  border-radius:10px;
+  margin-top:8px;
+}
+body.service-view .svc-promo-limited-label{
+  font-weight:700;
+  letter-spacing:.2px;
+}
+body.service-view .svc-promo-period{
+  color:#7f1d1d;
+}
+body.service-view .svc-promo-countdown{
+  font-weight:700;
+  color:#dc2626;
+}
 body.service-view .svc-price-new{
   color:#dc2626;
   font-size:18px;

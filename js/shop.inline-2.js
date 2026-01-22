@@ -1,7 +1,7 @@
 (function(){
   const CATS = [
     { key: "佛牌/聖物", label: "佛牌/聖物" },
-    { key: "蠟燭加持祈福", label: "祈福加持/代捐棺材" },
+    { key: "蠟燭加持祈福", label: "連線算命 / 捐棺行善" },
     { key: "跑廟行程", label: "跑廟行程" },
     { key: "其他", label: "泰國推薦好物" }
   ];

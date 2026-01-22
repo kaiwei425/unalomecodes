@@ -139,6 +139,12 @@
   const promoStoryMoreBtn = document.getElementById('svcPromoStoryMore');
   const promoStoryNameEl = document.getElementById('svcPromoStoryName');
   const promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
+  const promoLimitedEl = document.getElementById('svcPromoLimited');
+  const promoPeriodEl = document.getElementById('svcPromoPeriod');
+  const promoCountdownEl = document.getElementById('svcPromoCountdown');
+  const detailPromoLimitedEl = document.getElementById('svcDetailPromoLimited');
+  const detailPromoPeriodEl = document.getElementById('svcDetailPromoPeriod');
+  const detailPromoCountdownEl = document.getElementById('svcDetailPromoCountdown');
   const storyModal = document.getElementById('svcStoryModal');
   const storyModalImg = document.getElementById('svcStoryModalImg');
   const storyModalMsg = document.getElementById('svcStoryModalMsg');
@@ -200,6 +206,7 @@
   let promoStoryTimer = null;
   let promoStoryItems = [];
   let promoStoryIndex = 0;
+  let promoCountdownTimer = null;
   let requestDateLabelOriginal = '';
   let requestDateHintOriginal = '';
   let notePlaceholderOriginal = '';
@@ -2478,6 +2485,18 @@
     return Number.isFinite(ts) ? ts : 0;
   }
 
+  function formatPromoDate(ts){
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${y}/${m}/${day} ${hh}:${mm}`;
+  }
+
   function getPromoInfo(service){
     const promo = service && service.meta && service.meta.promo ? service.meta.promo : {};
     const price = Number(promo.promoPrice ?? promo.price ?? 0);
@@ -2501,11 +2520,108 @@
     return Number.isFinite(promo) ? promo : info.price;
   }
 
+  function getPromoPackBasePrice(packKey){
+    if (packKey === 'zh'){
+      const zh = Number(CONSULT_PACK_PRICES.zh || 0);
+      if (Number.isFinite(zh) && zh > 0) return zh;
+    }
+    const en = Number(CONSULT_PACK_PRICES.en || 0);
+    if (Number.isFinite(en) && en > 0) return en;
+    return getPhoneBasePrice();
+  }
+
+  function updatePromoCountdown(info){
+    const end = info && info.end ? Number(info.end) : 0;
+    if (!end || !Number.isFinite(end)){
+      if (promoCountdownEl) promoCountdownEl.textContent = '';
+      if (detailPromoCountdownEl) detailPromoCountdownEl.textContent = '';
+      return false;
+    }
+    const now = Date.now();
+    const remain = end - now;
+    if (remain <= 0){
+      if (promoCountdownEl) promoCountdownEl.textContent = '';
+      if (detailPromoCountdownEl) detailPromoCountdownEl.textContent = '';
+      return false;
+    }
+    const totalSec = Math.floor(remain / 1000);
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    const text = `倒數 ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    if (promoCountdownEl) promoCountdownEl.textContent = text;
+    if (detailPromoCountdownEl) detailPromoCountdownEl.textContent = text;
+    return true;
+  }
+
+  function updatePromoLimitedBlocks(service){
+    if (!service || !isPhoneConsultService(service)){
+      if (promoLimitedEl) promoLimitedEl.style.display = 'none';
+      if (detailPromoLimitedEl) detailPromoLimitedEl.style.display = 'none';
+      if (promoCountdownTimer){
+        clearInterval(promoCountdownTimer);
+        promoCountdownTimer = null;
+      }
+      return;
+    }
+    const info = getPromoInfo(service);
+    if (!info){
+      if (promoLimitedEl) promoLimitedEl.style.display = 'none';
+      if (detailPromoLimitedEl) detailPromoLimitedEl.style.display = 'none';
+      if (promoCountdownTimer){
+        clearInterval(promoCountdownTimer);
+        promoCountdownTimer = null;
+      }
+      return;
+    }
+    const startText = formatPromoDate(info.start);
+    const endText = formatPromoDate(info.end);
+    const periodText = (startText && endText)
+      ? `期間 ${startText} ~ ${endText}`
+      : (endText ? `期間至 ${endText}` : (startText ? `期間 ${startText}` : '期間：限時優惠'));
+    if (promoPeriodEl) promoPeriodEl.textContent = periodText;
+    if (detailPromoPeriodEl) detailPromoPeriodEl.textContent = periodText;
+    if (promoLimitedEl) promoLimitedEl.style.display = '';
+    if (detailPromoLimitedEl) detailPromoLimitedEl.style.display = '';
+    const ok = updatePromoCountdown(info);
+    if (promoCountdownTimer){
+      clearInterval(promoCountdownTimer);
+      promoCountdownTimer = null;
+    }
+    if (info.end && ok){
+      promoCountdownTimer = setInterval(()=>{
+        if (!updatePromoCountdown(info)){
+          if (promoLimitedEl) promoLimitedEl.style.display = 'none';
+          if (detailPromoLimitedEl) detailPromoLimitedEl.style.display = 'none';
+          if (promoCountdownTimer){
+            clearInterval(promoCountdownTimer);
+            promoCountdownTimer = null;
+          }
+        }
+      }, 1000);
+    }
+  }
+
+  function updatePromoPriceRow(packKey){
+    if (!promoPriceRow || !promoPriceOldEl || !promoPriceNewEl || !__PHONE_PROMO_SERVICE__) return;
+    const promoInfo = getPromoInfo(__PHONE_PROMO_SERVICE__);
+    const base = getPromoPackBasePrice(packKey || 'en');
+    const promoPrice = promoInfo ? getPromoDisplayPrice(__PHONE_PROMO_SERVICE__, packKey || 'en') : 0;
+    if (promoPrice && Number.isFinite(promoPrice) && promoPrice > 0 && promoPrice < base){
+      promoPriceOldEl.textContent = formatTWD(base);
+      promoPriceNewEl.textContent = formatTWD(promoPrice);
+      promoPriceRow.style.display = '';
+    }else{
+      promoPriceRow.style.display = 'none';
+    }
+  }
+
   function buildServiceCard(service, opts = {}){
     const sid = resolveServiceId(service);
     if (!service.id && sid) service.id = sid;
     const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
     const sold = Number(service.sold || 0);
+    const showSold = !isPhoneConsultService(service);
     const limitedRow = buildLimitedRow(service, '限時服務');
     const basePrice = isPhoneConsultService(service) ? getPhoneBasePrice() : Number(service.price||0);
     let priceHtml = formatTWD(basePrice);
@@ -2523,7 +2639,7 @@
       <div class="body">
         <div class="name">${escapeHtml(service.name||'服務')}</div>
         ${limitedRow}
-        <div class="meta"><span class="badge badge-sold">已售出：${sold}</span></div>
+        <div class="meta">${showSold ? `<span class="badge badge-sold">已售出：${sold}</span>` : ''}</div>
         <div class="price">${priceHtml}</div>
         <div class="cta">
           <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
@@ -2543,6 +2659,8 @@
     promoPills.forEach(btn=>{
       btn.classList.toggle('active', btn.dataset.pack === pack);
     });
+    updatePromoPriceRow(pack);
+    if (__PHONE_PROMO_SERVICE__) updatePromoLimitedBlocks(__PHONE_PROMO_SERVICE__);
   }
 
   function applyPhonePackSelection(service, pack){
@@ -2633,18 +2751,8 @@
     if (promoPackZhEl) promoPackZhEl.textContent = data.packZh || '';
     if (promoCta) promoCta.textContent = data.cta || '查看並預約';
     if (promoMiniEl) promoMiniEl.textContent = data.mini || '';
-    if (promoPriceRow && promoPriceOldEl && promoPriceNewEl && __PHONE_PROMO_SERVICE__){
-      const promoInfo = getPromoInfo(__PHONE_PROMO_SERVICE__);
-      const base = getPhoneBasePrice();
-      const promoPrice = promoInfo ? getPromoDisplayPrice(__PHONE_PROMO_SERVICE__, 'en') : 0;
-      if (promoPrice && Number.isFinite(promoPrice) && promoPrice > 0 && promoPrice < base){
-        promoPriceOldEl.textContent = formatTWD(base);
-        promoPriceNewEl.textContent = formatTWD(promoPrice);
-        promoPriceRow.style.display = '';
-      }else{
-        promoPriceRow.style.display = 'none';
-      }
-    }
+    updatePromoPriceRow(__PHONE_PACK__ || 'en');
+    if (__PHONE_PROMO_SERVICE__) updatePromoLimitedBlocks(__PHONE_PROMO_SERVICE__);
     if (promoBulletsEl){
       promoBulletsEl.innerHTML = '';
       (data.bullets || []).forEach(text=>{
@@ -3193,6 +3301,7 @@
         detailPriceHint.style.display = 'none';
       }
     }
+    updatePromoLimitedBlocks(detailDataset);
   }
 
   function syncPhoneAddonRow(service){

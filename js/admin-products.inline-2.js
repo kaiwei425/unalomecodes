@@ -29,6 +29,12 @@
 
   // --- 與 shop.html 同步的分類正規化函式 ---
   const ALL_CATEGORIES = ["佛牌/聖物", "蠟燭加持祈福", "跑廟行程", "其他"];
+  const CATEGORY_LABELS = {
+    "蠟燭加持祈福": "連線算命 / 捐棺行善"
+  };
+  function categoryLabel(cat){
+    return CATEGORY_LABELS[cat] || cat || "";
+  }
   function normalizeCategory(p) {
     const cat = p && p.category;
     if (cat && ALL_CATEGORIES.includes(cat)) return cat;
@@ -246,7 +252,7 @@
     const td = el("td");
     const t = el("div", { style:"font-weight:700" }, escapeHtml(p.name||"未命名"));
     const chips = el("div", { class:"chips", style:"margin-top:6px" });
-    if (p.category) chips.append(el("div",{ class:"chip alt" },"分類："+escapeHtml(p.category)));
+    if (p.category) chips.append(el("div",{ class:"chip alt" },"分類："+escapeHtml(categoryLabel(p.category))));
     if (p.deity)    chips.append(el("div",{ class:"chip" },"神祇："+escapeHtml(p.deity)));
     if (p.deityCode) chips.append(el("div",{ class:"chip" },"代碼："+escapeHtml(p.deityCode)));
     chips.append(el("div",{ class:"chip "+(p.active? "alt": "") }, p.active ? "上架中" : "已下架"));
@@ -359,7 +365,7 @@
     const catLab  = el("label",{}, "分類");
     const catSel  = el("select");
     ["佛牌/聖物","蠟燭加持祈福","跑廟行程","其他"].forEach(v=>{
-      const opt = el("option",{ value:v }, v);
+      const opt = el("option",{ value:v }, categoryLabel(v));
       // 使用新的正規化函式來確保正確選中
       if (normalizeCategory(p) === v) opt.selected = true;
       catSel.append(opt);
