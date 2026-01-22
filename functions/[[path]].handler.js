@@ -717,7 +717,9 @@ async function setBookingNotifyFlag(email, enabled, env){
 }
 async function getBookingNotifyEmails(env){
   const kv = env && env.ADMIN_ROLE_KV;
-  if (!kv) return [];
+  const fallbackRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || '').trim();
+  const fallback = fallbackRaw ? fallbackRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (!kv) return Array.from(new Set(fallback));
   let list = [];
   try{
     const raw = await kv.get('admin:role:index');
@@ -736,8 +738,8 @@ async function getBookingNotifyEmails(env){
     try{ raw = await kv.get(`admin:notify_booking:${email}`) || ''; }catch(_){}
     if (raw === '1' || raw === 'true') out.push(email);
   }
-  if (out.length) return Array.from(new Set(out));
-  return Array.from(new Set(bookingAll));
+  const merged = out.length ? out : bookingAll;
+  return Array.from(new Set(merged.concat(fallback)));
 }
 function getPhoneConsultConfig(env){
   const modeRaw = String(env?.PHONE_CONSULT_LAUNCH_MODE || 'admin').trim().toLowerCase();
