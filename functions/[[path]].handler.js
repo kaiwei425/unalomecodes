@@ -883,6 +883,33 @@ function buildConsultStageEmail(order, stage, env){
   const text = html.replace(/<br>/g, '\n');
   return { subject, html, text };
 }
+function buildBookingNotifyEmail(order, env){
+  const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+  const orderId = String(order.id || '').trim();
+  const slotStart = String(order.slotStart || order.requestDate || '').trim();
+  const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || 'https://unalomecodes.com').replace(/\/$/, '');
+  const adminUrl = primarySite + '/admin/slots';
+  const subject = `[${siteName}] 新訂單待預約 #${orderId}`;
+  const zh = [
+    '【中文】',
+    '有新訂單成立',
+    `訂單編號：${orderId}`,
+    `預約時間（曼谷時間）：${slotStart || '—'}`,
+    '請儘速完成預約。',
+    `完成預約後至後台 ${adminUrl} 點選「已完成預約」，訂單才會同步更新狀態。`
+  ].join('<br>');
+  const en = [
+    '[English]',
+    'A new order has been created.',
+    `Order ID: ${orderId}`,
+    `Appointment time (Bangkok time): ${slotStart || '—'}`,
+    'Please complete the booking as soon as possible.',
+    `After booking, go to ${adminUrl} and click "Booking confirmed" so the order status updates.`
+  ].join('<br>');
+  const html = `${zh}<br><br>${en}`;
+  const text = html.replace(/<br>/g, '\n');
+  return { subject, html, text };
+}
 async function sendConsultStageEmails(env, order, stage, internalList){
   try{
     const apiKey = (env.RESEND_API_KEY || env.RESEND_KEY || '').trim();
@@ -5790,7 +5817,22 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }catch(_){}
     try{
       const origin = new URL(request.url).origin;
-      await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false });
+      const notifyAdmin = stage === 'payment_confirmed' ? false : true;
+      await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin, emailContext:'status_update', bilingual:false });
+      if (stage === 'payment_confirmed'){
+        const bookingEmails = await getBookingNotifyEmails(env);
+        const msg = buildBookingNotifyEmail(order, env);
+        const internal = Array.from(new Set(bookingEmails || [])).filter(Boolean);
+        if (internal.length){
+          await sendEmailMessage(env, {
+            from: (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim(),
+            to: internal,
+            subject: msg.subject,
+            html: msg.html,
+            text: msg.text
+          });
+        }
+      }
     }catch(err){
       console.error('consult stage email error', err);
     }
