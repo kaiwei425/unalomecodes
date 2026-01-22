@@ -10170,15 +10170,23 @@ function composeOrderEmail(order, opts = {}) {
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const plainMode = !!opts.plain;
+  let itemsForRender = items;
+  if (isServiceOrder && discountAmount > 0 && items.length){
+    itemsForRender = items.map((it, idx)=>{
+      if (idx !== 0) return Object.assign({}, it);
+      const nextTotal = Math.max(0, Number(it.total || 0) - discountAmount);
+      return Object.assign({}, it, { total: nextTotal });
+    });
+  }
   const itemsHtml = plainMode
-    ? items.map(it => `• ${esc(it.name)}${it.spec ? `（${esc(it.spec)}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('<br>') || '<p>本次訂單明細將由客服另行確認。</p>'
-    : items.length
-      ? items.map((it, idx) => {
+    ? itemsForRender.map(it => `• ${esc(it.name)}${it.spec ? `（${esc(it.spec)}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('<br>') || '<p>本次訂單明細將由客服另行確認。</p>'
+    : itemsForRender.length
+      ? itemsForRender.map((it, idx) => {
           const imgUrl = rewriteEmailImageUrl(it.image, opts.imageHost);
           const img = imgUrl
             ? `<img src="${esc(imgUrl)}" alt="${esc(it.name)}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;margin-right:16px;">`
             : `<div style="width:64px;height:64px;border-radius:12px;background:#e2e8f0;margin-right:16px;"></div>`;
-          const dividerStyle = idx === items.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
+          const dividerStyle = idx === itemsForRender.length - 1 ? '' : 'border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;';
           return `<div style="display:flex;align-items:center;${dividerStyle}">
             ${img}
             <div style="flex:1;">
@@ -10190,8 +10198,8 @@ function composeOrderEmail(order, opts = {}) {
           </div>`;
         }).join('')
       : '<p style="margin:0;color:#475569;">本次訂單明細將由客服另行確認。</p>';
-  const itemsText = items.length
-    ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
+  const itemsText = itemsForRender.length
+    ? itemsForRender.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
     : '（本次訂單明細將由客服另行確認）';
   const shippingNote = shippingFee ? `（含運費${fmt(shippingFee).replace('NT$ ', '')}）` : '';
   const appointmentTw = isServiceOrder ? formatServiceAppointmentTaiwan(order) : '';
