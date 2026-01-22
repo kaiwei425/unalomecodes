@@ -8854,8 +8854,6 @@ if (pathname === '/api/payment/bank' && request.method === 'POST') {
     let perkInfo = null;
 
     const now = new Date().toISOString();
-    const isPhoneConsult = isPhoneConsultServiceRecord(svc, serviceId, env);
-    const consultStage = isPhoneConsult ? 'payment_pending' : '';
     const order = {
       id: newId,
       productId, productName, price, qty,
