@@ -5990,6 +5990,87 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     return new Response(JSON.stringify({ ok:true, updated, skipped }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
+  if (pathname === '/api/admin/service/slots/release' && request.method === 'POST') {
+    await cleanupExpiredHolds(env);
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    let body = null;
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const slotKeys = Array.isArray(body.slotKeys) ? body.slotKeys.map(k=>String(k||'').trim()).filter(Boolean) : [];
+    if (!slotKeys.length){
+      return new Response(JSON.stringify({ ok:false, error:'invalid_payload' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const updated = [];
+    const skipped = [];
+    for (const slotKey of slotKeys){
+      const parsed = parseSlotKey(slotKey);
+      if (!parsed){
+        skipped.push({ slotKey, reason:'invalid_slot' });
+        continue;
+      }
+      let existing = null;
+      try{
+        const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
+        if (raw) existing = JSON.parse(raw);
+      }catch(_){}
+      if (!existing || existing.status !== 'booked'){
+        skipped.push({ slotKey, reason:'not_booked' });
+        continue;
+      }
+      const orderId = String(existing.bookedOrderId || '').trim();
+      const record = Object.assign({}, existing, {
+        serviceId: parsed.serviceId,
+        slotKey,
+        date: parsed.dateStr,
+        time: parsed.hhmm,
+        enabled: true,
+        status: 'free',
+        heldUntil: 0,
+        holdToken: '',
+        holdBy: '',
+        holdExpiresAt: 0,
+        bookedOrderId: ''
+      });
+      await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(record));
+      if (orderId){
+        const store = env.SERVICE_ORDERS || env.ORDERS;
+        if (store){
+          try{
+            const rawOrder = await store.get(orderId);
+            if (rawOrder){
+              const order = JSON.parse(rawOrder);
+              order.slotKey = '';
+              order.slotStart = '';
+              order.requestDate = '';
+              order.updatedAt = new Date().toISOString();
+              await store.put(orderId, JSON.stringify(order));
+            }
+          }catch(_){}
+        }
+      }
+      updated.push(slotKey);
+    }
+    try{
+      const actor = await buildAuditActor(request, env);
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'slots_release',
+        ...actor,
+        targetType: 'service_slots',
+        targetId: 'bulk',
+        orderId: '',
+        slotKey: '',
+        meta: { count: updated.length }
+      });
+    }catch(err){
+      console.warn('audit slots_release failed', err);
+    }
+    return new Response(JSON.stringify({ ok:true, updated, skipped }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
   if (pathname === '/api/admin/service/phone-consult-template' && request.method === 'POST') {
     const guard = await requireAdminWrite(request, env);
     if (guard) return guard;
@@ -10800,7 +10881,7 @@ if (pathname === '/api/service/products' && request.method === 'DELETE') {
 }
 
 if (pathname === '/api/service/slots' && request.method === 'GET') {
-  await cleanupExpiredHolds(env);
+  cleanupExpiredHolds(env).catch(()=>{});
   if (!env?.SERVICE_SLOTS_KV){
     return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
   }

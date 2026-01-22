@@ -10,6 +10,7 @@
       btn_load: '載入時段',
       btn_publish: '開放選取時段',
       btn_unpublish: '取消選取時段',
+      btn_release_booked: '解除已預約時段',
       btn_select_all: '全選',
       btn_clear: '清除',
       label_service: '服務',
@@ -19,6 +20,7 @@
       label_service_auto: '已自動帶入 serviceId',
       label_service_id: 'Service ID',
       label_select: '選取',
+      label_release: '解除',
       msg_loading: '載入中…',
       msg_done: '完成',
       msg_saved: '已儲存',
@@ -76,6 +78,7 @@
       btn_load: 'Load slots',
       btn_publish: 'Publish selected',
       btn_unpublish: 'Unpublish selected',
+      btn_release_booked: 'Release booked slots',
       btn_select_all: 'Select all',
       btn_clear: 'Clear',
       label_service: 'Service',
@@ -85,6 +88,7 @@
       label_service_auto: 'serviceId auto-filled',
       label_service_id: 'Service ID',
       label_select: 'Select',
+      label_release: 'Release',
       msg_loading: 'Loading…',
       msg_done: 'Done',
       msg_saved: 'Saved',
@@ -212,6 +216,7 @@
   var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
+  var btnReleaseBooked = document.getElementById('btnReleaseBooked');
   var btnPublishedRefresh = document.getElementById('btnPublishedRefresh');
   var btnSelectAll = document.getElementById('btnSelectAll');
   var btnClearSel = document.getElementById('btnClearSel');
@@ -497,7 +502,9 @@
       card.appendChild(badge);
 
       var action = '';
-      if (status === 'free' && !enabled){
+      if (status === 'booked'){
+        action = 'release';
+      }else if (status === 'free' && !enabled){
         action = 'publish';
       }else if (status === 'free' && enabled){
         action = 'block';
@@ -514,7 +521,7 @@
         checkbox.setAttribute('data-slot-key', slot.slotKey || '');
         checkbox.setAttribute('data-action', action);
         var text = document.createElement('span');
-        text.textContent = t('label_select');
+        text.textContent = action === 'release' ? t('label_release') : t('label_select');
         labelWrap.appendChild(checkbox);
         labelWrap.appendChild(text);
         card.appendChild(labelWrap);
@@ -848,6 +855,40 @@
       });
   }
 
+  function handleReleaseBooked(){
+    if (!confirm('確定要解除已預約時段？此動作會清空該時段的預約並重新開放。')) return;
+    var slotKeys = collectSlotKeys('release');
+    if (!slotKeys.length){
+      setStatus(t('msg_failed'), true);
+      return;
+    }
+    setStatus(t('msg_loading'));
+    setButtonBusy(btnReleaseBooked, true);
+    postAction('/api/admin/service/slots/release', { slotKeys: slotKeys })
+      .then(function(result){
+        setButtonBusy(btnReleaseBooked, false);
+        if (!result.ok){
+          var err = (result.data && result.data.error) || '';
+          if (err === 'forbidden_role'){
+            setStatus(t('msg_forbidden'), true);
+          }else if (err === 'rate_limited'){
+            setStatus(t('msg_rate_limited'), true);
+          }else if (err === 'slots_kv_not_configured'){
+            setStatus(t('hint_kv_missing'), true);
+          }else{
+            setStatus(t('msg_failed'), true);
+          }
+          return;
+        }
+        setStatus(t('msg_saved') + ' ' + (result.data.updated || []).length);
+        loadSlots();
+      })
+      .catch(function(){
+        setButtonBusy(btnReleaseBooked, false);
+        setStatus(t('msg_failed'), true);
+      });
+  }
+
   fetchAdmin().then(function(result){
     if (!result.ok){
       setGuard(t('hint_owner_booking_only'));
@@ -871,6 +912,7 @@
     if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
+    if (btnReleaseBooked) btnReleaseBooked.addEventListener('click', handleReleaseBooked);
     if (btnSelectAll) btnSelectAll.addEventListener('click', function(){
       getSelectableSlotButtons().forEach(function(btn){
         selectSlotButton(btn, true);

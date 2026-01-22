@@ -1257,7 +1257,7 @@
     return (items || []).filter(day => day && day.date && day.date >= minDate);
   }
 
-  function ensurePlaceholderSlots(){
+  function ensurePlaceholderSlots(msg, isError){
     const minDate = getMinSlotDateStr();
     if (!minDate) return;
     slotPlaceholderMode = true;
@@ -1271,7 +1271,11 @@
     const activeDate = renderSlotDays(slotItems);
     const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
     if (activeItem) renderSlotGrid(activeItem);
-    setSlotStateText('目前暫無可預約時段', true);
+    if (msg){
+      setSlotStateText(msg, !!isError);
+    }else{
+      setSlotStateText('目前暫無可預約時段', true);
+    }
     if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
       detailAddBtn.disabled = true;
       detailAddBtn.textContent = '目前無法預約';
@@ -2239,7 +2243,7 @@
       setSlotStateText('顯示最近時段', false);
       updateAddBtnStateForSlot();
     }else{
-      ensurePlaceholderSlots();
+      ensurePlaceholderSlots('載入中…', false);
     }
     if (slotDaysPrev && !slotDaysPrev.__bound){
       slotDaysPrev.__bound = true;
@@ -2268,12 +2272,12 @@
       });
     }
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    for (let attempt = 0; attempt < 3; attempt += 1){
+    for (let attempt = 0; attempt < 2; attempt += 1){
       try{
         const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
         const data = result.data || {};
         if (!result.res.ok || !data || data.ok === false){
-          await sleep(1500);
+          await sleep(400);
           continue;
         }
         let items = normalizeSlots(data);
@@ -2286,7 +2290,7 @@
         }
         items = filterFutureSlotItems(items);
         if (!items.length){
-          await sleep(1500);
+          await sleep(400);
           continue;
         }
         slotPlaceholderMode = false;
@@ -2320,10 +2324,10 @@
         if (hasFree) setSlotStateText('');
         return;
       }catch(_){
-        await sleep(1500);
+        await sleep(400);
       }
     }
-    ensurePlaceholderSlots();
+    ensurePlaceholderSlots('目前暫無可預約時段', true);
   }
 
   async function refreshSlotPicker(){
