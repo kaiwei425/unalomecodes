@@ -5785,6 +5785,10 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       email: adminSession && adminSession.email ? adminSession.email : '',
       role: adminRole || 'admin_key'
     };
+    const stageLabel = getConsultStageLabel(stage);
+    if (stageLabel && stageLabel.zh){
+      order.status = stageLabel.zh;
+    }
     order.updatedAt = new Date().toISOString();
     await store.put(id, JSON.stringify(order));
     try{
@@ -5800,13 +5804,12 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         meta: { consultStage: stage }
       });
     }catch(_){}
-    let internal = [];
-    if (stage === 'payment_confirmed'){
-      internal = await getBookingNotifyEmails(env);
-    }else if (stage === 'appointment_confirmed' || stage === 'done'){
-      internal = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
+    try{
+      const origin = new URL(request.url).origin;
+      await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false });
+    }catch(err){
+      console.error('consult stage email error', err);
     }
-    await sendConsultStageEmails(env, order, stage, internal);
     return new Response(JSON.stringify({ ok:true, consultStage: stage }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
@@ -10192,9 +10195,12 @@ function composeOrderEmail(order, opts = {}) {
     : '（本次訂單明細將由客服另行確認）';
   const shippingNote = shippingFee ? `（含運費${fmt(shippingFee).replace('NT$ ', '')}）` : '';
   const appointmentTw = isServiceOrder ? formatServiceAppointmentTaiwan(order) : '';
-  const appointmentHtml = appointmentTw ? `<p><strong>預約時間（台灣）：</strong>${esc(appointmentTw)}</p>` : '';
+  const appointmentBkk = isServiceOrder ? String(order?.slotStart || order?.requestDate || '').trim() : '';
+  const appointmentHtml = (appointmentTw || appointmentBkk)
+    ? `<p><strong>預約時間：</strong>${appointmentBkk ? `${esc(appointmentBkk)}（曼谷）` : ''}${appointmentTw ? `${appointmentBkk ? '／' : ''}${esc(appointmentTw)}（台灣）` : ''}</p>`
+    : '';
   const baseInfoHtml = plainMode
-    ? `<p>訂單編號：${esc(order.id || '')}<br>訂單狀態：${esc(status)}<br>付款方式：${esc(method)}<br>應付金額：${fmt(order.amount || 0)}${shippingNote}${appointmentTw ? `<br>預約時間（台灣）：${esc(appointmentTw)}` : ''}</p>`
+    ? `<p>訂單編號：${esc(order.id || '')}<br>訂單狀態：${esc(status)}<br>付款方式：${esc(method)}<br>應付金額：${fmt(order.amount || 0)}${shippingNote}${appointmentTw || appointmentBkk ? `<br>預約時間：${appointmentBkk ? `${esc(appointmentBkk)}（曼谷）` : ''}${appointmentTw ? `${appointmentBkk ? '／' : ''}${esc(appointmentTw)}（台灣）` : ''}` : ''}</p>`
     : [
         `<p><strong>訂單編號：</strong>${esc(order.id || '')}</p>`,
         `<p><strong>訂單狀態：</strong>${esc(status)}</p>`,
@@ -10218,6 +10224,11 @@ function composeOrderEmail(order, opts = {}) {
     ? (plainMode
       ? '<p>如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</p>'
       : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</div>')
+    : '';
+  const serviceCallNote = (isServiceOrder && context === 'status_update' && consultStage === 'appointment_confirmed')
+    ? (plainMode
+      ? '<p>預約已完成，請加入官方LINE客服，後續將由專人與您聯繫進行通話連線。</p>'
+      : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#e0f2fe;color:#0c4a6e;font-size:13px;">預約已完成，請加入官方LINE客服，後續將由專人與您聯繫進行通話連線。</div>')
     : '';
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
@@ -10284,6 +10295,7 @@ function composeOrderEmail(order, opts = {}) {
         ${lookupHtml}
         ${serviceLookupNote}
         ${serviceRescheduleNote}
+        ${serviceCallNote}
         ${opts.admin ? '' : '<p>感謝您的支持，祝福一切順心圓滿！</p>'}
         ${customerFooter}
       </div>
@@ -10302,6 +10314,7 @@ function composeOrderEmail(order, opts = {}) {
           ${lookupHtml}
           ${serviceLookupNote}
           ${serviceRescheduleNote}
+          ${serviceCallNote}
           ${opts.admin ? '' : '<p style="margin:18px 0 0;">感謝您的支持，祝福一切順心圓滿！</p>'}
           ${customerFooter}
         </div>
@@ -10344,9 +10357,13 @@ function composeOrderEmail(order, opts = {}) {
   if (store) textParts.push(`7-11 門市：${store}`);
   if (note) textParts.push(`備註：${note}`);
   if (isServiceOrder){
+    if (appointmentBkk) textParts.push(`預約時間（曼谷）：${appointmentBkk}`);
     if (appointmentTw) textParts.push(`預約時間（台灣）：${appointmentTw}`);
     textParts.push('可至會員中心－我的訂單查詢最新進度。');
     textParts.push('如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。');
+    if (context === 'status_update' && consultStage === 'appointment_confirmed'){
+      textParts.push('預約已完成，請加入官方LINE客服，後續將由專人與您聯繫進行通話連線。');
+    }
   } else if (opts.lookupUrl) {
     textParts.push(`查詢訂單：${opts.lookupUrl}`);
   }
