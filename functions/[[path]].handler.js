@@ -757,6 +757,18 @@ function parsePromoTime(raw){
   const val = String(raw || '').trim();
   if (!val) return 0;
   const normalized = val.replace(/\//g, '-');
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(normalized);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (!hasTz && match){
+    const y = Number(match[1]);
+    const m = Number(match[2]);
+    const d = Number(match[3]);
+    const hh = Number(match[4] || 0);
+    const mm = Number(match[5] || 0);
+    const ss = Number(match[6] || 0);
+    const ms = Date.UTC(y, m - 1, d, hh - 7, mm, ss);
+    return Number.isFinite(ms) ? ms : 0;
+  }
   const dt = new Date(normalized);
   const ms = dt.getTime();
   return Number.isFinite(ms) ? ms : 0;
