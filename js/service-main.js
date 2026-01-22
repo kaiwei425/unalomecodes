@@ -253,7 +253,7 @@
   let slotPlaceholderMode = false;
   const SLOT_DAYS_STEP = 10;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
-  const SLOT_CACHE_TTL_MS = 0;
+  const SLOT_CACHE_TTL_MS = 30000;
   let SKIP_AUTO_RESUME = false;
   let limitedTimer = null;
   let serviceItems = [];
@@ -2215,59 +2215,63 @@
         }
       });
     }
-    try{
-      const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
-      const data = result.data || {};
-      if (!result.res.ok || !data || data.ok === false){
-        ensurePlaceholderSlots();
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    for (let attempt = 0; attempt < 3; attempt += 1){
+      try{
+        const result = await fetchSlots(serviceId, '', SLOT_DAYS_STEP);
+        const data = result.data || {};
+        if (!result.res.ok || !data || data.ok === false){
+          await sleep(1500);
+          continue;
+        }
+        let items = normalizeSlots(data);
+        if (!items.length){
+          const retry = await fetchSlots(serviceId, '', 30);
+          const retryData = retry.data || {};
+          if (retry.res.ok && retryData && retryData.ok !== false){
+            items = normalizeSlots(retryData);
+          }
+        }
+        items = filterFutureSlotItems(items);
+        if (!items.length){
+          await sleep(1500);
+          continue;
+        }
+        slotPlaceholderMode = false;
+        slotItems = items;
+        saveSlotCache(serviceId, items);
+        slotLastDate = items.length ? (items[items.length - 1].date || '') : '';
+        if (slotDaysEl) slotDaysEl.style.display = '';
+        if (slotGridEl) slotGridEl.style.display = '';
+        const activeDate = renderSlotDays(items);
+        const activeItem = items.find(day => day.date === activeDate) || items[0];
+        if (activeItem) renderSlotGrid(activeItem);
+        if (slotMoreBtn){
+          slotMoreBtn.style.display = '';
+          if (!slotMoreBtn.__bound){
+            slotMoreBtn.__bound = true;
+            slotMoreBtn.addEventListener('click', loadMoreSlots);
+          }
+          slotMoreBtn.disabled = false;
+          slotMoreBtn.textContent = '載入更多';
+        }
+        const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
+        if (!hasFree){
+          setSlotStateText('目前暫無可預約時段', true);
+          if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+            detailAddBtn.disabled = true;
+            detailAddBtn.textContent = '目前無法預約';
+          }
+        }else{
+          updateAddBtnStateForSlot();
+        }
+        if (hasFree) setSlotStateText('');
         return;
+      }catch(_){
+        await sleep(1500);
       }
-      let items = normalizeSlots(data);
-      if (!items.length){
-        const retry = await fetchSlots(serviceId, '', 30);
-        const retryData = retry.data || {};
-        if (retry.res.ok && retryData && retryData.ok !== false){
-          items = normalizeSlots(retryData);
-        }
-      }
-      items = filterFutureSlotItems(items);
-      if (!items.length){
-        ensurePlaceholderSlots();
-        return;
-      }
-      slotPlaceholderMode = false;
-      slotItems = items;
-      saveSlotCache(serviceId, items);
-      slotLastDate = items.length ? (items[items.length - 1].date || '') : '';
-      if (slotDaysEl) slotDaysEl.style.display = '';
-      if (slotGridEl) slotGridEl.style.display = '';
-      const activeDate = renderSlotDays(items);
-      const activeItem = items.find(day => day.date === activeDate) || items[0];
-      if (activeItem) renderSlotGrid(activeItem);
-      if (slotMoreBtn){
-        slotMoreBtn.style.display = '';
-        if (!slotMoreBtn.__bound){
-          slotMoreBtn.__bound = true;
-          slotMoreBtn.addEventListener('click', loadMoreSlots);
-        }
-        slotMoreBtn.disabled = false;
-        slotMoreBtn.textContent = '載入更多';
-      }
-      const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
-      if (!hasFree){
-        setSlotStateText('目前暫無可預約時段', true);
-        if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
-          detailAddBtn.disabled = true;
-          detailAddBtn.textContent = '目前無法預約';
-        }
-      }else{
-        updateAddBtnStateForSlot();
-      }
-      if (hasFree) setSlotStateText('');
-      return;
-    }catch(_){
-      ensurePlaceholderSlots();
     }
+    ensurePlaceholderSlots();
   }
 
   function getTzHintText(){
