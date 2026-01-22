@@ -10016,7 +10016,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
         adminRaw = [];
         forceAdmin = true;
       }
-      wrapBilingual = true;
+      wrapBilingual = !!ctx.bilingual;
     }
     adminRaw = Array.from(new Set(adminRaw)).filter(Boolean);
     const notifyAdmin = forceAdmin
@@ -10904,26 +10904,37 @@ if (pathname === '/api/service/slots' && request.method === 'GET') {
     const dateStr = addDaysDateStr(dateFrom, i);
     if (!dateStr) continue;
     const slots = [];
+    const slotKeys = [];
+    const slotTimes = [];
     for (const win of windows){
       for (let t=win.startMin; t<win.endMin; t+=cfg.stepMin){
         const time = minutesToHHMM(t);
         const hhmmNoColon = time.replace(':','');
         const slotKey = buildSlotKey(serviceId, dateStr, hhmmNoColon);
-        let status = 'free';
-        let enabled = false;
-        try{
-          const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
-          if (raw){
-            const rec = JSON.parse(raw);
-            enabled = resolveSlotEnabled(rec);
-            status = resolveSlotStatus(rec, now);
-            if (rec && rec.status === 'held' && status === 'free'){
-              try{ await env.SERVICE_SLOTS_KV.delete(slotKey); }catch(_){}
-            }
-          }
-        }catch(_){}
-        slots.push({ slotKey, time, status, enabled });
+        slotKeys.push(slotKey);
+        slotTimes.push(time);
       }
+    }
+    let rawList = [];
+    try{
+      rawList = await Promise.all(slotKeys.map(key => env.SERVICE_SLOTS_KV.get(key)));
+    }catch(_){
+      rawList = [];
+    }
+    for (let idx=0; idx<slotKeys.length; idx++){
+      const slotKey = slotKeys[idx];
+      const time = slotTimes[idx];
+      let status = 'free';
+      let enabled = false;
+      try{
+        const raw = rawList[idx];
+        if (raw){
+          const rec = JSON.parse(raw);
+          enabled = resolveSlotEnabled(rec);
+          status = resolveSlotStatus(rec, now);
+        }
+      }catch(_){}
+      slots.push({ slotKey, time, status, enabled });
     }
     items.push({ date: dateStr, slots });
   }

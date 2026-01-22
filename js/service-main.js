@@ -1684,7 +1684,7 @@
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     let timer = null;
     if (controller){
-      timer = setTimeout(()=> controller.abort(), 12000);
+      timer = setTimeout(()=> controller.abort(), 5000);
     }
     try{
       const url = buildSlotsUrl(qs);
