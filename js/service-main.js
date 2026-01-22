@@ -169,6 +169,7 @@
   const promoPackZhInput = document.getElementById('promoPackZhInput');
   const promoCtaInput = document.getElementById('promoCtaInput');
   const promoMiniInput = document.getElementById('promoMiniInput');
+  const promoServiceDescInput = document.getElementById('promoServiceDescInput');
   const promoPriceInput = document.getElementById('promoPriceInput');
   const promoStartInput = document.getElementById('promoStartInput');
   const promoEndInput = document.getElementById('promoEndInput');
@@ -2842,6 +2843,18 @@
     };
   }
 
+  function getServiceDescription(service){
+    if (!service) return '';
+    if (service.description != null) return String(service.description);
+    if (service.desc != null) return String(service.desc);
+    return '';
+  }
+
+  function fillServiceAdminForm(service){
+    if (!promoServiceDescInput) return;
+    promoServiceDescInput.value = getServiceDescription(service);
+  }
+
   async function savePromoForService(service, promo){
     const id = resolveServiceId(service);
     if (!id) return false;
@@ -2855,6 +2868,21 @@
     const data = await res.json().catch(()=>null);
     if (!res.ok || !data || data.ok === false) return false;
     service.meta = meta;
+    return true;
+  }
+
+  async function saveServiceFields(service, fields){
+    const id = resolveServiceId(service);
+    if (!id) return false;
+    const res = await fetch('/api/service/products', {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify(Object.assign({ id }, fields || {}))
+    });
+    const data = await res.json().catch(()=>null);
+    if (!res.ok || !data || data.ok === false) return false;
+    Object.assign(service, fields || {});
     return true;
   }
 
@@ -2907,6 +2935,7 @@
     promoAdminEl.style.display = 'none';
     const data = getPromoData(service);
     fillPromoForm(data);
+    fillServiceAdminForm(service);
     if (promoMediaEl) promoMediaEl.classList.toggle('is-editing', promoAdminEl.style.display !== 'none');
     bindPromoImageDrag();
     if (promoEditToggle && !promoEditToggle.__bound){
@@ -2923,6 +2952,7 @@
       promoResetBtn.addEventListener('click', ()=>{
         fillPromoForm(getPromoData(service));
         applyPromoContent(getPromoData(service));
+        fillServiceAdminForm(service);
       });
     }
     if (promoSaveBtn && !promoSaveBtn.__bound){
@@ -2930,8 +2960,19 @@
       promoSaveBtn.addEventListener('click', async ()=>{
         const next = readPromoForm();
         applyPromoContent(next);
-        const ok = await savePromoForService(service, next);
-        if (!ok){
+        const promoOk = await savePromoForService(service, next);
+        let descOk = true;
+        if (promoServiceDescInput){
+          const nextDesc = promoServiceDescInput.value.trim();
+          const currentDesc = getServiceDescription(service).trim();
+          if (nextDesc !== currentDesc){
+            descOk = await saveServiceFields(service, { description: nextDesc, desc: nextDesc });
+            if (descOk && detailDataset && resolveServiceId(detailDataset) === resolveServiceId(service)){
+              if (detailDesc) detailDesc.textContent = nextDesc;
+            }
+          }
+        }
+        if (!promoOk || !descOk){
           alert('儲存失敗，請稍後再試');
         }
       });
