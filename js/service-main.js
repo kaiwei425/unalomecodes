@@ -574,7 +574,9 @@
     if (cfgId){
       return String(resolveServiceId(service)) === cfgId;
     }
-    return false;
+    const metaType = service && service.meta && service.meta.type ? String(service.meta.type) : '';
+    if (String(metaType).toLowerCase() === 'phone_consult') return true;
+    return getPhoneConsultScore(service) >= 3;
   }
 
   function isPhoneConsultOrder(order){
@@ -631,7 +633,7 @@
   function canShowPhoneConsultToViewer(service){
     if (!isPhoneConsultService(service)) return true;
     const cfg = PHONE_CONSULT_CFG;
-    if (!cfg || !cfg.serviceId) return false;
+    if (!cfg || !cfg.serviceId) return true;
     if (cfg.isAdmin) return true;
     const mode = String(cfg.mode || 'admin').toLowerCase();
     if (mode === 'public') return true;
@@ -1470,9 +1472,9 @@
         });
         return item;
       }
-      if (item.slotHoldToken || item.slotKey || item.slotStart){
+      if (item.slotHoldToken){
         changed = true;
-        return Object.assign({}, item, { slotKey:'', slotHoldToken:'', slotStart:'', slotHoldUntilMs: 0 });
+        return Object.assign({}, item, { slotHoldToken:'', slotHoldUntilMs: 0 });
       }
       if (hold) clearHoldFromStorage(serviceId);
       return item;
