@@ -3417,32 +3417,7 @@
       return;
     }
     if (isPhoneConsultService(service) && shouldGateBySlotsForViewer()){
-      const avail = await getPhoneConsultSlotAvailability(service);
-      if (avail.reason !== 'ok'){
-        let msg = '目前沒有可預約時段 / No available slots at the moment';
-        if (avail.reason === 'fetch_failed'){
-          msg = '此服務目前尚未開放 / This service is not available yet';
-        }
-        if (detailTitle) detailTitle.textContent = service.name || '服務';
-        if (detailDesc) detailDesc.textContent = msg;
-        if (detailIncludes){
-          if (avail.reason === 'no_slots' || avail.reason === 'sold_out'){
-            detailIncludes.innerHTML = '<li>你可以稍後重新整理查看最新時段</li>';
-          }else{
-            detailIncludes.innerHTML = '';
-          }
-        }
-        if (detailOptionsWrap) detailOptionsWrap.style.display = 'none';
-        if (detailQtyWrap) detailQtyWrap.style.display = 'none';
-        if (consultPackWrap) consultPackWrap.style.display = 'none';
-        if (slotSection) slotSection.style.display = 'none';
-        if (detailAddBtn){
-          detailAddBtn.disabled = true;
-          detailAddBtn.textContent = '目前無法預約';
-        }
-        openDialog(detailDialog);
-        return;
-      }
+      await getPhoneConsultSlotAvailability(service);
     }
     if (resumeCheckoutIfHeld(service)) return;
     if (detailTitle) detailTitle.textContent = service.name || '服務';
