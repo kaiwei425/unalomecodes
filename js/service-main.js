@@ -193,6 +193,9 @@
   const slotRefreshBtn = document.getElementById('svcSlotRefresh');
   const slotDaysPrev = document.getElementById('svcSlotDaysPrev');
   const slotDaysNext = document.getElementById('svcSlotDaysNext');
+  const waitOverlay = document.getElementById('svcWaitOverlay');
+  const waitTitleEl = waitOverlay ? waitOverlay.querySelector('.svc-wait-title') : null;
+  const waitSubEl = waitOverlay ? waitOverlay.querySelector('.svc-wait-sub') : null;
   const consultPackWrap = document.getElementById('svcConsultPack');
   const consultPackPills = Array.from(document.querySelectorAll('#svcConsultPack .svc-pack-pill'));
   let consultAddonInput = document.getElementById('svcConsultAddonSummary');
@@ -1014,6 +1017,18 @@
     const base = item.optionName || '標準服務';
     if (item.addonSummary) return `${base} + ${item.addonSummary}`;
     return base;
+  }
+
+  function showWaitOverlay(title, sub){
+    if (!waitOverlay) return;
+    if (waitTitleEl && title) waitTitleEl.textContent = title;
+    if (waitSubEl && sub) waitSubEl.textContent = sub;
+    waitOverlay.style.display = '';
+  }
+
+  function hideWaitOverlay(){
+    if (!waitOverlay) return;
+    waitOverlay.style.display = 'none';
   }
 
   function getHoldOwnerKey(){
@@ -4109,29 +4124,34 @@
             }
             return;
           }
-          const holdRes = await requestHold(phoneItem.serviceId, phoneItem.slotKey);
-          if (!holdRes.ok){
-            if (holdRes.error === 'UNAUTHORIZED' && window.authState && typeof window.authState.login === 'function'){
-              window.authState.login();
+          showWaitOverlay('處理中…', '正在保留預約時段');
+          try{
+            const holdRes = await requestHold(phoneItem.serviceId, phoneItem.slotKey);
+            if (!holdRes.ok){
+              if (holdRes.error === 'UNAUTHORIZED' && window.authState && typeof window.authState.login === 'function'){
+                window.authState.login();
+                return;
+              }
+              alert(mapUserErrorMessage(holdRes.error) || '無法保留時段，請稍後再試');
               return;
             }
-            alert(mapUserErrorMessage(holdRes.error) || '無法保留時段，請稍後再試');
-            return;
+            phoneItem.slotHoldToken = holdRes.data.holdToken || '';
+            phoneItem.slotHoldUntilMs = Number(holdRes.data.heldUntil || 0) || 0;
+            if (!phoneItem.slotStart){
+              const parsed = parseSlotKeyDateTime(phoneItem.slotKey);
+              phoneItem.slotStart = parsed.date && parsed.time ? `${parsed.date} ${parsed.time}` : '';
+            }
+            saveHoldToStorage(phoneItem.serviceId, {
+              serviceId: phoneItem.serviceId,
+              slotKey: phoneItem.slotKey,
+              slotHoldToken: phoneItem.slotHoldToken,
+              slotStart: phoneItem.slotStart,
+              holdUntilMs: phoneItem.slotHoldUntilMs
+            });
+            saveCart(cart);
+          }finally{
+            hideWaitOverlay();
           }
-          phoneItem.slotHoldToken = holdRes.data.holdToken || '';
-          phoneItem.slotHoldUntilMs = Number(holdRes.data.heldUntil || 0) || 0;
-          if (!phoneItem.slotStart){
-            const parsed = parseSlotKeyDateTime(phoneItem.slotKey);
-            phoneItem.slotStart = parsed.date && parsed.time ? `${parsed.date} ${parsed.time}` : '';
-          }
-          saveHoldToStorage(phoneItem.serviceId, {
-            serviceId: phoneItem.serviceId,
-            slotKey: phoneItem.slotKey,
-            slotHoldToken: phoneItem.slotHoldToken,
-            slotStart: phoneItem.slotStart,
-            holdUntilMs: phoneItem.slotHoldUntilMs
-          });
-          saveCart(cart);
         }
       }
       closeDialog(cartPanel);

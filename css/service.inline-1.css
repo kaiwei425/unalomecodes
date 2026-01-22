@@ -150,6 +150,37 @@ body.service-view .svc-pack{
   gap:12px;
   text-align:left;
 }
+body.service-view .svc-wait-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(4px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+body.service-view .svc-wait-card{
+  background:#fff;
+  border:1px solid rgba(148,163,184,.3);
+  border-radius:16px;
+  padding:18px 22px;
+  min-width:220px;
+  text-align:center;
+  box-shadow:0 24px 60px rgba(15,23,42,.25);
+}
+body.service-view .svc-wait-spinner{
+  width:28px;
+  height:28px;
+  margin:0 auto 10px;
+  border:3px solid #e2e8f0;
+  border-top-color:#0f172a;
+  border-radius:50%;
+  animation:svcSpin .8s linear infinite;
+}
+body.service-view .svc-wait-title{font-weight:800;color:#0f172a;font-size:14px;}
+body.service-view .svc-wait-sub{margin-top:4px;font-size:12px;color:#64748b;}
+@keyframes svcSpin{to{transform:rotate(360deg);}}
 body.service-view .svc-price-row{
   display:flex;
   align-items:baseline;
