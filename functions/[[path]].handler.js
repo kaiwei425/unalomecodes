@@ -3982,35 +3982,7 @@ ${note ? `Note: ${note}\n` : ''}${reason ? `Reason: ${reason}\n` : ''}${adminUrl
   return { subject, html, text };
 }
 function buildBilingualOrderEmail(order, zhHtml, zhText, opts = {}){
-  const esc = (typeof escapeHtmlEmail === 'function') ? escapeHtmlEmail : (s)=> String(s || '');
-  const fmt = (typeof formatCurrencyTWD === 'function') ? formatCurrencyTWD : (n)=> `NT$ ${Number(n || 0)}`;
-  const id = order?.id || '';
-  const status = order?.status || '';
-  const amount = fmt(order?.amount || 0);
-  const method = order?.method || '';
-  const lookup = opts.lookupUrl || '';
-  const enLines = [
-    '[English]',
-    `Order ID: ${id}`,
-    status ? `Status: ${status}` : '',
-    method ? `Method: ${method}` : '',
-    `Total: ${amount}`,
-    lookup ? `Order lookup: ${lookup}` : ''
-  ].filter(Boolean);
-  const enHtml = `
-<div style="margin:16px 0 0;">
-  <strong>[English]</strong><br>
-  Order ID: ${esc(id)}<br>
-  ${status ? `Status: ${esc(status)}<br>` : ''}${method ? `Method: ${esc(method)}<br>` : ''}Total: ${esc(amount)}<br>
-  ${lookup ? `Order lookup: <a href="${esc(lookup)}" target="_blank" rel="noopener">${esc(lookup)}</a>` : ''}
-</div>`;
-  const html = `<div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;line-height:1.6;font-size:14px;">
-    <div><strong>【中文】</strong></div>
-    ${zhHtml}
-    ${enHtml}
-  </div>`;
-  const text = `【中文】\n${zhText}\n\n${enLines.join('\n')}`.trim();
-  return { html, text };
+  return { html: zhHtml, text: zhText };
 }
 
 async function getSessionUser(request, env){
@@ -10233,14 +10205,13 @@ function composeOrderEmail(order, opts = {}) {
       ? '<p>如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</p>'
       : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</div>')
     : '';
-  const serviceCallNote = (isServiceOrder && context === 'status_update' && consultStage === 'appointment_confirmed')
-    ? (plainMode
-      ? '<p>預約已完成，請加入官方LINE客服，後續將由專人與您聯繫進行通話連線。</p>'
-      : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#e0f2fe;color:#0c4a6e;font-size:13px;">預約已完成，請加入官方LINE客服，後續將由專人與您聯繫進行通話連線。</div>')
-    : '';
+  const serviceCallNote = '';
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
+      <p>${(isServiceOrder && consultStage === 'appointment_confirmed')
+        ? `您的訂單狀態已更新為 <strong>${esc(status)}</strong>，請加入官方LINE客服 <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或 LINE ID 搜尋輸入 @427oaemj，後續將由專人與您聯繫進行通話連線。`
+        : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。`
+      }請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${isServiceOrder ? '我們已收到您的訂單，將在核對匯款資料無誤後，儘速與老師聯繫安排預約，預約完成後會再來信通知。' : (isCod711 ? '我們已收到您的訂單，將儘速安排出貨。' : '我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。')}請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
@@ -10370,7 +10341,7 @@ function composeOrderEmail(order, opts = {}) {
     textParts.push('可至會員中心－我的訂單查詢最新進度。');
     textParts.push('如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。');
     if (context === 'status_update' && consultStage === 'appointment_confirmed'){
-      textParts.push('預約已完成，請加入官方LINE客服，後續將由專人與您聯繫進行通話連線。');
+      textParts.push(`您的訂單狀態已更新為 ${status}，請加入官方LINE客服 https://line.me/R/ti/p/@427oaemj 或 LINE ID 搜尋輸入 @427oaemj，後續將由專人與您聯繫進行通話連線。`);
     }
   } else if (opts.lookupUrl) {
     textParts.push(`查詢訂單：${opts.lookupUrl}`);
