@@ -97,6 +97,7 @@
   const step3RescheduleWrap = document.getElementById('svcStep3RescheduleWrap');
   const step3RescheduleBtn = document.getElementById('svcStep3Reschedule');
   const bookingNoticeEl = document.getElementById('svcBookingNotice');
+  const emailNoticeEls = Array.from(document.querySelectorAll('.svc-email-notice'));
   const rescheduleDialog = document.getElementById('svcRescheduleDialog');
   const rescheduleClose = document.getElementById('svcRescheduleClose');
   const rescheduleDaysEl = document.getElementById('svcRescheduleDays');
@@ -1017,6 +1018,26 @@
     const base = item.optionName || '標準服務';
     if (item.addonSummary) return `${base} + ${item.addonSummary}`;
     return base;
+  }
+
+  function updateEmailNotice(status){
+    if (!emailNoticeEls.length) return;
+    let text = '已寄出 Email 通知';
+    let warn = false;
+    if (status && status.ok === false){
+      warn = true;
+      if (status.reason === 'missing_config'){
+        text = 'Email 尚未寄出（寄信設定缺失）';
+      }else if (status.reason === 'no_recipients'){
+        text = 'Email 尚未寄出（收件人未設定）';
+      }else{
+        text = 'Email 寄送失敗，請稍後再試';
+      }
+    }
+    emailNoticeEls.forEach(el=>{
+      el.textContent = text;
+      el.classList.toggle('is-warn', warn);
+    });
   }
 
   function showWaitOverlay(title, sub){
@@ -4776,12 +4797,16 @@
         saveCart([]);
         renderCartPanel();
         updateCartBadge([]);
-        const finalAmount = (result && result.order && Number(result.order.amount)) || Number(result.amount) || totalAmount;
+        const preferredAmount = Number(totalAmount) || 0;
+        const finalAmount = preferredAmount > 0
+          ? preferredAmount
+          : (result && result.order && Number(result.order.amount)) || Number(result.amount) || totalAmount;
         renderCheckoutSuccess(result.orderId || result.id || '', finalAmount);
         if (result && result.order){
           updateRescheduleButtons(result.order);
           updateBookingNotice(result.order);
         }
+        updateEmailNotice(result && result.mailStatus ? result.mailStatus : null);
         if (slotItem && slotItem.serviceId) clearHoldFromStorage(slotItem.serviceId);
         resetSlotState();
         try{

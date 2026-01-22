@@ -328,6 +328,18 @@ body.service-view .svc-email-notice{
   border-radius:10px;
   text-align:center;
 }
+body.service-view .svc-email-notice.is-warn{
+  color:#b45309;
+  background:#fff7ed;
+  border-color:#fed7aa;
+}
+body.service-view #svcStep3Reschedule,
+body.service-view #svcSuccessReschedule{
+  width:auto;
+  max-width:280px;
+  padding:10px 16px;
+  font-size:14px;
+}
 body.service-view .svc-promo{margin:14px 0 18px;}
 body.service-view .svc-promo-card{
   position:relative;

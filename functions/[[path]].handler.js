@@ -9916,7 +9916,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const hasTransport = apiKey && fromDefault;
     if (!hasTransport) {
       console.log('[mail] skip sending — missing config', { hasApiKey: !!apiKey, fromDefault });
-      return;
+      return { ok:false, reason:'missing_config', hasApiKey: !!apiKey, hasFrom: !!fromDefault };
     }
     const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
     const origin = (ctx.origin || '').replace(/\/$/, '');
@@ -9989,37 +9989,48 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       adminHtml = wrappedAdmin.html;
       adminText = wrappedAdmin.text;
     }
-    const tasks = [];
+    const labeled = [];
     if (notifyCustomer && customerEmail) {
-      tasks.push(sendEmailMessage(env, {
+      labeled.push({ kind:'customer', promise: sendEmailMessage(env, {
         from: fromDefault,
         to: [customerEmail],
         subject: customerSubject,
         html: customerHtml,
         text: customerText
-      }));
+      }) });
     }
     if (notifyAdmin && adminRaw.length) {
-      tasks.push(sendEmailMessage(env, {
+      labeled.push({ kind:'admin', promise: sendEmailMessage(env, {
         from: fromDefault,
         to: adminRaw,
         subject: adminSubject,
         html: adminHtml,
         text: adminText
-      }));
+      }) });
     }
-    if (!tasks.length) {
+    if (!labeled.length) {
       console.log('[mail] skip sending — no recipients resolved');
-      return;
+      return { ok:false, reason:'no_recipients' };
     }
-    const settled = await Promise.allSettled(tasks);
+    const settled = await Promise.allSettled(labeled.map(task => task.promise));
+    let failed = false;
+    let sentCustomer = false;
+    let sentAdmin = false;
     settled.forEach((res, idx)=>{
+      const kind = labeled[idx] && labeled[idx].kind;
       if (res.status === 'rejected'){
+        failed = true;
         console.error('[mail] send failed', idx, res.reason);
+      }else if (kind === 'customer'){
+        sentCustomer = true;
+      }else if (kind === 'admin'){
+        sentAdmin = true;
       }
     });
+    return { ok: !failed, reason: failed ? 'send_failed' : '', sentCustomer, sentAdmin };
   } catch (err) {
     console.error('sendOrderEmails error', err);
+    return { ok:false, reason:'exception' };
   }
 }
 
@@ -11405,8 +11416,9 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
         console.error('service sold counter update failed', err);
       }
     }
+    let mailStatus = null;
     try{
-      await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:true });
+      mailStatus = await maybeSendOrderEmails(env, order, { channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:true });
     }catch(err){
       console.error('service order email error', err);
     }
@@ -11454,7 +11466,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
         email: buyer.email || ''
       });
     }catch(_){}
-    return new Response(JSON.stringify({ ok:true, orderId, order }), { status:200, headers: jsonHeaders });
+    return new Response(JSON.stringify({ ok:true, orderId, order, mailStatus }), { status:200, headers: jsonHeaders });
   }catch(e){
     return new Response(JSON.stringify({ ok:false, error:String(e) }), { status:500, headers: jsonHeaders });
   }
