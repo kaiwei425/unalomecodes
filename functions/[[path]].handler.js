@@ -725,16 +725,19 @@ async function getBookingNotifyEmails(env){
   }catch(_){}
   if (!Array.isArray(list) || !list.length) return [];
   const out = [];
+  const bookingAll = [];
   for (const item of list){
     const email = normalizeEmail(item);
     if (!email) continue;
     const role = await getAdminRole(email, env);
     if (String(role || '').trim().toLowerCase() !== 'booking') continue;
+    bookingAll.push(email);
     let raw = '';
     try{ raw = await kv.get(`admin:notify_booking:${email}`) || ''; }catch(_){}
     if (raw === '1' || raw === 'true') out.push(email);
   }
-  return Array.from(new Set(out));
+  if (out.length) return Array.from(new Set(out));
+  return Array.from(new Set(bookingAll));
 }
 function getPhoneConsultConfig(env){
   const modeRaw = String(env?.PHONE_CONSULT_LAUNCH_MODE || 'admin').trim().toLowerCase();
