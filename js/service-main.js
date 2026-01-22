@@ -29,6 +29,7 @@
   const detailQtyPlus = document.getElementById('svcDetailQtyPlus');
   const detailFeeHint = document.getElementById('svcDetailFeeHint');
   const detailPriceHint = document.getElementById('svcDetailPriceHint');
+  const detailPriceOldEl = document.getElementById('svcDetailPriceOld');
   const detailLimited = document.getElementById('svcDetailLimited');
   const detailRemaining = document.getElementById('svcDetailRemaining');
   const reviewListEl = document.getElementById('svcRvList');
@@ -128,6 +129,9 @@
   const promoPackEnEl = document.getElementById('svcPromoPackEn');
   const promoPackZhEl = document.getElementById('svcPromoPackZh');
   const promoMiniEl = document.getElementById('svcPromoMini');
+  const promoPriceRow = document.getElementById('svcPromoPriceRow');
+  const promoPriceOldEl = document.getElementById('svcPromoPriceOld');
+  const promoPriceNewEl = document.getElementById('svcPromoPriceNew');
   const promoStoriesEl = document.getElementById('svcPromoStories');
   const promoStoryMediaEl = document.querySelector('#svcPromoStories .svc-promo-story-media');
   const promoStoryImgEl = document.getElementById('svcPromoStoryImg');
@@ -154,6 +158,9 @@
   const promoPackZhInput = document.getElementById('promoPackZhInput');
   const promoCtaInput = document.getElementById('promoCtaInput');
   const promoMiniInput = document.getElementById('promoMiniInput');
+  const promoPriceInput = document.getElementById('promoPriceInput');
+  const promoStartInput = document.getElementById('promoStartInput');
+  const promoEndInput = document.getElementById('promoEndInput');
   const promoImageInput = document.getElementById('promoImageInput');
   const promoImagePosXInput = document.getElementById('promoImagePosXInput');
   const promoImagePosYInput = document.getElementById('promoImagePosYInput');
@@ -889,7 +896,8 @@
 
   function cartTotal(list){
     const itemsTotal = list.reduce((sum,item)=> {
-      const unit = Number(item.basePrice||0) + Number(item.optionPrice||0);
+      const promoUnit = Number(item && item.promoActive ? item.promoDisplayPrice : 0);
+      const unit = promoUnit > 0 ? promoUnit : (Number(item.basePrice||0) + Number(item.optionPrice||0));
       return sum + unit * getItemQty(item);
     }, 0);
     return itemsTotal + getCartFee(list);
@@ -1269,7 +1277,11 @@
       zh: Number.isFinite(zhPrice) ? zhPrice : 0
     };
     consultPackPills.forEach(btn=>{
-      const price = btn.dataset.pack === 'zh' ? CONSULT_PACK_PRICES.zh : CONSULT_PACK_PRICES.en;
+      let price = btn.dataset.pack === 'zh' ? CONSULT_PACK_PRICES.zh : CONSULT_PACK_PRICES.en;
+      const promo = getPromoDisplayPrice(service, btn.dataset.pack);
+      if (promo && Number.isFinite(promo) && promo > 0 && promo < price){
+        price = promo;
+      }
       const priceEl = btn.querySelector('.pill-price');
       if (priceEl) priceEl.textContent = formatTWD(price);
     });
@@ -2247,6 +2259,9 @@
         const tzLine = item.slotStart && isPhoneConsultService(item)
           ? `<div class="meta" style="color:#dc2626;">台灣時間：${escapeHtml(formatTaipeiFromBkk(item.slotStart))}</div>`
           : '';
+        const promoPriceHtml = item.promoActive && item.promoDisplayPrice
+          ? `<div class="price"><span class="price-old">${formatTWD(Number(item.promoOriginalPrice||0) * getItemQty(item))}</span><span class="price-new">${formatTWD(Number(item.promoDisplayPrice||0) * getItemQty(item))}</span></div>`
+          : `<div class="price">${formatTWD((Number(item.basePrice||0)+Number(item.optionPrice||0)) * getItemQty(item))}</div>`;
         return `
         <div class="svc-cart-item">
           <div class="info">
@@ -2267,7 +2282,7 @@
               ` : ''}
             </div>
           </div>
-          <div class="price">${formatTWD((Number(item.basePrice||0)+Number(item.optionPrice||0)) * getItemQty(item))}</div>
+          ${promoPriceHtml}
           <button type="button" class="svc-cart-remove" data-remove="${escapeHtml(item.uid||'')}">移除</button>
         </div>
       `;
@@ -2456,12 +2471,51 @@
     `;
   }
 
+  function parsePromoTime(val){
+    const raw = String(val || '').trim();
+    if (!raw) return 0;
+    const ts = Date.parse(raw);
+    return Number.isFinite(ts) ? ts : 0;
+  }
+
+  function getPromoInfo(service){
+    const promo = service && service.meta && service.meta.promo ? service.meta.promo : {};
+    const price = Number(promo.promoPrice ?? promo.price ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const start = parsePromoTime(promo.promoStart || promo.start);
+    const end = parsePromoTime(promo.promoEnd || promo.end);
+    if (start && Date.now() < start) return null;
+    if (end && Date.now() > end) return null;
+    if (start && end && end < start) return null;
+    return { price, start, end };
+  }
+
+  function getPromoDisplayPrice(service, packKey){
+    const info = getPromoInfo(service);
+    if (!info) return 0;
+    if (!isPhoneConsultService(service)) return info.price;
+    const base = Number(CONSULT_PACK_PRICES.en || 0);
+    const zh = Number(CONSULT_PACK_PRICES.zh || 0);
+    const delta = (packKey === 'zh' && Number.isFinite(zh) && Number.isFinite(base)) ? (zh - base) : 0;
+    const promo = info.price + (Number.isFinite(delta) ? delta : 0);
+    return Number.isFinite(promo) ? promo : info.price;
+  }
+
   function buildServiceCard(service, opts = {}){
     const sid = resolveServiceId(service);
     if (!service.id && sid) service.id = sid;
     const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
     const sold = Number(service.sold || 0);
     const limitedRow = buildLimitedRow(service, '限時服務');
+    const basePrice = isPhoneConsultService(service) ? getPhoneBasePrice() : Number(service.price||0);
+    let priceHtml = formatTWD(basePrice);
+    const promoInfo = isPhoneConsultService(service) ? getPromoInfo(service) : null;
+    if (promoInfo){
+      const promoPrice = getPromoDisplayPrice(service, 'en');
+      if (Number.isFinite(promoPrice) && promoPrice > 0 && promoPrice < basePrice){
+        priceHtml = `<span class="price-old">${formatTWD(basePrice)}</span><span class="price-new">${formatTWD(promoPrice)}</span>`;
+      }
+    }
     const card = document.createElement('div');
     card.className = 'card service-card' + (opts.hot ? ' hot-card' : '');
     card.innerHTML = `
@@ -2470,7 +2524,7 @@
         <div class="name">${escapeHtml(service.name||'服務')}</div>
         ${limitedRow}
         <div class="meta"><span class="badge badge-sold">已售出：${sold}</span></div>
-        <div class="price">${formatTWD(isPhoneConsultService(service) ? getPhoneBasePrice() : service.price)}</div>
+        <div class="price">${priceHtml}</div>
         <div class="cta">
           <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
         </div>
@@ -2528,6 +2582,9 @@
       packZh: promoPackZhEl ? promoPackZhEl.textContent.trim() : '',
       cta: promoCta ? promoCta.textContent.trim() : '',
       mini: promoMiniEl ? promoMiniEl.textContent.trim() : '',
+      promoPrice: '',
+      promoStart: '',
+      promoEnd: '',
       imageUrl: promoImgEl ? promoImgEl.getAttribute('src') || '' : '',
       imagePosX: '',
       imagePosY: ''
@@ -2576,6 +2633,18 @@
     if (promoPackZhEl) promoPackZhEl.textContent = data.packZh || '';
     if (promoCta) promoCta.textContent = data.cta || '查看並預約';
     if (promoMiniEl) promoMiniEl.textContent = data.mini || '';
+    if (promoPriceRow && promoPriceOldEl && promoPriceNewEl && __PHONE_PROMO_SERVICE__){
+      const promoInfo = getPromoInfo(__PHONE_PROMO_SERVICE__);
+      const base = getPhoneBasePrice();
+      const promoPrice = promoInfo ? getPromoDisplayPrice(__PHONE_PROMO_SERVICE__, 'en') : 0;
+      if (promoPrice && Number.isFinite(promoPrice) && promoPrice > 0 && promoPrice < base){
+        promoPriceOldEl.textContent = formatTWD(base);
+        promoPriceNewEl.textContent = formatTWD(promoPrice);
+        promoPriceRow.style.display = '';
+      }else{
+        promoPriceRow.style.display = 'none';
+      }
+    }
     if (promoBulletsEl){
       promoBulletsEl.innerHTML = '';
       (data.bullets || []).forEach(text=>{
@@ -2613,6 +2682,9 @@
     if (promoPackZhInput) promoPackZhInput.value = data.packZh || '';
     if (promoCtaInput) promoCtaInput.value = data.cta || '';
     if (promoMiniInput) promoMiniInput.value = data.mini || '';
+    if (promoPriceInput) promoPriceInput.value = data.promoPrice || '';
+    if (promoStartInput) promoStartInput.value = data.promoStart || '';
+    if (promoEndInput) promoEndInput.value = data.promoEnd || '';
     if (promoImageInput) promoImageInput.value = data.imageUrl || '';
     if (promoImagePosXInput) promoImagePosXInput.value = data.imagePosX !== '' ? data.imagePosX : '';
     if (promoImagePosYInput) promoImagePosYInput.value = data.imagePosY !== '' ? data.imagePosY : '';
@@ -2630,6 +2702,9 @@
       packZh: promoPackZhInput ? promoPackZhInput.value.trim() : '',
       cta: promoCtaInput ? promoCtaInput.value.trim() : '',
       mini: promoMiniInput ? promoMiniInput.value.trim() : '',
+      promoPrice: promoPriceInput ? promoPriceInput.value.trim() : '',
+      promoStart: promoStartInput ? promoStartInput.value.trim() : '',
+      promoEnd: promoEndInput ? promoEndInput.value.trim() : '',
       imageUrl: promoImageInput ? promoImageInput.value.trim() : '',
       imagePosX: normalizePromoPos(promoImagePosXInput ? promoImagePosXInput.value : ''),
       imagePosY: normalizePromoPos(promoImagePosYInput ? promoImagePosYInput.value : '')
@@ -3076,21 +3151,42 @@
     const variant = getVariantSelection(detailDataset);
     const diff = variant ? Number(variant.price||0) : 0;
     let unit = base + diff;
+    let promoUnit = 0;
     if (isPhoneConsultService(detailDataset)){
       const pack = CONSULT_PACK || resolveConsultPack('en');
       const packDelta = getConsultPackDelta(pack);
       unit = getPhoneBasePrice() + packDelta + (CONSULT_ADDON ? 500 : 0);
+      promoUnit = getPromoDisplayPrice(detailDataset, pack.key);
     }else{
       unit = base + diff;
+      promoUnit = 0;
     }
     const qtyEnabled = isQtyEnabled(detailDataset);
     const qty = qtyEnabled && detailQtyInput ? Math.max(1, Number(detailQtyInput.value||1) || 1) : 1;
     const fee = qtyEnabled ? getServiceFee(detailDataset) : 0;
-    detailPriceEl.textContent = (unit * qty + fee).toLocaleString('zh-TW');
+    let displayUnit = unit;
+    let showPromo = false;
+    if (promoUnit && Number.isFinite(promoUnit) && promoUnit > 0 && promoUnit < unit){
+      displayUnit = promoUnit;
+      showPromo = true;
+    }
+    const total = unit * qty + fee;
+    const displayTotal = displayUnit * qty + fee;
+    detailPriceEl.textContent = displayTotal.toLocaleString('zh-TW');
+    detailPriceEl.classList.toggle('is-promo', showPromo);
+    if (detailPriceOldEl){
+      if (showPromo){
+        detailPriceOldEl.textContent = formatTWD(total);
+        detailPriceOldEl.style.display = '';
+      }else{
+        detailPriceOldEl.textContent = '';
+        detailPriceOldEl.style.display = 'none';
+      }
+    }
     if (detailPriceHint){
       if (qtyEnabled){
         const feeText = fee > 0 ? ` + ${getServiceFeeLabel(detailDataset)} ${formatTWD(fee)}` : '';
-        detailPriceHint.textContent = `單價 ${formatTWD(unit)} × ${qty}${feeText}`;
+        detailPriceHint.textContent = `單價 ${formatTWD(displayUnit)} × ${qty}${feeText}`;
         detailPriceHint.style.display = '';
       }else{
         detailPriceHint.textContent = '';
@@ -3371,6 +3467,21 @@
     if (isPhone && consultPack){
       optionPrice = getConsultPackDelta(consultPack);
     }
+    const actualUnit = basePrice + optionPrice + addonPrice + consultAddonPrice;
+    let promoDisplayPrice = 0;
+    let promoOriginalPrice = 0;
+    let promoActive = false;
+    if (isPhone){
+      const promoPack = getPromoDisplayPrice(detail, consultPack ? consultPack.key : 'en');
+      if (promoPack && Number.isFinite(promoPack) && promoPack > 0){
+        const promoUnit = promoPack + consultAddonPrice;
+        if (promoUnit < actualUnit){
+          promoDisplayPrice = promoUnit;
+          promoOriginalPrice = actualUnit;
+          promoActive = true;
+        }
+      }
+    }
     return {
       uid: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()),
       serviceId: svcId,
@@ -3395,6 +3506,9 @@
       consultPackPrice: isPhone ? (basePrice + optionPrice) : consultPackPrice,
       consultAddonSummary: !!CONSULT_ADDON,
       consultAddonPrice: consultAddonPrice,
+      promoActive,
+      promoDisplayPrice,
+      promoOriginalPrice,
       image: (Array.isArray(detail.gallery) && detail.gallery[0]) || detail.cover || ''
     };
   }
@@ -3556,7 +3670,8 @@
     if (checkoutSummary){
       const lines = finalCart.map(item => {
         const qty = getItemQty(item);
-        const unit = Number(item.basePrice||0)+Number(item.optionPrice||0);
+        const promoUnit = Number(item && item.promoActive ? item.promoDisplayPrice : 0);
+        const unit = promoUnit > 0 ? promoUnit : (Number(item.basePrice||0)+Number(item.optionPrice||0));
         const label = escapeHtml(getCartItemOptionLabel(item)) + (qty > 1 ? ` × ${qty}` : '');
         const slotLine = item.slotStart ? `<div class="muted">預約時段：${escapeHtml(item.slotStart)}</div>` : '';
         const tzLine = item.slotStart && isPhoneConsultService(item)

@@ -176,6 +176,10 @@
           <button type="button" class="svc-pill" data-pack="zh" id="svcPromoPackZh">中文翻譯 NT$4000</button>
         </div>
       </div>
+      <div id="svcPromoPriceRow" class="svc-promo-price" style="display:none">
+        <span id="svcPromoPriceOld" class="svc-price-old"></span>
+        <span id="svcPromoPriceNew" class="svc-price-new"></span>
+      </div>
       <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
       <div id="svcPromoMini" class="svc-promo-mini">可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問</div>
       <div id="svcPromoStories" class="svc-promo-stories" style="display:none">
@@ -224,6 +228,15 @@
       </label>
       <label>補充文字
         <textarea id="promoMiniInput" rows="2"></textarea>
+      </label>
+      <label>優惠價
+        <input type="number" id="promoPriceInput" inputmode="numeric" placeholder="例如 3500">
+      </label>
+      <label>優惠開始
+        <input type="datetime-local" id="promoStartInput">
+      </label>
+      <label>優惠結束
+        <input type="datetime-local" id="promoEndInput">
       </label>
       <label>照片 URL
         <input type="text" id="promoImageInput" placeholder="https://...">
@@ -448,7 +461,11 @@
           </div>
           <div id="svcDetailPriceHint" style="font-size:12px;color:#6b7280;margin-top:6px;display:none;"></div>
         </div>
-        <div style="margin-top:16px;font-weight:800;font-size:20px;color:#0f172a;">NT$ <span id="svcDetailPrice">0</span></div>
+        <div class="svc-price-row" style="margin-top:16px;">
+          <span id="svcDetailPriceOld" class="svc-price-old" style="display:none"></span>
+          <span class="svc-price-currency">NT$</span>
+          <span id="svcDetailPrice">0</span>
+        </div>
         <div id="svcConsultPack" class="svc-pack" style="display:none">
           <div class="svc-pack-head">
             <div class="svc-pack-title">連線算命方案</div>

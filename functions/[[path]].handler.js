@@ -752,6 +752,77 @@ function isPhoneConsultServiceRecord(svc, serviceId, env){
   const hay = `${svc.name || ''} ${svc.desc || ''}`.toLowerCase();
   return /phone|電話|consult|占卜|算命/.test(hay);
 }
+function parsePromoTime(raw){
+  if (!raw) return 0;
+  const val = String(raw || '').trim();
+  if (!val) return 0;
+  const normalized = val.replace(/\//g, '-');
+  const dt = new Date(normalized);
+  const ms = dt.getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+function getPhoneConsultPromoInfo(svc){
+  const promo = (svc && svc.meta && svc.meta.promo) ? svc.meta.promo : {};
+  const price = Number((promo && (promo.promoPrice ?? promo.price)) || 0);
+  const startMs = parsePromoTime(promo && (promo.promoStart || promo.start || ''));
+  const endMs = parsePromoTime(promo && (promo.promoEnd || promo.end || ''));
+  return { price, startMs, endMs };
+}
+function isPromoActive(info, nowMs){
+  if (!info || !Number.isFinite(info.price) || info.price <= 0) return false;
+  if (info.startMs && nowMs < info.startMs) return false;
+  if (info.endMs && nowMs > info.endMs) return false;
+  return true;
+}
+function resolvePhoneConsultOptionPrices(options, basePrice){
+  let en = 0;
+  let zh = 0;
+  if (Array.isArray(options)){
+    for (const opt of options){
+      if (!opt) continue;
+      const name = String(opt.name || '').toLowerCase();
+      const price = Number(opt.price || 0);
+      if (!en && /英文|english|en/.test(name)) en = price;
+      if (!zh && /中文|chinese|zh/.test(name)) zh = price;
+    }
+  }
+  const base = (Number.isFinite(en) && en > 0) ? en : (Number.isFinite(basePrice) ? basePrice : 0);
+  return { base, en: en || base, zh };
+}
+function isZhOption(opt, prices){
+  const name = String(opt?.name || '').toLowerCase();
+  if (/中文|chinese|zh/.test(name)) return true;
+  const price = Number(opt?.price || 0);
+  return !!(prices && prices.zh > 0 && price === prices.zh);
+}
+function isEnOption(opt, prices){
+  const name = String(opt?.name || '').toLowerCase();
+  if (/英文|english|en/.test(name)) return true;
+  const price = Number(opt?.price || 0);
+  return !!(prices && prices.en > 0 && price === prices.en);
+}
+function getPhoneConsultTotalForOption(opt, prices){
+  if (!prices) return Number(opt?.price || 0) || 0;
+  if (isZhOption(opt, prices) && prices.zh > 0){
+    return prices.base + (prices.zh - prices.base);
+  }
+  if (isEnOption(opt, prices)){
+    return prices.base;
+  }
+  const price = Number(opt?.price || 0);
+  return price > 0 ? price : prices.base;
+}
+function getPhoneConsultPromoTotalForOption(opt, prices, promoBase){
+  if (!Number.isFinite(promoBase) || promoBase <= 0) return 0;
+  if (isZhOption(opt, prices) && prices.zh > 0){
+    const delta = prices.zh - prices.base;
+    return promoBase + Math.max(0, delta);
+  }
+  if (isEnOption(opt, prices)){
+    return promoBase;
+  }
+  return promoBase;
+}
 function isPhoneConsultOrder(order, env){
   if (!order) return false;
   const cfg = getPhoneConsultConfig(env || {});
@@ -11199,6 +11270,10 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       if (!buyer.name) buyer.name = svcUser.name || buyer.name;
     }
     const options = Array.isArray(svc.options) ? svc.options : [];
+    const isPhoneConsult = isPhoneConsultServiceRecord(svc, serviceId, env);
+    const phonePrices = isPhoneConsult ? resolvePhoneConsultOptionPrices(options, Number(svc.price||0)) : null;
+    const promoInfo = isPhoneConsult ? getPhoneConsultPromoInfo(svc) : null;
+    const promoActive = isPhoneConsult ? isPromoActive(promoInfo, nowMs()) : false;
     let baseCount = Number(body.baseCount || 0);
     if (!Number.isFinite(baseCount) || baseCount < 0) baseCount = 0;
     let requestedNames = [];
@@ -11221,6 +11296,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       return new Response(JSON.stringify({ ok:false, error:'請至少選擇一個服務項目' }), { status:400, headers: jsonHeaders });
     }
     const basePrice = Number(svc.price||0);
+    const basePriceForCalc = (isPhoneConsult && phonePrices) ? phonePrices.base : basePrice;
     const fixedFee = Math.max(0, Number(svc.fixedFee ?? svc.serviceFee ?? svc.travelFee ?? svc.extraFee ?? 0) || 0);
     const feeLabel = String(svc.feeLabel || '車馬費').trim();
     let items = [];
@@ -11228,7 +11304,18 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       items = selectionList.map(opt => ({
         name: `${svc.name}｜${opt.name}`,
         qty: 1,
-        total: basePrice + Number(opt.price||0),
+        total: (() => {
+          let unitTotal = basePriceForCalc + Number(opt.price||0);
+          if (isPhoneConsult && phonePrices){
+            const normalTotal = getPhoneConsultTotalForOption(opt, phonePrices);
+            unitTotal = normalTotal;
+            if (promoActive && promoInfo && promoInfo.price > 0 && promoInfo.price < phonePrices.base){
+              const promoTotal = getPhoneConsultPromoTotalForOption(opt, phonePrices, promoInfo.price);
+              if (promoTotal > 0 && promoTotal < normalTotal) unitTotal = promoTotal;
+            }
+          }
+          return unitTotal;
+        })(),
         image: svc.cover||''
       }));
     }
@@ -11239,7 +11326,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
       items.push({
         name: svc.name,
         qty: baseCount,
-        total: basePrice * baseCount,
+        total: basePriceForCalc * baseCount,
         image: svc.cover||''
       });
     }
