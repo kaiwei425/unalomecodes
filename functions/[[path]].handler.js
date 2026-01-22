@@ -10057,9 +10057,9 @@ function composeOrderEmail(order, opts = {}) {
   const method = (isServiceOrder && (!order.paymentMethod || /服務/.test(methodRaw))) ? '轉帳匯款' : methodRaw;
   const isCod711 = /貨到付款|cod|711/i.test(method || '');
   const context = opts.context || 'order_created';
-  const items = buildOrderItems(order);
-  const shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
-  const discountAmount = Math.max(0, Number(order?.coupon?.discount || 0));
+  let items = buildOrderItems(order);
+  let shippingFee = Number(order.shippingFee ?? order.shipping ?? 0) || 0;
+  let discountAmount = Math.max(0, Number(order?.coupon?.discount || 0));
   let subtotal = 0;
   if (items.length) {
     subtotal = items.reduce((s, it) => s + Number(it.total || 0), 0);
@@ -10068,6 +10068,14 @@ function composeOrderEmail(order, opts = {}) {
   }
   if (!subtotal) subtotal = Math.max(0, Number(order.amount || 0) - shippingFee + discountAmount);
   const totalAmount = Math.max(0, Number(order.amount || 0));
+  if (isServiceOrder){
+    if (items.length === 1 && totalAmount > 0){
+      items = [Object.assign({}, items[0], { total: totalAmount })];
+    }
+    subtotal = totalAmount;
+    discountAmount = 0;
+    shippingFee = 0;
+  }
   const supportEmail = 'bkkaiwei@gmail.com';
   const lineLabel = '@427oaemj';
   const lineInstruction = 'LINE ID：@427oaemj（請於官方 LINE 搜尋加入）';
@@ -10098,26 +10106,39 @@ function composeOrderEmail(order, opts = {}) {
     ? items.map(it => `• ${it.name}${it.spec ? `（${it.spec}）` : ''} × ${it.qty} ─ ${fmt(it.total)}`).join('\n')
     : '（本次訂單明細將由客服另行確認）';
   const shippingNote = shippingFee ? `（含運費${fmt(shippingFee).replace('NT$ ', '')}）` : '';
+  const appointmentTw = isServiceOrder ? formatServiceAppointmentTaiwan(order) : '';
+  const appointmentHtml = appointmentTw ? `<p><strong>預約時間（台灣）：</strong>${esc(appointmentTw)}</p>` : '';
   const baseInfoHtml = plainMode
-    ? `<p>訂單編號：${esc(order.id || '')}<br>訂單狀態：${esc(status)}<br>付款方式：${esc(method)}<br>應付金額：${fmt(order.amount || 0)}${shippingNote}</p>`
+    ? `<p>訂單編號：${esc(order.id || '')}<br>訂單狀態：${esc(status)}<br>付款方式：${esc(method)}<br>應付金額：${fmt(order.amount || 0)}${shippingNote}${appointmentTw ? `<br>預約時間（台灣）：${esc(appointmentTw)}` : ''}</p>`
     : [
         `<p><strong>訂單編號：</strong>${esc(order.id || '')}</p>`,
         `<p><strong>訂單狀態：</strong>${esc(status)}</p>`,
         `<p><strong>付款方式：</strong>${esc(method)}</p>`,
-        `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}${shippingNote}</p>`
+        `<p><strong>應付金額：</strong>${fmt(order.amount || 0)}${shippingNote}</p>`,
+        appointmentHtml
       ].filter(Boolean).join('');
-  const lookupHtml = opts.lookupUrl
+  const lookupHtml = opts.lookupUrl && !isServiceOrder
     ? plainMode
       ? `<p>查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）</p>`
       : `<div style="margin-top:16px;padding:12px;border-radius:8px;background:#eef2ff;color:#312e81;font-size:13px;">
           查詢訂單連結：${esc(opts.lookupUrl)}（請複製貼至瀏覽器開啟）
         </div>`
     : '';
+  const serviceLookupNote = isServiceOrder
+    ? (plainMode
+      ? '<p>可至會員中心－我的訂單查詢最新進度。</p>'
+      : '<div style="margin-top:16px;padding:12px;border-radius:8px;background:#ecfdf3;color:#166534;font-size:13px;">可至會員中心－我的訂單查詢最新進度。</div>')
+    : '';
+  const serviceRescheduleNote = isServiceOrder
+    ? (plainMode
+      ? '<p>如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</p>'
+      : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</div>')
+    : '';
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>您的訂單狀態已更新為 <strong>${esc(status)}</strong>。請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>${isCod711 ? '我們已收到您的訂單，將儘速安排出貨。' : '我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。'}請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
+      <p>${isServiceOrder ? '我們已收到您的訂單，將在核對匯款資料無誤後，儘速與老師聯繫安排預約，預約完成後會再來信通知。' : (isCod711 ? '我們已收到您的訂單，將儘速安排出貨。' : '我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。')}請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const lookupLine = opts.lookupUrl
@@ -10176,6 +10197,8 @@ function composeOrderEmail(order, opts = {}) {
         <p>${itemsHtml}</p>
         ${contactHtml ? `<p>聯絡資訊：<br>${contactHtml}</p>` : ''}
         ${lookupHtml}
+        ${serviceLookupNote}
+        ${serviceRescheduleNote}
         ${opts.admin ? '' : '<p>感謝您的支持，祝福一切順心圓滿！</p>'}
         ${customerFooter}
       </div>
@@ -10192,6 +10215,8 @@ function composeOrderEmail(order, opts = {}) {
           ${itemsHtml}
           ${contactHtml ? `<h3 style="font-size:16px;margin:20px 0 10px;">聯絡資訊</h3>${contactHtml}` : ''}
           ${lookupHtml}
+          ${serviceLookupNote}
+          ${serviceRescheduleNote}
           ${opts.admin ? '' : '<p style="margin:18px 0 0;">感謝您的支持，祝福一切順心圓滿！</p>'}
           ${customerFooter}
         </div>
@@ -10209,9 +10234,11 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push(lookupText);
     }
   } else {
-    const waitLine = isCod711
-      ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
-      : `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`;
+    const waitLine = isServiceOrder
+      ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速與老師聯繫安排預約，預約完成後會再來信通知。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
+      : (isCod711
+        ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
+        : `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
     textParts.push(waitLine);
   }
   textParts.push(`訂單編號：${order.id}`);
@@ -10231,7 +10258,13 @@ function composeOrderEmail(order, opts = {}) {
   if (email) textParts.push(`Email：${email}`);
   if (store) textParts.push(`7-11 門市：${store}`);
   if (note) textParts.push(`備註：${note}`);
-  if (opts.lookupUrl) textParts.push(`查詢訂單：${opts.lookupUrl}`);
+  if (isServiceOrder){
+    if (appointmentTw) textParts.push(`預約時間（台灣）：${appointmentTw}`);
+    textParts.push('可至會員中心－我的訂單查詢最新進度。');
+    textParts.push('如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。');
+  } else if (opts.lookupUrl) {
+    textParts.push(`查詢訂單：${opts.lookupUrl}`);
+  }
   if (!opts.admin) textParts.push('感謝您的訂購！');
   return { html, text: textParts.join('\n') };
 }
@@ -10341,6 +10374,27 @@ function formatCurrencyTWD(num) {
   } catch (_) {
     return 'NT$ ' + (num || 0);
   }
+}
+
+function formatServiceAppointmentTaiwan(order) {
+  const raw = String(order?.slotStart || order?.requestDate || '').trim();
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+  if (!match) return '';
+  const datePart = match[1];
+  const timePart = match[2];
+  const [y, m, d] = datePart.split('-').map(v => Number(v));
+  const [hh, mm] = timePart.split(':').map(v => Number(v));
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return '';
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return '';
+  const ms = Date.UTC(y, m - 1, d, hh + 1, mm);
+  if (!Number.isFinite(ms)) return '';
+  const dt = new Date(ms);
+  const yyyy = dt.getUTCFullYear();
+  const MM = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const DD = String(dt.getUTCDate()).padStart(2, '0');
+  const HH = String(dt.getUTCHours()).padStart(2, '0');
+  const Min = String(dt.getUTCMinutes()).padStart(2, '0');
+  return `${yyyy}-${MM}-${DD} ${HH}:${Min}`;
 }
 
 /* ========== CSV helpers ========== */
@@ -11419,7 +11473,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }
     let mailStatus = null;
     try{
-      mailStatus = await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:true });
+      mailStatus = await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'service_created', bilingual:false });
     }catch(err){
       console.error('service order email error', err);
     }
