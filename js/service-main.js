@@ -251,6 +251,7 @@
   let slotDaysPage = 0;
   let slotHasMore = true;
   let slotPlaceholderMode = false;
+  let FORCE_SLOT_REFRESH = false;
   const SLOT_DAYS_STEP = 10;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
   const SLOT_CACHE_TTL_MS = 30000;
@@ -1087,6 +1088,14 @@
       if (!serviceId) return;
       const key = SLOT_CACHE_PREFIX + String(serviceId || '').trim();
       sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), items: items || [] }));
+    }catch(_){}
+  }
+
+  function clearSlotCache(serviceId){
+    try{
+      if (!serviceId) return;
+      const key = SLOT_CACHE_PREFIX + String(serviceId || '').trim();
+      sessionStorage.removeItem(key);
     }catch(_){}
   }
 
@@ -2173,6 +2182,10 @@
     const restoredHold = restoreHoldForService(serviceId);
     if (!restoredHold){
       restorePendingSlotFromCart(serviceId);
+    }
+    if (FORCE_SLOT_REFRESH){
+      FORCE_SLOT_REFRESH = false;
+      clearSlotCache(serviceId);
     }
     const cached = loadSlotCache(serviceId);
     const cachedItems = cached ? filterFutureSlotItems(cached) : [];
@@ -4521,7 +4534,9 @@
       if (releaseRes.ok && (releaseRes.released || releaseRes.reason === 'hold_not_found')){
         clearHoldFromStorage(serviceId);
         clearSlotFromCart(serviceId);
+        clearSlotCache(serviceId);
         resetSlotState();
+        FORCE_SLOT_REFRESH = true;
       }else{
         LAST_RELEASE_MSG = '目前無法釋放原本時段，請稍後再試';
       }
