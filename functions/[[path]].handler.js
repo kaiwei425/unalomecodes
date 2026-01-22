@@ -3983,7 +3983,7 @@ ${note ? `Note: ${note}\n` : ''}${reason ? `Reason: ${reason}\n` : ''}${adminUrl
 }
 function buildBilingualOrderEmail(order, zhHtml, zhText, opts = {}){
   const esc = (typeof escapeHtmlEmail === 'function') ? escapeHtmlEmail : (s)=> String(s || '');
-  const fmt = formatCurrencyTWD;
+  const fmt = (typeof formatCurrencyTWD === 'function') ? formatCurrencyTWD : (n)=> `NT$ ${Number(n || 0)}`;
   const id = order?.id || '';
   const status = order?.status || '';
   const amount = fmt(order?.amount || 0);
@@ -10037,7 +10037,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
 
 function composeOrderEmail(order, opts = {}) {
   const esc = (typeof escapeHtmlEmail === 'function') ? escapeHtmlEmail : (s)=> String(s || '');
-  const fmt = formatCurrencyTWD;
+  const fmt = (typeof formatCurrencyTWD === 'function') ? formatCurrencyTWD : (n)=> `NT$ ${Number(n || 0)}`;
   const brand = opts.siteName || 'Unalomecodes';
   const buyerName = (order?.buyer?.name || '').trim() || '貴賓';
   const phone = (order?.buyer?.phone || order?.buyer?.contact || order?.contact || '').trim();
