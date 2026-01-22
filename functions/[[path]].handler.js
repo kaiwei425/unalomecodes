@@ -3929,7 +3929,7 @@ async function updateRescheduleIndex(env, requestId){
   return true;
 }
 function buildRescheduleEmail(payload){
-  const esc = escapeHtmlEmail;
+  const esc = (typeof escapeHtmlEmail === 'function') ? escapeHtmlEmail : (s)=> String(s || '');
   const type = payload?.type || 'requested';
   const orderId = payload?.orderId || '';
   const currentSlot = payload?.currentSlot || '';
@@ -3982,7 +3982,7 @@ ${note ? `Note: ${note}\n` : ''}${reason ? `Reason: ${reason}\n` : ''}${adminUrl
   return { subject, html, text };
 }
 function buildBilingualOrderEmail(order, zhHtml, zhText, opts = {}){
-  const esc = escapeHtmlEmail;
+  const esc = (typeof escapeHtmlEmail === 'function') ? escapeHtmlEmail : (s)=> String(s || '');
   const fmt = formatCurrencyTWD;
   const id = order?.id || '';
   const status = order?.status || '';
@@ -10035,7 +10035,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
 }
 
 function composeOrderEmail(order, opts = {}) {
-  const esc = escapeHtmlEmail;
+  const esc = (typeof escapeHtmlEmail === 'function') ? escapeHtmlEmail : (s)=> String(s || '');
   const fmt = formatCurrencyTWD;
   const brand = opts.siteName || 'Unalomecodes';
   const buyerName = (order?.buyer?.name || '').trim() || '貴賓';

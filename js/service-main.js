@@ -3555,7 +3555,7 @@
       return;
     }
     if (isPhoneConsultService(service) && shouldGateBySlotsForViewer()){
-      await getPhoneConsultSlotAvailability(service);
+      getPhoneConsultSlotAvailability(service).catch(()=>{});
     }
     if (resumeCheckoutIfHeld(service)) return;
     if (detailTitle) detailTitle.textContent = service.name || '服務';
