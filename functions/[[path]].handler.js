@@ -11271,6 +11271,7 @@ if (pathname === '/api/service/order' && request.method === 'POST') {
     }
     const options = Array.isArray(svc.options) ? svc.options : [];
     const isPhoneConsult = isPhoneConsultServiceRecord(svc, serviceId, env);
+    const consultStage = isPhoneConsult ? 'payment_pending' : '';
     const phonePrices = isPhoneConsult ? resolvePhoneConsultOptionPrices(options, Number(svc.price||0)) : null;
     const promoInfo = isPhoneConsult ? getPhoneConsultPromoInfo(svc) : null;
     const promoActive = isPhoneConsult ? isPromoActive(promoInfo, nowMs()) : false;

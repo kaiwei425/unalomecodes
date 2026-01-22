@@ -323,7 +323,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var dlg = document.getElementById('dlgOrderSuccess');
       if (!dlg){
         try{ window.__orderSuccessWillOpen = false; }catch(_){}
-        alert('訂單已送出，請截圖保存。訂單編號：' + (opts.orderId || opts.id || ''));
+        alert('訂單已送出，已寄出 Email 通知。訂單編號：' + (opts.orderId || opts.id || ''));
         return;
       }
       try{
@@ -351,7 +351,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       }
       var title = opts.title || '訂單建立成功';
       var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
-      var note = opts.note || '請截圖保存本頁資訊，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
+      var note = opts.note || '已寄出 Email 通知，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
       var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : ((opts.channel === 'cod' || opts.channel === 'cod-711') ? '貨到付款(7-11)' : '轉帳匯款'));
       var lookupDigits = opts.orderLookupDigits || suffixId;
       var phone = opts.phone || '';
@@ -501,7 +501,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             window.__runPendingOrderReload();
           }
         }catch(_){}
-        alert('訂單已送出，請截圖保存。訂單編號：'+ (id || ''));
+        alert('訂單已送出，已寄出 Email 通知。訂單編號：'+ (id || ''));
       }
     }catch(err){
       console.error(err);
@@ -511,7 +511,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           window.__runPendingOrderReload();
         }
       }catch(_){}
-      try{ alert('訂單已送出，請截圖保存。'); }catch(_){}
+      try{ alert('訂單已送出，已寄出 Email 通知。'); }catch(_){}
     }
   };
 

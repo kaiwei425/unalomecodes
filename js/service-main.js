@@ -45,6 +45,7 @@
   const checkoutBackBtn = document.getElementById('svcCartBack');
   const slotChangeBtn = document.getElementById('svcSlotChangeBtn');
   const checkoutNextBtn = document.getElementById('svcCartNext');
+  const checkoutNextLabelDefault = checkoutNextBtn ? checkoutNextBtn.textContent : '';
   const checkoutSubmitBtn = document.getElementById('svcBankSubmit');
   const checkoutServiceIdInput = document.getElementById('svcCartServiceId');
   const checkoutStepSections = {
@@ -113,6 +114,7 @@
   const cartPanelBack = document.getElementById('svcCartPanelBack');
   const cartClearBtn = document.getElementById('svcCartClear');
   const cartCheckoutBtn = document.getElementById('svcCartCheckout');
+  const cartCheckoutLabelDefault = cartCheckoutBtn ? cartCheckoutBtn.textContent : '';
   const privacyLink = document.getElementById('privacyLink');
   const privacyDialog = document.getElementById('privacyDialog');
   const privacyClose = document.getElementById('privacyClose');
@@ -141,9 +143,11 @@
   const promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
   const promoLimitedEl = document.getElementById('svcPromoLimited');
   const promoPeriodEl = document.getElementById('svcPromoPeriod');
+  const promoEarlyBirdEl = document.getElementById('svcPromoEarlyBird');
   const promoCountdownEl = document.getElementById('svcPromoCountdown');
   const detailPromoLimitedEl = document.getElementById('svcDetailPromoLimited');
   const detailPromoPeriodEl = document.getElementById('svcDetailPromoPeriod');
+  const detailPromoEarlyBirdEl = document.getElementById('svcDetailPromoEarlyBird');
   const detailPromoCountdownEl = document.getElementById('svcDetailPromoCountdown');
   const storyModal = document.getElementById('svcStoryModal');
   const storyModalImg = document.getElementById('svcStoryModalImg');
@@ -159,6 +163,7 @@
   const promoSubInput = document.getElementById('promoSubInput');
   const promoBulletsInput = document.getElementById('promoBulletsInput');
   const promoNoteInput = document.getElementById('promoNoteInput');
+  const promoEarlyBirdInput = document.getElementById('promoEarlyBirdInput');
   const promoPackLabelInput = document.getElementById('promoPackLabelInput');
   const promoPackEnInput = document.getElementById('promoPackEnInput');
   const promoPackZhInput = document.getElementById('promoPackZhInput');
@@ -835,8 +840,22 @@
     }
     if (isPhone){
       applyPhotoRequirement(false, serviceName);
+      if (contactPhotoSkipHint){
+        contactPhotoSkipHint.textContent = '';
+        contactPhotoSkipHint.style.display = 'none';
+      }
     }else{
       applyPhotoRequirement(!!photoRequired, serviceName);
+    }
+    applyCheckoutLabels(!!isPhone);
+  }
+
+  function applyCheckoutLabels(isPhone){
+    if (cartCheckoutBtn){
+      cartCheckoutBtn.textContent = isPhone ? '填寫預約資料' : cartCheckoutLabelDefault;
+    }
+    if (checkoutNextBtn){
+      checkoutNextBtn.textContent = isPhone ? '填寫預約資料' : checkoutNextLabelDefault;
     }
   }
 
@@ -1787,9 +1806,9 @@
       detailAddBtn.textContent = '加入購物車';
     }
     if (start){
-      setSlotStateText(`已選擇 ${start}，按加入購物車後保留 15 分鐘`, false);
+      setSlotStateText(`已選擇 ${start}，按填寫預約資料後保留 15 分鐘`, false);
     }else{
-      setSlotStateText('已選擇時段，按加入購物車後保留 15 分鐘', false);
+      setSlotStateText('已選擇時段，按填寫預約資料後保留 15 分鐘', false);
     }
   }
 
@@ -2298,6 +2317,7 @@
     if (cartAmountEl){
       cartAmountEl.textContent = formatTWD(cartTotal(cart));
     }
+    applyCheckoutLabels(cart.some(item => isPhoneConsultService(item)));
   }
 
   function setCheckoutStep(step){
@@ -2504,7 +2524,7 @@
     if (start && Date.now() < start) return null;
     if (end && Date.now() > end) return null;
     if (start && end && end < start) return null;
-    return { price, start, end };
+    return { price, start, end, earlyBird: String(promo.earlyBird || '') };
   }
 
   function getPromoDisplayPrice(service, packKey){
@@ -2577,6 +2597,8 @@
     const periodText = endText ? `至 ${endText} 截止` : '限時優惠';
     if (promoPeriodEl) promoPeriodEl.textContent = periodText;
     if (detailPromoPeriodEl) detailPromoPeriodEl.textContent = periodText;
+    if (promoEarlyBirdEl) promoEarlyBirdEl.textContent = info.earlyBird || '';
+    if (detailPromoEarlyBirdEl) detailPromoEarlyBirdEl.textContent = info.earlyBird || '';
     if (promoLimitedEl) promoLimitedEl.style.display = '';
     if (detailPromoLimitedEl) detailPromoLimitedEl.style.display = '';
     const ok = updatePromoCountdown(info);
@@ -2691,6 +2713,7 @@
       sub: promoSubEl ? promoSubEl.textContent.trim() : '',
       bullets,
       note: promoNoteEl ? promoNoteEl.textContent.trim() : '',
+      earlyBird: promoEarlyBirdEl ? promoEarlyBirdEl.textContent.trim() : '',
       packLabel: promoPackLabelEl ? promoPackLabelEl.textContent.trim() : '',
       packEn: promoPackEnEl ? promoPackEnEl.textContent.trim() : '',
       packZh: promoPackZhEl ? promoPackZhEl.textContent.trim() : '',
@@ -2742,6 +2765,8 @@
     if (promoTitleEl) promoTitleEl.textContent = data.title || '';
     if (promoSubEl) promoSubEl.textContent = data.sub || '';
     if (promoNoteEl) promoNoteEl.textContent = data.note || '';
+    if (promoEarlyBirdEl) promoEarlyBirdEl.textContent = data.earlyBird || '';
+    if (detailPromoEarlyBirdEl) detailPromoEarlyBirdEl.textContent = data.earlyBird || '';
     if (promoPackLabelEl) promoPackLabelEl.textContent = data.packLabel || '';
     if (promoPackEnEl) promoPackEnEl.textContent = data.packEn || '';
     if (promoPackZhEl) promoPackZhEl.textContent = data.packZh || '';
@@ -2781,6 +2806,7 @@
     if (promoSubInput) promoSubInput.value = data.sub || '';
     if (promoBulletsInput) promoBulletsInput.value = (data.bullets || []).join('\n');
     if (promoNoteInput) promoNoteInput.value = data.note || '';
+    if (promoEarlyBirdInput) promoEarlyBirdInput.value = data.earlyBird || '';
     if (promoPackLabelInput) promoPackLabelInput.value = data.packLabel || '';
     if (promoPackEnInput) promoPackEnInput.value = data.packEn || '';
     if (promoPackZhInput) promoPackZhInput.value = data.packZh || '';
@@ -2801,6 +2827,7 @@
       sub: promoSubInput ? promoSubInput.value.trim() : '',
       bullets: promoBulletsInput ? promoBulletsInput.value.split('\n').map(x=>x.trim()).filter(Boolean) : [],
       note: promoNoteInput ? promoNoteInput.value.trim() : '',
+      earlyBird: promoEarlyBirdInput ? promoEarlyBirdInput.value.trim() : '',
       packLabel: promoPackLabelInput ? promoPackLabelInput.value.trim() : '',
       packEn: promoPackEnInput ? promoPackEnInput.value.trim() : '',
       packZh: promoPackZhInput ? promoPackZhInput.value.trim() : '',
@@ -3192,24 +3219,7 @@
 
   async function applyServiceVisibility(){
     const baseVisible = allServiceItems.filter(svc => canShowPhoneConsultToViewer(svc));
-    if (!shouldGateBySlotsForViewer()){
-      serviceItems = baseVisible;
-      renderHotServices(serviceItems);
-      renderList(serviceItems);
-      return;
-    }
-    const filtered = [];
-    for (const svc of baseVisible){
-      if (!isPhoneConsultService(svc) || ADMIN_PREVIEW_MODE){
-        filtered.push(svc);
-        continue;
-      }
-      const avail = await getPhoneConsultSlotAvailability(svc);
-      if (avail.reason === 'ok'){
-        filtered.push(svc);
-      }
-    }
-    serviceItems = filtered;
+    serviceItems = baseVisible;
     renderHotServices(serviceItems);
     renderList(serviceItems);
   }
@@ -3645,30 +3655,6 @@
         alert('請先選擇預約時段');
         return false;
       }
-      if (!pending.slotHoldToken){
-        const holdRes = await requestHold(pending.serviceId, pending.slotKey);
-        if (!holdRes.ok){
-          if (holdRes.error === 'UNAUTHORIZED' && window.authState && typeof window.authState.login === 'function'){
-            window.authState.login();
-            return false;
-          }
-          alert('無法保留時段，請重新選擇');
-          return false;
-        }
-        pending.slotHoldToken = holdRes.data.holdToken || '';
-        pending.slotHoldUntilMs = Number(holdRes.data.heldUntil || 0) || 0;
-        if (!pending.slotStart){
-          const parsed = parseSlotKeyDateTime(pending.slotKey);
-          pending.slotStart = parsed.date && parsed.time ? `${parsed.date} ${parsed.time}` : '';
-        }
-        saveHoldToStorage(pending.serviceId, {
-          serviceId: pending.serviceId,
-          slotKey: pending.slotKey,
-          slotHoldToken: pending.slotHoldToken,
-          slotStart: pending.slotStart,
-          holdUntilMs: pending.slotHoldUntilMs
-        });
-      }
     }
     let cart = loadCart();
     cart = ensureSingleService(cart, pending.serviceId);
@@ -3709,15 +3695,6 @@
         window.location.href = '/api/auth/google/login?prompt=select_account';
       }
       return;
-    }
-    if (isPhone && !CURRENT_DETAIL_SLOT.slotHoldToken){
-      const pending = getPendingSlotForHold();
-      if (!pending){
-        setSlotStateText('請先選擇預約時段', true);
-        return;
-      }
-      const ok = await holdSlot(pending);
-      if (!ok) return;
     }
     const item = buildServiceCartItem(detailDataset);
     if (!item) return;
@@ -4028,7 +4005,52 @@
     });
   }
   if (cartCheckoutBtn){
-    cartCheckoutBtn.addEventListener('click', ()=>{
+    cartCheckoutBtn.addEventListener('click', async ()=>{
+      const cart = loadCart();
+      if (!cart.length){
+        alert('購物車是空的');
+        return;
+      }
+      const phoneItem = cart.find(it => isPhoneConsultService(it));
+      if (phoneItem){
+        if (!phoneItem.slotKey){
+          alert('請先選擇預約時段');
+          return;
+        }
+        if (!phoneItem.slotHoldToken){
+          if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
+            if (window.authState && typeof window.authState.login === 'function'){
+              window.authState.login();
+            }else{
+              window.location.href = '/api/auth/google/login?prompt=select_account';
+            }
+            return;
+          }
+          const holdRes = await requestHold(phoneItem.serviceId, phoneItem.slotKey);
+          if (!holdRes.ok){
+            if (holdRes.error === 'UNAUTHORIZED' && window.authState && typeof window.authState.login === 'function'){
+              window.authState.login();
+              return;
+            }
+            alert(mapUserErrorMessage(holdRes.error) || '無法保留時段，請稍後再試');
+            return;
+          }
+          phoneItem.slotHoldToken = holdRes.data.holdToken || '';
+          phoneItem.slotHoldUntilMs = Number(holdRes.data.heldUntil || 0) || 0;
+          if (!phoneItem.slotStart){
+            const parsed = parseSlotKeyDateTime(phoneItem.slotKey);
+            phoneItem.slotStart = parsed.date && parsed.time ? `${parsed.date} ${parsed.time}` : '';
+          }
+          saveHoldToStorage(phoneItem.serviceId, {
+            serviceId: phoneItem.serviceId,
+            slotKey: phoneItem.slotKey,
+            slotHoldToken: phoneItem.slotHoldToken,
+            slotStart: phoneItem.slotStart,
+            holdUntilMs: phoneItem.slotHoldUntilMs
+          });
+          saveCart(cart);
+        }
+      }
       closeDialog(cartPanel);
       clearCartBackId();
       openCheckoutDialog();
@@ -4738,10 +4760,6 @@
     bindHotToggle();
     const phoneTarget = findPhoneConsultService(allServices);
     let canShowPromo = !!(phoneTarget && canShowPhoneConsultToViewer(phoneTarget));
-    if (canShowPromo && shouldGateBySlotsForViewer() && !ADMIN_PREVIEW_MODE){
-      const avail = await getPhoneConsultSlotAvailability(phoneTarget);
-      canShowPromo = avail.reason === 'ok';
-    }
     if (canShowPromo){
       initPhonePromo(allServices);
     }else if (promoSection){

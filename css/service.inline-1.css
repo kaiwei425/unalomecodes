@@ -190,6 +190,10 @@ body.service-view .svc-promo-limited-label{
 body.service-view .svc-promo-period{
   color:#7f1d1d;
 }
+body.service-view .svc-promo-earlybird{
+  color:#b91c1c;
+  font-weight:700;
+}
 body.service-view .svc-promo-countdown{
   font-weight:800;
   color:#dc2626;
@@ -275,6 +279,16 @@ body.service-view .svc-pack-addon .svc-addon-select{
 }
 body.service-view .svc-pack-addon .addon-hint{font-size:12px;color:#64748b;margin-top:6px;line-height:1.6;}
 body.service-view .svc-pack-policy{font-size:12px;color:#64748b;display:grid;gap:4px;}
+body.service-view .svc-email-notice{
+  margin:10px 0 0;
+  font-size:13px;
+  color:#0f172a;
+  background:#f8fafc;
+  border:1px solid rgba(15,23,42,.08);
+  padding:8px 10px;
+  border-radius:10px;
+  text-align:center;
+}
 body.service-view .svc-promo{margin:14px 0 18px;}
 body.service-view .svc-promo-card{
   position:relative;

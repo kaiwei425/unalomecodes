@@ -183,6 +183,7 @@
       <div id="svcPromoLimited" class="svc-promo-limited" style="display:none">
         <span class="svc-promo-limited-label">限時優惠</span>
         <span id="svcPromoPeriod" class="svc-promo-period"></span>
+        <span id="svcPromoEarlyBird" class="svc-promo-earlybird">早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價</span>
         <span id="svcPromoCountdown" class="svc-promo-countdown"></span>
       </div>
       <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
@@ -218,6 +219,9 @@
       </label>
       <label>提醒
         <input type="text" id="promoNoteInput">
+      </label>
+      <label>優惠說明
+        <input type="text" id="promoEarlyBirdInput" placeholder="早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價">
       </label>
       <label>方案標題
         <input type="text" id="promoPackLabelInput">
@@ -474,6 +478,7 @@
         <div id="svcDetailPromoLimited" class="svc-promo-limited" style="display:none">
           <span class="svc-promo-limited-label">限時優惠</span>
           <span id="svcDetailPromoPeriod" class="svc-promo-period"></span>
+          <span id="svcDetailPromoEarlyBird" class="svc-promo-earlybird">早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價</span>
           <span id="svcDetailPromoCountdown" class="svc-promo-countdown"></span>
         </div>
         <div id="svcConsultPack" class="svc-pack" style="display:none">
@@ -709,6 +714,7 @@
           <div>匯款末五碼：<span id="svcStep3Last5">—</span></div>
           <div>聯絡人：<span id="svcStep3Buyer">—</span></div>
         </div>
+        <div class="svc-email-notice">已寄出 Email 通知</div>
         <div class="svc-bank-hint">之後可透過左側「祈福進度查詢」輸入手機與訂單末五碼（英數）查詢最新進度。</div>
         <div id="svcStep3RescheduleWrap" style="margin-top:12px;display:none;">
           <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
@@ -753,6 +759,7 @@
       <div id="svcSuccessHint" style="font-size:14px;color:#374151;line-height:1.7;">
         我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。
       </div>
+      <div class="svc-email-notice">已寄出 Email 通知</div>
       <div id="svcSuccessRescheduleWrap" style="margin-top:12px;display:none;">
         <div style="font-size:12px;color:#64748b;">請於預約時間 48 小時前申請</div>
         <button type="button" class="btn primary" id="svcSuccessReschedule">申請改期 / Request Reschedule</button>
