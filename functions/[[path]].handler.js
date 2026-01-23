@@ -5836,7 +5836,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           notifyAdmin: true,
           adminEmails: ownerAdmins,
           emailContext:'status_update',
-          bilingual:false
+          bilingual:false,
+          serialSend: true
         });
         const msg = buildBookingNotifyEmail(order, env);
         const internal = Array.from(new Set((bookingEmails || []).concat(extraBooking))).filter(Boolean);
@@ -5852,7 +5853,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           console.warn('[booking] notify skipped: no recipients resolved');
         }
       }else{
-        await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false });
+        await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false, serialSend:true });
       }
     }catch(err){
       console.error('consult stage email error', err);
@@ -10146,7 +10147,20 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       console.log('[mail] skip sending — no recipients resolved');
       return { ok:false, reason:'no_recipients' };
     }
-    const settled = await Promise.allSettled(labeled.map(task => task.promise));
+    const settled = ctx.serialSend
+      ? (async ()=>{
+          const results = [];
+          for (const task of labeled){
+            try{
+              const value = await task.promise;
+              results.push({ status:'fulfilled', value });
+            }catch(error){
+              results.push({ status:'rejected', reason: error });
+            }
+          }
+          return results;
+        })()
+      : Promise.allSettled(labeled.map(task => task.promise));
     let failed = false;
     let sentCustomer = false;
     let sentAdmin = false;
@@ -10494,16 +10508,27 @@ async function sendEmailMessage(env, message) {
     text: message.text || undefined
   };
   if (replyTo) payload.reply_to = replyTo;
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
+  let attempt = 0;
+  while (attempt < 2){
+    attempt += 1;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok){
+      let data = {};
+      try { data = await res.json(); } catch(_){}
+      return data;
+    }
     const errText = await res.text().catch(()=> '');
+    if (res.status === 429 && attempt < 2){
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      continue;
+    }
     throw new Error(`Email API ${res.status}: ${errText || res.statusText}`);
   }
   let data = {};
