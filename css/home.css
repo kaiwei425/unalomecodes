@@ -974,6 +974,7 @@ body.home-view .svc-promo-card{
   box-shadow:0 12px 24px rgba(15,23,42,0.08);
   align-items:start;
 }
+body.home-view .svc-promo{margin:14px 0 0;}
 @media (min-width: 900px){
   body.home-view .svc-promo-card{
     grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
@@ -1085,6 +1086,89 @@ body.home-view .svc-promo-cta{
   box-shadow:0 8px 18px rgba(16,149,214,.25);
 }
 body.home-view .svc-promo-mini{font-size:12px;color:#64748b;line-height:1.6;}
+body.home-view .svc-promo-price{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  font-size:18px;
+  font-weight:800;
+  color:#0f172a;
+}
+body.home-view .svc-price-old{
+  font-size:14px;
+  color:#94a3b8;
+  text-decoration:line-through;
+  font-weight:600;
+}
+body.home-view .svc-price-new{
+  font-size:20px;
+  color:#dc2626;
+}
+body.home-view .svc-promo-limited{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid #fecaca;
+  background:#fff5f5;
+  color:#b91c1c;
+  font-size:13px;
+  font-weight:700;
+}
+body.home-view .svc-promo-limited-label{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#fee2e2;
+  color:#b91c1c;
+  font-size:12px;
+  font-weight:800;
+}
+body.home-view .svc-promo-period{
+  font-weight:700;
+  color:#7f1d1d;
+}
+body.home-view .svc-promo-countdown{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid #fecaca;
+  font-size:12px;
+}
+body.home-view .svc-promo-stories{
+  margin-top:8px;
+  padding:12px;
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:12px;
+  background:#f8fafc;
+}
+body.home-view .svc-promo-stories-head{
+  font-size:12px;
+  font-weight:700;
+  color:#64748b;
+  margin-bottom:6px;
+}
+body.home-view .svc-promo-story-msg{
+  font-size:14px;
+  color:#0f172a;
+  line-height:1.6;
+  min-height:44px;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+body.home-view .svc-promo-story-meta{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:6px;
+  font-size:12px;
+  color:#64748b;
+}
 .section-head{
   display:flex;
   align-items:flex-start;
