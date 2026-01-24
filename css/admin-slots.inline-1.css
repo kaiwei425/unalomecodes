@@ -75,6 +75,9 @@ body.admin-slots-view .slot-date-nav{
   align-items:center;
   gap:8px;
 }
+body.admin-slots-view .slot-date-nav-standalone{
+  margin-top:12px;
+}
 body.admin-slots-view .slot-date-nav .btn{
   height:40px;
   min-width:40px;
