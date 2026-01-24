@@ -67,11 +67,22 @@
             <div class="slot-booking-actions">
               <button class="btn primary" id="btnPublishWindow" type="button" data-i18n="booking_publish_window">一鍵上架 + 開放</button>
               <button class="btn" id="btnPublishSchedule" type="button" data-i18n="booking_publish_schedule">排程上架 + 開放</button>
+              <button class="btn" id="btnCancelSchedule" type="button" data-i18n="booking_cancel_schedule">取消排程</button>
               <button class="btn" id="btnCloseWindow" type="button" data-i18n="booking_close_window">立即關閉預約</button>
             </div>
           </div>
           <div id="bookingWindowStatus" class="muted" data-i18n="booking_status_loading" style="margin-top:6px;"></div>
           <div id="bookingScheduleStatus" class="muted" style="margin-top:4px;"></div>
+          <div class="slot-selected">
+            <div class="slot-selected-head">
+              <div class="slot-selected-title" data-i18n="selected_title">已選取時段</div>
+              <div class="slot-selected-meta">
+                <span id="selectedSlotsCount" class="muted">0</span>
+                <button class="btn" id="btnClearSelectedAll" type="button" data-i18n="selected_clear">清空選取</button>
+              </div>
+            </div>
+            <div id="selectedSlotsList" class="slot-selected-list muted" data-i18n="selected_empty">尚未選取時段。</div>
+          </div>
           <div id="slotTzHint" class="slot-tz-hint muted"></div>
           <div class="slot-actions">
             <button class="btn primary" id="btnPublish" data-i18n="btn_publish">開放選取時段</button>

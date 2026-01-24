@@ -126,6 +126,9 @@ body.admin-slots-view .slot-booking-actions .btn{
   padding:0 14px;
   border-radius:12px;
 }
+body.admin-slots-view .slot-booking-actions #btnCancelSchedule{
+  border-color:#f1f5f9;
+}
 body.admin-slots-view .slot-booking-actions .btn.primary{
   background:#0f172a;
   border-color:#0f172a;
@@ -142,6 +145,58 @@ body.admin-slots-view .slot-field-compact input{
 }
 body.admin-slots-view .slot-field-time input{
   max-width:200px;
+}
+body.admin-slots-view .slot-selected{
+  margin-top:12px;
+  padding:10px 12px;
+  border:1px solid var(--admin-border);
+  border-radius:12px;
+  background:#fff;
+}
+body.admin-slots-view .slot-selected-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+body.admin-slots-view .slot-selected-title{
+  font-weight:700;
+  font-size:13px;
+  color:var(--admin-text);
+}
+body.admin-slots-view .slot-selected-meta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+}
+body.admin-slots-view .slot-selected-meta .btn{
+  height:30px;
+  padding:0 10px;
+  border-radius:10px;
+  font-size:12px;
+}
+body.admin-slots-view .slot-selected-list{
+  margin-top:8px;
+  display:grid;
+  gap:6px;
+  font-size:12px;
+}
+body.admin-slots-view .slot-selected-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 8px;
+  border-radius:10px;
+  background:#f8fafc;
+  border:1px solid rgba(148,163,184,.25);
+}
+body.admin-slots-view .slot-selected-item .btn{
+  height:26px;
+  padding:0 8px;
+  border-radius:8px;
+  font-size:11px;
 }
 body.admin-slots-view .slot-booking-controls label{
   font-weight:700;
@@ -190,6 +245,14 @@ body.admin-slots-view .slot-booking-controls .btn{
   }
   body.admin-slots-view .slot-booking-actions{
     width:100%;
+  }
+  body.admin-slots-view .slot-selected-head{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  body.admin-slots-view .slot-selected-meta{
+    width:100%;
+    justify-content:space-between;
   }
   body.admin-slots-view .slot-field-compact input{
     max-width:none;

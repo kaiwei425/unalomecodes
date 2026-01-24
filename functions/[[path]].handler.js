@@ -3904,6 +3904,42 @@ async function publishSlotKeys(env, slotKeys){
   }
   return { updated, skipped };
 }
+async function unpublishSlotKeys(env, slotKeys){
+  const updated = [];
+  const skipped = [];
+  const now = nowMs();
+  for (const slotKey of slotKeys){
+    const parsed = parseSlotKey(slotKey);
+    if (!parsed){
+      skipped.push({ slotKey, reason:'invalid_slot' });
+      continue;
+    }
+    let existing = null;
+    try{
+      const raw = await env.SERVICE_SLOTS_KV.get(slotKey);
+      if (raw) existing = JSON.parse(raw);
+    }catch(_){}
+    const status = resolveSlotStatus(existing, now);
+    if (status === 'booked' || status === 'held'){
+      skipped.push({ slotKey, reason: status });
+      continue;
+    }
+    const record = {
+      serviceId: parsed.serviceId,
+      slotKey,
+      date: parsed.dateStr,
+      time: parsed.hhmm,
+      enabled: false,
+      status: 'blocked',
+      heldUntil: 0,
+      holdToken: '',
+      bookedOrderId: ''
+    };
+    await env.SERVICE_SLOTS_KV.put(slotKey, JSON.stringify(record));
+    updated.push(slotKey);
+  }
+  return { updated, skipped };
+}
 async function applyScheduledSlotPublish(env, serviceId){
   const schedule = await getServiceSlotPublishSchedule(env, serviceId);
   const scheduleAt = schedule ? Number(schedule.publishAt || 0) : 0;
@@ -3919,11 +3955,28 @@ async function applyScheduledSlotPublish(env, serviceId){
       openFrom: scheduleAt,
       openUntil: scheduleAt + minutes * 60 * 1000,
       createdAt: new Date().toISOString(),
-      createdBy: String(schedule.createdBy || '')
+      createdBy: String(schedule.createdBy || ''),
+      slotKeys: scheduleKeys
     });
   }
   await clearServiceSlotPublishSchedule(env, serviceId);
   return null;
+}
+async function closeExpiredWindowIfNeeded(env, serviceId, windowInfo){
+  if (!windowInfo) return windowInfo;
+  const openUntil = Number(windowInfo.openUntil || 0);
+  if (!openUntil || nowMs() < openUntil) return windowInfo;
+  const slotKeys = Array.isArray(windowInfo.slotKeys) ? windowInfo.slotKeys : [];
+  if (slotKeys.length){
+    await unpublishSlotKeys(env, slotKeys);
+    const next = Object.assign({}, windowInfo, {
+      slotKeys: [],
+      closedAt: new Date().toISOString()
+    });
+    await setServiceSlotWindow(env, serviceId, next);
+    return next;
+  }
+  return windowInfo;
 }
 function getTodayDateStr(tz){
   try{
@@ -6036,6 +6089,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       if (Object.prototype.hasOwnProperty.call(body, 'bookingMode')){
         await setServiceSlotMode(env, serviceId, body.bookingMode);
       }
+      const slotKeys = Array.isArray(body.slotKeys) ? body.slotKeys.map(k=>String(k||'').trim()).filter(Boolean) : [];
       const adminSession = await getAdminSession(request, env);
       const actorEmail = adminSession && adminSession.email ? String(adminSession.email || '').trim() : '';
       const openWindowMinutes = Number(body.openWindowMinutes || 0);
@@ -6049,22 +6103,31 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           openFrom,
           openUntil,
           createdAt: new Date().toISOString(),
-          createdBy: actorEmail
+          createdBy: actorEmail,
+          slotKeys: slotKeys
         });
       }else if (closeWindow){
         const prev = await getServiceSlotWindow(env, serviceId);
         const openFrom = prev && Number(prev.openFrom || 0) ? Number(prev.openFrom || 0) : now;
+        const prevSlotKeys = prev && Array.isArray(prev.slotKeys) ? prev.slotKeys : [];
+        if (prevSlotKeys.length){
+          await unpublishSlotKeys(env, prevSlotKeys);
+        }
         await setServiceSlotWindow(env, serviceId, {
           serviceId,
           openFrom,
           openUntil: now,
           createdAt: prev && prev.createdAt ? String(prev.createdAt) : new Date().toISOString(),
-          createdBy: actorEmail
+          createdBy: actorEmail,
+          slotKeys: [],
+          closedAt: new Date().toISOString(),
+          closedBy: actorEmail
         });
       }
     }
     const bookingMode = await getServiceSlotMode(env, serviceId);
-    const windowInfo = await getServiceSlotWindow(env, serviceId);
+    let windowInfo = await getServiceSlotWindow(env, serviceId);
+    windowInfo = await closeExpiredWindowIfNeeded(env, serviceId, windowInfo);
     const publishSchedule = await getServiceSlotPublishSchedule(env, serviceId);
     const active = bookingMode === BOOKING_MODE_WINDOWED ? isSlotWindowActive(windowInfo, now) : false;
     const publishWindow = bookingMode === BOOKING_MODE_WINDOWED
@@ -6106,7 +6169,8 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           openFrom: publishAt,
           openUntil: publishAt + minutes * 60 * 1000,
           createdAt: new Date().toISOString(),
-          createdBy: actorEmail
+          createdBy: actorEmail,
+          slotKeys: slotKeys
         });
       }
       await clearServiceSlotPublishSchedule(env, serviceId);
@@ -6121,6 +6185,22 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       createdBy: actorEmail
     });
     return new Response(JSON.stringify({ ok:true, scheduled:true, serviceId, publishAt, slotCount: slotKeys.length, openWindowMinutes: minutes }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/slots/publish-schedule/cancel' && request.method === 'POST') {
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    let body = null;
+    try{ body = await request.json(); }catch(_){ body = {}; }
+    const serviceId = String(body.serviceId || '').trim();
+    if (!serviceId){
+      return new Response(JSON.stringify({ ok:false, error:'missing_service_id' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    await clearServiceSlotPublishSchedule(env, serviceId);
+    return new Response(JSON.stringify({ ok:true, serviceId }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/service/slots/publish' && request.method === 'POST') {
@@ -11232,7 +11312,10 @@ if (pathname === '/api/service/products' && request.method === 'DELETE') {
     await applyScheduledSlotPublish(env, serviceId);
     const cfg = getSlotConfig(env);
     const bookingMode = await getServiceSlotMode(env, serviceId);
-    const windowInfo = bookingMode === BOOKING_MODE_WINDOWED ? await getServiceSlotWindow(env, serviceId) : null;
+    let windowInfo = bookingMode === BOOKING_MODE_WINDOWED ? await getServiceSlotWindow(env, serviceId) : null;
+    if (windowInfo){
+      windowInfo = await closeExpiredWindowIfNeeded(env, serviceId, windowInfo);
+    }
     const windowActive = bookingMode === BOOKING_MODE_WINDOWED ? isSlotWindowActive(windowInfo, nowMs()) : false;
     const daysRaw = Number(url.searchParams.get('days') || cfg.daysAhead);
     const days = Math.max(1, Math.min(31, Number.isFinite(daysRaw) ? daysRaw : cfg.daysAhead));
