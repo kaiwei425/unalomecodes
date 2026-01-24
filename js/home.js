@@ -9,10 +9,34 @@
   var heroQuizCta = document.querySelector('[data-hero-quiz-cta]');
   var heroTempleCta = document.querySelector('[data-hero-temple-cta]');
   var homeConsultEditBtn = document.getElementById('homeConsultEditBtn');
-  var homeConsultMedia = document.querySelector('#homePhoneConsultPromo .svc-promo-media');
-  var homeConsultImg = homeConsultMedia ? homeConsultMedia.querySelector('img') : null;
-  var homeConsultPosX = homeConsultMedia ? homeConsultMedia.querySelector('[data-edit-key="home-consult-image-pos-x"]') : null;
-  var homeConsultPosY = homeConsultMedia ? homeConsultMedia.querySelector('[data-edit-key="home-consult-image-pos-y"]') : null;
+  var promoSection = document.getElementById('homePhoneConsultPromo');
+  var promoKickerEl = document.getElementById('svcPromoKicker');
+  var promoTitleEl = document.getElementById('svcPromoTitle');
+  var promoSubEl = document.getElementById('svcPromoSub');
+  var promoBulletsEl = document.getElementById('svcPromoBullets');
+  var promoNoteEl = document.getElementById('svcPromoNote');
+  var promoPackLabelEl = document.getElementById('svcPromoPackLabel');
+  var promoPackEnEl = document.getElementById('svcPromoPackEn');
+  var promoPackZhEl = document.getElementById('svcPromoPackZh');
+  var promoPriceRow = document.getElementById('svcPromoPriceRow');
+  var promoPriceOldEl = document.getElementById('svcPromoPriceOld');
+  var promoPriceNewEl = document.getElementById('svcPromoPriceNew');
+  var promoLimitedEl = document.getElementById('svcPromoLimited');
+  var promoPeriodEl = document.getElementById('svcPromoPeriod');
+  var promoEarlyBirdEl = document.getElementById('svcPromoEarlyBird');
+  var promoCountdownEl = document.getElementById('svcPromoCountdown');
+  var promoCta = document.getElementById('svcPromoCta');
+  var promoMiniEl = document.getElementById('svcPromoMini');
+  var promoStoriesEl = document.getElementById('svcPromoStories');
+  var promoStoryMediaEl = document.querySelector('#svcPromoStories .svc-promo-story-media');
+  var promoStoryImgEl = document.getElementById('svcPromoStoryImg');
+  var promoStoryMsgEl = document.getElementById('svcPromoStoryMsg');
+  var promoStoryMoreBtn = document.getElementById('svcPromoStoryMore');
+  var promoStoryNameEl = document.getElementById('svcPromoStoryName');
+  var promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
+  var promoMediaEl = document.querySelector('#homePhoneConsultPromo .svc-promo-media');
+  var promoImgEl = document.getElementById('svcPromoImg');
+  var promoPills = Array.from(document.querySelectorAll('#homePhoneConsultPromo .svc-pill'));
 
   var LANG_KEY = 'uc_lang';
   var I18N = {
@@ -220,61 +244,489 @@
     if (!window.authState || typeof window.authState.onAdmin !== 'function') return;
     window.authState.onAdmin(function(isAdmin){
       if (typeof window.authState.hasAdminPermission === 'function'){
-        isAdmin = isAdmin && window.authState.hasAdminPermission('page_meta_edit');
+        isAdmin = isAdmin && window.authState.hasAdminPermission('service_meta_edit');
       }
       homeConsultEditBtn.hidden = !isAdmin;
     });
     homeConsultEditBtn.addEventListener('click', function(){
-      function trigger(){
-        var toggle = document.getElementById('adminEditToggle');
-        if (toggle) toggle.click();
-      }
-      trigger();
-      setTimeout(trigger, 300);
+      window.location.href = '/service?serviceId=SVT409059d4';
     });
   }
 
-  function initHomeConsultImageDrag(){
-    if (!homeConsultMedia || !homeConsultImg || !homeConsultPosX || !homeConsultPosY) return;
-    function getPosValue(node, fallback){
-      var num = Number(String(node.textContent || '').trim());
-      if (!Number.isFinite(num)) return fallback;
-      return Math.max(0, Math.min(100, num));
+  var HOME_PROMO_SERVICE = null;
+  var HOME_PROMO_PACK = 'en';
+  var HOME_PROMO_PACK_PRICES = { en: 0, zh: 0 };
+  var promoCountdownTimer = null;
+  var promoStoryTimer = null;
+  var promoStoryItems = [];
+  var promoStoryIndex = 0;
+
+  function formatTWD(num){
+    const n = Number(num || 0);
+    return 'NT$ ' + n.toLocaleString('zh-TW');
+  }
+
+  function parsePriceValue(raw){
+    if (raw === null || raw === undefined) return NaN;
+    if (typeof raw === 'number') return raw;
+    const txt = String(raw).replace(/[^\d.]/g, '');
+    if (!txt) return NaN;
+    return Number(txt);
+  }
+
+  function readOptionPrice(opt){
+    if (!opt) return NaN;
+    const raw = opt.price ?? opt.amount ?? opt.value ?? opt.cost;
+    return parsePriceValue(raw);
+  }
+
+  function resolveServiceId(service){
+    if (!service) return '';
+    return service.serviceId || service.service_id || service.id || service._id || service.key || service._key || '';
+  }
+
+  function isPhoneConsultService(service){
+    const metaType = service && service.meta && service.meta.type ? String(service.meta.type) : '';
+    if (String(metaType).toLowerCase() === 'phone_consult') return true;
+    const name = String(service.name || service.serviceName || '').trim();
+    return /電話算命|電話|phone|consultation|占卜|算命/i.test(name);
+  }
+
+  function parsePromoTime(val){
+    const raw = String(val || '').trim();
+    if (!raw) return 0;
+    const ts = Date.parse(raw);
+    return Number.isFinite(ts) ? ts : 0;
+  }
+
+  function formatPromoDate(ts){
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}/${m}/${day}`;
+  }
+
+  function getPromoInfo(service){
+    const promo = service && service.meta && service.meta.promo ? service.meta.promo : {};
+    const price = Number(promo.promoPrice ?? promo.price ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const start = parsePromoTime(promo.promoStart || promo.start);
+    const end = parsePromoTime(promo.promoEnd || promo.end);
+    if (start && Date.now() < start) return null;
+    if (end && Date.now() > end) return null;
+    if (start && end && end < start) return null;
+    return { price, start, end, earlyBird: String(promo.earlyBird || '') };
+  }
+
+  function getPhoneBasePrice(){
+    const en = Number(HOME_PROMO_PACK_PRICES.en || 0);
+    if (Number.isFinite(en) && en > 0) return en;
+    return 0;
+  }
+
+  function getPromoDisplayPrice(service, packKey){
+    const info = getPromoInfo(service);
+    if (!info) return 0;
+    if (!isPhoneConsultService(service)) return info.price;
+    const base = Number(HOME_PROMO_PACK_PRICES.en || 0);
+    const zh = Number(HOME_PROMO_PACK_PRICES.zh || 0);
+    const delta = (packKey === 'zh' && Number.isFinite(zh) && Number.isFinite(base)) ? (zh - base) : 0;
+    const promo = info.price + (Number.isFinite(delta) ? delta : 0);
+    return Number.isFinite(promo) ? promo : info.price;
+  }
+
+  function getPromoPackBasePrice(packKey){
+    if (packKey === 'zh'){
+      const zh = Number(HOME_PROMO_PACK_PRICES.zh || 0);
+      if (Number.isFinite(zh) && zh > 0) return zh;
     }
-    function applyPos(x, y){
-      var px = Math.max(0, Math.min(100, x));
-      var py = Math.max(0, Math.min(100, y));
-      homeConsultImg.style.objectPosition = px + '% ' + py + '%';
-      homeConsultPosX.textContent = String(Math.round(px));
-      homeConsultPosY.textContent = String(Math.round(py));
+    const en = Number(HOME_PROMO_PACK_PRICES.en || 0);
+    if (Number.isFinite(en) && en > 0) return en;
+    return getPhoneBasePrice();
+  }
+
+  function updatePromoCountdown(info){
+    const end = info && info.end ? Number(info.end) : 0;
+    if (!end || !Number.isFinite(end)){
+      if (promoCountdownEl) promoCountdownEl.textContent = '';
+      return false;
     }
-    applyPos(getPosValue(homeConsultPosX, 50), getPosValue(homeConsultPosY, 50));
-    if (homeConsultMedia.__bound) return;
-    homeConsultMedia.__bound = true;
-    homeConsultMedia.addEventListener('pointerdown', function(event){
-      if (!document.body.classList.contains('is-editing')) return;
-      if (!homeConsultImg) return;
-      event.preventDefault();
-      homeConsultMedia.setPointerCapture && homeConsultMedia.setPointerCapture(event.pointerId);
-      var rect = homeConsultMedia.getBoundingClientRect();
-      var startX = event.clientX;
-      var startY = event.clientY;
-      var baseX = getPosValue(homeConsultPosX, 50);
-      var baseY = getPosValue(homeConsultPosY, 50);
-      function onMove(moveEvent){
-        var dx = moveEvent.clientX - startX;
-        var dy = moveEvent.clientY - startY;
-        var nextX = baseX + (dx / rect.width) * 100;
-        var nextY = baseY + (dy / rect.height) * 100;
-        applyPos(nextX, nextY);
+    const now = Date.now();
+    const remain = end - now;
+    if (remain <= 0){
+      if (promoCountdownEl) promoCountdownEl.textContent = '';
+      return false;
+    }
+    const totalSec = Math.floor(remain / 1000);
+    const days = Math.floor(totalSec / 86400);
+    const hrs = Math.floor((totalSec % 86400) / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    const text = `剩餘 ${days}天 ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    if (promoCountdownEl) promoCountdownEl.textContent = text;
+    return true;
+  }
+
+  function updatePromoLimitedBlocks(service){
+    if (!service || !isPhoneConsultService(service)){
+      if (promoLimitedEl) promoLimitedEl.style.display = 'none';
+      if (promoCountdownTimer){
+        clearInterval(promoCountdownTimer);
+        promoCountdownTimer = null;
       }
-      function onUp(){
+      return;
+    }
+    const info = getPromoInfo(service);
+    if (!info){
+      if (promoLimitedEl) promoLimitedEl.style.display = 'none';
+      if (promoCountdownTimer){
+        clearInterval(promoCountdownTimer);
+        promoCountdownTimer = null;
+      }
+      return;
+    }
+    const endText = formatPromoDate(info.end);
+    const periodText = endText ? `至 ${endText} 截止` : '限時優惠';
+    if (promoPeriodEl) promoPeriodEl.textContent = periodText;
+    if (promoEarlyBirdEl) promoEarlyBirdEl.textContent = info.earlyBird || '';
+    if (promoLimitedEl) promoLimitedEl.style.display = '';
+    const ok = updatePromoCountdown(info);
+    if (promoCountdownTimer){
+      clearInterval(promoCountdownTimer);
+      promoCountdownTimer = null;
+    }
+    if (info.end && ok){
+      promoCountdownTimer = setInterval(()=>{
+        if (!updatePromoCountdown(info)){
+          if (promoLimitedEl) promoLimitedEl.style.display = 'none';
+          if (promoCountdownTimer){
+            clearInterval(promoCountdownTimer);
+            promoCountdownTimer = null;
+          }
+        }
+      }, 1000);
+    }
+  }
+
+  function updatePromoPriceRow(packKey){
+    if (!promoPriceRow || !promoPriceOldEl || !promoPriceNewEl || !HOME_PROMO_SERVICE) return;
+    const promoInfo = getPromoInfo(HOME_PROMO_SERVICE);
+    const base = getPromoPackBasePrice(packKey || 'en');
+    const promoPrice = promoInfo ? getPromoDisplayPrice(HOME_PROMO_SERVICE, packKey || 'en') : 0;
+    if (promoPrice && Number.isFinite(promoPrice) && promoPrice > 0 && promoPrice < base){
+      promoPriceOldEl.textContent = formatTWD(base);
+      promoPriceNewEl.textContent = formatTWD(promoPrice);
+      promoPriceRow.style.display = '';
+    }else{
+      promoPriceRow.style.display = 'none';
+    }
+  }
+
+  function normalizePromoPos(val){
+    const num = Number(val);
+    if (!Number.isFinite(num)) return '';
+    if (num < 0) return 0;
+    if (num > 100) return 100;
+    return Math.round(num);
+  }
+
+  function getPromoDefaults(){
+    const bullets = promoBulletsEl ? Array.from(promoBulletsEl.querySelectorAll('li')).map(li => li.textContent.trim()).filter(Boolean) : [];
+    return {
+      kicker: promoKickerEl ? promoKickerEl.textContent.trim() : '',
+      title: promoTitleEl ? promoTitleEl.textContent.trim() : '',
+      sub: promoSubEl ? promoSubEl.textContent.trim() : '',
+      bullets,
+      note: promoNoteEl ? promoNoteEl.textContent.trim() : '',
+      earlyBird: promoEarlyBirdEl ? promoEarlyBirdEl.textContent.trim() : '',
+      packLabel: promoPackLabelEl ? promoPackLabelEl.textContent.trim() : '',
+      packEn: promoPackEnEl ? promoPackEnEl.textContent.trim() : '',
+      packZh: promoPackZhEl ? promoPackZhEl.textContent.trim() : '',
+      cta: promoCta ? promoCta.textContent.trim() : '',
+      mini: promoMiniEl ? promoMiniEl.textContent.trim() : '',
+      promoPrice: '',
+      promoStart: '',
+      promoEnd: '',
+      imageUrl: promoImgEl ? promoImgEl.getAttribute('src') || '' : '',
+      imagePosX: '',
+      imagePosY: ''
+    };
+  }
+
+  function getPromoData(service){
+    const base = getPromoDefaults();
+    const meta = service && service.meta && service.meta.promo ? service.meta.promo : {};
+    const cover = service ? (service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '') : '';
+    const merged = Object.assign({}, base, meta);
+    if (!merged.imageUrl && cover) merged.imageUrl = cover;
+    const optList = Array.isArray(service && service.options) ? service.options : [];
+    if (!merged.packEn || !merged.packZh){
+      const enOpt = optList.find(opt => /英文/.test(String(opt.name || '')));
+      const zhOpt = optList.find(opt => /中文/.test(String(opt.name || '')));
+      if (!merged.packEn && enOpt){
+        merged.packEn = `英文翻譯 ${formatTWD(readOptionPrice(enOpt) || 0)}`;
+      }
+      if (!merged.packZh && zhOpt){
+        merged.packZh = `中文翻譯 ${formatTWD(readOptionPrice(zhOpt) || 0)}`;
+      }
+    }else{
+      const enOpt = optList.find(opt => /英文/.test(String(opt.name || '')));
+      const zhOpt = optList.find(opt => /中文/.test(String(opt.name || '')));
+      if (enOpt && merged.packEn){
+        merged.packEn = String(merged.packEn).replace(/NT\$\s*[\d,]+/i, formatTWD(readOptionPrice(enOpt) || 0));
+      }
+      if (zhOpt && merged.packZh){
+        merged.packZh = String(merged.packZh).replace(/NT\$\s*[\d,]+/i, formatTWD(readOptionPrice(zhOpt) || 0));
+      }
+    }
+    merged.imagePosX = normalizePromoPos(merged.imagePosX);
+    merged.imagePosY = normalizePromoPos(merged.imagePosY);
+    return merged;
+  }
+
+  function applyPromoContent(data){
+    if (!data) return;
+    if (promoKickerEl) promoKickerEl.textContent = data.kicker || '';
+    if (promoTitleEl) promoTitleEl.textContent = data.title || '';
+    if (promoSubEl) promoSubEl.textContent = data.sub || '';
+    if (promoNoteEl) promoNoteEl.textContent = data.note || '';
+    if (promoEarlyBirdEl) promoEarlyBirdEl.textContent = data.earlyBird || '';
+    if (promoPackLabelEl) promoPackLabelEl.textContent = data.packLabel || '';
+    if (promoPackEnEl) promoPackEnEl.textContent = data.packEn || '';
+    if (promoPackZhEl) promoPackZhEl.textContent = data.packZh || '';
+    if (promoCta) promoCta.textContent = data.cta || '查看並預約';
+    if (promoMiniEl) promoMiniEl.textContent = data.mini || '';
+    if (promoBulletsEl){
+      promoBulletsEl.innerHTML = '';
+      (data.bullets || []).forEach(text=>{
+        if (!text) return;
+        const li = document.createElement('li');
+        li.textContent = text;
+        promoBulletsEl.appendChild(li);
+      });
+    }
+    if (promoImgEl){
+      const url = data.imageUrl || '';
+      if (promoMediaEl) promoMediaEl.style.display = url ? '' : 'none';
+      if (url) promoImgEl.setAttribute('src', url);
+      const posX = normalizePromoPos(data.imagePosX);
+      const posY = normalizePromoPos(data.imagePosY);
+      if (posX !== '' || posY !== ''){
+        const x = posX === '' ? 50 : posX;
+        const y = posY === '' ? 50 : posY;
+        promoImgEl.style.objectPosition = `${x}% ${y}%`;
+      }else{
+        promoImgEl.style.objectPosition = '';
+      }
+    }
+    updatePromoPriceRow(HOME_PROMO_PACK || 'en');
+    if (HOME_PROMO_SERVICE) updatePromoLimitedBlocks(HOME_PROMO_SERVICE);
+  }
+
+  function setPromoPack(next){
+    const pack = next === 'zh' ? 'zh' : 'en';
+    HOME_PROMO_PACK = pack;
+    promoPills.forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.pack === pack);
+    });
+    updatePromoPriceRow(pack);
+    if (HOME_PROMO_SERVICE) updatePromoLimitedBlocks(HOME_PROMO_SERVICE);
+  }
+
+  function renderPromoStory(item){
+    if (!promoStoriesEl || !promoStoryMsgEl) return;
+    function escapeHtml(text){
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function formatStoryTime(ts){
+      try{
+        if (!ts) return '';
+        const date = new Date(ts);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'});
+      }catch(_){
+        return '';
+      }
+    }
+    function formatStoryMsgHtml(msg){
+      const raw = String(msg || '').trim();
+      if (!raw) return '目前尚無留言';
+      const escaped = escapeHtml(raw);
+      if (/\r|\n/.test(raw)){
+        return escaped.replace(/\r\n|\r|\n/g, '<br>');
+      }
+      return escaped.replace(/([。！？!?])\s*/g, '$1<br>');
+    }
+    if (promoStoryMediaEl && promoStoryImgEl){
+      const imgUrl = item && (item.imageUrl || item.image || item.photo || item.pic) ? String(item.imageUrl || item.image || item.photo || item.pic) : '';
+      if (imgUrl){
+        promoStoryImgEl.src = imgUrl;
+        promoStoryImgEl.alt = item && item.nick ? String(item.nick) : '';
+        promoStoryMediaEl.style.display = '';
+      }else{
+        promoStoryImgEl.removeAttribute('src');
+        promoStoryImgEl.alt = '';
+        promoStoryMediaEl.style.display = 'none';
+      }
+    }
+    promoStoryMsgEl.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
+    if (promoStoryMoreBtn){
+      promoStoryMoreBtn.style.display = promoStoryItems.length ? '' : 'none';
+      promoStoryMoreBtn.textContent = '顯示更多';
+    }
+    if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
+    if (promoStoryTimeEl) promoStoryTimeEl.textContent = formatStoryTime(item && item.ts ? String(item.ts) : '');
+  }
+
+  function startPromoStoryRotation(items){
+    if (promoStoryTimer){
+      clearInterval(promoStoryTimer);
+      promoStoryTimer = null;
+    }
+    promoStoryItems = Array.isArray(items) ? items : [];
+    promoStoryIndex = 0;
+    if (!promoStoriesEl || !promoStoryItems.length){
+      if (promoStoriesEl){
+        promoStoriesEl.style.display = 'none';
+      }
+      return;
+    }
+    promoStoriesEl.style.display = '';
+    renderPromoStory(promoStoryItems[0]);
+    if (promoStoryItems.length <= 1) return;
+    promoStoryTimer = setInterval(()=>{
+      promoStoryIndex = (promoStoryIndex + 1) % promoStoryItems.length;
+      renderPromoStory(promoStoryItems[promoStoryIndex]);
+    }, 7000);
+  }
+
+  async function loadPromoStories(service){
+    if (!promoStoriesEl) return;
+    const serviceId = String((service && resolveServiceId(service)) || 'SVT409059d4').trim();
+    if (!serviceId){
+      promoStoriesEl.style.display = 'none';
+      startPromoStoryRotation([]);
+      return;
+    }
+    try{
+      const cacheBust = Date.now();
+      const res = await fetch(`/api/stories?code=${encodeURIComponent(serviceId)}&_=${cacheBust}`);
+      const data = await res.json().catch(()=>null);
+      if (!res.ok || !data || data.ok === false){
+        promoStoriesEl.style.display = 'none';
+        startPromoStoryRotation([]);
+        return;
+      }
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (!items.length){
+        promoStoriesEl.style.display = 'none';
+        startPromoStoryRotation([]);
+        return;
+      }
+      startPromoStoryRotation(items.slice(0, 10));
+    }catch(_){
+      promoStoriesEl.style.display = 'none';
+      startPromoStoryRotation([]);
+    }
+  }
+
+  function getConsultPackPrices(service){
+    const options = Array.isArray(service && service.options) ? service.options : [];
+    const enOpt = options.find(opt => /英文/.test(String(opt.name || '')));
+    const zhOpt = options.find(opt => /中文/.test(String(opt.name || '')));
+    return {
+      en: readOptionPrice(enOpt) || 0,
+      zh: readOptionPrice(zhOpt) || 0
+    };
+  }
+
+  function bindPromoImageDrag(){
+    if (!promoMediaEl || !promoImgEl || !HOME_PROMO_SERVICE) return;
+    if (promoMediaEl.__bound) return;
+    promoMediaEl.__bound = true;
+    promoMediaEl.addEventListener('pointerdown', function(event){
+      if (!window.authState || typeof window.authState.hasAdminPermission !== 'function') return;
+      if (!window.authState.hasAdminPermission('service_meta_edit')) return;
+      event.preventDefault();
+      promoMediaEl.setPointerCapture && promoMediaEl.setPointerCapture(event.pointerId);
+      const rect = promoMediaEl.getBoundingClientRect();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const current = HOME_PROMO_SERVICE && HOME_PROMO_SERVICE.meta && HOME_PROMO_SERVICE.meta.promo ? HOME_PROMO_SERVICE.meta.promo : {};
+      const baseX = normalizePromoPos(current.imagePosX || 50) || 50;
+      const baseY = normalizePromoPos(current.imagePosY || 50) || 50;
+      function onMove(moveEvent){
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+        const nextX = baseX + (dx / rect.width) * 100;
+        const nextY = baseY + (dy / rect.height) * 100;
+        promoImgEl.style.objectPosition = `${Math.max(0, Math.min(100, nextX))}% ${Math.max(0, Math.min(100, nextY))}%`;
+      }
+      async function onUp(upEvent){
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
+        const dx = upEvent.clientX - startX;
+        const dy = upEvent.clientY - startY;
+        const nextX = Math.max(0, Math.min(100, baseX + (dx / rect.width) * 100));
+        const nextY = Math.max(0, Math.min(100, baseY + (dy / rect.height) * 100));
+        const meta = Object.assign({}, HOME_PROMO_SERVICE.meta || {});
+        const promo = Object.assign({}, meta.promo || {}, { imagePosX: Math.round(nextX), imagePosY: Math.round(nextY) });
+        meta.promo = promo;
+        try{
+          await fetch('/api/service/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ id: resolveServiceId(HOME_PROMO_SERVICE), meta })
+          });
+        }catch(_){}
       }
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     });
+  }
+
+  async function initHomeServicePromo(){
+    if (!promoSection) return;
+    try{
+      const res = await fetch('/api/service/products?active=true', { cache:'no-store' });
+      const data = await res.json().catch(()=>({}));
+      const items = Array.isArray(data.items) ? data.items : [];
+      const target = items.find(item => String(resolveServiceId(item)) === 'SVT409059d4') ||
+        items.find(item => isPhoneConsultService(item));
+      if (!target) return;
+      HOME_PROMO_SERVICE = target;
+      HOME_PROMO_PACK_PRICES = getConsultPackPrices(target);
+      applyPromoContent(getPromoData(target));
+      setPromoPack('en');
+      loadPromoStories(target);
+      bindPromoImageDrag();
+      if (promoCta){
+        promoCta.addEventListener('click', function(){
+          window.location.href = '/service?serviceId=' + encodeURIComponent(resolveServiceId(target));
+        });
+      }
+      promoPills.forEach(function(btn){
+        if (btn.__bound) return;
+        btn.__bound = true;
+        btn.addEventListener('click', function(){
+          setPromoPack(btn.dataset.pack);
+        });
+      });
+      if (promoStoryMoreBtn){
+        promoStoryMoreBtn.addEventListener('click', function(){
+          window.location.href = '/service?serviceId=' + encodeURIComponent(resolveServiceId(target));
+        });
+      }
+    }catch(_){}
   }
 
 
@@ -1638,7 +2090,7 @@
 
   restoreHeroQuizCacheFromBackup();
   initHomeConsultEditor();
-  initHomeConsultImageDrag();
+  initHomeServicePromo();
   const initialProfile = getAuthProfile();
   if (initialProfile) syncLocalFromProfile(initialProfile);
   toggleHeroVisibility();

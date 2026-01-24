@@ -986,7 +986,7 @@ body[data-page-key="home"] .svc-promo{margin:14px 0 18px;}
 body[data-page-key="home"] .svc-promo-left{display:grid;gap:10px;}
 body[data-page-key="home"] .svc-promo-media{
   width:100%;
-  height:220px;
+  height:150px;
   border-radius:14px;
   overflow:hidden;
   background:linear-gradient(135deg,#e2e8f0,#f8fafc);
@@ -994,7 +994,7 @@ body[data-page-key="home"] .svc-promo-media{
 }
 @media (min-width: 900px){
   body[data-page-key="home"] .svc-promo-media{
-    height:280px;
+    height:200px;
   }
 }
 body[data-page-key="home"] .svc-promo-media img{
@@ -1130,6 +1130,10 @@ body[data-page-key="home"] .svc-promo-limited-label{
 body[data-page-key="home"] .svc-promo-period{
   color:#7f1d1d;
 }
+body[data-page-key="home"] .svc-promo-earlybird{
+  color:#b91c1c;
+  font-weight:700;
+}
 body[data-page-key="home"] .svc-promo-countdown{
   font-weight:800;
   color:#dc2626;
@@ -1137,6 +1141,55 @@ body[data-page-key="home"] .svc-promo-countdown{
   border:1px solid rgba(220,38,38,.2);
   padding:2px 8px;
   border-radius:999px;
+}
+body[data-page-key="home"] .svc-promo-stories{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:12px;
+  background:#f8fafc;
+}
+body[data-page-key="home"] .svc-promo-stories-head{
+  font-size:12px;
+  font-weight:700;
+  color:#64748b;
+  margin-bottom:6px;
+}
+body[data-page-key="home"] .svc-promo-story-media{
+  display:none;
+  margin:0 0 8px;
+}
+body[data-page-key="home"] .svc-promo-story-media img{
+  width:100%;
+  max-height:160px;
+  object-fit:cover;
+  border-radius:10px;
+  display:block;
+}
+body[data-page-key="home"] .svc-promo-story-msg{
+  font-size:14px;
+  color:#0f172a;
+  line-height:1.6;
+  min-height:44px;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+body[data-page-key="home"] .svc-promo-story-more{
+  margin-top:6px;
+  border:0;
+  background:transparent;
+  color:#2563eb;
+  font-size:12px;
+  cursor:pointer;
+  padding:0;
+}
+body[data-page-key="home"] .svc-promo-story-meta{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:6px;
+  font-size:12px;
+  color:#64748b;
 }
 .section-head{
   display:flex;
