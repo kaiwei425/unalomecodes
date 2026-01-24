@@ -8,6 +8,7 @@
   var langToggle = document.getElementById('langToggle');
   var heroQuizCta = document.querySelector('[data-hero-quiz-cta]');
   var heroTempleCta = document.querySelector('[data-hero-temple-cta]');
+  var homeConsultEditBtn = document.getElementById('homeConsultEditBtn');
 
   var LANG_KEY = 'uc_lang';
   var I18N = {
@@ -28,6 +29,7 @@
       'home-hero-title': '最懂玩泰國的入口',
       'home-hero-subtitle': '懂拜拜、懂美食、懂在地，把泰國整理成你用得上的資訊。',
       'home-hero-cta-primary': '1 分鐘找到你的守護神',
+      'home-hero-cta-consult': '立即預約電話算命',
       'home-hero-cta-secondary': '探索寺廟地圖',
       'home-hero-cta-note': '完成後會得到命中指引、行動建議與可下載的守護卡',
       'deity-state-template': '適合正在「{k1}、{k2}」階段的人，尤其當你需要更穩的「{s1}」時',
@@ -74,6 +76,10 @@
       'home-entry-service-desc': '提供泰國蠟燭、法會祈福及義德善堂代捐棺木行善等服務，都會提供影片及照片。',
       'home-entry-service-tag-1': '服務',
       'home-entry-service-tag-2': '影片及照片',
+      'home-entry-consult-title': '電話算命｜泰國老師',
+      'home-entry-consult-desc': '一對一電話諮詢＋即時翻譯，選擇中文或英文翻譯方案即可預約。',
+      'home-entry-consult-tag-1': '電話諮詢',
+      'home-entry-consult-tag-2': '即時翻譯',
       'home-entry-shop-title': 'Unalomecodes商城',
       'home-entry-shop-desc': '可先點選測驗與您有緣的神祇，找到與您共鳴的守護神，精選泰國佛牌及聖物。未來也會推出泰國必買/代購商品。',
       'home-entry-shop-tag-1': '精選',
@@ -85,7 +91,8 @@
       'about-creator-tag-1': '曼谷常駐',
       'about-creator-tag-2': '在地生活',
       'about-creator-tag-3': '在地美食寺廟介紹',
-      'about-back': '返回上一頁'
+      'about-back': '返回上一頁',
+      'home-consult-edit': '編輯'
     },
     en: {
       'nav-title': 'unalomecodes | Thailand Portal',
@@ -104,6 +111,7 @@
       'home-hero-title': 'Your Gateway to Thailand',
       'home-hero-subtitle': 'Temples, food, and local culture—organized into what you need.',
       'home-hero-cta-primary': 'Find your deity in 1 minute',
+      'home-hero-cta-consult': 'Book a phone consult',
       'home-hero-cta-secondary': 'Explore the temple map',
       'home-hero-cta-note': 'You’ll get insights, next-step actions, and a downloadable protection card.',
       'deity-state-template': 'Best for phases of “{k1}, {k2}”, especially when you need steadier “{s1}”.',
@@ -150,6 +158,10 @@
       'home-entry-service-desc': 'We provide Thai candle rituals, blessing ceremonies, and Yi De charity coffin donations—with video and photo proof.',
       'home-entry-service-tag-1': 'Services',
       'home-entry-service-tag-2': 'Video & Photos',
+      'home-entry-consult-title': 'Phone Consult | Thai Master',
+      'home-entry-consult-desc': '1:1 phone consult with live translation. Choose Chinese or English interpreting to book.',
+      'home-entry-consult-tag-1': 'Phone Session',
+      'home-entry-consult-tag-2': 'Live Translation',
       'home-entry-shop-title': 'Unalomecodes Shop',
       'home-entry-shop-desc': 'Take the quiz to find the deity that resonates with you, then explore curated Thai amulets and sacred items. More Thailand must-buys and sourcing services are coming.',
       'home-entry-shop-tag-1': 'Curated',
@@ -161,7 +173,8 @@
       'about-creator-tag-1': 'Based in Bangkok',
       'about-creator-tag-2': 'Local Life',
       'about-creator-tag-3': 'Local Food & Temples',
-      'about-back': 'Back'
+      'about-back': 'Back',
+      'home-consult-edit': 'Edit'
     }
   };
 
@@ -194,6 +207,25 @@
   function setLang(lang){
     try{ localStorage.setItem(LANG_KEY, lang); }catch(_){}
     applyLang(lang);
+  }
+
+  function initHomeConsultEditor(){
+    if (!homeConsultEditBtn) return;
+    if (!window.authState || typeof window.authState.onAdmin !== 'function') return;
+    window.authState.onAdmin(function(isAdmin){
+      if (typeof window.authState.hasAdminPermission === 'function'){
+        isAdmin = isAdmin && window.authState.hasAdminPermission('page_meta_edit');
+      }
+      homeConsultEditBtn.hidden = !isAdmin;
+    });
+    homeConsultEditBtn.addEventListener('click', function(){
+      function trigger(){
+        var toggle = document.getElementById('adminEditToggle');
+        if (toggle) toggle.click();
+      }
+      trigger();
+      setTimeout(trigger, 300);
+    });
   }
 
   function handleSubmit(event){
@@ -1555,6 +1587,7 @@
   }
 
   restoreHeroQuizCacheFromBackup();
+  initHomeConsultEditor();
   const initialProfile = getAuthProfile();
   if (initialProfile) syncLocalFromProfile(initialProfile);
   toggleHeroVisibility();
