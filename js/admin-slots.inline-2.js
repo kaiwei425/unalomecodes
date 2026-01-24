@@ -66,7 +66,24 @@
       status_held: '暫鎖',
       status_booked: '已預約',
       status_blocked: '未開放',
-      status_not_published: '未開放'
+      status_not_published: '未開放',
+      booking_mode_label: '預約模式',
+      booking_mode_legacy: '原本模式（一直可預約）',
+      booking_mode_windowed: '限時模式（手動開放）',
+      booking_window_minutes: '開放時長（分鐘）',
+      booking_publish_window: '一鍵上架 + 開放',
+      booking_close_window: '立即關閉預約',
+      booking_status_loading: '載入中…',
+      booking_status_legacy: '目前為原本模式（不限制預約時間窗）',
+      booking_status_active: '目前可預約：{from} - {until}（台灣時間）',
+      booking_status_inactive: '目前未開放預約（上次時間窗：{from} - {until}）',
+      booking_status_none: '目前未開放預約（尚未設定時間窗）',
+      booking_status_unavailable: '無法取得預約設定',
+      booking_confirm_publish: '確定要執行【一鍵上架 + 開放】？',
+      booking_confirm_switch: '目前為原本模式，是否切換為限時模式並開放？',
+      booking_confirm_close: '確定要立即關閉預約？',
+      booking_invalid_minutes: '請輸入開放時長（分鐘）',
+      booking_publish_in_progress: '已上架，設定開放中…'
     },
     en: {
       slots_title: 'Slot Management',
@@ -134,7 +151,24 @@
       status_held: 'Held',
       status_booked: 'Booked',
       status_blocked: 'Not published',
-      status_not_published: 'Not published'
+      status_not_published: 'Not published',
+      booking_mode_label: 'Booking mode',
+      booking_mode_legacy: 'Legacy (always open)',
+      booking_mode_windowed: 'Windowed (manual open)',
+      booking_window_minutes: 'Open duration (minutes)',
+      booking_publish_window: 'Publish + Open',
+      booking_close_window: 'Close booking now',
+      booking_status_loading: 'Loading…',
+      booking_status_legacy: 'Legacy mode (no booking window limit)',
+      booking_status_active: 'Booking open: {from} - {until} (Taipei time)',
+      booking_status_inactive: 'Booking closed (last window: {from} - {until})',
+      booking_status_none: 'Booking closed (no window configured)',
+      booking_status_unavailable: 'Unable to load booking config',
+      booking_confirm_publish: 'Run "Publish + Open" now?',
+      booking_confirm_switch: 'Currently in legacy mode. Switch to windowed and open now?',
+      booking_confirm_close: 'Close booking immediately?',
+      booking_invalid_minutes: 'Please enter open duration (minutes)',
+      booking_publish_in_progress: 'Published. Opening window...'
     }
   };
   var ADMIN_LANG = 'zh';
@@ -172,6 +206,7 @@
     var btnEn = document.getElementById('langEn');
     if (btnZh) btnZh.classList.toggle('is-active', ADMIN_LANG === 'zh');
     if (btnEn) btnEn.classList.toggle('is-active', ADMIN_LANG === 'en');
+    renderBookingWindowStatus();
   }
 
   function ensureServiceIdInput(){
@@ -227,7 +262,7 @@
   var adminSlotsWarning = document.getElementById('adminSlotsWarning');
   var langZh = document.getElementById('langZh');
   var langEn = document.getElementById('langEn');
-  var bookingModeSelect = document.getElementById('bookingModeSelect');
+  var bookingModeBtns = Array.from(document.querySelectorAll('.booking-mode-toggle .mode-btn'));
   var bookingWindowMinutes = document.getElementById('bookingWindowMinutes');
   var bookingWindowStatus = document.getElementById('bookingWindowStatus');
   var btnPublishWindow = document.getElementById('btnPublishWindow');
@@ -307,12 +342,12 @@
     if (!bookingWindowStatus) return;
     var mode = (currentSlotConfig && currentSlotConfig.bookingMode) ? currentSlotConfig.bookingMode : 'legacy';
     if (mode !== 'windowed'){
-      bookingWindowStatus.textContent = '目前為原本模式（不限制預約時間窗）';
+      bookingWindowStatus.textContent = t('booking_status_legacy');
       return;
     }
     var win = currentSlotConfig && currentSlotConfig.publishWindow ? currentSlotConfig.publishWindow : null;
     if (!win || !win.openFrom || !win.openUntil){
-      bookingWindowStatus.textContent = '目前未開放預約（尚未設定時間窗）';
+      bookingWindowStatus.textContent = t('booking_status_none');
       return;
     }
     var now = Date.now();
@@ -322,32 +357,37 @@
     var fromText = formatTaipeiTime(openFrom);
     var untilText = formatTaipeiTime(openUntil);
     if (active){
-      bookingWindowStatus.textContent = '目前可預約：' + fromText + ' - ' + untilText + '（台灣時間）';
+      bookingWindowStatus.textContent = t('booking_status_active').replace('{from}', fromText).replace('{until}', untilText);
     }else{
-      bookingWindowStatus.textContent = '目前未開放預約（上次時間窗：' + fromText + ' - ' + untilText + '）';
+      bookingWindowStatus.textContent = t('booking_status_inactive').replace('{from}', fromText).replace('{until}', untilText);
     }
+  }
+
+  function setBookingModeUI(mode){
+    var next = mode === 'windowed' ? 'windowed' : 'legacy';
+    bookingModeBtns.forEach(function(btn){
+      btn.classList.toggle('is-active', btn.dataset.mode === next);
+    });
   }
 
   function loadSlotConfig(serviceId){
     if (!serviceId) return;
-    if (bookingWindowStatus) bookingWindowStatus.textContent = '載入中…';
+    if (bookingWindowStatus) bookingWindowStatus.textContent = t('booking_status_loading');
     fetch('/api/admin/service/slots/config?serviceId=' + encodeURIComponent(serviceId), { credentials:'include', cache:'no-store' })
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
       .then(function(result){
         if (!result.ok){
           currentSlotConfig = { bookingMode:'legacy', publishWindow:null };
-          if (bookingWindowStatus) bookingWindowStatus.textContent = '無法取得預約設定';
+          if (bookingWindowStatus) bookingWindowStatus.textContent = t('booking_status_unavailable');
           return;
         }
         currentSlotConfig = result.data || { bookingMode:'legacy', publishWindow:null };
-        if (bookingModeSelect){
-          bookingModeSelect.value = currentSlotConfig.bookingMode || 'legacy';
-        }
+        setBookingModeUI(currentSlotConfig.bookingMode || 'legacy');
         renderBookingWindowStatus();
       })
       .catch(function(){
         currentSlotConfig = { bookingMode:'legacy', publishWindow:null };
-        if (bookingWindowStatus) bookingWindowStatus.textContent = '無法取得預約設定';
+        if (bookingWindowStatus) bookingWindowStatus.textContent = t('booking_status_unavailable');
       });
   }
 
@@ -894,7 +934,7 @@
           return;
         }
         currentSlotConfig = result.data || currentSlotConfig;
-        if (bookingModeSelect) bookingModeSelect.value = currentSlotConfig.bookingMode || 'legacy';
+        setBookingModeUI(currentSlotConfig.bookingMode || 'legacy');
         renderBookingWindowStatus();
         if (typeof onDone === 'function') onDone(true);
       })
@@ -911,16 +951,17 @@
       setStatus(t('msg_failed'), true);
       return;
     }
-    if (!confirm('確定要執行【一鍵上架 + 開放】？')) return;
+    if (!confirm(t('booking_confirm_publish'))) return;
     var serviceId = getServiceIdValue();
     var minutes = Number(bookingWindowMinutes && bookingWindowMinutes.value || 0);
     if (!Number.isFinite(minutes) || minutes <= 0){
-      setStatus('請輸入開放時長（分鐘）', true);
+      setStatus(t('booking_invalid_minutes'), true);
       return;
     }
-    var nextMode = bookingModeSelect ? bookingModeSelect.value : 'legacy';
+    var nextMode = (bookingModeBtns || []).find(function(btn){ return btn.classList.contains('is-active'); });
+    nextMode = nextMode ? nextMode.dataset.mode : 'legacy';
     if (nextMode !== 'windowed'){
-      var confirmSwitch = confirm('目前為原本模式，是否切換為限時模式並開放？');
+      var confirmSwitch = confirm(t('booking_confirm_switch'));
       if (!confirmSwitch) return;
       nextMode = 'windowed';
     }
@@ -933,7 +974,7 @@
           setStatus(t('msg_failed'), true);
           return;
         }
-        setStatus('已上架，設定開放中…');
+        setStatus(t('booking_publish_in_progress'));
         updateSlotConfig({ serviceId: serviceId, bookingMode: nextMode, openWindowMinutes: minutes }, function(){
           setButtonBusy(btnPublishWindow, false);
           loadSlots();
@@ -948,7 +989,7 @@
   function handleCloseWindow(){
     var serviceId = getServiceIdValue();
     if (!serviceId) return;
-    if (!confirm('確定要立即關閉預約？')) return;
+    if (!confirm(t('booking_confirm_close'))) return;
     setStatus(t('msg_loading'));
     setButtonBusy(btnCloseWindow, true);
     updateSlotConfig({ serviceId: serviceId, closeWindow: true }, function(){
@@ -1052,11 +1093,15 @@
     if (btnReleaseBooked) btnReleaseBooked.addEventListener('click', handleReleaseBooked);
     if (btnPublishWindow) btnPublishWindow.addEventListener('click', handlePublishWithWindow);
     if (btnCloseWindow) btnCloseWindow.addEventListener('click', handleCloseWindow);
-    if (bookingModeSelect){
-      bookingModeSelect.addEventListener('change', function(){
-        var serviceId = getServiceIdValue();
-        if (!serviceId) return;
-        updateSlotConfig({ serviceId: serviceId, bookingMode: bookingModeSelect.value });
+    if (bookingModeBtns.length){
+      bookingModeBtns.forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var mode = btn.dataset.mode || 'legacy';
+          setBookingModeUI(mode);
+          var serviceId = getServiceIdValue();
+          if (!serviceId) return;
+          updateSlotConfig({ serviceId: serviceId, bookingMode: mode });
+        });
       });
     }
     if (btnSelectAll) btnSelectAll.addEventListener('click', function(){

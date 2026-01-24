@@ -102,11 +102,55 @@ body.admin-slots-view .slot-controls input{
   appearance:auto;
   -webkit-appearance:auto;
 }
+body.admin-slots-view .slot-booking-controls{
+  grid-template-columns:minmax(0,1.4fr) minmax(140px,220px) minmax(220px,1fr);
+  align-items:end;
+}
+body.admin-slots-view .slot-booking-controls .slot-field{
+  min-width:0;
+}
+body.admin-slots-view .slot-booking-controls .slot-label{
+  font-size:13px;
+  font-weight:700;
+  color:var(--admin-muted);
+}
+body.admin-slots-view .slot-booking-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-start;
+}
+body.admin-slots-view .booking-mode-toggle{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+body.admin-slots-view .booking-mode-toggle .mode-btn{
+  height:36px;
+  padding:0 12px;
+  border-radius:10px;
+  font-size:13px;
+}
+body.admin-slots-view .booking-mode-toggle .mode-btn.is-active{
+  background:#0f172a;
+  color:#fff;
+  border-color:#0f172a;
+}
+body.admin-slots-view .slot-booking-controls .btn{
+  height:40px;
+}
 @media (max-width:900px){
   body.admin-slots-view .slot-controls{
     grid-template-columns:1fr;
   }
   body.admin-slots-view .slot-controls .btn{
+    width:100%;
+  }
+  body.admin-slots-view .slot-booking-controls{
+    grid-template-columns:1fr;
+  }
+  body.admin-slots-view .slot-booking-actions{
     width:100%;
   }
 }
