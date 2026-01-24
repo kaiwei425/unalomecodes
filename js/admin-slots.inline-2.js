@@ -92,6 +92,10 @@
       booking_publish_in_progress: '已上架，設定開放中…',
       booking_schedule_set: '已排程上架：{time}（{count} 個時段）',
       booking_schedule_none: '尚未設定排程上架',
+      booking_view_schedule: '查看已排程時段',
+      scheduled_list_title: '已排程時段',
+      scheduled_list_empty: '目前沒有已排程時段。',
+      schedule_close: '關閉',
       schedule_title: '排程開放時間',
       schedule_time_label: '預約開放時間（泰國時間，台灣時間+1）',
       schedule_time_hint: '請選擇要上架並開放預約的時間',
@@ -196,6 +200,10 @@
       booking_publish_in_progress: 'Published. Opening window...',
       booking_schedule_set: 'Scheduled: {time} ({count} slots)',
       booking_schedule_none: 'No scheduled publish',
+      booking_view_schedule: 'View scheduled slots',
+      scheduled_list_title: 'Scheduled slots',
+      scheduled_list_empty: 'No scheduled slots.',
+      schedule_close: 'Close',
       schedule_title: 'Schedule publish time',
       schedule_time_label: 'Publish time (Bangkok time, Taipei +1)',
       schedule_time_hint: 'Choose when to publish and open booking',
@@ -232,6 +240,9 @@
       var next = t(key);
       if (next && next !== key) node.textContent = next;
     });
+    if (schedulePublishAtInput){
+      schedulePublishAtInput.setAttribute('lang', ADMIN_LANG === 'en' ? 'en' : 'zh-TW');
+    }
     var consultTitle = document.querySelector('[data-i18n="consult_title"]');
     if (consultTitle) consultTitle.textContent = t('consult_title');
     var consultReload = document.getElementById('btnConsultReload');
@@ -308,6 +319,7 @@
   var bookingWindowStatus = document.getElementById('bookingWindowStatus');
   var btnPublishWindow = document.getElementById('btnPublishWindow');
   var bookingScheduleStatus = document.getElementById('bookingScheduleStatus');
+  var btnViewScheduled = document.getElementById('btnViewScheduled');
   var btnPublishSchedule = document.getElementById('btnPublishSchedule');
   var btnCancelSchedule = document.getElementById('btnCancelSchedule');
   var btnCloseWindow = document.getElementById('btnCloseWindow');
@@ -319,6 +331,9 @@
   var schedulePublishAtInput = document.getElementById('schedulePublishAtInput');
   var scheduleConfirmBtn = document.getElementById('scheduleConfirm');
   var scheduleCancelBtn = document.getElementById('scheduleCancel');
+  var scheduleListDialog = document.getElementById('scheduleListDialog');
+  var scheduleListContent = document.getElementById('scheduleListContent');
+  var scheduleListClose = document.getElementById('scheduleListClose');
   var currentSlotConfig = { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
   var selectedSlotKeys = new Set();
   var selectedSlotMeta = new Map();
@@ -436,16 +451,30 @@
     return yyf + '-' + mmf + '-' + ddf + 'T' + hhf + ':' + mif;
   }
 
+  function setScheduleChipState(state){
+    if (!bookingScheduleStatus) return;
+    bookingScheduleStatus.classList.remove('is-active', 'is-inactive', 'is-none');
+    if (state) bookingScheduleStatus.classList.add(state);
+  }
+
+  function setWindowChipState(state){
+    if (!bookingWindowStatus) return;
+    bookingWindowStatus.classList.remove('is-active', 'is-inactive', 'is-none');
+    if (state) bookingWindowStatus.classList.add(state);
+  }
+
   function renderBookingWindowStatus(){
     if (!bookingWindowStatus) return;
     var mode = (currentSlotConfig && currentSlotConfig.bookingMode) ? currentSlotConfig.bookingMode : 'legacy';
     if (mode !== 'windowed'){
       bookingWindowStatus.textContent = t('booking_status_legacy');
+      setWindowChipState('is-none');
       return;
     }
     var win = currentSlotConfig && currentSlotConfig.publishWindow ? currentSlotConfig.publishWindow : null;
     if (!win || !win.openFrom || !win.openUntil){
       bookingWindowStatus.textContent = t('booking_status_none');
+      setWindowChipState('is-none');
       return;
     }
     var now = Date.now();
@@ -456,8 +485,10 @@
     var untilText = formatTaipeiTime(openUntil);
     if (active){
       bookingWindowStatus.textContent = t('booking_status_active').replace('{from}', fromText).replace('{until}', untilText);
+      setWindowChipState('is-active');
     }else{
       bookingWindowStatus.textContent = t('booking_status_inactive').replace('{from}', fromText).replace('{until}', untilText);
+      setWindowChipState('is-inactive');
     }
   }
 
@@ -466,6 +497,8 @@
     var schedule = currentSlotConfig && currentSlotConfig.publishSchedule ? currentSlotConfig.publishSchedule : null;
     if (!schedule || !schedule.publishAt){
       bookingScheduleStatus.textContent = t('booking_schedule_none');
+      setScheduleChipState('is-none');
+      if (btnViewScheduled) btnViewScheduled.style.display = 'none';
       return;
     }
     var timeText = formatBangkokTime(schedule.publishAt);
@@ -473,6 +506,8 @@
     bookingScheduleStatus.textContent = t('booking_schedule_set')
       .replace('{time}', timeText)
       .replace('{count}', String(count || 0));
+    setScheduleChipState(Date.now() < Number(schedule.publishAt || 0) ? 'is-inactive' : 'is-active');
+    if (btnViewScheduled) btnViewScheduled.style.display = '';
   }
 
   function getSelectionStorageKey(serviceId){
@@ -1317,6 +1352,39 @@
     scheduleContext = null;
   }
 
+  function openScheduleListDialog(){
+    if (!scheduleListDialog || !scheduleListContent) return;
+    var schedule = currentSlotConfig && currentSlotConfig.publishSchedule ? currentSlotConfig.publishSchedule : null;
+    if (!schedule || !Array.isArray(schedule.slotKeys) || !schedule.slotKeys.length){
+      scheduleListContent.textContent = t('scheduled_list_empty');
+    }else{
+      var list = schedule.slotKeys.slice().sort(function(a,b){
+        return String(a).localeCompare(String(b));
+      });
+      scheduleListContent.innerHTML = '';
+      list.forEach(function(slotKey){
+        var row = document.createElement('div');
+        row.className = 'schedule-list-item';
+        row.textContent = formatSlotKey(slotKey);
+        scheduleListContent.appendChild(row);
+      });
+    }
+    if (typeof scheduleListDialog.showModal === 'function'){
+      scheduleListDialog.showModal();
+    }else{
+      scheduleListDialog.setAttribute('open', '');
+    }
+  }
+
+  function closeScheduleListDialog(){
+    if (!scheduleListDialog) return;
+    if (typeof scheduleListDialog.close === 'function'){
+      scheduleListDialog.close();
+    }else{
+      scheduleListDialog.removeAttribute('open');
+    }
+  }
+
   function confirmScheduleDialog(){
     if (!scheduleContext) return;
     var raw = String(schedulePublishAtInput && schedulePublishAtInput.value || '').trim();
@@ -1486,6 +1554,8 @@
     if (btnCloseWindow) btnCloseWindow.addEventListener('click', handleCloseWindow);
     if (scheduleCancelBtn) scheduleCancelBtn.addEventListener('click', closeScheduleDialog);
     if (scheduleConfirmBtn) scheduleConfirmBtn.addEventListener('click', confirmScheduleDialog);
+    if (btnViewScheduled) btnViewScheduled.addEventListener('click', openScheduleListDialog);
+    if (scheduleListClose) scheduleListClose.addEventListener('click', closeScheduleListDialog);
     if (btnClearSelectedAll) btnClearSelectedAll.addEventListener('click', clearSelectedAll);
     bindSelectionRowActions();
     if (bookingModeBtns.length){

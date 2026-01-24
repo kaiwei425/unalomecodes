@@ -61,8 +61,11 @@
               <button class="btn" id="btnCloseWindow" type="button" data-i18n="booking_close_window">立即關閉預約</button>
             </div>
           </div>
-          <div id="bookingWindowStatus" class="muted windowed-only" data-i18n="booking_status_loading" style="margin-top:6px;"></div>
-          <div id="bookingScheduleStatus" class="muted windowed-only" style="margin-top:4px;"></div>
+          <div id="bookingWindowStatus" class="schedule-chip windowed-only" data-i18n="booking_status_loading" style="margin-top:6px;"></div>
+          <div class="schedule-status windowed-only">
+            <div id="bookingScheduleStatus" class="schedule-chip"></div>
+            <button class="btn" id="btnViewScheduled" type="button" data-i18n="booking_view_schedule">查看已排程時段</button>
+          </div>
           <div class="slot-selected">
             <div class="slot-selected-head">
               <div class="slot-selected-title" data-i18n="selected_title">已選取時段</div>
@@ -123,6 +126,15 @@
       <div class="schedule-actions">
         <button type="button" class="btn" id="scheduleCancel" data-i18n="schedule_cancel">取消</button>
         <button type="button" class="btn primary" id="scheduleConfirm" data-i18n="schedule_confirm">確認排程</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="scheduleListDialog" class="schedule-dialog">
+    <div class="schedule-card">
+      <div class="schedule-title" data-i18n="scheduled_list_title">已排程時段</div>
+      <div id="scheduleListContent" class="schedule-list muted"></div>
+      <div class="schedule-actions">
+        <button type="button" class="btn primary" id="scheduleListClose" data-i18n="schedule_close">關閉</button>
       </div>
     </div>
   </dialog>

@@ -212,6 +212,63 @@ body.admin-slots-view .schedule-actions{
   justify-content:flex-end;
   gap:8px;
 }
+body.admin-slots-view .schedule-status{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:4px;
+}
+body.admin-slots-view .schedule-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  background:#f8fafc;
+  border:1px solid rgba(148,163,184,.4);
+  color:#0f172a;
+}
+body.admin-slots-view .schedule-chip::before{
+  content:'⏱';
+  font-size:12px;
+}
+body.admin-slots-view .schedule-chip.is-active{
+  background:#ecfdf3;
+  border-color:#86efac;
+  color:#166534;
+}
+body.admin-slots-view .schedule-chip.is-inactive{
+  background:#fff7ed;
+  border-color:#fdba74;
+  color:#9a3412;
+}
+body.admin-slots-view .schedule-chip.is-none{
+  background:#f1f5f9;
+  border-color:#e2e8f0;
+  color:#475569;
+}
+body.admin-slots-view .schedule-status .btn{
+  height:30px;
+  padding:0 10px;
+  border-radius:10px;
+  font-size:12px;
+}
+body.admin-slots-view .schedule-list{
+  max-height:240px;
+  overflow:auto;
+  display:grid;
+  gap:6px;
+  font-size:12px;
+}
+body.admin-slots-view .schedule-list-item{
+  padding:6px 8px;
+  border-radius:10px;
+  background:#f8fafc;
+  border:1px solid rgba(148,163,184,.25);
+}
 body.admin-slots-view .slot-selected{
   margin-top:12px;
   padding:10px 12px;
