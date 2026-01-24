@@ -300,6 +300,11 @@
     return /電話算命|電話|phone|consultation|占卜|算命/i.test(name);
   }
 
+  function resolveStoryCode(service){
+    const code = service && (service.reviewCode || service.deityCode || service.deity || service.code || resolveServiceId(service));
+    return String(code || '').trim().toUpperCase();
+  }
+
   function parsePromoTime(val){
     const raw = String(val || '').trim();
     if (!raw) return 0;
@@ -588,7 +593,7 @@
     promoStoryMsgEl.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
     if (promoStoryMoreBtn){
       promoStoryMoreBtn.style.display = promoStoryItems.length ? '' : 'none';
-      promoStoryMoreBtn.textContent = promoStoryExpanded ? '收起' : '查看全部';
+      promoStoryMoreBtn.textContent = '查看全部';
     }
     if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
     if (promoStoryTimeEl) promoStoryTimeEl.textContent = formatStoryTime(item && item.ts ? String(item.ts) : '');
@@ -622,15 +627,15 @@
 
   async function loadPromoStories(service){
     if (!promoStoriesEl) return;
-    const serviceId = String((service && resolveServiceId(service)) || 'SVT409059d4').trim();
-    if (!serviceId){
+    const storyCode = resolveStoryCode(service) || 'SVT409059d4';
+    if (!storyCode){
       promoStoriesEl.style.display = 'none';
       startPromoStoryRotation([]);
       return;
     }
     try{
       const cacheBust = Date.now();
-      const res = await fetch(`/api/stories?code=${encodeURIComponent(serviceId)}&_=${cacheBust}`);
+      const res = await fetch(`/api/stories?code=${encodeURIComponent(storyCode)}&_=${cacheBust}`);
       const data = await res.json().catch(()=>null);
       if (!res.ok || !data || data.ok === false){
         promoStoriesEl.style.display = 'none';
