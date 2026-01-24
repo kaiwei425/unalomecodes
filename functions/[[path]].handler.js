@@ -6040,7 +6040,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         await maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
+          notifyAdmin: false,
+          notifyCustomer: true,
+          emailContext:'status_update',
+          bilingual:false,
+          serialSend: true
+        });
+        await maybeSendOrderEmails(env, order, {
+          origin,
+          channel:'服務型商品',
           notifyAdmin: true,
+          notifyCustomer: false,
           adminEmails: ownerAdmins,
           emailContext:'status_update',
           bilingual:false,
