@@ -101,7 +101,8 @@
       selected_empty: '尚未選取時段。',
       selected_clear: '清空選取',
       selected_remove: '移除',
-      selected_count: '共 {count} 個時段'
+      selected_count: '共 {count} 個時段',
+      selected_need_publish: '請先選取要上架的時段'
     },
     en: {
       slots_title: 'Slot Management',
@@ -204,7 +205,8 @@
       selected_empty: 'No slots selected.',
       selected_clear: 'Clear selection',
       selected_remove: 'Remove',
-      selected_count: '{count} slots selected'
+      selected_count: '{count} slots selected',
+      selected_need_publish: 'Please select slots to publish'
     }
   };
   var ADMIN_LANG = 'zh';
@@ -288,7 +290,6 @@
   var slotPrevDay = document.getElementById('slotPrevDay');
   var slotNextDay = document.getElementById('slotNextDay');
   var slotTzHint = document.getElementById('slotTzHint');
-  var btnLoad = document.getElementById('btnLoad');
   var btnPublish = document.getElementById('btnPublish');
   var btnUnpublish = document.getElementById('btnUnpublish');
   var btnReleaseBooked = document.getElementById('btnReleaseBooked');
@@ -1260,7 +1261,10 @@
     if (!btnPublishSchedule) return;
     var slotKeys = collectSlotKeys('publish');
     if (!slotKeys.length){
-      setStatus(t('msg_failed'), true);
+      setStatus(t('selected_need_publish'), true);
+      if (selectedSlotsList && selectedSlotsList.scrollIntoView){
+        selectedSlotsList.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
       return;
     }
     var serviceId = getServiceIdValue();
@@ -1473,7 +1477,6 @@
       }
     }catch(_){}
     initDateNav();
-    if (btnLoad) btnLoad.addEventListener('click', loadSlots);
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
     if (btnReleaseBooked) btnReleaseBooked.addEventListener('click', handleReleaseBooked);
