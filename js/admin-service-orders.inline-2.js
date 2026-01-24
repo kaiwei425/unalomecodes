@@ -357,7 +357,11 @@
       const proofHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       const deleteHidden = IS_FULFILLMENT ? 'style="display:none"' : '';
       const safeId = escapeHtml(o.id || '');
-      const safeStatus = hasConsultStage && consultStage ? escapeHtml(consultStageLabel(consultStage)) : escapeHtml(o.status || '待處理');
+      const consultStatusLabel = hasConsultStage && consultStage ? consultStageLabel(consultStage) : '';
+      const safeStatus = hasConsultStage && consultStage ? escapeHtml(consultStatusLabel) : escapeHtml(o.status || '待處理');
+      const statusOptions = hasConsultStage && consultStage
+        ? `<option value="${escapeHtml(consultStatusLabel)}" selected>${escapeHtml(consultStatusLabel)}</option>`
+        : STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('');
       return `
         <div class="order-card" data-id="${safeId}">
           <div class="order-header">
@@ -390,7 +394,7 @@
           <div class="section">
             <strong>狀態</strong>
             <select data-id="${safeId}" class="statusSel" ${statusDisabled}>
-              ${STATUSES.map(st => `<option value="${st}" ${st === o.status ? 'selected':''}>${st}</option>`).join('')}
+              ${statusOptions}
             </select>
           </div>
           ${hasConsultStage ? `
@@ -482,7 +486,10 @@
           body: JSON.stringify({ id, consultStage })
         });
         const target = orders.find(o=> o.id === id);
-        if (target) target.consultStage = consultStage;
+        if (target){
+          target.consultStage = consultStage;
+          target.status = consultStageLabel(consultStage);
+        }
         render();
       }catch(err){
         alert('更新失敗：' + err.message);
