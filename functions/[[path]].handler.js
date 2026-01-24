@@ -622,6 +622,21 @@ function sanitizePermissionsForRole(role, perms){
 function sleepMs(ms){
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+function isRateLimitError(err){
+  if (!err) return false;
+  const msg = typeof err === 'string'
+    ? err
+    : (err.message || (()=>{ try{ return JSON.stringify(err); }catch(_){ return String(err); } })());
+  return /429|rate_limit|too many requests/i.test(msg);
+}
+
+function isRateLimitResult(result){
+  if (!result || result.ok) return false;
+  if (isRateLimitError(result.error) || isRateLimitError(result.reason)) return true;
+  const errors = Array.isArray(result.errors) ? result.errors : [];
+  return errors.some((entry)=> isRateLimitError(entry && (entry.error || entry.reason || entry)));
+}
 async function getAdminPermissionsForEmail(email, env, roleOverride){
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const role = roleOverride || await getAdminRole(normalizedEmail, env);
@@ -6033,6 +6048,14 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
     }catch(_){}
     try{
       const origin = new URL(request.url).origin;
+      const sendWithRetry = async (sendFn)=>{
+        let result = await sendFn();
+        if (isRateLimitResult(result)){
+          await sleepMs(1200);
+          result = await sendFn();
+        }
+        return result;
+      };
       if (stage === 'payment_confirmed'){
         const bookingEmails = await getBookingNotifyEmails(env);
         const extraBookingRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || env?.BOOKING_TO || '').trim();
@@ -6050,7 +6073,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           }catch(_){}
           ownerAdmins.push(normalized);
         }));
-        await maybeSendOrderEmails(env, order, {
+        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: false,
@@ -6058,9 +6081,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           emailContext:'status_update',
           bilingual:false,
           serialSend: true
-        });
+        }));
         await sleepMs(650);
-        await maybeSendOrderEmails(env, order, {
+        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: true,
@@ -6069,18 +6092,33 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           emailContext:'status_update',
           bilingual:false,
           serialSend: true
-        });
+        }));
         await sleepMs(650);
         const msg = buildBookingNotifyEmail(order, env);
         const internal = Array.from(new Set((bookingEmails || []).concat(extraBooking))).filter(Boolean);
         if (internal.length){
-          await sendEmailMessage(env, {
-            from: (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim(),
-            to: internal,
-            subject: msg.subject,
-            html: msg.html,
-            text: msg.text
-          });
+          try{
+            await sendEmailMessage(env, {
+              from: (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim(),
+              to: internal,
+              subject: msg.subject,
+              html: msg.html,
+              text: msg.text
+            });
+          }catch(err){
+            if (isRateLimitError(err)){
+              await sleepMs(1200);
+              await sendEmailMessage(env, {
+                from: (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim(),
+                to: internal,
+                subject: msg.subject,
+                html: msg.html,
+                text: msg.text
+              });
+            }else{
+              throw err;
+            }
+          }
         }else{
           console.warn('[booking] notify skipped: no recipients resolved');
         }
@@ -6097,7 +6135,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           }catch(_){}
           ownerAdmins.push(normalized);
         }));
-        await maybeSendOrderEmails(env, order, {
+        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: false,
@@ -6105,9 +6143,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           emailContext:'status_update',
           bilingual:false,
           serialSend:true
-        });
+        }));
         await sleepMs(650);
-        await maybeSendOrderEmails(env, order, {
+        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: true,
@@ -6116,7 +6154,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           emailContext:'status_update',
           bilingual:false,
           serialSend:true
-        });
+        }));
       }
     }catch(err){
       console.error('consult stage email error', err);
