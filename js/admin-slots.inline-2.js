@@ -71,7 +71,9 @@
       booking_mode_legacy: '原本模式（一直可預約）',
       booking_mode_windowed: '限時模式（手動開放）',
       booking_window_minutes: '開放時長（分鐘）',
+      booking_publish_at: '自動開放時間（台灣時間）',
       booking_publish_window: '一鍵上架 + 開放',
+      booking_publish_schedule: '排程上架 + 開放',
       booking_close_window: '立即關閉預約',
       booking_status_loading: '載入中…',
       booking_status_legacy: '目前為原本模式（不限制預約時間窗）',
@@ -80,10 +82,14 @@
       booking_status_none: '目前未開放預約（尚未設定時間窗）',
       booking_status_unavailable: '無法取得預約設定',
       booking_confirm_publish: '確定要執行【一鍵上架 + 開放】？',
+      booking_confirm_schedule: '確定要排程【上架 + 開放】？',
       booking_confirm_switch: '目前為原本模式，是否切換為限時模式並開放？',
       booking_confirm_close: '確定要立即關閉預約？',
       booking_invalid_minutes: '請輸入開放時長（分鐘）',
-      booking_publish_in_progress: '已上架，設定開放中…'
+      booking_invalid_publish_time: '請選擇排程時間',
+      booking_publish_in_progress: '已上架，設定開放中…',
+      booking_schedule_set: '已排程上架：{time}',
+      booking_schedule_none: '尚未設定排程上架'
     },
     en: {
       slots_title: 'Slot Management',
@@ -156,7 +162,9 @@
       booking_mode_legacy: 'Legacy (always open)',
       booking_mode_windowed: 'Windowed (manual open)',
       booking_window_minutes: 'Open duration (minutes)',
+      booking_publish_at: 'Auto publish time (Taipei time)',
       booking_publish_window: 'Publish + Open',
+      booking_publish_schedule: 'Schedule publish + open',
       booking_close_window: 'Close booking now',
       booking_status_loading: 'Loading…',
       booking_status_legacy: 'Legacy mode (no booking window limit)',
@@ -165,10 +173,14 @@
       booking_status_none: 'Booking closed (no window configured)',
       booking_status_unavailable: 'Unable to load booking config',
       booking_confirm_publish: 'Run "Publish + Open" now?',
+      booking_confirm_schedule: 'Schedule "Publish + Open"?',
       booking_confirm_switch: 'Currently in legacy mode. Switch to windowed and open now?',
       booking_confirm_close: 'Close booking immediately?',
       booking_invalid_minutes: 'Please enter open duration (minutes)',
-      booking_publish_in_progress: 'Published. Opening window...'
+      booking_invalid_publish_time: 'Please choose a schedule time',
+      booking_publish_in_progress: 'Published. Opening window...',
+      booking_schedule_set: 'Scheduled: {time}',
+      booking_schedule_none: 'No scheduled publish'
     }
   };
   var ADMIN_LANG = 'zh';
@@ -207,6 +219,7 @@
     if (btnZh) btnZh.classList.toggle('is-active', ADMIN_LANG === 'zh');
     if (btnEn) btnEn.classList.toggle('is-active', ADMIN_LANG === 'en');
     renderBookingWindowStatus();
+    renderBookingScheduleStatus();
   }
 
   function ensureServiceIdInput(){
@@ -266,8 +279,11 @@
   var bookingWindowMinutes = document.getElementById('bookingWindowMinutes');
   var bookingWindowStatus = document.getElementById('bookingWindowStatus');
   var btnPublishWindow = document.getElementById('btnPublishWindow');
+  var bookingPublishAt = document.getElementById('bookingPublishAt');
+  var bookingScheduleStatus = document.getElementById('bookingScheduleStatus');
+  var btnPublishSchedule = document.getElementById('btnPublishSchedule');
   var btnCloseWindow = document.getElementById('btnCloseWindow');
-  var currentSlotConfig = { bookingMode:'legacy', publishWindow:null };
+  var currentSlotConfig = { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
 
   function ensureServiceIdDisplay(){
     var wrap = document.querySelector('.slot-controls');
@@ -363,6 +379,17 @@
     }
   }
 
+  function renderBookingScheduleStatus(){
+    if (!bookingScheduleStatus) return;
+    var schedule = currentSlotConfig && currentSlotConfig.publishSchedule ? currentSlotConfig.publishSchedule : null;
+    if (!schedule || !schedule.publishAt){
+      bookingScheduleStatus.textContent = t('booking_schedule_none');
+      return;
+    }
+    var timeText = formatTaipeiTime(schedule.publishAt);
+    bookingScheduleStatus.textContent = t('booking_schedule_set').replace('{time}', timeText);
+  }
+
   function setBookingModeUI(mode){
     var next = mode === 'windowed' ? 'windowed' : 'legacy';
     bookingModeBtns.forEach(function(btn){
@@ -377,17 +404,20 @@
       .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(data){ return { ok: res.ok && data && data.ok, data: data || {} }; }); })
       .then(function(result){
         if (!result.ok){
-          currentSlotConfig = { bookingMode:'legacy', publishWindow:null };
+          currentSlotConfig = { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
           if (bookingWindowStatus) bookingWindowStatus.textContent = t('booking_status_unavailable');
+          if (bookingScheduleStatus) bookingScheduleStatus.textContent = t('booking_schedule_none');
           return;
         }
-        currentSlotConfig = result.data || { bookingMode:'legacy', publishWindow:null };
+        currentSlotConfig = result.data || { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
         setBookingModeUI(currentSlotConfig.bookingMode || 'legacy');
         renderBookingWindowStatus();
+        renderBookingScheduleStatus();
       })
       .catch(function(){
-        currentSlotConfig = { bookingMode:'legacy', publishWindow:null };
+        currentSlotConfig = { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
         if (bookingWindowStatus) bookingWindowStatus.textContent = t('booking_status_unavailable');
+        if (bookingScheduleStatus) bookingScheduleStatus.textContent = t('booking_schedule_none');
       });
   }
 
@@ -986,6 +1016,78 @@
       });
   }
 
+  function parsePublishAtInput(){
+    var raw = String(bookingPublishAt && bookingPublishAt.value || '').trim();
+    if (!raw) return 0;
+    var ts = Date.parse(raw);
+    return Number.isNaN(ts) ? 0 : ts;
+  }
+
+  function handlePublishSchedule(){
+    if (!btnPublishSchedule) return;
+    var slotKeys = collectSlotKeys('publish');
+    if (!slotKeys.length){
+      setStatus(t('msg_failed'), true);
+      return;
+    }
+    var publishAt = parsePublishAtInput();
+    if (!publishAt){
+      setStatus(t('booking_invalid_publish_time'), true);
+      return;
+    }
+    if (!confirm(t('booking_confirm_schedule'))) return;
+    var serviceId = getServiceIdValue();
+    var minutes = Number(bookingWindowMinutes && bookingWindowMinutes.value || 0);
+    if (!Number.isFinite(minutes) || minutes <= 0){
+      setStatus(t('booking_invalid_minutes'), true);
+      return;
+    }
+    var nextMode = (bookingModeBtns || []).find(function(btn){ return btn.classList.contains('is-active'); });
+    nextMode = nextMode ? nextMode.dataset.mode : 'legacy';
+    if (nextMode !== 'windowed'){
+      var confirmSwitch = confirm(t('booking_confirm_switch'));
+      if (!confirmSwitch) return;
+      nextMode = 'windowed';
+    }
+    setStatus(t('msg_loading'));
+    setButtonBusy(btnPublishSchedule, true);
+    postAction('/api/admin/service/slots/publish-schedule', {
+      serviceId: serviceId,
+      slotKeys: slotKeys,
+      publishAt: publishAt,
+      openWindowMinutes: minutes
+    })
+      .then(function(result){
+        if (!result.ok){
+          setButtonBusy(btnPublishSchedule, false);
+          setStatus(t('msg_failed'), true);
+          return;
+        }
+        var scheduleText = result.data && result.data.publishAt ? formatTaipeiTime(result.data.publishAt) : '';
+        if (result.data && result.data.executed){
+          setStatus(t('booking_publish_in_progress'));
+        }else if (scheduleText){
+          setStatus(t('booking_schedule_set').replace('{time}', scheduleText));
+        }else{
+          setStatus(t('msg_saved'));
+        }
+        var finish = function(){
+          setButtonBusy(btnPublishSchedule, false);
+          loadSlotConfig(serviceId);
+          loadSlots();
+        };
+        if (nextMode !== (currentSlotConfig && currentSlotConfig.bookingMode)){
+          updateSlotConfig({ serviceId: serviceId, bookingMode: nextMode }, finish);
+          return;
+        }
+        finish();
+      })
+      .catch(function(){
+        setButtonBusy(btnPublishSchedule, false);
+        setStatus(t('msg_failed'), true);
+      });
+  }
+
   function handleCloseWindow(){
     var serviceId = getServiceIdValue();
     if (!serviceId) return;
@@ -1092,6 +1194,7 @@
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
     if (btnReleaseBooked) btnReleaseBooked.addEventListener('click', handleReleaseBooked);
     if (btnPublishWindow) btnPublishWindow.addEventListener('click', handlePublishWithWindow);
+    if (btnPublishSchedule) btnPublishSchedule.addEventListener('click', handlePublishSchedule);
     if (btnCloseWindow) btnCloseWindow.addEventListener('click', handleCloseWindow);
     if (bookingModeBtns.length){
       bookingModeBtns.forEach(function(btn){
