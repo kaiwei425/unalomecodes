@@ -1140,45 +1140,6 @@ body[data-page-key="home"] .svc-promo-countdown{
   padding:2px 8px;
   border-radius:999px;
 }
-body[data-page-key="home"] .svc-promo-stories{
-  margin-top:8px;
-  padding:12px;
-  border:1px solid rgba(15,23,42,.08);
-  border-radius:12px;
-  background:#f8fafc;
-}
-body[data-page-key="home"] .svc-promo-stories-head{
-  font-size:12px;
-  font-weight:700;
-  color:#64748b;
-  margin-bottom:6px;
-}
-body[data-page-key="home"] .svc-promo-story-msg{
-  font-size:14px;
-  color:#0f172a;
-  line-height:1.6;
-  min-height:44px;
-  white-space:pre-wrap;
-  word-break:break-word;
-}
-body[data-page-key="home"] .svc-promo-story-meta{
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  margin-top:6px;
-  font-size:12px;
-  color:#64748b;
-}
-body[data-page-key="home"] .home-story-source{
-  display:none;
-  margin-top:12px;
-  padding-top:12px;
-  border-top:1px dashed rgba(148,163,184,.4);
-  font-size:12px;
-  color:#94a3b8;
-}
-body[data-page-key="home"] .home-story-source__item + .home-story-source__item{margin-top:10px;}
-body[data-page-key="home"].is-editing .home-story-source{display:block;}
 .section-head{
   display:flex;
   align-items:flex-start;

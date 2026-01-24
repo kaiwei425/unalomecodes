@@ -9,9 +9,6 @@
   var heroQuizCta = document.querySelector('[data-hero-quiz-cta]');
   var heroTempleCta = document.querySelector('[data-hero-temple-cta]');
   var homeConsultEditBtn = document.getElementById('homeConsultEditBtn');
-  var homeConsultStoryMsg = document.getElementById('homeConsultStoryMsg');
-  var homeConsultStoryName = document.getElementById('homeConsultStoryName');
-  var homeConsultStoryDate = document.getElementById('homeConsultStoryDate');
 
   var LANG_KEY = 'uc_lang';
   var I18N = {
@@ -34,7 +31,6 @@
       'home-hero-title': '最懂玩泰國的入口',
       'home-hero-subtitle': '懂拜拜、懂美食、懂在地，把泰國整理成你用得上的資訊。',
       'home-hero-cta-primary': '1 分鐘找到你的守護神',
-      'home-hero-cta-consult': '立即預約連線泰國老師',
       'home-hero-cta-secondary': '探索寺廟地圖',
       'home-hero-cta-note': '完成後會得到命中指引、行動建議與可下載的守護卡',
       'deity-state-template': '適合正在「{k1}、{k2}」階段的人，尤其當你需要更穩的「{s1}」時',
@@ -118,7 +114,6 @@
       'home-hero-title': 'Your Gateway to Thailand',
       'home-hero-subtitle': 'Temples, food, and local culture—organized into what you need.',
       'home-hero-cta-primary': 'Find your deity in 1 minute',
-      'home-hero-cta-consult': 'Book a Thai master call',
       'home-hero-cta-secondary': 'Explore the temple map',
       'home-hero-cta-note': 'You’ll get insights, next-step actions, and a downloadable protection card.',
       'deity-state-template': 'Best for phases of “{k1}, {k2}”, especially when you need steadier “{s1}”.',
@@ -235,34 +230,6 @@
     });
   }
 
-  function initHomeConsultStories(){
-    if (!homeConsultStoryMsg || !homeConsultStoryName || !homeConsultStoryDate) return;
-    var source = document.querySelector('.home-story-source');
-    if (!source) return;
-    var items = Array.from(source.querySelectorAll('.home-story-source__item')).map(function(item){
-      var msg = (item.querySelector('[data-edit-key$="-msg"]') || {}).textContent || '';
-      var name = (item.querySelector('[data-edit-key$="-name"]') || {}).textContent || '';
-      var date = (item.querySelector('[data-edit-key$="-date"]') || {}).textContent || '';
-      return {
-        msg: String(msg || '').trim(),
-        name: String(name || '').trim(),
-        date: String(date || '').trim()
-      };
-    }).filter(function(item){ return item.msg; });
-    if (!items.length) return;
-    var index = 0;
-    function render(){
-      var item = items[index % items.length];
-      homeConsultStoryMsg.textContent = item.msg;
-      homeConsultStoryName.textContent = item.name || '';
-      homeConsultStoryDate.textContent = item.date || '';
-      index = (index + 1) % items.length;
-    }
-    render();
-    if (items.length > 1){
-      setInterval(render, 6000);
-    }
-  }
 
   function handleSubmit(event){
     event.preventDefault();
@@ -1624,7 +1591,6 @@
 
   restoreHeroQuizCacheFromBackup();
   initHomeConsultEditor();
-  initHomeConsultStories();
   const initialProfile = getAuthProfile();
   if (initialProfile) syncLocalFromProfile(initialProfile);
   toggleHeroVisibility();
