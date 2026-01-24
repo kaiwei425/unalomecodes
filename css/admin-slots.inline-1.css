@@ -103,7 +103,7 @@ body.admin-slots-view .slot-controls input{
   -webkit-appearance:auto;
 }
 body.admin-slots-view .slot-booking-controls{
-  grid-template-columns:minmax(0,1.4fr) minmax(110px,150px) minmax(200px,240px) minmax(260px,1fr);
+  grid-template-columns:minmax(0,1.4fr) minmax(110px,150px) minmax(200px,240px);
   align-items:center;
 }
 body.admin-slots-view .slot-booking-controls .slot-field{
@@ -120,6 +120,7 @@ body.admin-slots-view .slot-booking-actions{
   gap:10px;
   flex-wrap:wrap;
   justify-content:flex-start;
+  grid-column:1/-1;
 }
 body.admin-slots-view .slot-booking-actions .btn{
   height:36px;

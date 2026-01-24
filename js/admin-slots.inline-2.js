@@ -18,7 +18,7 @@
       label_day: '日期',
       label_slots: '時段',
       label_service_auto: '已自動帶入 serviceId',
-      label_service_id: 'Service ID',
+      label_service_id: '服務 ID',
       label_select: '選取',
       label_release: '解除',
       msg_loading: '載入中…',
@@ -67,6 +67,7 @@
       status_booked: '已預約',
       status_blocked: '未開放',
       status_not_published: '未開放',
+      slot_tz_hint: '時段顯示：曼谷時間（UTC+7），台北時間請 +1 小時。',
       booking_mode_label: '預約模式',
       booking_mode_legacy: '原本模式（一直可預約）',
       booking_mode_windowed: '限時模式（手動開放）',
@@ -165,6 +166,7 @@
       status_booked: 'Booked',
       status_blocked: 'Not published',
       status_not_published: 'Not published',
+      slot_tz_hint: 'Slot times are Bangkok time (UTC+7); Taipei is +1 hour.',
       booking_mode_label: 'Booking mode',
       booking_mode_legacy: 'Legacy (always open)',
       booking_mode_windowed: 'Windowed (manual open)',
@@ -216,7 +218,9 @@
   function applyI18n(){
     document.querySelectorAll('[data-i18n]').forEach(function(node){
       var key = node.getAttribute('data-i18n');
-      if (key) node.textContent = t(key);
+      if (!key) return;
+      var next = t(key);
+      if (next && next !== key) node.textContent = next;
     });
     var consultTitle = document.querySelector('[data-i18n="consult_title"]');
     if (consultTitle) consultTitle.textContent = t('consult_title');
@@ -669,7 +673,7 @@
 
   function setTzHint(){
     if (!slotTzHint) return;
-    slotTzHint.textContent = '時段顯示：曼谷時間（UTC+7），台北時間請 +1 小時 / Slot times are Bangkok time (UTC+7); Taipei is +1 hour.';
+    slotTzHint.textContent = t('slot_tz_hint');
   }
 
   function getDateValue(){
