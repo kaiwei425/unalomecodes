@@ -64,6 +64,7 @@ body.service-view .svc-slot-section{
 body.service-view .svc-slot-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 body.service-view .svc-slot-title{font-weight:800;font-size:14px;color:#0f172a;}
 body.service-view .svc-slot-hint{font-size:12px;color:#64748b;}
+body.service-view .svc-slot-hint.is-alert{color:#b91c1c;font-weight:700;}
 body.service-view .svc-slot-days-nav{display:grid;grid-template-columns:32px 1fr 32px;align-items:center;gap:8px;}
 body.service-view .svc-slot-nav{
   border:1px solid var(--line);
@@ -138,8 +139,23 @@ body.service-view .svc-slot-state{font-size:12px;color:#64748b;}
 body.service-view .svc-slot-state.ok{color:#166534;}
 body.service-view .svc-slot-state.err{color:#b91c1c;}
 body.service-view .svc-slot-tz{font-size:12px;color:#94a3b8;margin-top:6px;}
-body.service-view .svc-slot-actions{margin-top:10px;}
+body.service-view .svc-slot-actions{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
 body.service-view .svc-slot-actions .btn{width:100%;}
+body.service-view .svc-slot-actions .btn.is-active{
+  background:#0f172a;
+  border-color:#0f172a;
+  color:#fff;
+}
+@media (max-width:640px){
+  body.service-view .svc-slot-actions{
+    grid-template-columns:1fr;
+  }
+}
 body.service-view .svc-pack{
   margin-top:12px;
   padding:12px;

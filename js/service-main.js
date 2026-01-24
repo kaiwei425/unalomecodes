@@ -194,6 +194,7 @@
   const slotTzHintEl = document.getElementById('svcSlotTzHint');
   const slotMoreBtn = document.getElementById('svcSlotMore');
   const slotRefreshBtn = document.getElementById('svcSlotRefresh');
+  const slotToggleBookableBtn = document.getElementById('svcSlotToggleBookable');
   const slotDaysPrev = document.getElementById('svcSlotDaysPrev');
   const slotDaysNext = document.getElementById('svcSlotDaysNext');
   const waitOverlay = document.getElementById('svcWaitOverlay');
@@ -258,6 +259,7 @@
   let slotDaysPage = 0;
   let slotHasMore = true;
   let slotPlaceholderMode = false;
+  let slotShowOnlyBookable = false;
   let FORCE_SLOT_REFRESH = false;
   const SLOT_DAYS_STEP = 10;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
@@ -265,6 +267,8 @@
   const SLOT_CACHE_TTL_MS = 30000;
   let SLOT_BOOKING_MODE = 'legacy';
   let SLOT_PUBLISH_WINDOW = null;
+  let slotWindowTimerId = null;
+  let SLOT_WINDOW_ACTIVE = null;
   let SKIP_AUTO_RESUME = false;
   let limitedTimer = null;
   let serviceItems = [];
@@ -1201,28 +1205,66 @@
     updateSlotHintText();
   }
 
+  function updateSlotToggleButton(){
+    if (!slotToggleBookableBtn) return;
+    slotToggleBookableBtn.classList.toggle('is-active', slotShowOnlyBookable);
+    slotToggleBookableBtn.textContent = slotShowOnlyBookable ? '顯示全部時段' : '只顯示可預約時段';
+  }
+
   function updateSlotHintText(){
     if (!slotHintEl) return;
     if (SLOT_BOOKING_MODE !== 'windowed'){
-      slotHintEl.textContent = '僅顯示可開放預約時段，（保留 15 分鐘）';
+      slotHintEl.textContent = '';
+      slotHintEl.classList.remove('is-alert');
+      if (SLOT_WINDOW_ACTIVE !== true){
+        SLOT_WINDOW_ACTIVE = true;
+        if (slotSection && slotSection.style.display !== 'none'){
+          refreshSlotDisplay();
+        }
+      }
+      if (slotWindowTimerId){
+        clearInterval(slotWindowTimerId);
+        slotWindowTimerId = null;
+      }
       return;
     }
     const win = SLOT_PUBLISH_WINDOW || {};
     const openFrom = Number(win.openFrom || 0);
     const openUntil = Number(win.openUntil || 0);
-    const now = Date.now();
-    const active = openFrom && openUntil && now >= openFrom && now < openUntil;
-    if (openFrom && openUntil){
-      const fromText = formatTaipeiDateTime(openFrom);
-      const untilText = formatTaipeiDateTime(openUntil);
-      if (active){
-        slotHintEl.textContent = `目前可預約：${fromText} - ${untilText}（台灣時間）`;
-      }else{
-        slotHintEl.textContent = `目前未開放預約（上次時間窗：${fromText} - ${untilText}）`;
-      }
+    if (!openFrom || !openUntil){
+      slotHintEl.textContent = '目前未開放預約';
+      slotHintEl.classList.remove('is-alert');
       return;
     }
-    slotHintEl.textContent = '目前未開放預約（尚未設定時間窗）';
+    const updateCountdown = ()=>{
+      const now = Date.now();
+      const remain = openUntil - now;
+      const windowActive = isPublishWindowActive();
+      if (SLOT_WINDOW_ACTIVE !== windowActive){
+        SLOT_WINDOW_ACTIVE = windowActive;
+        if (slotSection && slotSection.style.display !== 'none'){
+          refreshSlotDisplay();
+        }
+      }
+      if (remain <= 0){
+        slotHintEl.textContent = '目前未開放預約';
+        slotHintEl.classList.remove('is-alert');
+        if (slotWindowTimerId){
+          clearInterval(slotWindowTimerId);
+          slotWindowTimerId = null;
+        }
+        return;
+      }
+      const mins = Math.floor(remain / 60000);
+      const secs = Math.floor((remain % 60000) / 1000);
+      const mm = String(Math.max(0, mins)).padStart(2,'0');
+      const ss = String(Math.max(0, secs)).padStart(2,'0');
+      slotHintEl.textContent = `預約倒數 ${mm}:${ss}（台灣時間）`;
+      slotHintEl.classList.add('is-alert');
+    };
+    updateCountdown();
+    if (slotWindowTimerId) clearInterval(slotWindowTimerId);
+    slotWindowTimerId = setInterval(updateCountdown, 1000);
   }
 
   function isPublishWindowActive(){
@@ -1234,6 +1276,14 @@
     if (openUntil <= openFrom) return false;
     const now = Date.now();
     return now >= openFrom && now < openUntil;
+  }
+
+  function isSlotBookable(slot){
+    if (!slot) return false;
+    if (slot.bookable !== undefined) return !!slot.bookable;
+    const status = String(slot.status || 'free');
+    const enabled = slot.enabled !== false;
+    return enabled && status === 'free' && isPublishWindowActive();
   }
 
   function getConsultPackKeyFromStorage(){
@@ -1341,6 +1391,49 @@
     return (items || []).filter(day => day && day.date && day.date >= minDate);
   }
 
+  function filterBookableSlotItems(items){
+    if (!slotShowOnlyBookable) return items || [];
+    return (items || []).map(day=>{
+      if (!day || !Array.isArray(day.slots)) return null;
+      const slots = day.slots.filter(slot=> isSlotBookable(slot));
+      if (!slots.length) return null;
+      return { date: day.date, slots };
+    }).filter(Boolean);
+  }
+
+  function getDisplaySlotItems(){
+    return filterBookableSlotItems(slotItems);
+  }
+
+  function refreshSlotDisplay(){
+    const displayItems = getDisplaySlotItems();
+    if (!displayItems.length){
+      if (slotShowOnlyBookable){
+        if (slotDaysEl) slotDaysEl.style.display = 'none';
+        if (slotDaysPrev) slotDaysPrev.style.display = 'none';
+        if (slotDaysNext) slotDaysNext.style.display = 'none';
+        if (slotGridEl) slotGridEl.style.display = 'none';
+        setSlotStateText('目前暫無可預約時段', true);
+        if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+          detailAddBtn.disabled = true;
+          detailAddBtn.textContent = '目前無法預約';
+        }
+        return;
+      }
+      ensurePlaceholderSlots('目前暫無可預約時段', true);
+      return;
+    }
+    if (slotDaysEl) slotDaysEl.style.display = '';
+    if (slotDaysPrev) slotDaysPrev.style.display = '';
+    if (slotDaysNext) slotDaysNext.style.display = '';
+    if (slotGridEl) slotGridEl.style.display = '';
+    const activeDate = renderSlotDays(displayItems);
+    const activeItem = displayItems.find(day => day.date === activeDate) || displayItems[0];
+    if (activeItem) renderSlotGrid(activeItem);
+    setSlotStateText('', false);
+    updateAddBtnStateForSlot();
+  }
+
   function ensurePlaceholderSlots(msg, isError){
     const minDate = getMinSlotDateStr();
     if (!minDate) return;
@@ -1349,11 +1442,24 @@
       slotItems = buildPlaceholderDays(minDate, SLOT_DAYS_STEP);
     }
     if (!slotItems.length) return;
+    if (slotShowOnlyBookable){
+      if (slotDaysEl) slotDaysEl.style.display = 'none';
+      if (slotDaysPrev) slotDaysPrev.style.display = 'none';
+      if (slotDaysNext) slotDaysNext.style.display = 'none';
+      if (slotGridEl) slotGridEl.style.display = 'none';
+      setSlotStateText(msg || '目前暫無可預約時段', !!isError);
+      if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+        detailAddBtn.disabled = true;
+        detailAddBtn.textContent = '目前無法預約';
+      }
+      return;
+    }
     slotLastDate = slotItems[slotItems.length - 1].date || '';
     if (slotDaysEl) slotDaysEl.style.display = '';
     if (slotGridEl) slotGridEl.style.display = '';
-    const activeDate = renderSlotDays(slotItems);
-    const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
+    const displayItems = getDisplaySlotItems();
+    const activeDate = renderSlotDays(displayItems.length ? displayItems : slotItems);
+    const activeItem = displayItems.find(day => day.date === activeDate) || displayItems[0] || slotItems[0];
     if (activeItem) renderSlotGrid(activeItem);
     if (msg){
       setSlotStateText(msg, !!isError);
@@ -1877,9 +1983,7 @@
       slotItems = mergeSlotDays(slotItems, moreItems);
       slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
       if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
-      const activeDate = renderSlotDays(slotItems);
-      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
-      if (activeItem) renderSlotGrid(activeItem);
+      refreshSlotDisplay();
       setSlotStateText('目前暫無可預約時段', true);
       return;
     }
@@ -1898,9 +2002,7 @@
         slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
         slotPlaceholderMode = true;
         if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
-        const activeDate = renderSlotDays(slotItems);
-        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
-        if (activeItem) renderSlotGrid(activeItem);
+        refreshSlotDisplay();
         setSlotStateText('目前暫無可預約時段', true);
         return;
       }
@@ -1911,19 +2013,14 @@
         slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
         slotPlaceholderMode = true;
         if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
-        const activeDate = renderSlotDays(slotItems);
-        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
-        if (activeItem) renderSlotGrid(activeItem);
+        refreshSlotDisplay();
         setSlotStateText('目前暫無可預約時段', true);
         return;
       }
       slotItems = filterFutureSlotItems(mergeSlotDays(slotItems, moreItems));
       slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
       if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
-      const activeDate = renderSlotDays(slotItems);
-      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
-      if (activeItem) renderSlotGrid(activeItem);
-      setSlotStateText('');
+      refreshSlotDisplay();
       if (slotMoreBtn){
         slotMoreBtn.disabled = false;
         slotMoreBtn.textContent = '載入更多';
@@ -1934,9 +2031,7 @@
       slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : nextDate;
       slotPlaceholderMode = true;
       if (Number.isInteger(targetPage)) slotDaysPage = targetPage;
-      const activeDate = renderSlotDays(slotItems);
-      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
-      if (activeItem) renderSlotGrid(activeItem);
+      refreshSlotDisplay();
       setSlotStateText('目前暫無可預約時段', true);
     }finally{
       if (slotMoreBtn && slotMoreBtn.textContent !== '沒有更多時段'){
@@ -1988,8 +2083,7 @@
       btn.className = 'svc-slot-btn';
       const status = String(slot.status || 'free');
       const enabled = slot.enabled !== false;
-      const windowActive = isPublishWindowActive();
-      const bookable = slot.bookable !== undefined ? !!slot.bookable : (enabled && status === 'free' && windowActive);
+      const bookable = isSlotBookable(slot);
       btn.textContent = slot.time || '--:--';
       if (slot.slotKey) btn.dataset.slotKey = slot.slotKey;
       if (!bookable || status !== 'free'){
@@ -2320,6 +2414,15 @@
       slotRefreshBtn.disabled = false;
       slotRefreshBtn.textContent = '重新整理可預約時段';
     }
+    updateSlotToggleButton();
+    if (slotToggleBookableBtn && !slotToggleBookableBtn.__bound){
+      slotToggleBookableBtn.__bound = true;
+      slotToggleBookableBtn.addEventListener('click', ()=>{
+        slotShowOnlyBookable = !slotShowOnlyBookable;
+        updateSlotToggleButton();
+        refreshSlotDisplay();
+      });
+    }
     const serviceId = resolveServiceId(service);
     slotHasMore = true;
     slotDaysPage = 0;
@@ -2336,35 +2439,35 @@
     if (cachedItems && cachedItems.length){
       slotItems = cachedItems;
       slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : '';
-      if (slotDaysEl) slotDaysEl.style.display = '';
-      if (slotGridEl) slotGridEl.style.display = '';
-      const activeDate = renderSlotDays(slotItems);
-      const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[0];
-      if (activeItem) renderSlotGrid(activeItem);
-      setSlotStateText('顯示最近時段', false);
-      updateAddBtnStateForSlot();
+      refreshSlotDisplay();
     }else{
       ensurePlaceholderSlots('載入中…', false);
     }
     if (slotDaysPrev && !slotDaysPrev.__bound){
       slotDaysPrev.__bound = true;
       slotDaysPrev.addEventListener('click', ()=>{
+        const displayItems = getDisplaySlotItems();
+        if (slotShowOnlyBookable && !displayItems.length) return;
         if (slotDaysPage <= 0) return;
         slotDaysPage -= 1;
-        const activeDate = renderSlotDays(slotItems);
-        const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[slotDaysPage * SLOT_DAYS_STEP] || slotItems[0];
-        if (activeItem) renderSlotGrid(activeItem);
+        refreshSlotDisplay();
       });
     }
     if (slotDaysNext && !slotDaysNext.__bound){
       slotDaysNext.__bound = true;
       slotDaysNext.addEventListener('click', async ()=>{
-        const totalPages = Math.max(1, Math.ceil(slotItems.length / SLOT_DAYS_STEP));
+        const displayItems = getDisplaySlotItems();
+        if (slotShowOnlyBookable && !displayItems.length){
+          if (slotHasMore){
+            await loadMoreSlots(slotDaysPage + 1);
+          }
+          return;
+        }
+        const list = displayItems.length ? displayItems : slotItems;
+        const totalPages = Math.max(1, Math.ceil(list.length / SLOT_DAYS_STEP));
         if (slotDaysPage < totalPages - 1){
           slotDaysPage += 1;
-          const activeDate = renderSlotDays(slotItems);
-          const activeItem = slotItems.find(day => day.date === activeDate) || slotItems[slotDaysPage * SLOT_DAYS_STEP] || slotItems[0];
-          if (activeItem) renderSlotGrid(activeItem);
+          refreshSlotDisplay();
           return;
         }
         if (slotHasMore){
@@ -2398,11 +2501,7 @@
         slotItems = items;
         saveSlotCache(serviceId, items);
         slotLastDate = items.length ? (items[items.length - 1].date || '') : '';
-        if (slotDaysEl) slotDaysEl.style.display = '';
-        if (slotGridEl) slotGridEl.style.display = '';
-        const activeDate = renderSlotDays(items);
-        const activeItem = items.find(day => day.date === activeDate) || items[0];
-        if (activeItem) renderSlotGrid(activeItem);
+        refreshSlotDisplay();
         if (slotMoreBtn){
           slotMoreBtn.style.display = '';
           if (!slotMoreBtn.__bound){
@@ -2412,7 +2511,7 @@
           slotMoreBtn.disabled = false;
           slotMoreBtn.textContent = '載入更多';
         }
-        const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => slot.enabled !== false && String(slot.status || '') === 'free'));
+        const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => isSlotBookable(slot)));
         if (!hasFree){
           setSlotStateText('目前暫無可預約時段', true);
           if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
