@@ -1174,6 +1174,12 @@ body[data-page-key="home"] .svc-promo-story-msg{
   white-space:pre-wrap;
   word-break:break-word;
 }
+body[data-page-key="home"] .svc-promo-stories:not(.is-expanded) .svc-promo-story-msg{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:6;
+  overflow:hidden;
+}
 body[data-page-key="home"] .svc-promo-story-more{
   margin-top:6px;
   border:0;

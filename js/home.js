@@ -260,6 +260,7 @@
   var promoStoryTimer = null;
   var promoStoryItems = [];
   var promoStoryIndex = 0;
+  var promoStoryExpanded = false;
 
   function formatTWD(num){
     const n = Number(num || 0);
@@ -580,19 +581,28 @@
     promoStoryMsgEl.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
     if (promoStoryMoreBtn){
       promoStoryMoreBtn.style.display = promoStoryItems.length ? '' : 'none';
-      promoStoryMoreBtn.textContent = '顯示更多';
+      promoStoryMoreBtn.textContent = promoStoryExpanded ? '收起' : '查看全部';
     }
     if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
     if (promoStoryTimeEl) promoStoryTimeEl.textContent = formatStoryTime(item && item.ts ? String(item.ts) : '');
   }
 
-  function startPromoStoryRotation(items){
+  function stopPromoStoryRotation(){
     if (promoStoryTimer){
       clearInterval(promoStoryTimer);
       promoStoryTimer = null;
     }
-    promoStoryItems = Array.isArray(items) ? items : [];
-    promoStoryIndex = 0;
+  }
+
+  function setPromoStoryExpanded(next){
+    promoStoryExpanded = !!next;
+    if (promoStoriesEl) promoStoriesEl.classList.toggle('is-expanded', promoStoryExpanded);
+  }
+
+  function startPromoStoryRotation(items, keepIndex){
+    stopPromoStoryRotation();
+    if (Array.isArray(items)) promoStoryItems = items;
+    if (!keepIndex) promoStoryIndex = 0;
     if (!promoStoriesEl || !promoStoryItems.length){
       if (promoStoriesEl){
         promoStoriesEl.style.display = 'none';
@@ -600,8 +610,8 @@
       return;
     }
     promoStoriesEl.style.display = '';
-    renderPromoStory(promoStoryItems[0]);
-    if (promoStoryItems.length <= 1) return;
+    renderPromoStory(promoStoryItems[promoStoryIndex] || promoStoryItems[0]);
+    if (promoStoryItems.length <= 1 || promoStoryExpanded) return;
     promoStoryTimer = setInterval(()=>{
       promoStoryIndex = (promoStoryIndex + 1) % promoStoryItems.length;
       renderPromoStory(promoStoryItems[promoStoryIndex]);
@@ -631,6 +641,7 @@
         startPromoStoryRotation([]);
         return;
       }
+      setPromoStoryExpanded(false);
       startPromoStoryRotation(items.slice(0, 10));
     }catch(_){
       promoStoriesEl.style.display = 'none';
@@ -723,7 +734,14 @@
       });
       if (promoStoryMoreBtn){
         promoStoryMoreBtn.addEventListener('click', function(){
-          window.location.href = '/service?serviceId=' + encodeURIComponent(resolveServiceId(target));
+          if (!promoStoriesEl) return;
+          setPromoStoryExpanded(!promoStoryExpanded);
+          if (promoStoryExpanded){
+            stopPromoStoryRotation();
+          }else{
+            startPromoStoryRotation(null, true);
+          }
+          renderPromoStory(promoStoryItems[promoStoryIndex] || promoStoryItems[0]);
         });
       }
     }catch(_){}
