@@ -6080,7 +6080,37 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           console.warn('[booking] notify skipped: no recipients resolved');
         }
       }else{
-        await maybeSendOrderEmails(env, order, { origin, channel:'服務型商品', notifyAdmin:true, emailContext:'status_update', bilingual:false, serialSend:true });
+        const baseAdmins = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '')
+          .split(',').map(s => s.trim()).filter(Boolean);
+        const ownerAdmins = [];
+        await Promise.all(baseAdmins.map(async (email)=>{
+          const normalized = String(email || '').trim();
+          if (!normalized) return;
+          try{
+            const role = await getAdminRole(normalized, env);
+            if (role === 'booking') return;
+          }catch(_){}
+          ownerAdmins.push(normalized);
+        }));
+        await maybeSendOrderEmails(env, order, {
+          origin,
+          channel:'服務型商品',
+          notifyAdmin: false,
+          notifyCustomer: true,
+          emailContext:'status_update',
+          bilingual:false,
+          serialSend:true
+        });
+        await maybeSendOrderEmails(env, order, {
+          origin,
+          channel:'服務型商品',
+          notifyAdmin: true,
+          notifyCustomer: false,
+          adminEmails: ownerAdmins,
+          emailContext:'status_update',
+          bilingual:false,
+          serialSend:true
+        });
       }
     }catch(err){
       console.error('consult stage email error', err);
@@ -10442,7 +10472,22 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
         const extraBooking = extraBookingRaw ? extraBookingRaw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : [];
         const bookingSet = new Set((bookingEmails || []).concat(extraBooking).map(s => String(s || '').trim()).filter(Boolean));
         if (bookingSet.size){
-          adminRaw = adminRaw.filter(email => !bookingSet.has(String(email || '').trim()));
+          const next = [];
+          await Promise.all(adminRaw.map(async (email)=>{
+            const normalized = String(email || '').trim();
+            if (!normalized) return;
+            if (!bookingSet.has(normalized)){
+              next.push(normalized);
+              return;
+            }
+            try{
+              const role = await getAdminRole(normalized, env);
+              if (role && role !== 'booking'){
+                next.push(normalized);
+              }
+            }catch(_){}
+          }));
+          adminRaw = next;
         }
       }catch(_){}
     }
