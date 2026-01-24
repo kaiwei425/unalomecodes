@@ -1024,14 +1024,20 @@
     if (!emailNoticeEls.length) return;
     let text = '已寄出 Email 通知';
     let warn = false;
-    if (status && status.ok === false){
-      warn = true;
-      if (status.reason === 'missing_config'){
-        text = 'Email 尚未寄出（寄信設定缺失）';
-      }else if (status.reason === 'no_recipients'){
-        text = 'Email 尚未寄出（收件人未設定）';
-      }else{
-        text = 'Email 寄送失敗，請稍後再試';
+    if (status){
+      const sentCustomer = status.sentCustomer === true;
+      if (status.ok === false && sentCustomer){
+        warn = false;
+        text = '已寄出 Email 通知';
+      }else if (status.ok === false || status.sentCustomer === false){
+        warn = true;
+        if (status.reason === 'missing_config'){
+          text = 'Email 尚未寄出（寄信設定缺失）';
+        }else if (status.reason === 'no_recipients'){
+          text = 'Email 尚未寄出（收件人未設定）';
+        }else{
+          text = 'Email 寄送失敗，請稍後再試';
+        }
       }
     }
     emailNoticeEls.forEach(el=>{
