@@ -34,6 +34,14 @@
   var promoStoryMoreBtn = document.getElementById('svcPromoStoryMore');
   var promoStoryNameEl = document.getElementById('svcPromoStoryName');
   var promoStoryTimeEl = document.getElementById('svcPromoStoryTime');
+  var promoStoryModal = document.getElementById('homePromoStoryModal');
+  var promoStoryModalImg = document.getElementById('homePromoStoryImg');
+  var promoStoryModalMsg = document.getElementById('homePromoStoryMsg');
+  var promoStoryModalName = document.getElementById('homePromoStoryName');
+  var promoStoryModalTime = document.getElementById('homePromoStoryTime');
+  var promoStoryModalClose = document.getElementById('homePromoStoryClose');
+  var promoStoryModalPrev = document.getElementById('homePromoStoryPrev');
+  var promoStoryModalNext = document.getElementById('homePromoStoryNext');
   var promoMediaEl = document.querySelector('#homePhoneConsultPromo .svc-promo-media');
   var promoImgEl = document.getElementById('svcPromoImg');
   var promoPills = Array.from(document.querySelectorAll('#homePhoneConsultPromo .svc-pill'));
@@ -260,7 +268,6 @@
   var promoStoryTimer = null;
   var promoStoryItems = [];
   var promoStoryIndex = 0;
-  var promoStoryExpanded = false;
 
   function formatTWD(num){
     const n = Number(num || 0);
@@ -594,11 +601,6 @@
     }
   }
 
-  function setPromoStoryExpanded(next){
-    promoStoryExpanded = !!next;
-    if (promoStoriesEl) promoStoriesEl.classList.toggle('is-expanded', promoStoryExpanded);
-  }
-
   function startPromoStoryRotation(items, keepIndex){
     stopPromoStoryRotation();
     if (Array.isArray(items)) promoStoryItems = items;
@@ -611,7 +613,7 @@
     }
     promoStoriesEl.style.display = '';
     renderPromoStory(promoStoryItems[promoStoryIndex] || promoStoryItems[0]);
-    if (promoStoryItems.length <= 1 || promoStoryExpanded) return;
+    if (promoStoryItems.length <= 1) return;
     promoStoryTimer = setInterval(()=>{
       promoStoryIndex = (promoStoryIndex + 1) % promoStoryItems.length;
       renderPromoStory(promoStoryItems[promoStoryIndex]);
@@ -641,7 +643,6 @@
         startPromoStoryRotation([]);
         return;
       }
-      setPromoStoryExpanded(false);
       startPromoStoryRotation(items.slice(0, 10));
     }catch(_){
       promoStoriesEl.style.display = 'none';
@@ -734,17 +735,93 @@
       });
       if (promoStoryMoreBtn){
         promoStoryMoreBtn.addEventListener('click', function(){
-          if (!promoStoriesEl) return;
-          setPromoStoryExpanded(!promoStoryExpanded);
-          if (promoStoryExpanded){
-            stopPromoStoryRotation();
-          }else{
-            startPromoStoryRotation(null, true);
-          }
-          renderPromoStory(promoStoryItems[promoStoryIndex] || promoStoryItems[0]);
+          if (!promoStoryItems.length || !promoStoryModal) return;
+          openPromoStoryModal();
+        });
+      }
+      if (promoStoryModalClose){
+        promoStoryModalClose.addEventListener('click', closePromoStoryModal);
+      }
+      if (promoStoryModalPrev){
+        promoStoryModalPrev.addEventListener('click', function(){
+          if (!promoStoryItems.length) return;
+          promoStoryIndex = (promoStoryIndex - 1 + promoStoryItems.length) % promoStoryItems.length;
+          renderPromoStoryModal(promoStoryItems[promoStoryIndex]);
+        });
+      }
+      if (promoStoryModalNext){
+        promoStoryModalNext.addEventListener('click', function(){
+          if (!promoStoryItems.length) return;
+          promoStoryIndex = (promoStoryIndex + 1) % promoStoryItems.length;
+          renderPromoStoryModal(promoStoryItems[promoStoryIndex]);
         });
       }
     }catch(_){}
+  }
+
+  function renderPromoStoryModal(item){
+    if (!promoStoryModalMsg) return;
+    function escapeHtml(text){
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function formatStoryTime(ts){
+      try{
+        if (!ts) return '';
+        const date = new Date(ts);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'});
+      }catch(_){
+        return '';
+      }
+    }
+    function formatStoryMsgHtml(msg){
+      const raw = String(msg || '').trim();
+      if (!raw) return '目前尚無留言';
+      const escaped = escapeHtml(raw);
+      if (/\r|\n/.test(raw)){
+        return escaped.replace(/\r\n|\r|\n/g, '<br>');
+      }
+      return escaped.replace(/([。！？!?])\s*/g, '$1<br>');
+    }
+    if (promoStoryModalImg){
+      const imgUrl = item && (item.imageUrl || item.image || item.photo || item.pic) ? String(item.imageUrl || item.image || item.photo || item.pic) : '';
+      if (imgUrl){
+        promoStoryModalImg.src = imgUrl;
+        promoStoryModalImg.alt = item && item.nick ? String(item.nick) : '';
+        promoStoryModalImg.parentElement.style.display = '';
+      }else{
+        promoStoryModalImg.removeAttribute('src');
+        promoStoryModalImg.alt = '';
+        promoStoryModalImg.parentElement.style.display = 'none';
+      }
+    }
+    promoStoryModalMsg.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
+    if (promoStoryModalName) promoStoryModalName.textContent = item && item.nick ? String(item.nick) : '';
+    if (promoStoryModalTime) promoStoryModalTime.textContent = formatStoryTime(item && item.ts ? String(item.ts) : '');
+  }
+
+  function openPromoStoryModal(){
+    if (!promoStoryModal) return;
+    renderPromoStoryModal(promoStoryItems[promoStoryIndex] || promoStoryItems[0]);
+    if (typeof promoStoryModal.showModal === 'function'){
+      promoStoryModal.showModal();
+    }else{
+      promoStoryModal.setAttribute('open', 'open');
+    }
+  }
+
+  function closePromoStoryModal(){
+    if (!promoStoryModal) return;
+    if (typeof promoStoryModal.close === 'function'){
+      promoStoryModal.close();
+    }else{
+      promoStoryModal.removeAttribute('open');
+    }
   }
 
 

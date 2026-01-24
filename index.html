@@ -128,6 +128,10 @@
       </section>
       <section class="section" id="homePhoneConsultPromo">
         <div class="svc-promo">
+          <div class="home-promo-head">
+            <span class="home-promo-badge" data-edit-key="home-consult-badge">當前主打</span>
+            <span class="home-promo-sub" data-edit-key="home-consult-headline">每日台灣時間 20:00–21:00 開放預約</span>
+          </div>
           <div class="svc-promo-card">
             <button type="button" class="svc-promo-edit" id="homeConsultEditBtn" data-i18n="home-consult-edit" hidden>編輯</button>
             <div class="svc-promo-left">
@@ -179,6 +183,28 @@
             </div>
           </div>
         </div>
+        <dialog id="homePromoStoryModal" class="svc-story-modal">
+          <div class="svc-story-card">
+            <div class="svc-story-head">
+              <span class="svc-story-title">顧客反饋</span>
+              <button type="button" class="svc-story-close" id="homePromoStoryClose" aria-label="關閉">✕</button>
+            </div>
+            <div class="svc-story-body">
+              <div class="svc-story-media">
+                <img id="homePromoStoryImg" alt="">
+              </div>
+              <div id="homePromoStoryMsg" class="svc-story-msg"></div>
+              <div class="svc-story-meta">
+                <span id="homePromoStoryName"></span>
+                <span id="homePromoStoryTime"></span>
+              </div>
+            </div>
+            <div class="svc-story-actions">
+              <button type="button" class="btn" id="homePromoStoryPrev">上一則</button>
+              <button type="button" class="btn" id="homePromoStoryNext">下一則</button>
+            </div>
+          </div>
+        </dialog>
       </section>
       <div id="dailyFortuneModal" class="hero-modal" hidden>
         <div class="hero-modal__content">
