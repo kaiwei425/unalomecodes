@@ -618,6 +618,10 @@ function sanitizePermissionsForRole(role, perms){
   }
   return [];
 }
+
+function sleepMs(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 async function getAdminPermissionsForEmail(email, env, roleOverride){
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const role = roleOverride || await getAdminRole(normalizedEmail, env);
@@ -6040,10 +6044,9 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         await Promise.all(baseAdmins.map(async (email)=>{
           const normalized = String(email || '').trim();
           if (!normalized) return;
-          if (bookingSet.has(normalized)) return;
           try{
             const role = await getAdminRole(normalized, env);
-            if (role === 'booking') return;
+            if (bookingSet.has(normalized) && role === 'booking') return;
           }catch(_){}
           ownerAdmins.push(normalized);
         }));
@@ -6056,6 +6059,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend: true
         });
+        await sleepMs(650);
         await maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
@@ -6066,6 +6070,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend: true
         });
+        await sleepMs(650);
         const msg = buildBookingNotifyEmail(order, env);
         const internal = Array.from(new Set((bookingEmails || []).concat(extraBooking))).filter(Boolean);
         if (internal.length){
@@ -6101,6 +6106,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend:true
         });
+        await sleepMs(650);
         await maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
