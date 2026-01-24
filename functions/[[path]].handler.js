@@ -623,6 +623,17 @@ function sleepMs(ms){
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function getOrderCustomerEmail(order){
+  return (
+    order?.buyer?.email ||
+    order?.email ||
+    order?.contactEmail ||
+    order?.buyer_email ||
+    order?.recipientEmail ||
+    ''
+  ).trim();
+}
+
 function isRateLimitError(err){
   if (!err) return false;
   const msg = typeof err === 'string'
@@ -636,6 +647,48 @@ function isRateLimitResult(result){
   if (isRateLimitError(result.error) || isRateLimitError(result.reason)) return true;
   const errors = Array.isArray(result.errors) ? result.errors : [];
   return errors.some((entry)=> isRateLimitError(entry && (entry.error || entry.reason || entry)));
+}
+
+async function sendEmailWithRetry(env, payload){
+  try{
+    return await sendEmailMessage(env, payload);
+  }catch(err){
+    if (isRateLimitError(err)){
+      await sleepMs(1200);
+      return sendEmailMessage(env, payload);
+    }
+    throw err;
+  }
+}
+
+function buildStatusUpdateEmailPayload(order, env, opts = {}){
+  const siteName = (env.EMAIL_BRAND || env.SITE_NAME || 'Unalomecodes').trim();
+  const statusLabel = (order.status || '').trim();
+  const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || 'https://unalomecodes.com').replace(/\/$/, '');
+  const serviceLookupBase = env.SERVICE_LOOKUP_URL
+    ? env.SERVICE_LOOKUP_URL.replace(/\/$/, '')
+    : `${primarySite}/service`;
+  const defaultLookupBase = (env.ORDER_LOOKUP_URL || primarySite).replace(/\/$/, '');
+  const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || String(order?.method||'').includes('服務');
+  const lookupUrl = order.id
+    ? isServiceOrder
+      ? `${serviceLookupBase}#lookup=${encodeURIComponent(order.id)}`
+      : `${defaultLookupBase}/shop#lookup=${encodeURIComponent(order.id)}`
+    : '';
+  const channelLabel = opts.channel || order.method || '';
+  const imageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || primarySite;
+  const subjectPrefix = opts.admin ? `[${siteName}]` : siteName;
+  const subject = `${subjectPrefix} 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`;
+  const composeOpts = {
+    siteName,
+    lookupUrl,
+    channelLabel,
+    imageHost,
+    context: 'status_update',
+    blessingDone: statusLabel === '祈福完成'
+  };
+  const composed = composeOrderEmail(order, Object.assign({ admin: !!opts.admin }, composeOpts));
+  return { subject, html: composed.html, text: composed.text };
 }
 async function getAdminPermissionsForEmail(email, env, roleOverride){
   const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -6056,6 +6109,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         }
         return result;
       };
+      const fromDefault = (env.ORDER_EMAIL_FROM || env.RESEND_FROM || env.EMAIL_FROM || '').trim();
       if (stage === 'payment_confirmed'){
         const bookingEmails = await getBookingNotifyEmails(env);
         const extraBookingRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || env?.BOOKING_TO || '').trim();
@@ -6073,7 +6127,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           }catch(_){}
           ownerAdmins.push(normalized);
         }));
-        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
+        const customerResult = await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: false,
@@ -6083,7 +6137,20 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           serialSend: true
         }));
         await sleepMs(650);
-        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
+        if (fromDefault && customerResult && !customerResult.sentCustomer){
+          const customerEmail = getOrderCustomerEmail(order);
+          if (customerEmail){
+            const payload = buildStatusUpdateEmailPayload(order, env, { admin:false, channel:'服務型商品' });
+            await sendEmailWithRetry(env, {
+              from: fromDefault,
+              to: [customerEmail],
+              subject: payload.subject,
+              html: payload.html,
+              text: payload.text
+            });
+          }
+        }
+        const adminResult = await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: true,
@@ -6093,6 +6160,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend: true
         }));
+        await sleepMs(650);
+        if (fromDefault && adminResult && !adminResult.sentAdmin && ownerAdmins.length){
+          const payload = buildStatusUpdateEmailPayload(order, env, { admin:true, channel:'服務型商品' });
+          await sendEmailWithRetry(env, {
+            from: fromDefault,
+            to: ownerAdmins,
+            subject: payload.subject,
+            html: payload.html,
+            text: payload.text
+          });
+        }
         await sleepMs(650);
         const msg = buildBookingNotifyEmail(order, env);
         const internal = Array.from(new Set((bookingEmails || []).concat(extraBooking))).filter(Boolean);
@@ -6135,7 +6213,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           }catch(_){}
           ownerAdmins.push(normalized);
         }));
-        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
+        const customerResult = await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: false,
@@ -6145,7 +6223,20 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           serialSend:true
         }));
         await sleepMs(650);
-        await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
+        if (fromDefault && customerResult && !customerResult.sentCustomer){
+          const customerEmail = getOrderCustomerEmail(order);
+          if (customerEmail){
+            const payload = buildStatusUpdateEmailPayload(order, env, { admin:false, channel:'服務型商品' });
+            await sendEmailWithRetry(env, {
+              from: fromDefault,
+              to: [customerEmail],
+              subject: payload.subject,
+              html: payload.html,
+              text: payload.text
+            });
+          }
+        }
+        const adminResult = await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
           notifyAdmin: true,
@@ -6155,6 +6246,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend:true
         }));
+        await sleepMs(650);
+        if (fromDefault && adminResult && !adminResult.sentAdmin && ownerAdmins.length){
+          const payload = buildStatusUpdateEmailPayload(order, env, { admin:true, channel:'服務型商品' });
+          await sendEmailWithRetry(env, {
+            from: fromDefault,
+            to: ownerAdmins,
+            subject: payload.subject,
+            html: payload.html,
+            text: payload.text
+          });
+        }
       }
     }catch(err){
       console.error('consult stage email error', err);
