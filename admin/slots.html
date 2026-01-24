@@ -56,23 +56,23 @@
                 <button type="button" class="btn mode-btn" data-mode="windowed" data-i18n="booking_mode_windowed">限時模式（手動開放）</button>
               </div>
             </div>
-            <div class="slot-field slot-field-compact">
+            <div class="slot-field slot-field-compact windowed-only">
               <label for="bookingWindowMinutes" data-i18n="booking_window_minutes">開放時長（分鐘）</label>
               <input id="bookingWindowMinutes" type="number" min="15" step="5" value="60">
             </div>
-            <div class="slot-field slot-field-compact slot-field-time">
+            <div class="slot-field slot-field-compact slot-field-time windowed-only">
               <label for="bookingPublishAt" data-i18n="booking_publish_at">自動開放時間（台灣時間）</label>
               <input id="bookingPublishAt" type="datetime-local">
             </div>
-            <div class="slot-booking-actions">
+            <div class="slot-booking-actions windowed-only">
               <button class="btn primary" id="btnPublishWindow" type="button" data-i18n="booking_publish_window">一鍵上架 + 開放</button>
               <button class="btn" id="btnPublishSchedule" type="button" data-i18n="booking_publish_schedule">排程上架 + 開放</button>
               <button class="btn" id="btnCancelSchedule" type="button" data-i18n="booking_cancel_schedule">取消排程</button>
               <button class="btn" id="btnCloseWindow" type="button" data-i18n="booking_close_window">立即關閉預約</button>
             </div>
           </div>
-          <div id="bookingWindowStatus" class="muted" data-i18n="booking_status_loading" style="margin-top:6px;"></div>
-          <div id="bookingScheduleStatus" class="muted" style="margin-top:4px;"></div>
+          <div id="bookingWindowStatus" class="muted windowed-only" data-i18n="booking_status_loading" style="margin-top:6px;"></div>
+          <div id="bookingScheduleStatus" class="muted windowed-only" style="margin-top:4px;"></div>
           <div class="slot-selected">
             <div class="slot-selected-head">
               <div class="slot-selected-title" data-i18n="selected_title">已選取時段</div>

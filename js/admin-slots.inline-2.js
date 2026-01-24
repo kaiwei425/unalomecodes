@@ -306,6 +306,7 @@
   var selectedSlotsList = document.getElementById('selectedSlotsList');
   var selectedSlotsCount = document.getElementById('selectedSlotsCount');
   var btnClearSelectedAll = document.getElementById('btnClearSelectedAll');
+  var slotBookingControls = document.querySelector('.slot-booking-controls');
   var currentSlotConfig = { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
   var selectedSlotKeys = new Set();
   var selectedSlotMeta = new Map();
@@ -531,6 +532,11 @@
     bookingModeBtns.forEach(function(btn){
       btn.classList.toggle('is-active', btn.dataset.mode === next);
     });
+    if (slotBookingControls){
+      slotBookingControls.classList.toggle('is-windowed', next === 'windowed');
+      slotBookingControls.classList.toggle('is-legacy', next !== 'windowed');
+    }
+    document.body.classList.toggle('is-windowed-mode', next === 'windowed');
   }
 
   function loadSlotConfig(serviceId){

@@ -105,6 +105,30 @@ body.admin-slots-view .slot-controls input{
 body.admin-slots-view .slot-booking-controls{
   grid-template-columns:minmax(0,1.4fr) minmax(110px,150px) minmax(200px,240px);
   align-items:center;
+  padding:10px;
+  border-radius:12px;
+  border:1px solid transparent;
+}
+body.admin-slots-view .slot-booking-controls.is-legacy{
+  background:#f8fafc;
+  border-color:#e2e8f0;
+  grid-template-columns:minmax(0,1fr);
+}
+body.admin-slots-view .slot-booking-controls.is-windowed{
+  background:#fff7ed;
+  border-color:#fed7aa;
+}
+body.admin-slots-view .windowed-only{
+  display:none;
+}
+body.admin-slots-view.is-windowed-mode .windowed-only{
+  display:block;
+}
+body.admin-slots-view.is-windowed-mode .slot-booking-actions.windowed-only{
+  display:flex;
+}
+body.admin-slots-view.is-windowed-mode .slot-field.windowed-only{
+  display:flex;
 }
 body.admin-slots-view .slot-booking-controls .slot-field{
   min-width:0;
