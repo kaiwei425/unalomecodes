@@ -6036,7 +6036,17 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         const bookingSet = new Set((bookingEmails || []).concat(extraBooking).map(s => String(s || '').trim()).filter(Boolean));
         const baseAdmins = (env.ORDER_NOTIFY_EMAIL || env.ORDER_ALERT_EMAIL || env.ADMIN_EMAIL || '')
           .split(',').map(s => s.trim()).filter(Boolean);
-        const ownerAdmins = baseAdmins.filter(email => !bookingSet.has(String(email || '').trim()));
+        const ownerAdmins = [];
+        await Promise.all(baseAdmins.map(async (email)=>{
+          const normalized = String(email || '').trim();
+          if (!normalized) return;
+          if (bookingSet.has(normalized)) return;
+          try{
+            const role = await getAdminRole(normalized, env);
+            if (role === 'booking') return;
+          }catch(_){}
+          ownerAdmins.push(normalized);
+        }));
         await maybeSendOrderEmails(env, order, {
           origin,
           channel:'服務型商品',
@@ -10425,6 +10435,17 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       wrapBilingual = !!ctx.bilingual;
     }
     adminRaw = Array.from(new Set(adminRaw)).filter(Boolean);
+    if (adminRaw.length){
+      try{
+        const bookingEmails = await getBookingNotifyEmails(env);
+        const extraBookingRaw = String(env?.BOOKING_NOTIFY_EMAIL || env?.BOOKING_EMAIL || env?.BOOKING_ALERT_EMAIL || env?.BOOKING_TO || '').trim();
+        const extraBooking = extraBookingRaw ? extraBookingRaw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean) : [];
+        const bookingSet = new Set((bookingEmails || []).concat(extraBooking).map(s => String(s || '').trim()).filter(Boolean));
+        if (bookingSet.size){
+          adminRaw = adminRaw.filter(email => !bookingSet.has(String(email || '').trim()));
+        }
+      }catch(_){}
+    }
     const notifyAdmin = forceAdmin
       ? adminRaw.length > 0
       : (ctx.notifyAdmin === false ? false : adminRaw.length > 0);

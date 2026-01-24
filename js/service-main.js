@@ -1026,18 +1026,23 @@
     let warn = false;
     if (status){
       const sentCustomer = status.sentCustomer === true;
-      if (status.ok === false && sentCustomer){
+      const reason = status.reason || '';
+      const mustFail = reason === 'missing_config' || reason === 'no_recipients' || status.sentCustomer === false;
+      if (status.ok === false && !mustFail){
         warn = false;
         text = '已寄出 Email 通知';
       }else if (status.ok === false || status.sentCustomer === false){
         warn = true;
-        if (status.reason === 'missing_config'){
+        if (reason === 'missing_config'){
           text = 'Email 尚未寄出（寄信設定缺失）';
-        }else if (status.reason === 'no_recipients'){
+        }else if (reason === 'no_recipients'){
           text = 'Email 尚未寄出（收件人未設定）';
         }else{
           text = 'Email 寄送失敗，請稍後再試';
         }
+      }else if (sentCustomer){
+        warn = false;
+        text = '已寄出 Email 通知';
       }
     }
     emailNoticeEls.forEach(el=>{
