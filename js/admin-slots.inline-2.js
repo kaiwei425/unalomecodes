@@ -72,7 +72,6 @@
       booking_mode_legacy: '原本模式（一直可預約）',
       booking_mode_windowed: '限時模式（手動開放）',
       booking_window_minutes: '開放時長（分鐘）',
-      booking_publish_at: '自動開放時間（泰國時間，台灣時間+1）',
       booking_publish_window: '一鍵上架 + 開放',
       booking_publish_schedule: '排程上架 + 開放',
       booking_cancel_schedule: '取消排程',
@@ -93,6 +92,11 @@
       booking_publish_in_progress: '已上架，設定開放中…',
       booking_schedule_set: '已排程上架：{time}（{count} 個時段）',
       booking_schedule_none: '尚未設定排程上架',
+      schedule_title: '排程開放時間',
+      schedule_time_label: '預約開放時間（泰國時間，台灣時間+1）',
+      schedule_time_hint: '請選擇要上架並開放預約的時間',
+      schedule_confirm: '確認排程',
+      schedule_cancel: '取消',
       selected_title: '已選取時段',
       selected_empty: '尚未選取時段。',
       selected_clear: '清空選取',
@@ -171,7 +175,6 @@
       booking_mode_legacy: 'Legacy (always open)',
       booking_mode_windowed: 'Windowed (manual open)',
       booking_window_minutes: 'Open duration (minutes)',
-      booking_publish_at: 'Auto publish time (Bangkok time, Taipei +1)',
       booking_publish_window: 'Publish + Open',
       booking_publish_schedule: 'Schedule publish + open',
       booking_cancel_schedule: 'Cancel schedule',
@@ -192,6 +195,11 @@
       booking_publish_in_progress: 'Published. Opening window...',
       booking_schedule_set: 'Scheduled: {time} ({count} slots)',
       booking_schedule_none: 'No scheduled publish',
+      schedule_title: 'Schedule publish time',
+      schedule_time_label: 'Publish time (Bangkok time, Taipei +1)',
+      schedule_time_hint: 'Choose when to publish and open booking',
+      schedule_confirm: 'Confirm',
+      schedule_cancel: 'Cancel',
       selected_title: 'Selected slots',
       selected_empty: 'No slots selected.',
       selected_clear: 'Clear selection',
@@ -298,7 +306,6 @@
   var bookingWindowMinutes = document.getElementById('bookingWindowMinutes');
   var bookingWindowStatus = document.getElementById('bookingWindowStatus');
   var btnPublishWindow = document.getElementById('btnPublishWindow');
-  var bookingPublishAt = document.getElementById('bookingPublishAt');
   var bookingScheduleStatus = document.getElementById('bookingScheduleStatus');
   var btnPublishSchedule = document.getElementById('btnPublishSchedule');
   var btnCancelSchedule = document.getElementById('btnCancelSchedule');
@@ -307,10 +314,15 @@
   var selectedSlotsCount = document.getElementById('selectedSlotsCount');
   var btnClearSelectedAll = document.getElementById('btnClearSelectedAll');
   var slotBookingControls = document.querySelector('.slot-booking-controls');
+  var scheduleDialog = document.getElementById('scheduleDialog');
+  var schedulePublishAtInput = document.getElementById('schedulePublishAtInput');
+  var scheduleConfirmBtn = document.getElementById('scheduleConfirm');
+  var scheduleCancelBtn = document.getElementById('scheduleCancel');
   var currentSlotConfig = { bookingMode:'legacy', publishWindow:null, publishSchedule:null };
   var selectedSlotKeys = new Set();
   var selectedSlotMeta = new Map();
   var selectedServiceId = '';
+  var scheduleContext = null;
 
   function ensureServiceIdDisplay(){
     var wrap = document.querySelector('.slot-controls');
@@ -381,6 +393,48 @@
     }
   }
 
+  function formatBangkokTime(ts){
+    if (!ts) return '';
+    try{
+      return new Date(ts).toLocaleString('zh-TW', { timeZone:'Asia/Bangkok', hour12:false });
+    }catch(_){
+      return new Date(ts).toLocaleString('zh-TW', { hour12:false });
+    }
+  }
+
+  function formatBangkokDateTimeLocal(ts){
+    var date = ts ? new Date(ts) : new Date();
+    try{
+      var fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone:'Asia/Bangkok',
+        year:'numeric',
+        month:'2-digit',
+        day:'2-digit',
+        hour:'2-digit',
+        minute:'2-digit',
+        hour12:false
+      });
+      var parts = fmt.formatToParts(date);
+      var pick = function(type){
+        var found = parts.find(function(p){ return p.type === type; });
+        return found ? found.value : '';
+      };
+      var yy = pick('year');
+      var mm = pick('month');
+      var dd = pick('day');
+      var hh = pick('hour');
+      var mi = pick('minute');
+      if (yy && mm && dd && hh && mi) return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + mi;
+    }catch(_){}
+    var fallback = new Date(date.getTime());
+    var yyf = fallback.getFullYear();
+    var mmf = String(fallback.getMonth() + 1).padStart(2,'0');
+    var ddf = String(fallback.getDate()).padStart(2,'0');
+    var hhf = String(fallback.getHours()).padStart(2,'0');
+    var mif = String(fallback.getMinutes()).padStart(2,'0');
+    return yyf + '-' + mmf + '-' + ddf + 'T' + hhf + ':' + mif;
+  }
+
   function renderBookingWindowStatus(){
     if (!bookingWindowStatus) return;
     var mode = (currentSlotConfig && currentSlotConfig.bookingMode) ? currentSlotConfig.bookingMode : 'legacy';
@@ -413,7 +467,7 @@
       bookingScheduleStatus.textContent = t('booking_schedule_none');
       return;
     }
-    var timeText = formatTaipeiTime(schedule.publishAt);
+    var timeText = formatBangkokTime(schedule.publishAt);
     var count = Array.isArray(schedule.slotKeys) ? schedule.slotKeys.length : Number(schedule.slotCount || 0);
     bookingScheduleStatus.textContent = t('booking_schedule_set')
       .replace('{time}', timeText)
@@ -1185,12 +1239,12 @@
       });
   }
 
-  function parsePublishAtInput(){
-    var raw = String(bookingPublishAt && bookingPublishAt.value || '').trim();
-    if (!raw) return 0;
-    var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  function parsePublishAtInput(raw){
+    var input = String(raw || '').trim();
+    if (!input) return 0;
+    var match = input.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
     if (!match){
-      var direct = Date.parse(raw);
+      var direct = Date.parse(input);
       return Number.isNaN(direct) ? 0 : direct;
     }
     var y = Number(match[1]);
@@ -1199,7 +1253,7 @@
     var hh = Number(match[4]);
     var mm = Number(match[5]);
     if (!y || !m || !d || !Number.isFinite(hh) || !Number.isFinite(mm)) return 0;
-    return Date.UTC(y, m - 1, d, hh - 8, mm);
+    return Date.UTC(y, m - 1, d, hh - 7, mm);
   }
 
   function handlePublishSchedule(){
@@ -1209,63 +1263,21 @@
       setStatus(t('msg_failed'), true);
       return;
     }
-    var publishAt = parsePublishAtInput();
-    if (!publishAt){
-      setStatus(t('booking_invalid_publish_time'), true);
-      return;
-    }
-    if (!confirm(t('booking_confirm_schedule'))) return;
     var serviceId = getServiceIdValue();
     var minutes = Number(bookingWindowMinutes && bookingWindowMinutes.value || 0);
     if (!Number.isFinite(minutes) || minutes <= 0){
       setStatus(t('booking_invalid_minutes'), true);
       return;
     }
-    var nextMode = (bookingModeBtns || []).find(function(btn){ return btn.classList.contains('is-active'); });
-    nextMode = nextMode ? nextMode.dataset.mode : 'legacy';
-    if (nextMode !== 'windowed'){
-      var confirmSwitch = confirm(t('booking_confirm_switch'));
-      if (!confirmSwitch) return;
-      nextMode = 'windowed';
+    scheduleContext = { serviceId: serviceId, slotKeys: slotKeys, minutes: minutes };
+    if (schedulePublishAtInput){
+      schedulePublishAtInput.value = formatBangkokDateTimeLocal(Date.now());
     }
-    setStatus(t('msg_loading'));
-    setButtonBusy(btnPublishSchedule, true);
-    postAction('/api/admin/service/slots/publish-schedule', {
-      serviceId: serviceId,
-      slotKeys: slotKeys,
-      publishAt: publishAt,
-      openWindowMinutes: minutes
-    })
-      .then(function(result){
-        if (!result.ok){
-          setButtonBusy(btnPublishSchedule, false);
-          setStatus(t('msg_failed'), true);
-          return;
-        }
-        var scheduleText = result.data && result.data.publishAt ? formatTaipeiTime(result.data.publishAt) : '';
-        if (result.data && result.data.executed){
-          setStatus(t('booking_publish_in_progress'));
-        }else if (scheduleText){
-          setStatus(t('booking_schedule_set').replace('{time}', scheduleText));
-        }else{
-          setStatus(t('msg_saved'));
-        }
-        var finish = function(){
-          setButtonBusy(btnPublishSchedule, false);
-          clearSelectionAfterPublish();
-          loadSlotConfig(serviceId);
-          loadSlots();
-        };
-        if (nextMode !== (currentSlotConfig && currentSlotConfig.bookingMode)){
-          updateSlotConfig({ serviceId: serviceId, bookingMode: nextMode }, finish);
-          return;
-        }
-        finish();
-      })
-      .catch(function(){
-        setButtonBusy(btnPublishSchedule, false);
-        setStatus(t('msg_failed'), true);
-      });
+    if (scheduleDialog && typeof scheduleDialog.showModal === 'function'){
+      scheduleDialog.showModal();
+    }else if (scheduleDialog){
+      scheduleDialog.setAttribute('open', '');
+    }
   }
 
   function handleCancelSchedule(){
@@ -1288,6 +1300,75 @@
       .catch(function(){
         setButtonBusy(btnCancelSchedule, false);
         setStatus(t('msg_failed'), true);
+      });
+  }
+
+  function closeScheduleDialog(){
+    if (!scheduleDialog) return;
+    if (typeof scheduleDialog.close === 'function'){
+      scheduleDialog.close();
+    }else{
+      scheduleDialog.removeAttribute('open');
+    }
+    scheduleContext = null;
+  }
+
+  function confirmScheduleDialog(){
+    if (!scheduleContext) return;
+    var raw = String(schedulePublishAtInput && schedulePublishAtInput.value || '').trim();
+    var publishAt = parsePublishAtInput(raw);
+    if (!publishAt){
+      setStatus(t('booking_invalid_publish_time'), true);
+      return;
+    }
+    if (!confirm(t('booking_confirm_schedule'))) return;
+    var nextMode = (bookingModeBtns || []).find(function(btn){ return btn.classList.contains('is-active'); });
+    nextMode = nextMode ? nextMode.dataset.mode : 'legacy';
+    if (nextMode !== 'windowed'){
+      var confirmSwitch = confirm(t('booking_confirm_switch'));
+      if (!confirmSwitch) return;
+      nextMode = 'windowed';
+    }
+    setStatus(t('msg_loading'));
+    setButtonBusy(btnPublishSchedule, true);
+    postAction('/api/admin/service/slots/publish-schedule', {
+      serviceId: scheduleContext.serviceId,
+      slotKeys: scheduleContext.slotKeys,
+      publishAt: publishAt,
+      openWindowMinutes: scheduleContext.minutes
+    })
+      .then(function(result){
+        if (!result.ok){
+          setButtonBusy(btnPublishSchedule, false);
+          setStatus(t('msg_failed'), true);
+          return;
+        }
+        var scheduleText = result.data && result.data.publishAt ? formatBangkokTime(result.data.publishAt) : '';
+        if (result.data && result.data.executed){
+          setStatus(t('booking_publish_in_progress'));
+        }else if (scheduleText){
+          setStatus(t('booking_schedule_set').replace('{time}', scheduleText).replace('{count}', String(scheduleContext.slotKeys.length)));
+        }else{
+          setStatus(t('msg_saved'));
+        }
+        var finish = function(){
+          setButtonBusy(btnPublishSchedule, false);
+          clearSelectionAfterPublish();
+          loadSlotConfig(scheduleContext.serviceId);
+          loadSlots();
+        };
+        if (nextMode !== (currentSlotConfig && currentSlotConfig.bookingMode)){
+          updateSlotConfig({ serviceId: scheduleContext.serviceId, bookingMode: nextMode }, finish);
+          return;
+        }
+        finish();
+      })
+      .catch(function(){
+        setButtonBusy(btnPublishSchedule, false);
+        setStatus(t('msg_failed'), true);
+      })
+      .finally(function(){
+        closeScheduleDialog();
       });
   }
 
@@ -1400,6 +1481,8 @@
     if (btnPublishSchedule) btnPublishSchedule.addEventListener('click', handlePublishSchedule);
     if (btnCancelSchedule) btnCancelSchedule.addEventListener('click', handleCancelSchedule);
     if (btnCloseWindow) btnCloseWindow.addEventListener('click', handleCloseWindow);
+    if (scheduleCancelBtn) scheduleCancelBtn.addEventListener('click', closeScheduleDialog);
+    if (scheduleConfirmBtn) scheduleConfirmBtn.addEventListener('click', confirmScheduleDialog);
     if (btnClearSelectedAll) btnClearSelectedAll.addEventListener('click', clearSelectedAll);
     bindSelectionRowActions();
     if (bookingModeBtns.length){

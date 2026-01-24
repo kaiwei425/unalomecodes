@@ -55,10 +55,6 @@
               <label for="bookingWindowMinutes" data-i18n="booking_window_minutes">開放時長（分鐘）</label>
               <input id="bookingWindowMinutes" type="number" min="15" step="5" value="60">
             </div>
-            <div class="slot-field slot-field-compact slot-field-time windowed-only">
-              <label for="bookingPublishAt" data-i18n="booking_publish_at">自動開放時間（台灣時間）</label>
-              <input id="bookingPublishAt" type="datetime-local">
-            </div>
             <div class="slot-booking-actions windowed-only">
               <button class="btn primary" id="btnPublishWindow" type="button" data-i18n="booking_publish_window">一鍵上架 + 開放</button>
               <button class="btn" id="btnPublishSchedule" type="button" data-i18n="booking_publish_schedule">排程上架 + 開放</button>
@@ -120,5 +116,17 @@
     </div>
   </div>
   <script src="/js/admin-slots.inline-2.js"></script>
+  <dialog id="scheduleDialog" class="schedule-dialog">
+    <div class="schedule-card">
+      <div class="schedule-title" data-i18n="schedule_title">排程開放時間</div>
+      <label for="schedulePublishAtInput" class="schedule-label" data-i18n="schedule_time_label">預約開放時間（泰國時間，台灣時間+1）</label>
+      <input id="schedulePublishAtInput" type="datetime-local">
+      <div class="muted schedule-hint" data-i18n="schedule_time_hint">請選擇要上架並開放預約的時間</div>
+      <div class="schedule-actions">
+        <button type="button" class="btn" id="scheduleCancel" data-i18n="schedule_cancel">取消</button>
+        <button type="button" class="btn primary" id="scheduleConfirm" data-i18n="schedule_confirm">確認排程</button>
+      </div>
+    </div>
+  </dialog>
 </body>
 </html>
