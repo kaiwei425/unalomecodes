@@ -9,6 +9,10 @@
   var heroQuizCta = document.querySelector('[data-hero-quiz-cta]');
   var heroTempleCta = document.querySelector('[data-hero-temple-cta]');
   var homeConsultEditBtn = document.getElementById('homeConsultEditBtn');
+  var homeConsultMedia = document.querySelector('#homePhoneConsultPromo .svc-promo-media');
+  var homeConsultImg = homeConsultMedia ? homeConsultMedia.querySelector('img') : null;
+  var homeConsultPosX = homeConsultMedia ? homeConsultMedia.querySelector('[data-edit-key="home-consult-image-pos-x"]') : null;
+  var homeConsultPosY = homeConsultMedia ? homeConsultMedia.querySelector('[data-edit-key="home-consult-image-pos-y"]') : null;
 
   var LANG_KEY = 'uc_lang';
   var I18N = {
@@ -227,6 +231,49 @@
       }
       trigger();
       setTimeout(trigger, 300);
+    });
+  }
+
+  function initHomeConsultImageDrag(){
+    if (!homeConsultMedia || !homeConsultImg || !homeConsultPosX || !homeConsultPosY) return;
+    function getPosValue(node, fallback){
+      var num = Number(String(node.textContent || '').trim());
+      if (!Number.isFinite(num)) return fallback;
+      return Math.max(0, Math.min(100, num));
+    }
+    function applyPos(x, y){
+      var px = Math.max(0, Math.min(100, x));
+      var py = Math.max(0, Math.min(100, y));
+      homeConsultImg.style.objectPosition = px + '% ' + py + '%';
+      homeConsultPosX.textContent = String(Math.round(px));
+      homeConsultPosY.textContent = String(Math.round(py));
+    }
+    applyPos(getPosValue(homeConsultPosX, 50), getPosValue(homeConsultPosY, 50));
+    if (homeConsultMedia.__bound) return;
+    homeConsultMedia.__bound = true;
+    homeConsultMedia.addEventListener('pointerdown', function(event){
+      if (!document.body.classList.contains('is-editing')) return;
+      if (!homeConsultImg) return;
+      event.preventDefault();
+      homeConsultMedia.setPointerCapture && homeConsultMedia.setPointerCapture(event.pointerId);
+      var rect = homeConsultMedia.getBoundingClientRect();
+      var startX = event.clientX;
+      var startY = event.clientY;
+      var baseX = getPosValue(homeConsultPosX, 50);
+      var baseY = getPosValue(homeConsultPosY, 50);
+      function onMove(moveEvent){
+        var dx = moveEvent.clientX - startX;
+        var dy = moveEvent.clientY - startY;
+        var nextX = baseX + (dx / rect.width) * 100;
+        var nextY = baseY + (dy / rect.height) * 100;
+        applyPos(nextX, nextY);
+      }
+      function onUp(){
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
     });
   }
 
@@ -1591,6 +1638,7 @@
 
   restoreHeroQuizCacheFromBackup();
   initHomeConsultEditor();
+  initHomeConsultImageDrag();
   const initialProfile = getAuthProfile();
   if (initialProfile) syncLocalFromProfile(initialProfile);
   toggleHeroVisibility();

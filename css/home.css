@@ -986,7 +986,7 @@ body[data-page-key="home"] .svc-promo{margin:14px 0 18px;}
 body[data-page-key="home"] .svc-promo-left{display:grid;gap:10px;}
 body[data-page-key="home"] .svc-promo-media{
   width:100%;
-  height:150px;
+  height:220px;
   border-radius:14px;
   overflow:hidden;
   background:linear-gradient(135deg,#e2e8f0,#f8fafc);
@@ -994,9 +994,7 @@ body[data-page-key="home"] .svc-promo-media{
 }
 @media (min-width: 900px){
   body[data-page-key="home"] .svc-promo-media{
-    max-width:520px;
-    height:200px;
-    margin-left:auto;
+    height:280px;
   }
 }
 body[data-page-key="home"] .svc-promo-media img{
