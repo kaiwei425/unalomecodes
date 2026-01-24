@@ -9,6 +9,9 @@
   var heroQuizCta = document.querySelector('[data-hero-quiz-cta]');
   var heroTempleCta = document.querySelector('[data-hero-temple-cta]');
   var homeConsultEditBtn = document.getElementById('homeConsultEditBtn');
+  var homeConsultStoryMsg = document.getElementById('homeConsultStoryMsg');
+  var homeConsultStoryName = document.getElementById('homeConsultStoryName');
+  var homeConsultStoryDate = document.getElementById('homeConsultStoryDate');
 
   var LANG_KEY = 'uc_lang';
   var I18N = {
@@ -230,6 +233,35 @@
       trigger();
       setTimeout(trigger, 300);
     });
+  }
+
+  function initHomeConsultStories(){
+    if (!homeConsultStoryMsg || !homeConsultStoryName || !homeConsultStoryDate) return;
+    var source = document.querySelector('.home-story-source');
+    if (!source) return;
+    var items = Array.from(source.querySelectorAll('.home-story-source__item')).map(function(item){
+      var msg = (item.querySelector('[data-edit-key$="-msg"]') || {}).textContent || '';
+      var name = (item.querySelector('[data-edit-key$="-name"]') || {}).textContent || '';
+      var date = (item.querySelector('[data-edit-key$="-date"]') || {}).textContent || '';
+      return {
+        msg: String(msg || '').trim(),
+        name: String(name || '').trim(),
+        date: String(date || '').trim()
+      };
+    }).filter(function(item){ return item.msg; });
+    if (!items.length) return;
+    var index = 0;
+    function render(){
+      var item = items[index % items.length];
+      homeConsultStoryMsg.textContent = item.msg;
+      homeConsultStoryName.textContent = item.name || '';
+      homeConsultStoryDate.textContent = item.date || '';
+      index = (index + 1) % items.length;
+    }
+    render();
+    if (items.length > 1){
+      setInterval(render, 6000);
+    }
   }
 
   function handleSubmit(event){
@@ -1592,6 +1624,7 @@
 
   restoreHeroQuizCacheFromBackup();
   initHomeConsultEditor();
+  initHomeConsultStories();
   const initialProfile = getAuthProfile();
   if (initialProfile) syncLocalFromProfile(initialProfile);
   toggleHeroVisibility();
