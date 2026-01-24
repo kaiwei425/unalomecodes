@@ -3757,6 +3757,69 @@ function getSlotConfig(env){
   const windowsStr = String(env?.SLOT_DAILY_WINDOWS || '13:00-20:00');
   return { tz, holdTtlMin, daysAhead, stepMin, windowsStr };
 }
+const SLOT_MODE_KEY_PREFIX = 'slot_mode:';
+const SLOT_WINDOW_KEY_PREFIX = 'slot_window:';
+const BOOKING_MODE_LEGACY = 'legacy';
+const BOOKING_MODE_WINDOWED = 'windowed';
+function normalizeBookingMode(input){
+  const raw = String(input || '').trim().toLowerCase();
+  if (raw === BOOKING_MODE_WINDOWED) return BOOKING_MODE_WINDOWED;
+  return BOOKING_MODE_LEGACY;
+}
+function buildSlotModeKey(serviceId){
+  return `${SLOT_MODE_KEY_PREFIX}${String(serviceId || '').trim()}`;
+}
+function buildSlotWindowKey(serviceId){
+  return `${SLOT_WINDOW_KEY_PREFIX}${String(serviceId || '').trim()}`;
+}
+async function getServiceSlotMode(env, serviceId){
+  if (!env?.SERVICE_SLOTS_KV || !serviceId) return BOOKING_MODE_LEGACY;
+  try{
+    const raw = await env.SERVICE_SLOTS_KV.get(buildSlotModeKey(serviceId));
+    if (!raw) return BOOKING_MODE_LEGACY;
+    return normalizeBookingMode(raw);
+  }catch(_){
+    return BOOKING_MODE_LEGACY;
+  }
+}
+async function setServiceSlotMode(env, serviceId, mode){
+  if (!env?.SERVICE_SLOTS_KV || !serviceId) return;
+  const normalized = normalizeBookingMode(mode);
+  const key = buildSlotModeKey(serviceId);
+  try{
+    if (normalized === BOOKING_MODE_LEGACY){
+      await env.SERVICE_SLOTS_KV.delete(key);
+    }else{
+      await env.SERVICE_SLOTS_KV.put(key, normalized);
+    }
+  }catch(_){}
+}
+async function getServiceSlotWindow(env, serviceId){
+  if (!env?.SERVICE_SLOTS_KV || !serviceId) return null;
+  try{
+    const raw = await env.SERVICE_SLOTS_KV.get(buildSlotWindowKey(serviceId));
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== 'object') return null;
+    return obj;
+  }catch(_){
+    return null;
+  }
+}
+async function setServiceSlotWindow(env, serviceId, windowInfo){
+  if (!env?.SERVICE_SLOTS_KV || !serviceId || !windowInfo) return;
+  try{
+    await env.SERVICE_SLOTS_KV.put(buildSlotWindowKey(serviceId), JSON.stringify(windowInfo));
+  }catch(_){}
+}
+function isSlotWindowActive(windowInfo, now){
+  if (!windowInfo) return false;
+  const openFrom = Number(windowInfo.openFrom || 0);
+  const openUntil = Number(windowInfo.openUntil || 0);
+  if (!openFrom || !openUntil) return false;
+  if (openUntil <= openFrom) return false;
+  return now >= openFrom && now < openUntil;
+}
 function buildSlotKey(serviceId, dateStr, hhmmNoColon){
   return `slot:${serviceId}:${dateStr}:${hhmmNoColon}`;
 }
@@ -5859,6 +5922,62 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
       console.error('consult stage email error', err);
     }
     return new Response(JSON.stringify({ ok:true, consultStage: stage }), { status:200, headers: jsonHeadersFor(request, env) });
+  }
+
+  if (pathname === '/api/admin/service/slots/config' && (request.method === 'GET' || request.method === 'POST')) {
+    const guard = await requireAdminSlotsManage(request, env);
+    if (guard) return guard;
+    const now = nowMs();
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    let serviceId = String(url.searchParams.get('serviceId') || '').trim();
+    let body = {};
+    if (request.method === 'POST'){
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      if (!serviceId) serviceId = String(body.serviceId || '').trim();
+    }
+    if (!serviceId){
+      return new Response(JSON.stringify({ ok:false, error:'missing_service_id' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    if (request.method === 'POST'){
+      if (Object.prototype.hasOwnProperty.call(body, 'bookingMode')){
+        await setServiceSlotMode(env, serviceId, body.bookingMode);
+      }
+      const adminSession = await getAdminSession(request, env);
+      const actorEmail = adminSession && adminSession.email ? String(adminSession.email || '').trim() : '';
+      const openWindowMinutes = Number(body.openWindowMinutes || 0);
+      const closeWindow = body.closeWindow === true;
+      if (Number.isFinite(openWindowMinutes) && openWindowMinutes > 0){
+        const minutes = Math.min(24 * 60, Math.max(1, Math.round(openWindowMinutes)));
+        const openFrom = now;
+        const openUntil = now + minutes * 60 * 1000;
+        await setServiceSlotWindow(env, serviceId, {
+          serviceId,
+          openFrom,
+          openUntil,
+          createdAt: new Date().toISOString(),
+          createdBy: actorEmail
+        });
+      }else if (closeWindow){
+        const prev = await getServiceSlotWindow(env, serviceId);
+        const openFrom = prev && Number(prev.openFrom || 0) ? Number(prev.openFrom || 0) : now;
+        await setServiceSlotWindow(env, serviceId, {
+          serviceId,
+          openFrom,
+          openUntil: now,
+          createdAt: prev && prev.createdAt ? String(prev.createdAt) : new Date().toISOString(),
+          createdBy: actorEmail
+        });
+      }
+    }
+    const bookingMode = await getServiceSlotMode(env, serviceId);
+    const windowInfo = await getServiceSlotWindow(env, serviceId);
+    const active = bookingMode === BOOKING_MODE_WINDOWED ? isSlotWindowActive(windowInfo, now) : false;
+    const publishWindow = bookingMode === BOOKING_MODE_WINDOWED
+      ? { openFrom: Number(windowInfo?.openFrom || 0), openUntil: Number(windowInfo?.openUntil || 0), active }
+      : null;
+    return new Response(JSON.stringify({ ok:true, serviceId, bookingMode, publishWindow }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/service/slots/publish' && request.method === 'POST') {
@@ -10985,20 +11104,23 @@ if (pathname === '/api/service/products' && request.method === 'DELETE') {
   return new Response(JSON.stringify({ ok:true }), { status:200, headers: jsonHeaders });
 }
 
-if (pathname === '/api/service/slots' && request.method === 'GET') {
-  cleanupExpiredHolds(env).catch(()=>{});
-  if (!env?.SERVICE_SLOTS_KV){
-    return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
-  }
-  const serviceId = String(url.searchParams.get('serviceId') || '').trim();
-  if (!serviceId){
-    return new Response(JSON.stringify({ ok:false, error:'missing_service_id' }), { status:400, headers: jsonHeadersFor(request, env) });
-  }
-  const cfg = getSlotConfig(env);
-  const daysRaw = Number(url.searchParams.get('days') || cfg.daysAhead);
-  const days = Math.max(1, Math.min(31, Number.isFinite(daysRaw) ? daysRaw : cfg.daysAhead));
-  const dateFromParam = String(url.searchParams.get('dateFrom') || '').trim();
-  const dateFrom = /^\d{4}-\d{2}-\d{2}$/.test(dateFromParam) ? dateFromParam : getTodayDateStr(cfg.tz);
+  if (pathname === '/api/service/slots' && request.method === 'GET') {
+    cleanupExpiredHolds(env).catch(()=>{});
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
+    const serviceId = String(url.searchParams.get('serviceId') || '').trim();
+    if (!serviceId){
+      return new Response(JSON.stringify({ ok:false, error:'missing_service_id' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const cfg = getSlotConfig(env);
+    const bookingMode = await getServiceSlotMode(env, serviceId);
+    const windowInfo = bookingMode === BOOKING_MODE_WINDOWED ? await getServiceSlotWindow(env, serviceId) : null;
+    const windowActive = bookingMode === BOOKING_MODE_WINDOWED ? isSlotWindowActive(windowInfo, nowMs()) : false;
+    const daysRaw = Number(url.searchParams.get('days') || cfg.daysAhead);
+    const days = Math.max(1, Math.min(31, Number.isFinite(daysRaw) ? daysRaw : cfg.daysAhead));
+    const dateFromParam = String(url.searchParams.get('dateFrom') || '').trim();
+    const dateFrom = /^\d{4}-\d{2}-\d{2}$/.test(dateFromParam) ? dateFromParam : getTodayDateStr(cfg.tz);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom)){
     return new Response(JSON.stringify({ ok:false, error:'invalid_date_from' }), { status:400, headers: jsonHeadersFor(request, env) });
   }
@@ -11039,18 +11161,22 @@ if (pathname === '/api/service/slots' && request.method === 'GET') {
           status = resolveSlotStatus(rec, now);
         }
       }catch(_){}
-      slots.push({ slotKey, time, status, enabled });
+      const bookable = enabled && status === 'free' && (bookingMode !== BOOKING_MODE_WINDOWED || windowActive);
+      slots.push({ slotKey, time, status, enabled, bookable });
     }
     items.push({ date: dateStr, slots });
   }
-  return new Response(JSON.stringify({ ok:true, serviceId, dateFrom, days, items }), { status:200, headers: jsonHeadersFor(request, env) });
+  const publishWindow = bookingMode === BOOKING_MODE_WINDOWED
+    ? { openFrom: Number(windowInfo?.openFrom || 0), openUntil: Number(windowInfo?.openUntil || 0), active: windowActive }
+    : null;
+  return new Response(JSON.stringify({ ok:true, serviceId, dateFrom, days, items, bookingMode, publishWindow }), { status:200, headers: jsonHeadersFor(request, env) });
 }
 
-if (pathname === '/api/service/slot/hold' && request.method === 'POST') {
-  await cleanupExpiredHolds(env);
-  if (!env?.SERVICE_SLOTS_KV){
-    return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
-  }
+  if (pathname === '/api/service/slot/hold' && request.method === 'POST') {
+    await cleanupExpiredHolds(env);
+    if (!env?.SERVICE_SLOTS_KV){
+      return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
+    }
   if (!env?.SERVICE_SLOT_HOLDS_KV){
     return new Response(JSON.stringify({ ok:false, error:'holds_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
   }
@@ -11064,15 +11190,22 @@ if (pathname === '/api/service/slot/hold' && request.method === 'POST') {
   }catch(_){
     body = {};
   }
-  const serviceId = String(body.serviceId || '').trim();
-  const slotKey = String(body.slotKey || '').trim();
-  if (!serviceId || !slotKey){
-    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
-  }
-  const parsed = parseSlotKey(slotKey);
-  if (!parsed || parsed.serviceId !== serviceId){
-    return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
-  }
+    const serviceId = String(body.serviceId || '').trim();
+    const slotKey = String(body.slotKey || '').trim();
+    if (!serviceId || !slotKey){
+      return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
+    const bookingMode = await getServiceSlotMode(env, serviceId);
+    if (bookingMode === BOOKING_MODE_WINDOWED){
+      const windowInfo = await getServiceSlotWindow(env, serviceId);
+      if (!isSlotWindowActive(windowInfo, nowMs())){
+        return new Response(JSON.stringify({ ok:false, error:'SLOT_NOT_PUBLISHED' }), { status:409, headers: jsonHeadersFor(request, env) });
+      }
+    }
+    const parsed = parseSlotKey(slotKey);
+    if (!parsed || parsed.serviceId !== serviceId){
+      return new Response(JSON.stringify({ ok:false, error:'INVALID_SLOT' }), { status:400, headers: jsonHeadersFor(request, env) });
+    }
   const now = nowMs();
   const holdUserId = resolveHoldUserId(svcUser, request);
   const existingHold = await hasActiveHoldForUser(env, holdUserId);

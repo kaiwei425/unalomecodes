@@ -48,6 +48,24 @@
             </div>
             <button class="btn" id="btnLoad" data-i18n="btn_load">載入時段</button>
           </div>
+          <div class="slot-controls slot-booking-controls">
+            <div class="slot-field">
+              <label for="bookingModeSelect">預約模式
+                <select id="bookingModeSelect">
+                  <option value="legacy">原本模式（一直可預約）</option>
+                  <option value="windowed">限時模式（手動開放）</option>
+                </select>
+              </label>
+            </div>
+            <div class="slot-field">
+              <label for="bookingWindowMinutes">開放時長（分鐘）
+                <input id="bookingWindowMinutes" type="number" min="15" step="5" value="60">
+              </label>
+            </div>
+            <button class="btn primary" id="btnPublishWindow" type="button">一鍵上架 + 開放</button>
+            <button class="btn" id="btnCloseWindow" type="button">立即關閉預約</button>
+          </div>
+          <div id="bookingWindowStatus" class="muted" style="margin-top:6px;"></div>
           <div id="slotTzHint" class="slot-tz-hint muted"></div>
           <div class="slot-actions">
             <button class="btn primary" id="btnPublish" data-i18n="btn_publish">開放選取時段</button>

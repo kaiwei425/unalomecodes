@@ -270,13 +270,13 @@
       (day.slots || []).forEach(function(s){
         stats.hasSlots = true;
         var status = String(s.status || 'free');
-        if (s.enabled === true) stats.enabled = true;
+        if (s.bookable === true || s.enabled === true) stats.enabled = true;
         var d = parseSlotDateTime(day.date, s.time, s.slotKey);
         var isFuture = d ? d.getTime() > now.getTime() : true;
         if (status === 'held') stats.held++;
         else if (status === 'booked') stats.booked++;
         else if (status === 'blocked') stats.blocked++;
-        else if (status === 'free' && s.enabled === true && isFuture) stats.free++;
+        else if (status === 'free' && (s.bookable === true || s.enabled === true) && isFuture) stats.free++;
       });
     });
     return stats;
@@ -287,9 +287,9 @@
     var hasEnabled = false;
     (items || []).forEach(function(day){
       (day.slots || []).forEach(function(s){
-        if (s.enabled === true) hasEnabled = true;
+        if (s.bookable === true || s.enabled === true) hasEnabled = true;
         var status = String(s.status || '');
-        if (status !== 'free' || s.enabled !== true) return;
+        if (status !== 'free' || (s.bookable !== undefined ? s.bookable !== true : s.enabled !== true)) return;
         var ts = parseSlotDateTime(day.date, s.time, s.slotKey);
         if (!ts || ts.getTime() >= now) free++;
       });

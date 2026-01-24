@@ -261,7 +261,10 @@
   let FORCE_SLOT_REFRESH = false;
   const SLOT_DAYS_STEP = 10;
   const SLOT_CACHE_PREFIX = 'svcSlotCache:';
+  const SLOT_CONFIG_PREFIX = 'svcSlotConfig:';
   const SLOT_CACHE_TTL_MS = 30000;
+  let SLOT_BOOKING_MODE = 'legacy';
+  let SLOT_PUBLISH_WINDOW = null;
   let SKIP_AUTO_RESUME = false;
   let limitedTimer = null;
   let serviceItems = [];
@@ -706,12 +709,13 @@
           const merged = Object.assign({}, slot);
           if (!merged.date && dayItem.date) merged.date = dayItem.date;
           const ts = parseSlotStart(merged);
-          const enabledSlot = merged.enabled !== false;
+          const enabledSlot = merged.bookable !== undefined ? merged.bookable : (merged.enabled !== false);
           if (ts && ts >= now && enabledSlot) futureSlots.push(merged);
         });
       });
       const freeCount = futureSlots.filter(slot=>{
         const status = String(slot.status || '').toLowerCase();
+        if (slot.bookable !== undefined) return slot.bookable === true;
         return (status === 'free' || slot.free === true) && slot.enabled !== false;
       }).length;
       const hasFuture = futureSlots.length > 0;
@@ -1152,6 +1156,84 @@
     }catch(_){
       return null;
     }
+  }
+
+  function saveSlotConfigCache(serviceId, config){
+    try{
+      if (!serviceId) return;
+      const key = SLOT_CONFIG_PREFIX + String(serviceId || '').trim();
+      sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), config: config || null }));
+    }catch(_){}
+  }
+
+  function loadSlotConfigCache(serviceId){
+    try{
+      if (!serviceId) return null;
+      const key = SLOT_CONFIG_PREFIX + String(serviceId || '').trim();
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !data.config) return null;
+      if (data.at && (Date.now() - Number(data.at)) > SLOT_CACHE_TTL_MS){
+        sessionStorage.removeItem(key);
+        return null;
+      }
+      return data.config;
+    }catch(_){
+      return null;
+    }
+  }
+
+  function formatTaipeiDateTime(ts){
+    if (!ts) return '';
+    try{
+      return new Date(ts).toLocaleString('zh-TW', { timeZone:'Asia/Taipei', hour12:false });
+    }catch(_){
+      return new Date(ts).toLocaleString('zh-TW', { hour12:false });
+    }
+  }
+
+  function applySlotConfigInfo(serviceId, info){
+    if (!serviceId || !info) return;
+    SLOT_BOOKING_MODE = String(info.bookingMode || 'legacy');
+    SLOT_PUBLISH_WINDOW = info.publishWindow || null;
+    saveSlotConfigCache(serviceId, { bookingMode: SLOT_BOOKING_MODE, publishWindow: SLOT_PUBLISH_WINDOW });
+    updateSlotHintText();
+  }
+
+  function updateSlotHintText(){
+    if (!slotHintEl) return;
+    if (SLOT_BOOKING_MODE !== 'windowed'){
+      slotHintEl.textContent = '僅顯示可開放預約時段，（保留 15 分鐘）';
+      return;
+    }
+    const win = SLOT_PUBLISH_WINDOW || {};
+    const openFrom = Number(win.openFrom || 0);
+    const openUntil = Number(win.openUntil || 0);
+    const now = Date.now();
+    const active = openFrom && openUntil && now >= openFrom && now < openUntil;
+    if (openFrom && openUntil){
+      const fromText = formatTaipeiDateTime(openFrom);
+      const untilText = formatTaipeiDateTime(openUntil);
+      if (active){
+        slotHintEl.textContent = `目前可預約：${fromText} - ${untilText}（台灣時間）`;
+      }else{
+        slotHintEl.textContent = `目前未開放預約（上次時間窗：${fromText} - ${untilText}）`;
+      }
+      return;
+    }
+    slotHintEl.textContent = '目前未開放預約（尚未設定時間窗）';
+  }
+
+  function isPublishWindowActive(){
+    if (SLOT_BOOKING_MODE !== 'windowed') return true;
+    const win = SLOT_PUBLISH_WINDOW || {};
+    const openFrom = Number(win.openFrom || 0);
+    const openUntil = Number(win.openUntil || 0);
+    if (!openFrom || !openUntil) return false;
+    if (openUntil <= openFrom) return false;
+    const now = Date.now();
+    return now >= openFrom && now < openUntil;
   }
 
   function getConsultPackKeyFromStorage(){
@@ -1694,6 +1776,9 @@
         signal: controller ? controller.signal : undefined
       });
       const data = await res.json().catch(()=>({}));
+      if (res.ok && data && data.ok && (data.bookingMode || data.publishWindow)){
+        applySlotConfigInfo(serviceId, { bookingMode: data.bookingMode, publishWindow: data.publishWindow });
+      }
       if (!res.ok){
         console.warn('[slots] fetch failed', res.status, url, data);
       }
@@ -1903,9 +1988,11 @@
       btn.className = 'svc-slot-btn';
       const status = String(slot.status || 'free');
       const enabled = slot.enabled !== false;
+      const windowActive = isPublishWindowActive();
+      const bookable = slot.bookable !== undefined ? !!slot.bookable : (enabled && status === 'free' && windowActive);
       btn.textContent = slot.time || '--:--';
       if (slot.slotKey) btn.dataset.slotKey = slot.slotKey;
-      if (!enabled || status !== 'free'){
+      if (!bookable || status !== 'free'){
         btn.classList.add('is-disabled');
         if (status === 'booked') btn.classList.add('is-booked');
         if (status === 'blocked') btn.classList.add('is-blocked');
@@ -1920,9 +2007,13 @@
         btn.classList.add('is-held');
       }
       btn.addEventListener('click', ()=>{
-        if (!enabled || status !== 'free'){
+        if (!bookable || status !== 'free'){
           if (status === 'held'){
             setSlotStateText(mapUserErrorMessage('SLOT_UNAVAILABLE'), true);
+            return;
+          }
+          if (status === 'free' && enabled && !bookable){
+            setSlotStateText('目前非開放預約時間，請稍後再試', true);
           }
           return;
         }
@@ -2213,7 +2304,15 @@
     }
     resetSlotState();
     slotSection.style.display = '';
-    slotHintEl.textContent = '僅顯示可開放預約時段，（保留 15 分鐘）';
+    const cachedConfig = loadSlotConfigCache(resolveServiceId(service));
+    if (cachedConfig){
+      SLOT_BOOKING_MODE = String(cachedConfig.bookingMode || 'legacy');
+      SLOT_PUBLISH_WINDOW = cachedConfig.publishWindow || null;
+    }else{
+      SLOT_BOOKING_MODE = 'legacy';
+      SLOT_PUBLISH_WINDOW = null;
+    }
+    updateSlotHintText();
     if (slotTzHintEl){
       slotTzHintEl.textContent = getTzHintText();
     }
