@@ -957,18 +957,18 @@ function buildConsultStageEmail(order, stage, env){
   const subject = `[${siteName}] 訂單狀態更新 / Order Status Update #${orderId}`;
   const zh = [
     '【中文】',
+    '系統通知｜訂單狀態更新',
     `訂單編號：${orderId}`,
     `預約時段：${slotStart || '—'}`,
     `目前階段：${label.zh || stage}`,
-    '如有需要請聯繫客服。',
     `後台連結：${adminUrl}`
   ].join('<br>');
   const en = [
     '[English]',
+    'System Notification | Order Status Update',
     `Order ID: ${orderId}`,
     `Slot: ${slotStart || '—'}`,
     `Stage: ${label.en || stage}`,
-    'Please contact support if needed.',
     `Admin: ${adminUrl}`
   ].join('<br>');
   const html = `${zh}<br><br>${en}`;
@@ -981,22 +981,22 @@ function buildBookingNotifyEmail(order, env){
   const slotStart = String(order.slotStart || order.requestDate || '').trim();
   const primarySite = (env.SITE_URL || env.PUBLIC_SITE_URL || 'https://unalomecodes.com').replace(/\/$/, '');
   const adminUrl = primarySite + '/admin/slots';
-  const subject = `[${siteName}] 新訂單待預約 #${orderId}`;
+  const subject = `[${siteName}] 新訂單待預約 / Booking Required #${orderId}`;
   const zh = [
     '【中文】',
-    '有新訂單成立',
+    '有一筆新訂單需要安排預約',
     `訂單編號：${orderId}`,
     `預約時間（曼谷時間）：${slotStart || '—'}`,
-    '請儘速完成預約。',
-    `完成預約後至後台 ${adminUrl} 點選「已完成預約」，訂單才會同步更新狀態。`
+    '請盡快完成預約安排；完成後至後台點選「已完成預約」以更新訂單狀態。',
+    `後台：${adminUrl}`
   ].join('<br>');
   const en = [
     '[English]',
-    'A new order has been created.',
+    'A new booking requires scheduling.',
     `Order ID: ${orderId}`,
     `Appointment time (Bangkok time): ${slotStart || '—'}`,
-    'Please complete the booking as soon as possible.',
-    `After booking, go to ${adminUrl} and click "Booking confirmed" so the order status updates.`
+    'Please complete the booking ASAP, then click "Booking confirmed" in the admin panel to update the order status.',
+    `Admin: ${adminUrl}`
   ].join('<br>');
   const html = `${zh}<br><br>${en}`;
   const text = html.replace(/<br>/g, '\n');
@@ -10675,10 +10675,10 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
     const isBlessingDone = statusLabel === '祈福完成';
     const customerSubject = emailContext === 'status_update'
       ? `${siteName} 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
-      : `${siteName} 訂單確認 #${order.id}`;
+      : `${siteName} 訂單成立通知 #${order.id}`;
     const adminSubject = emailContext === 'status_update'
       ? `[${siteName}] 訂單狀態更新 #${order.id}${statusLabel ? `｜${statusLabel}` : ''}`
-      : `[${siteName}] 新訂單通知 #${order.id}`;
+      : `[${siteName}] 系統通知：新訂單 #${order.id}`;
     const defaultImageHost = env.EMAIL_IMAGE_HOST || env.FILE_HOST || env.PUBLIC_FILE_HOST || env.SITE_URL || 'https://unalomecodes.com';
     const imageHost = ctx.imageHost || defaultImageHost || origin;
     const composeOpts = { siteName, lookupUrl, channelLabel, imageHost, context: emailContext, blessingDone: isBlessingDone };
@@ -10871,11 +10871,21 @@ function composeOrderEmail(order, opts = {}) {
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${(isServiceOrder && consultStage === 'appointment_confirmed')
-        ? `您的訂單狀態已更新為 <strong>${esc(status)}</strong>，請加入官方LINE客服 <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或 LINE ID 搜尋輸入 @427oaemj，後續將由專人與您聯繫進行通話連線。`
-        : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。`
-      }請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`
+        ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。`
+        : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。我們將依流程持續處理，如有進一步安排會以 Email 通知您。`
+      }</p>
+      <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>${isServiceOrder ? '我們已收到您的訂單，將在核對匯款資料無誤後，儘速與老師聯繫安排預約，預約完成後會再來信通知。' : (isCod711 ? '我們已收到您的訂單，將儘速安排出貨。' : '我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。')}請勿直接回覆此信，如需協助可寫信至 ${esc(supportEmail)} 或加入官方 LINE ID：${lineLabel}（請於 LINE 搜尋加入）。</p>`;
+      <p>感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。</p>
+      <p>目前正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間；預約確認完成後，系統會再次寄送通知信給您，請留意電子郵件。</p>
+      <p>您可至會員中心－我的訂單查詢最新狀態；如需改期，請於預約時間 48 小時前聯繫客服。</p>
+      <p>客服 LINE：${lineLabel}</p>
+      <p>Dear ${esc(buyerName)},</p>
+      <p>Thank you for choosing ${esc(opts.siteName || 'Unalomecodes')}. We have received your order successfully.</p>
+      <p>We are now verifying the payment and preparing the appointment. You will receive another email once the schedule is confirmed.</p>
+      <p>You can check the latest status in My Orders. To reschedule, please contact us at least 48 hours in advance.</p>
+      <p>LINE Support: ${lineLabel}</p>
+      <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const lookupLine = opts.lookupUrl
@@ -10892,7 +10902,8 @@ function composeOrderEmail(order, opts = {}) {
         </div>`;
     customerIntro += trackingHtml;
   }
-  const adminIntro = `<p>${esc(opts.siteName || '商城')} 有一筆新的訂單建立。</p>`;
+  const adminIntro = `<p>系統通知：${esc(opts.siteName || '商城')} 有一筆新的訂單建立或訂單狀態更新。</p>
+    <p>System notification: A new order or status update is recorded on ${esc(opts.siteName || '商城')}.</p>`;
   const contactRows = [
     buyerName ? `<p style="margin:0 0 8px;"><strong>收件人：</strong>${esc(buyerName)}</p>` : '',
     phone ? `<p style="margin:0 0 8px;"><strong>聯絡電話：</strong>${esc(phone)}</p>` : '',
@@ -10965,7 +10976,15 @@ function composeOrderEmail(order, opts = {}) {
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
-    textParts.push(`親愛的 ${buyerName} 您好：您的訂單狀態已更新為「${status}」。請勿直接回覆此信，可透過 ${supportEmail} 或 LINE ID：${lineLabel} 聯繫。`);
+    if (consultStage === 'appointment_confirmed') {
+      textParts.push(`您的預約已確認完成。請加入官方 LINE https://line.me/R/ti/p/@427oaemj 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。`);
+      textParts.push(`Your appointment has been confirmed. Please add our official LINE https://line.me/R/ti/p/@427oaemj or search ID @427oaemj. Our staff will contact you shortly to arrange the call and explain the next steps.`);
+    } else {
+      textParts.push(`您的訂單狀態已更新為「${status}」。我們會依照流程持續處理，如有進一步安排，系統將以電子郵件通知您。`);
+      textParts.push(`Your order status has been updated to ${status}. We will continue processing your order and notify you by email if there are further updates.`);
+    }
+    textParts.push(`如需協助請聯繫 ${supportEmail} 或 LINE ID：${lineLabel}。`);
+    textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
     if (isBlessingDone){
       const lookupText = opts.lookupUrl
         ? `請至 ${opts.lookupUrl} 查詢祈福進度，輸入手機號碼並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。`
@@ -10973,12 +10992,23 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push(lookupText);
     }
   } else {
-    const waitLine = isServiceOrder
-      ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速與老師聯繫安排預約，預約完成後會再來信通知。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
-      : (isCod711
+    if (isServiceOrder){
+      textParts.push(`親愛的 ${buyerName} 您好：感謝您選擇 ${opts.siteName || 'Unalomecodes'}，我們已成功收到您的訂單。`);
+      textParts.push('目前我們正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間。');
+      textParts.push('預約確認完成後，系統將再次寄送通知信給您，請留意電子郵件。');
+      textParts.push('您可至 會員中心 我的訂單 查詢最新狀態。');
+      textParts.push(`如需改期，請於預約時間 48 小時前聯繫客服。客服 LINE：${lineLabel}`);
+      textParts.push(`Dear ${buyerName}, Thank you for choosing ${opts.siteName || 'Unalomecodes'}. We have received your order successfully.`);
+      textParts.push('We are now verifying the payment and preparing the appointment with the consultant.');
+      textParts.push('You will receive another email once the schedule is confirmed.');
+      textParts.push('You can check the latest status in My Orders.');
+      textParts.push(`To reschedule, please contact us at least 48 hours in advance. LINE Support: ${lineLabel}`);
+    }else{
+      const waitLine = isCod711
         ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
-        : `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`);
-    textParts.push(waitLine);
+        : `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`;
+      textParts.push(waitLine);
+    }
   }
   textParts.push(`訂單編號：${order.id}`);
   textParts.push(`訂單狀態：${status}`);
