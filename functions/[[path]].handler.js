@@ -6099,6 +6099,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
         meta: { consultStage: stage }
       });
     }catch(_){}
+    let mailStatus = { customer: null, admin: null, booking: null };
     try{
       const origin = new URL(request.url).origin;
       const sendWithRetry = async (sendFn)=>{
@@ -6136,6 +6137,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend: true
         }));
+        mailStatus.customer = customerResult || { ok:false, reason:'no_result' };
         await sleepMs(650);
         if (fromDefault && customerResult && !customerResult.sentCustomer){
           const customerEmail = getOrderCustomerEmail(order);
@@ -6148,6 +6150,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
               html: payload.html,
               text: payload.text
             });
+            mailStatus.customer = Object.assign({}, mailStatus.customer || {}, { fallback:true, fallbackOk:true });
           }
         }
         const adminResult = await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
@@ -6160,6 +6163,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend: true
         }));
+        mailStatus.admin = adminResult || { ok:false, reason:'no_result' };
         await sleepMs(650);
         if (fromDefault && adminResult && !adminResult.sentAdmin && ownerAdmins.length){
           const payload = buildStatusUpdateEmailPayload(order, env, { admin:true, channel:'服務型商品' });
@@ -6170,6 +6174,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             html: payload.html,
             text: payload.text
           });
+          mailStatus.admin = Object.assign({}, mailStatus.admin || {}, { fallback:true, fallbackOk:true });
         }
         await sleepMs(650);
         const msg = buildBookingNotifyEmail(order, env);
@@ -6193,11 +6198,16 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
                 html: msg.html,
                 text: msg.text
               });
+              mailStatus.booking = { ok:true, count: internal.length, retried:true };
             }else{
               throw err;
             }
           }
+          if (!mailStatus.booking){
+            mailStatus.booking = { ok:true, count: internal.length };
+          }
         }else{
+          mailStatus.booking = { ok:false, reason:'no_recipients' };
           console.warn('[booking] notify skipped: no recipients resolved');
         }
       }else{
@@ -6222,6 +6232,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend:true
         }));
+        mailStatus.customer = customerResult || { ok:false, reason:'no_result' };
         await sleepMs(650);
         if (fromDefault && customerResult && !customerResult.sentCustomer){
           const customerEmail = getOrderCustomerEmail(order);
@@ -6234,6 +6245,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
               html: payload.html,
               text: payload.text
             });
+            mailStatus.customer = Object.assign({}, mailStatus.customer || {}, { fallback:true, fallbackOk:true });
           }
         }
         const adminResult = await sendWithRetry(()=> maybeSendOrderEmails(env, order, {
@@ -6246,6 +6258,7 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
           bilingual:false,
           serialSend:true
         }));
+        mailStatus.admin = adminResult || { ok:false, reason:'no_result' };
         await sleepMs(650);
         if (fromDefault && adminResult && !adminResult.sentAdmin && ownerAdmins.length){
           const payload = buildStatusUpdateEmailPayload(order, env, { admin:true, channel:'服務型商品' });
@@ -6256,12 +6269,15 @@ if (request.method === 'OPTIONS' && (pathname === '/api/payment/bank' || pathnam
             html: payload.html,
             text: payload.text
           });
+          mailStatus.admin = Object.assign({}, mailStatus.admin || {}, { fallback:true, fallbackOk:true });
         }
       }
     }catch(err){
       console.error('consult stage email error', err);
+      mailStatus.error = String(err || '');
     }
-    return new Response(JSON.stringify({ ok:true, consultStage: stage }), { status:200, headers: jsonHeadersFor(request, env) });
+    console.log('consult stage mail status', { orderId: id, stage, mailStatus });
+    return new Response(JSON.stringify({ ok:true, consultStage: stage, mailStatus }), { status:200, headers: jsonHeadersFor(request, env) });
   }
 
   if (pathname === '/api/admin/service/slots/config' && (request.method === 'GET' || request.method === 'POST')) {
