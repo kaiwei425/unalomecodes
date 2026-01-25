@@ -10871,7 +10871,7 @@ function composeOrderEmail(order, opts = {}) {
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${(isServiceOrder && consultStage === 'appointment_confirmed')
-        ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。`
+        ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`
         : (isServiceOrder && consultStage === 'done')
           ? `感謝您選擇 ${esc(opts.siteName || 'unalomecodes')} 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="https://unalomecodes.com/service?id=SVT409059d4" target="_blank" rel="noopener">https://unalomecodes.com/service?id=SVT409059d4</a>），讓更多人也能看到這項服務，對自己的命運更加瞭解，讓未來更美好。再次感謝您的支持，期待未來再次為您服務。`
           : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。我們將依流程持續處理，如有進一步安排會以 Email 通知您。`
@@ -10979,7 +10979,7 @@ function composeOrderEmail(order, opts = {}) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
     if (consultStage === 'appointment_confirmed') {
-      textParts.push(`您的預約已確認完成。請加入官方 LINE https://line.me/R/ti/p/@427oaemj 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。`);
+      textParts.push(`您的預約已確認完成。請加入官方 LINE https://line.me/R/ti/p/@427oaemj 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`);
       textParts.push(`Your appointment has been confirmed. Please add our official LINE https://line.me/R/ti/p/@427oaemj or search ID @427oaemj. Our staff will contact you shortly to arrange the call and explain the next steps.`);
     } else if (consultStage === 'done') {
       textParts.push(`感謝您選擇 ${opts.siteName || 'unalomecodes'} 的服務，您的訂單已順利完成。`);
