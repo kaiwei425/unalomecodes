@@ -709,6 +709,20 @@ dialog[data-fallback-open]{display:block;}
 .svc-stepper span{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:#6b7280;font-weight:700;background:#fff;}
 .svc-stepper span.active{background:#16a34a;color:#fff;border-color:#16a34a;box-shadow:0 8px 20px rgba(22,163,74,.35);}
 .svc-stepper span.done{background:#bbf7d0;color:#166534;border-color:#86efac;}
+.svc-hold-countdown{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:8px 14px;
+  margin:8px 12px 0;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:700;
+  color:#dc2626;
+  background:rgba(254,226,226,.6);
+  border:1px solid rgba(248,113,113,.35);
+}
 .svc-step-content{display:none;flex-direction:column;gap:16px;padding:18px;}
 .svc-step-content.active{display:flex;}
 .svc-step-title{font-weight:800;font-size:18px;}

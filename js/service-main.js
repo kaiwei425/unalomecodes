@@ -192,6 +192,7 @@
   const slotStateEl = document.getElementById('svcSlotState');
   const slotHintEl = document.getElementById('svcSlotHint');
   const slotTzHintEl = document.getElementById('svcSlotTzHint');
+  const holdCountdownEl = document.getElementById('svcHoldCountdown');
   const slotMoreBtn = document.getElementById('svcSlotMore');
   const slotRefreshBtn = document.getElementById('svcSlotRefresh');
   const slotToggleBookableBtn = document.getElementById('svcSlotToggleBookable');
@@ -1095,6 +1096,7 @@
       CURRENT_DETAIL_SLOT.holdUntilMs = 0;
       CURRENT_DETAIL_SLOT.pendingSlotKey = '';
       CURRENT_DETAIL_SLOT.pendingSlotStart = '';
+      updateHoldCountdown(0);
       // 清除購物車中的時段資料，避免不同帳號看到倒數
       const cart = loadCart();
       if (Array.isArray(cart) && cart.length){
@@ -1738,6 +1740,21 @@
     slotStateEl.classList.toggle('ok', !isError && !!msg);
   }
 
+  function updateHoldCountdown(remainMs){
+    if (!holdCountdownEl) return;
+    if (!remainMs || remainMs <= 0){
+      holdCountdownEl.style.display = 'none';
+      holdCountdownEl.textContent = '';
+      return;
+    }
+    const mins = Math.floor(remainMs / 60000);
+    const secs = Math.floor((remainMs % 60000) / 1000);
+    const mm = String(mins).padStart(2,'0');
+    const ss = String(secs).padStart(2,'0');
+    holdCountdownEl.textContent = `時段保留 15 分鐘，請於 ${mm}:${ss} 內完成訂單`;
+    holdCountdownEl.style.display = 'flex';
+  }
+
   function parseSlotKeyDateTime(slotKey){
     const raw = String(slotKey || '');
     const match = raw.match(/slot:[^:]+:(\d{4}-\d{2}-\d{2}):(\d{4})/);
@@ -2135,6 +2152,7 @@
   function startHoldTimer(){
     if (!CURRENT_DETAIL_SLOT.holdUntilMs) return;
     if (CURRENT_DETAIL_SLOT.timerId) clearInterval(CURRENT_DETAIL_SLOT.timerId);
+    updateHoldCountdown(CURRENT_DETAIL_SLOT.holdUntilMs - Date.now());
     CURRENT_DETAIL_SLOT.timerId = setInterval(()=>{
       const remain = CURRENT_DETAIL_SLOT.holdUntilMs - Date.now();
       if (remain <= 0){
@@ -2148,6 +2166,7 @@
         CURRENT_DETAIL_SLOT.pendingSlotKey = '';
         CURRENT_DETAIL_SLOT.pendingSlotStart = '';
         setSlotStateText('保留已到期，請重新選擇', true);
+        updateHoldCountdown(0);
         if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
           detailAddBtn.disabled = true;
           detailAddBtn.textContent = '目前無法預約';
@@ -2159,6 +2178,7 @@
       const mm = String(mins).padStart(2,'0');
       const ss = String(secs).padStart(2,'0');
       setSlotStateText(`已保留此時段 ${mm}:${ss}（請於倒數內完成下單）`, false);
+      updateHoldCountdown(remain);
     }, 1000);
   }
 
@@ -2179,6 +2199,7 @@
         CURRENT_DETAIL_SLOT.slotHoldToken = '';
         CURRENT_DETAIL_SLOT.holdUntilMs = 0;
         CURRENT_DETAIL_SLOT.slotStart = '';
+        updateHoldCountdown(0);
       }
     }
     try{
@@ -4817,6 +4838,7 @@
         clearSlotFromCart(serviceId);
         clearSlotCache(serviceId);
         resetSlotState();
+        updateHoldCountdown(0);
         FORCE_SLOT_REFRESH = true;
       }else{
         LAST_RELEASE_MSG = '目前無法釋放原本時段，請稍後再試';
