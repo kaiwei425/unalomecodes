@@ -31,6 +31,32 @@
       return new Date(str).toLocaleString('zh-TW', { hour12:false });
     }catch(_){ return str; }
   }
+  function formatTaipeiFromBkk(slotStart){
+    const raw = String(slotStart || '').trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s]+(\d{2}):(\d{2})/);
+    if (!match) return '';
+    const y = Number(match[1]);
+    const m = Number(match[2]);
+    const d = Number(match[3]);
+    const hh = Number(match[4]);
+    const mm = Number(match[5]);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) || !Number.isFinite(hh) || !Number.isFinite(mm)) return '';
+    const utcMs = Date.UTC(y, m - 1, d, hh - 7, mm);
+    const tpeMs = utcMs + 8 * 3600 * 1000;
+    const dt = new Date(tpeMs);
+    const yy = dt.getUTCFullYear();
+    const mo = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(dt.getUTCDate()).padStart(2, '0');
+    const th = String(dt.getUTCHours()).padStart(2, '0');
+    const tm = String(dt.getUTCMinutes()).padStart(2, '0');
+    return `${yy}-${mo}-${da} ${th}:${tm}`;
+  }
+  function isPhoneConsultOrder(order){
+    if (!order) return false;
+    if (order.consultStage) return true;
+    const name = String(order.serviceName || '').toLowerCase();
+    return /phone|電話|consult|占卜|算命/.test(name);
+  }
 
   const qnaCache = new Map();
 
@@ -199,6 +225,14 @@
         })
       : [];
     const dateStr = fmtDate(order.createdAt || '');
+    const scheduleRaw = String(order.slotStart || order.requestDate || '').trim();
+    const isPhoneOrder = isPhoneConsultOrder(order);
+    const scheduleTpe = scheduleRaw && isPhoneOrder ? formatTaipeiFromBkk(scheduleRaw) : '';
+    const scheduleLine = scheduleRaw
+      ? (isPhoneOrder && scheduleTpe
+        ? `指定日期：${escapeHtml(scheduleRaw)}（曼谷時間） <span style="color:#dc2626;">${escapeHtml(scheduleTpe)}（台灣時間）</span>`
+        : `指定日期：${escapeHtml(scheduleRaw)}`)
+      : '';
     const itemCards = itemsLine.map(it=>{
       const imgUrl = sanitizeImageUrl(it.image);
       const img = imgUrl ? `<img src="${escapeHtml(imgUrl)}" style="width:60px;height:60px;object-fit:cover;border-radius:10px;border:1px solid var(--line);">` : '';
@@ -219,7 +253,7 @@
       ${storeText ? `<div class="order-meta">取貨門市：${storeText}</div>` : ''}
       ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
       ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
-      ${order.requestDate ? `<div class="order-meta">指定日期：${escapeHtml(order.requestDate)}</div>` : ''}
+      ${scheduleLine ? `<div class="order-meta">${scheduleLine}</div>` : ''}
       ${itemCards}
       <div class="order-qna" data-qna="1">
         <button type="button" class="qna-toggle" data-qna-toggle="1">訂單問與答 <span class="qna-unread" data-qna-unread="1">0</span></button>
