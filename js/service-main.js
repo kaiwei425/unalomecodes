@@ -229,6 +229,7 @@
   let CONSULT_ADDON = false;
   let LAST_RELEASE_MSG = '';
   const PHONE_BASE_PRICE = 3500;
+  let checkoutHoldTimerId = null;
   let PHONE_BASE_PRICE_OVERRIDE = 0;
   let CONSULT_PACK_PRICES = { en: 0, zh: 0 };
   let CURRENT_DETAIL_SLOT = {
@@ -1753,6 +1754,32 @@
     const ss = String(secs).padStart(2,'0');
     holdCountdownEl.textContent = `時段保留 15 分鐘，請於 ${mm}:${ss} 內完成訂單`;
     holdCountdownEl.style.display = 'flex';
+  }
+
+  function stopCheckoutHoldCountdown(){
+    if (checkoutHoldTimerId){
+      clearInterval(checkoutHoldTimerId);
+      checkoutHoldTimerId = null;
+    }
+    updateHoldCountdown(0);
+  }
+
+  function startCheckoutHoldCountdown(holdUntilMs){
+    if (!holdUntilMs || !Number.isFinite(holdUntilMs)) {
+      stopCheckoutHoldCountdown();
+      return;
+    }
+    stopCheckoutHoldCountdown();
+    const tick = ()=>{
+      const remain = holdUntilMs - Date.now();
+      if (remain <= 0){
+        stopCheckoutHoldCountdown();
+        return;
+      }
+      updateHoldCountdown(remain);
+    };
+    tick();
+    checkoutHoldTimerId = setInterval(tick, 1000);
   }
 
   function parseSlotKeyDateTime(slotKey){
@@ -4152,6 +4179,12 @@
     // 強制載入會員基本資料
     ensureContactFromProfile(6);
     renderCheckoutSummary(cart);
+    const phoneItem = cart.find(it => isPhoneConsultService(it));
+    if (phoneItem && Number(phoneItem.slotHoldUntilMs || 0) > Date.now()){
+      startCheckoutHoldCountdown(Number(phoneItem.slotHoldUntilMs || 0));
+    }else{
+      stopCheckoutHoldCountdown();
+    }
     openDialog(checkoutDialog);
     try{
       if (window.trackEvent) window.trackEvent('service_checkout_start', { itemId: cart[0].serviceId || '' });
@@ -4455,6 +4488,7 @@
   if (checkoutDialog){
     checkoutDialog.addEventListener('close', ()=>{
       resetCheckoutFlow();
+      stopCheckoutHoldCountdown();
     });
   }
 
