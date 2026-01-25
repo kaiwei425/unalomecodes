@@ -50,6 +50,7 @@ function resolveCorsOrigin(request, env){
   const allow = new Set();
   const addOrigin = (val)=>{
     if (!val) return;
+    let mailStatus = { customer: null, admin: null, booking: null };
     try{
       const u = val.startsWith('http') ? new URL(val) : new URL(`https://${val}`);
       allow.add(u.origin);
@@ -687,6 +688,20 @@ function buildStatusUpdateEmailPayload(order, env, opts = {}){
     context: 'status_update',
     blessingDone: statusLabel === '祈福完成'
   };
+  if (typeof composeOrderEmail !== 'function'){
+    const orderId = String(order.id || '').trim();
+    const slotStart = String(order.slotStart || order.requestDate || '').trim();
+    const lines = [
+      `訂單狀態更新`,
+      `訂單編號：${orderId || '—'}`,
+      `狀態：${statusLabel || '—'}`,
+      slotStart ? `預約時段：${slotStart}` : '',
+      lookupUrl ? `查詢訂單：${lookupUrl}` : ''
+    ].filter(Boolean);
+    const text = lines.join('\n');
+    const html = lines.join('<br>');
+    return { subject, html, text };
+  }
   const composed = composeOrderEmail(order, Object.assign({ admin: !!opts.admin }, composeOpts));
   return { subject, html: composed.html, text: composed.text };
 }
@@ -10701,7 +10716,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
       return { ok:false, reason:'no_recipients' };
     }
     const settled = ctx.serialSend
-      ? (async ()=>{
+      ? await (async ()=>{
           const results = [];
           for (const task of labeled){
             try{
@@ -10713,7 +10728,7 @@ async function maybeSendOrderEmails(env, order, ctx = {}) {
           }
           return results;
         })()
-      : Promise.allSettled(labeled.map(task => task.promise));
+      : await Promise.allSettled(labeled.map(task => task.promise));
     let failed = false;
     let sentCustomer = false;
     let sentAdmin = false;
