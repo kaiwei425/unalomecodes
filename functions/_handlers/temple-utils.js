@@ -2595,6 +2595,44 @@ function createTempleUtils(deps){
         }
       }
     }catch(_){}
+    try{
+      if (env.PRODUCTS.list){
+        const iter = await env.PRODUCTS.list({ prefix:'PRODUCT:' });
+        const keys = Array.isArray(iter.keys) ? iter.keys : [];
+        const target = String(pid).toLowerCase();
+        for (const k of keys.slice(0, 500)){
+          const name = String(k.name || '');
+          if (!name) continue;
+          if (name.toLowerCase() === `product:${target}`){
+            const raw = await env.PRODUCTS.get(name);
+            if (raw){
+              const p = JSON.parse(raw);
+              return normalizeProduct(p);
+            }
+          }
+        }
+        for (const k of keys.slice(0, 500)){
+          const name = String(k.name || '');
+          if (!name) continue;
+          const raw = await env.PRODUCTS.get(name);
+          if (!raw) continue;
+          let p = null;
+          try{ p = JSON.parse(raw); }catch(_){ p = null; }
+          if (!p) continue;
+          const candidates = [
+            p.id,
+            p.productId,
+            p.code,
+            p.sku,
+            p.slug,
+            name.replace(/^PRODUCT:/, '')
+          ].filter(Boolean).map(v => String(v).toLowerCase());
+          if (candidates.includes(target)){
+            return normalizeProduct(p);
+          }
+        }
+      }
+    }catch(_){}
     return null;
   }
   function resolveVariant(product, variantName){
