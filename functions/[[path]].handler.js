@@ -80,7 +80,15 @@ const {
   makeToken
 });
 
-const { proofSecret, signProofToken, verifyProofToken, extractProofKeyFromUrl, isAllowedFileUrl } = createProofUtils({
+const {
+  proofSecret,
+  signProofToken,
+  verifyProofToken,
+  extractProofKeyFromUrl,
+  isAllowedFileUrl,
+  resolveTotalStockForProduct,
+  resolveAvailableStock
+} = createProofUtils({
   getAny,
   arrayBufferToBase64,
   signSession,

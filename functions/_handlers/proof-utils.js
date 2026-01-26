@@ -964,7 +964,9 @@ function createProofUtils(deps){
     signProofToken,
     verifyProofToken,
     extractProofKeyFromUrl,
-    isAllowedFileUrl
+    isAllowedFileUrl,
+    resolveTotalStockForProduct,
+    resolveAvailableStock
   };
 }
 
