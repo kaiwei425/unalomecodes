@@ -2762,6 +2762,14 @@ Enter this code at checkout.`
     ev.preventDefault();
     openFortuneDialog();
   });
+  const fortuneBtn = document.getElementById('membershipFortuneBtn');
+  if (fortuneBtn && !fortuneBtn.dataset.fortuneBound){
+    fortuneBtn.dataset.fortuneBound = '1';
+    fortuneBtn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      openFortuneDialog();
+    });
+  }
   if (fortuneClose){
     fortuneClose.addEventListener('click', ()=> closeDialog(fortuneDialog));
   }
