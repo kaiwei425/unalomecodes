@@ -11067,7 +11067,7 @@ function composeOrderEmail(order, opts = {}) {
         textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
       }
     } else if (!isServiceOrder && /已完成|完成/.test(String(status || ''))) {
-      textParts.push(`親愛的 ${buyerName} 您好，感謝您選擇 ${opts.siteName || 'Unalomecodes'}，您的訂單 ${order.id || ''} 已順利完成。`);
+      textParts.push(`感謝您選擇 ${opts.siteName || 'Unalomecodes'}，您的訂單 ${order.id || ''} 已順利完成。`);
       textParts.push('我們很榮幸能夠為您提供這次的服務，也希望這次的體驗能為您帶來正面的能量與幫助。');
       textParts.push('✨ 邀請您留下寶貴的回饋');
       textParts.push('您的回饋對我們非常重要，不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。');
