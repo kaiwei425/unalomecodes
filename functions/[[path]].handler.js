@@ -16,6 +16,7 @@ import { createCouponHandlers } from './_handlers/coupons.js';
 import { createServiceProductsHandlers } from './_handlers/service-products.js';
 import { createFileHandlers } from './_handlers/files.js';
 import { createMiscApiHandlers } from './_handlers/misc-apis.js';
+import { createFoodUtils } from './_handlers/food-utils.js';
 import { createUploadHandlers } from './_handlers/upload.js';
 import { createAdminHandlers } from './_handlers/admin.js';
 import { createAuthHandlers } from './_handlers/auth.js';
@@ -517,6 +518,8 @@ const uploadHandlers = createUploadHandlers({
   safeExt
 });
 
+const foodUtils = createFoodUtils({ getAny });
+
 const adminHandlers = createAdminHandlers({
   json,
   jsonHeadersFor,
@@ -683,6 +686,14 @@ const adminHandlers = createAdminHandlers({
   jsonWithHeaders,
   recordFoodMapStat,
   recordTempleMapStat,
+  readFood: foodUtils.readFood,
+  saveFood: foodUtils.saveFood,
+  listFoods: foodUtils.listFoods,
+  readFoodsListCache: foodUtils.readFoodsListCache,
+  writeFoodsListCache: foodUtils.writeFoodsListCache,
+  deleteFoodsListCache: foodUtils.deleteFoodsListCache,
+  upsertFoodsListCache: foodUtils.upsertFoodsListCache,
+  resetFoodsListMemoryCache: foodUtils.resetFoodsListMemoryCache,
   listTemples,
   mergeTempleRecord,
   normalizeTemplePayload,

@@ -588,7 +588,15 @@ function createFoodUtils(deps){
     geocodeByGoogle,
     geocodeByNominatim,
     geocodeQueryForFood,
-    resolveFoodLatLng
+    resolveFoodLatLng,
+    readFood,
+    saveFood,
+    resetFoodsListMemoryCache,
+    readFoodsListCache,
+    writeFoodsListCache,
+    deleteFoodsListCache,
+    upsertFoodsListCache,
+    listFoods
   };
 }
 
