@@ -10884,6 +10884,7 @@ function composeOrderEmail(order, opts = {}) {
         : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如需調整服務時間或內容，請聯繫官方 LINE 客服協助。</div>'))
     : '';
   const serviceCallNote = '';
+  const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${(isServiceOrder && consultStage === 'appointment_confirmed')
@@ -10941,7 +10942,6 @@ function composeOrderEmail(order, opts = {}) {
       <p>If you need assistance, please contact us via Email or LINE.</p>`
       }
       <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`;
-  const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
     const serviceName = esc(order?.serviceName || (Array.isArray(order?.items) && order.items[0] && order.items[0].name) || '服務');
     const lookupLine = `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，您的${serviceName}已順利完成 🙏<br><br>
