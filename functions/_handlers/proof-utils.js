@@ -909,6 +909,30 @@ function createProofUtils(deps){
     };
     return { ok:true, item };
   }
+
+  function buildOrderItems(order) {
+    if (Array.isArray(order?.items) && order.items.length) {
+      return order.items.map(it => ({
+        name: String(it.productName || it.name || it.title || '商品'),
+        spec: String(it.variantName || it.spec || it.deity || '').trim(),
+        qty: Math.max(1, Number(it.qty || it.quantity || 1) || 1),
+        total: Number(it.total || (Number(it.price || it.unitPrice || 0) * Math.max(1, Number(it.qty || it.quantity || 1) || 1)) || 0),
+        image: String(it.image || it.picture || it.img || '')
+      }));
+    }
+    if (order?.productName) {
+      const qty = Math.max(1, Number(order.qty || 1) || 1);
+      const unit = Number(order.price || (order.amount || 0) / qty || 0);
+      return [{
+        name: String(order.productName),
+        spec: String(order.variantName || '').trim(),
+        qty,
+        total: unit * qty,
+        image: String(order.productImage || order.image || order.cover || '')
+      }];
+    }
+    return [];
+  }
   async function resolveOrderSelection(env, body){
     function isTruthy(x){ return x === true || x === 1 || x === '1' || String(x).toLowerCase() === 'true' || String(x).toLowerCase() === 'yes' || x === 'on'; }
     const hintMode   = (body.mode || '').toLowerCase();
@@ -969,7 +993,8 @@ function createProofUtils(deps){
     resolveAvailableStock,
     readProductById,
     getUserStore,
-    getSessionUserRecord
+    getSessionUserRecord,
+    buildOrderItems
   };
 }
 
