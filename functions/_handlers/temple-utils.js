@@ -2570,6 +2570,13 @@ function createTempleUtils(deps){
       }
     }catch(_){}
     try{
+      const rawDirect = await env.PRODUCTS.get(pid);
+      if (rawDirect){
+        const p = JSON.parse(rawDirect);
+        return normalizeProduct(p);
+      }
+    }catch(_){}
+    try{
       const indexRaw = await env.PRODUCTS.get('INDEX');
       const ids = indexRaw ? (JSON.parse(indexRaw) || []) : [];
       if (Array.isArray(ids) && ids.length){
