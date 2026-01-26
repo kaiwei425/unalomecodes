@@ -51,6 +51,37 @@ const TEMPLES_LIST_KV_TTL = 60 * 10;
 const TEMPLES_LIST_KEY = 'TEMPLES:LIST';
 const TEMPLES_LIST_CACHE = { ts: 0, items: null };
 
+const DEFAULT_SERVICE_PRODUCTS = [
+  {
+    id: 'svc-candle-basic',
+    name: '蠟燭祈福｜基本祈請',
+    category: '服務型',
+    description: '老師於指定吉日時為您點燃蠟燭祈願，並以泰文逐一祝禱所託願望。',
+    duration: '約 7 天',
+    includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
+    price: 799,
+    cover: 'https://unalomecodes.com/api/file/mock/candle-basic.png',
+    options: [
+      { name: '基礎蠟燭', price: 0 },
+      { name: '祈願蠟燭 + 供品', price: 300 }
+    ]
+  },
+  {
+    id: 'svc-candle-plus',
+    name: '蠟燭祈福｜進階供品組',
+    category: '服務型',
+    description: '加上供品與祈福儀式照片回傳，適合需要長期加持的願望。',
+    duration: '約 14 天',
+    includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
+    price: 1299,
+    cover: 'https://unalomecodes.com/api/file/mock/candle-plus.png',
+    options: [
+      { name: '進階供品組', price: 0 },
+      { name: '供品＋特別祈禱', price: 500 }
+    ]
+  }
+];
+
 const ORDER_INDEX_KEY = 'ORDER_INDEX';
 const ORDER_ID_PREFIX = 'OD';
 const ORDER_ID_LEN = 10;
@@ -1961,37 +1992,6 @@ async function generateServiceOrderId(env){
   }
   return SERVICE_ORDER_ID_PREFIX + makeOrderCode(SERVICE_ORDER_ID_LEN + 2);
 }
-
-const DEFAULT_SERVICE_PRODUCTS = [
-  {
-    id: 'svc-candle-basic',
-    name: '蠟燭祈福｜基本祈請',
-    category: '服務型',
-    description: '老師於指定吉日時為您點燃蠟燭祈願，並以泰文逐一祝禱所託願望。',
-    duration: '約 7 天',
-    includes: ['蠟燭祈請一次', '祈福祝禱錄音節錄'],
-    price: 799,
-    cover: 'https://unalomecodes.com/api/file/mock/candle-basic.png',
-    options: [
-      { name: '基礎蠟燭', price: 0 },
-      { name: '祈願蠟燭 + 供品', price: 300 }
-    ]
-  },
-  {
-    id: 'svc-candle-plus',
-    name: '蠟燭祈福｜進階供品組',
-    category: '服務型',
-    description: '加上供品與祈福儀式照片回傳，適合需要長期加持的願望。',
-    duration: '約 14 天',
-    includes: ['蠟燭祈請三次', '供品與祝禱紀錄', '祈福成果照片'],
-    price: 1299,
-    cover: 'https://unalomecodes.com/api/file/mock/candle-plus.png',
-    options: [
-      { name: '進階供品組', price: 0 },
-      { name: '供品＋特別祈禱', price: 500 }
-    ]
-  }
-];
 
 function normalizeTWPhoneStrict(raw){
   const digits = String(raw||'').replace(/\D+/g,'');
