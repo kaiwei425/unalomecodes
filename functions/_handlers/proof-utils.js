@@ -994,6 +994,7 @@ function createProofUtils(deps){
     readProductById,
     getUserStore,
     getSessionUserRecord,
+    saveUserRecord,
     buildOrderItems
   };
 }
