@@ -385,6 +385,7 @@ const serviceOrderHandlers = createServiceOrderHandlers({
   jsonHeaders,
   cleanupExpiredHolds,
   getSlotConfig,
+  applyScheduledSlotPublish,
   getServiceSlotMode,
   getServiceSlotWindow,
   closeExpiredWindowIfNeeded,
