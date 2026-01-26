@@ -19,10 +19,52 @@ function createAdminHandlers(deps){
     checkAdminRateLimit,
     buildRateKey,
     updateDashboardStats,
+    getUserStore,
+    isAdmin,
+    isPhoneConsultOrder,
+    normalizeConsultStage,
+    buildBookingNotifyEmail,
+    getOrderCustomerEmail,
+    isRateLimitError,
+    isRateLimitResult,
+    requireAdminSlotsManage,
+    sleepMs,
     pickTrackStore,
     normalizeTrackEvent,
+    recordTrackEvent,
     formatTZ,
     taipeiDateKey,
+    taipeiDateParts,
+    formatTaipeiDate,
+    toWeekdayKey,
+    toBirthWeekdayKey,
+    getMahaTaksa,
+    getYamUbakong,
+    getThaiDayColor,
+    deriveTabooColor,
+    zodiacInfoByKey,
+    sunSignByDate,
+    moonPhaseInfo,
+    fnv1aHash,
+    buildLuckyNumbers,
+    buildUserSignals,
+    buildAdviceLine,
+    buildStarText,
+    pickPersonalTask,
+    buildLocalFortuneV2,
+    normalizeFortunePayloadV2,
+    normalizeSummaryStars,
+    normalizeAdviceWithLine,
+    sanitizeRitual,
+    callOpenAIFortune,
+    ensureFortuneIndex,
+    recordFortuneStat,
+    isTooSimilar,
+    FORTUNE_FORMAT_VERSION,
+    PHUM_LABEL,
+    MANTRA_LIST,
+    GUARDIAN_TONE,
+    ICHING_NAMES,
     computeServerDiscount,
     maybeSendOrderEmails,
     sendEmailMessage,
@@ -57,6 +99,7 @@ function createAdminHandlers(deps){
     parsePublishAt,
     publishSlotKeys,
     unpublishSlotKeys,
+    getSessionUser,
     getSessionUserRecord,
     loadUserRecord,
     saveUserRecord,
@@ -66,6 +109,9 @@ function createAdminHandlers(deps){
     buildRescheduleId,
     updateRescheduleIndex,
     parseSlotStartToMs,
+    normalizeQuizInput,
+    resolveCreatorName,
+    hasCreatorTermsAccepted,
     normalizeTWPhoneStrict,
     getClientIp,
     generateServiceOrderId,
@@ -83,6 +129,7 @@ function createAdminHandlers(deps){
     normalizeStatus,
     statusIsPaidOrReady,
     statusIsWaitingVerify,
+    isFoodCreator,
     getAdminQnaUnread,
     clearAdminQnaUnread,
     getUserUnreadTotal,
@@ -108,7 +155,25 @@ function createAdminHandlers(deps){
     orderQnaHandlers,
     orderFlowHandlers,
     paymentHandlers,
-    couponHandlers
+    couponHandlers,
+    creatorInviteKey,
+    normalizeCreatorCode,
+    generateCreatorInviteCode,
+    jsonWithHeaders,
+    recordFoodMapStat,
+    recordTempleMapStat,
+    listTemples,
+    mergeTempleRecord,
+    normalizeTemplePayload,
+    readTemple,
+    readTemplesListCache,
+    resetTemplesListMemoryCache,
+    resolveTempleCoords,
+    resolveTempleHours,
+    saveTemple,
+    upsertTemplesListCache,
+    writeTemplesListCache,
+    deleteTemplesListCache
   } = deps;
 
   async function handleAdminApis(request, env, url, pathname, origin){
@@ -1996,7 +2061,10 @@ function createAdminHandlers(deps){
         seed,
         avoidTasks
       });
-      const hasPersonalTask = personalTask && personalTask.task;
+      const safePersonalTask = (personalTask && personalTask.task)
+        ? personalTask
+        : { task:'列出今天三個待辦，先完成最重要的一件。', why:'先完成一件可控的小步驟，讓節奏回正。' };
+      const hasPersonalTask = !!safePersonalTask.task;
       let fortune = null;
       let source = 'local';
       const taksaLabel = PHUM_LABEL[taksa.phum] || taksa.phum || '—';
@@ -2020,7 +2088,7 @@ function createAdminHandlers(deps){
         `規則：只回傳 JSON，欄位必須符合 schema，禁止新增欄位；不得使用模糊巴納姆語句。`,
         `summary 第一個句子必須點名「今天是 ${taksaLabel} 日」，不可改寫骨架事實。`,
         `core/timing/lucky 必須與輸入骨架一致，不可改寫；若不一致視為無效輸出。`,
-        `action.task 必須完全等於「${personalTask.task}」，不得改寫或換詞。`,
+        `action.task 必須完全等於「${safePersonalTask.task}」，不得改寫或換詞。`,
         `action.task 必須 15 分鐘內可完成、可打勾驗證，且不可與 avoidTasks 重複。`,
         `action.why 必須對應 ${taksa.phum} 與 ${signals.focus.join('、') || '工作'}。`,
         `timing.best / timing.avoid 必須使用上述 Yam 時段，不可自造。`,
@@ -2038,10 +2106,15 @@ function createAdminHandlers(deps){
       const systemPrompt = '你是泰國 Maha Taksa + Mutelu 的祭司。請以繁體中文撰寫，嚴格遵守骨架事實與 JSON schema。';
 
       ctx.userSignals = signals;
-      ctx.personalTask = personalTask;
+      ctx.personalTask = safePersonalTask;
       if (!forceLocal && hasPersonalTask){
-        fortune = normalizeFortunePayloadV2(await callOpenAIFortune(env, prompt, seed, systemPrompt), ctx);
-        source = fortune ? 'openai' : 'local';
+        try{
+          fortune = normalizeFortunePayloadV2(await callOpenAIFortune(env, prompt, seed, systemPrompt), ctx);
+          source = fortune ? 'openai' : 'local';
+        }catch(_){
+          fortune = null;
+          source = 'local';
+        }
       }
       if (fortune && isTooSimilar(fortune, history)){
         if (!forceLocal){
@@ -2051,13 +2124,21 @@ function createAdminHandlers(deps){
             seed: seed + 1,
             avoidTasks
           });
-          const promptAlt = prompt + `\naction.task 與 avoidTasks 重複，請更換成新的可勾選任務，且必須等於「${personalAlt.task}」。其餘骨架保持不變。`;
-          const altCtx = Object.assign({}, ctx, { personalTask: personalAlt });
-          const alt = normalizeFortunePayloadV2(await callOpenAIFortune(env, promptAlt, seed + 1, systemPrompt), altCtx);
-          if (alt && !isTooSimilar(alt, history)){
-            fortune = alt;
-            source = 'openai';
-          }else{
+          const safeAlt = (personalAlt && personalAlt.task)
+            ? personalAlt
+            : safePersonalTask;
+          const promptAlt = prompt + `\naction.task 與 avoidTasks 重複，請更換成新的可勾選任務，且必須等於「${safeAlt.task}」。其餘骨架保持不變。`;
+          const altCtx = Object.assign({}, ctx, { personalTask: safeAlt });
+          try{
+            const alt = normalizeFortunePayloadV2(await callOpenAIFortune(env, promptAlt, seed + 1, systemPrompt), altCtx);
+            if (alt && !isTooSimilar(alt, history)){
+              fortune = alt;
+              source = 'openai';
+            }else{
+              fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks, signals);
+              source = 'local';
+            }
+          }catch(_){
             fortune = buildLocalFortuneV2(ctx, seed + 17, avoidTasks, signals);
             source = 'local';
           }

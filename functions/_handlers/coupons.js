@@ -17,6 +17,7 @@ function createCouponHandlers(deps){
     isAdmin,
     getUserStore,
     loadUserRecord,
+    normalizeQuizInput,
     makeCouponCode,
     couponKey,
     saveCoupon,

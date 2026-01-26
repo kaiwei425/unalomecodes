@@ -949,6 +949,7 @@ Dear ${esc(buyerName)}, Thank you for shopping with ${esc(opts.siteName || 'Unal
     buildOrderDraft,
     maybeSendOrderEmails,
     sendEmailMessage,
+    composeOrderEmail,
     shouldNotifyStatus
   };
 }
