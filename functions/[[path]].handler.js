@@ -134,6 +134,7 @@ const SERVICE_ORDER_ID_LEN = 10;
 const FORTUNE_FORMAT_VERSION = '2.0.0';
 const FORTUNE_STATS_PREFIX = 'FORTUNE_STATS:';
 const FORTUNE_STATS_SEEN_PREFIX = 'FORTUNE_STATS:SEEN:';
+const ADMIN_KEY_USAGE_SEEN = new WeakSet();
 
 const coreShared = createCoreSharedUtils({
   getAny,
@@ -1286,12 +1287,43 @@ async function requireAdminSlotsManage(request, env){
   }
   return null;
 }
+async function logAdminKeyUsage(request, env){
+  try{
+    if (ADMIN_KEY_USAGE_SEEN.has(request)) return;
+    ADMIN_KEY_USAGE_SEEN.add(request);
+    const entry = {
+      ts: new Date().toISOString(),
+      action: 'admin_key_used',
+      actorEmail: '',
+      actorRole: 'admin_key',
+      ip: getClientIp(request) || '',
+      ua: request.headers.get('User-Agent') || '',
+      targetType: 'http',
+      targetId: new URL(request.url).pathname,
+      meta: {
+        method: request.method,
+        origin: request.headers.get('Origin') || '',
+        referer: request.headers.get('Referer') || ''
+      }
+    };
+    await auditAppend(env, entry);
+  }catch(err){
+    try{
+      const path = new URL(request.url).pathname;
+      console.log(JSON.stringify({ admin_key_used: true, path, error: String(err) }));
+    }catch(_){}
+  }
+}
 async function isAdmin(request, env){
   try{
     const fromCookie = await getAdminSession(request, env);
     if (fromCookie) return true;
     const key = (request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key') || '').trim();
-    return !!(env.ADMIN_KEY && key && key === env.ADMIN_KEY);
+    if (env.ADMIN_KEY && key && key === env.ADMIN_KEY){
+      await logAdminKeyUsage(request, env);
+      return true;
+    }
+    return false;
   }catch(e){ return false; }
 }
 function normalizeEmail(val){
