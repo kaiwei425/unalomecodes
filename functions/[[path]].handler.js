@@ -10878,15 +10878,28 @@ function composeOrderEmail(order, opts = {}) {
       }</p>
       <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。</p>
-      <p>目前正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間；預約確認完成後，系統會再次寄送通知信給您，請留意電子郵件。</p>
+      <p>${isServiceOrder
+        ? `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。`
+        : `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。`
+      }</p>
+      ${isServiceOrder
+        ? `<p>目前正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間；預約確認完成後，系統會再次寄送通知信給您，請留意電子郵件。</p>
       <p>您可至會員中心－我的訂單查詢最新狀態；如需改期，請於預約時間 48 小時前聯繫客服。</p>
       <p>客服 LINE：${lineLabel}</p>
       <p>Dear ${esc(buyerName)},</p>
       <p>Thank you for choosing ${esc(opts.siteName || 'Unalomecodes')}. We have received your order successfully.</p>
       <p>We are now verifying the payment and preparing the appointment. You will receive another email once the schedule is confirmed.</p>
       <p>You can check the latest status in My Orders. To reschedule, please contact us at least 48 hours in advance.</p>
-      <p>LINE Support: ${lineLabel}</p>
+      <p>LINE Support: ${lineLabel}</p>`
+        : `<p>目前正在核對付款與訂單資料，確認無誤後將安排出貨。</p>
+      <p>若為 7-11 店到店，出貨後將另行寄送物流通知。</p>
+      <p>如需協助請聯繫客服：${esc(supportEmail)} 或 LINE ID：${lineLabel}。</p>
+      <p>Dear ${esc(buyerName)},</p>
+      <p>Thank you for shopping with ${esc(opts.siteName || 'Unalomecodes')}. We have received your order.</p>
+      <p>We are verifying the payment and order details. Once confirmed, we will arrange shipment.</p>
+      <p>For 7-ELEVEN pickup orders, a shipping notification will be sent after dispatch.</p>
+      <p>If you need assistance, please contact us via Email or LINE.</p>`
+      }
       <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
   if (context === 'status_update' && isBlessingDone){
@@ -11010,10 +11023,14 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push('You can check the latest status in My Orders.');
       textParts.push(`To reschedule, please contact us at least 48 hours in advance. LINE Support: ${lineLabel}`);
     }else{
-      const waitLine = isCod711
-        ? `親愛的 ${buyerName} 您好：我們已收到您的訂單，將儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`
-        : `親愛的 ${buyerName} 您好：我們已收到您的訂單，將在核對匯款資料無誤後，儘速安排出貨。請勿直接回覆此信，如需協助可寫信至 ${supportEmail} 或加入官方 LINE ID：${lineLabel}。`;
-      textParts.push(waitLine);
+      textParts.push(`親愛的 ${buyerName} 您好：感謝您選擇 ${opts.siteName || 'Unalomecodes'}，我們已成功收到您的訂單。`);
+      textParts.push('目前正在核對付款與訂單資料，確認無誤後將安排出貨。');
+      textParts.push('若為 7-11 店到店，出貨後會再寄送通知與物流資訊。');
+      textParts.push(`如需協助請聯繫客服：${supportEmail} 或 LINE ID：${lineLabel}。`);
+      textParts.push(`Dear ${buyerName}, Thank you for shopping with ${opts.siteName || 'Unalomecodes'}. We have received your order.`);
+      textParts.push('We are verifying the payment and order details. Once confirmed, we will arrange shipment.');
+      textParts.push('For 7-ELEVEN pickup orders, a shipping notification will be sent after dispatch.');
+      textParts.push('If you need assistance, please contact us via Email or LINE.');
     }
   }
   textParts.push(`訂單編號：${order.id}`);
