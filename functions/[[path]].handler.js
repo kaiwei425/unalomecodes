@@ -589,6 +589,7 @@ const adminHandlers = createAdminHandlers({
   resolvePhoneConsultOptionPrices,
   buildSlotKey,
   parseSlotKey,
+  BOOKING_MODE_WINDOWED,
   resolveSlotStatus,
   resolveSlotEnabled,
   cleanupExpiredHolds,

@@ -90,6 +90,7 @@ function createAdminHandlers(deps){
     parseSlotKey,
     parseTimeToMinutes,
     minutesToHHMM,
+    BOOKING_MODE_WINDOWED,
     resolveSlotStatus,
     resolveSlotEnabled,
     cleanupExpiredHolds,
