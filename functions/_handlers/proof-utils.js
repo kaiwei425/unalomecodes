@@ -968,7 +968,8 @@ function createProofUtils(deps){
     resolveTotalStockForProduct,
     resolveAvailableStock,
     readProductById,
-    getUserStore
+    getUserStore,
+    getSessionUserRecord
   };
 }
 

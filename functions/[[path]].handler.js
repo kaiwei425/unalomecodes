@@ -89,7 +89,8 @@ const {
   resolveTotalStockForProduct,
   resolveAvailableStock,
   readProductById,
-  getUserStore
+  getUserStore,
+  getSessionUserRecord
 } = createProofUtils({
   getAny,
   arrayBufferToBase64,
