@@ -10805,6 +10805,14 @@ function composeOrderEmail(order, opts = {}) {
   const serviceFeedbackUrl = order?.serviceId
     ? `https://unalomecodes.com/service?id=${encodeURIComponent(String(order.serviceId))}`
     : 'https://unalomecodes.com/service';
+  const productFeedbackId = (order && order.productId && String(order.productId) !== 'CART')
+    ? String(order.productId)
+    : (Array.isArray(order?.items) && order.items[0] && (order.items[0].productId || order.items[0].id))
+      ? String(order.items[0].productId || order.items[0].id)
+      : '';
+  const productFeedbackUrl = productFeedbackId
+    ? `https://unalomecodes.com/shop?productId=${encodeURIComponent(productFeedbackId)}`
+    : 'https://unalomecodes.com/shop';
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const plainMode = !!opts.plain;
@@ -10882,6 +10890,15 @@ function composeOrderEmail(order, opts = {}) {
         ? (isPhoneConsultServiceOrder
           ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`
           : `您的服務已完成安排／預約。如需進一步協助，請聯繫客服 Email：${esc(supportEmail)} 或 LINE：${lineLabel}。`)
+        : (!isServiceOrder && /已完成|完成/.test(String(status || '')))
+          ? `親愛的 ${esc(buyerName)} 您好，<br><br>
+感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，您的訂單 ${esc(order.id || '')} 已順利完成 🙏<br><br>
+我們很榮幸能夠為您提供這次的服務，也希望這次的體驗能為您帶來正面的能量與幫助。<br><br>
+<strong>✨ 邀請您留下寶貴的回饋</strong><br>
+您的回饋對我們非常重要，<br>
+不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。<br>
+👉 點此留下您的評價：<br>
+<a href="${esc(productFeedbackUrl)}" target="_blank" rel="noopener">${esc(productFeedbackUrl)}</a>`
         : (isServiceOrder && consultStage === 'done' && !isPhoneConsultServiceOrder)
           ? `感謝您選擇 unalomecodes 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="${esc(serviceFeedbackUrl)}" target="_blank" rel="noopener">${esc(serviceFeedbackUrl)}</a>）。再次感謝您的支持，期待未來再次為您服務。`
         : (isServiceOrder && consultStage === 'done')
@@ -11025,6 +11042,12 @@ function composeOrderEmail(order, opts = {}) {
         textParts.push('Your service schedule has been confirmed.');
         textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
       }
+    } else if (!isServiceOrder && /已完成|完成/.test(String(status || ''))) {
+      textParts.push(`親愛的 ${buyerName} 您好，感謝您選擇 ${opts.siteName || 'Unalomecodes'}，您的訂單 ${order.id || ''} 已順利完成。`);
+      textParts.push('我們很榮幸能夠為您提供這次的服務，也希望這次的體驗能為您帶來正面的能量與幫助。');
+      textParts.push('✨ 邀請您留下寶貴的回饋');
+      textParts.push('您的回饋對我們非常重要，不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。');
+      textParts.push(`👉 點此留下您的評價：${productFeedbackUrl}`);
     } else if (consultStage === 'done' && !isPhoneConsultServiceOrder) {
       textParts.push(`感謝您選擇 unalomecodes 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋(${serviceFeedbackUrl})。再次感謝您的支持，期待未來再次為您服務。`);
     } else if (consultStage === 'done') {
