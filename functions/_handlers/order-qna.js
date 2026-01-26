@@ -26,7 +26,6 @@ function createOrderQnaHandlers(deps){
     getQnaMetaStore,
     getUserUnreadTotal,
     clearUserUnreadAll,
-    clearUserUnreadForOrder,
     getUserCouponUnread,
     saveUserRecord
   } = deps;
