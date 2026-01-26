@@ -10778,9 +10778,6 @@ function composeOrderEmail(order, opts = {}) {
   const methodRaw = opts.channelLabel || order.method || '訂單';
   const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || /服務/.test(String(order?.method||''));
   const isPhoneConsultServiceOrder = isServiceOrder && String(order?.serviceId || '').trim() === 'SVT409059d4';
-  const serviceDisplayName = isServiceOrder
-    ? String(order?.serviceName || (Array.isArray(order?.items) && order.items[0] && order.items[0].name) || '服務')
-    : '';
   const method = (isServiceOrder && (!order.paymentMethod || /服務/.test(methodRaw))) ? '轉帳匯款' : methodRaw;
   const isCod711 = /貨到付款|cod|711/i.test(method || '');
   const context = opts.context || 'order_created';
@@ -10889,16 +10886,7 @@ function composeOrderEmail(order, opts = {}) {
   const serviceCallNote = '';
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
-      <p>${(isBlessingServiceDone)
-        ? `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，您的${esc(serviceDisplayName)}已順利完成 🙏<br><br>
-我們已完成本次服務流程，相關成果與進度可至會員中心查看。<br>
-希望這次的服務能為您帶來正向的力量與安定。<br><br>
-<strong>✨ 邀請您留下寶貴的回饋</strong><br>
-您的回饋對我們非常重要，<br>
-不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。<br>
-👉 點此留下您的評價：<br>
-<a href="${esc(serviceFeedbackUrl)}" target="_blank" rel="noopener">${esc(serviceFeedbackUrl)}</a>`
-        : (isServiceOrder && consultStage === 'appointment_confirmed')
+      <p>${(isServiceOrder && consultStage === 'appointment_confirmed')
         ? (isPhoneConsultServiceOrder
           ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`
           : `您的服務已完成安排／預約。如需進一步協助，請聯繫客服 Email：${esc(supportEmail)} 或 LINE：${lineLabel}。`)
@@ -10916,10 +10904,7 @@ function composeOrderEmail(order, opts = {}) {
           ? `感謝您選擇 ${esc(opts.siteName || 'unalomecodes')} 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="https://unalomecodes.com/service?id=SVT409059d4" target="_blank" rel="noopener">https://unalomecodes.com/service?id=SVT409059d4</a>），讓更多人也能看到這項服務，對自己的命運更加瞭解，讓未來更美好。再次感謝您的支持，期待未來再次為您服務。`
           : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。我們將依流程持續處理，如有進一步安排會以 Email 通知您。`
       }</p>
-      <p>${isBlessingServiceDone
-        ? `本信件為系統自動發送，請勿直接回覆。如需協助請聯繫 ${esc(supportEmail)} 或 LINE ID：${lineLabel}。`
-        : `Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.`
-      }</p>`
+      <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${isServiceOrder
         ? (isPhoneConsultServiceOrder ? `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。` : '')
@@ -10957,11 +10942,16 @@ function composeOrderEmail(order, opts = {}) {
       }
       <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`;
   const isBlessingDone = opts.blessingDone || (order.status === '祈福完成');
-  const isBlessingServiceDone = isServiceOrder && !isPhoneConsultServiceOrder && context === 'status_update' && isBlessingDone;
-  if (context === 'status_update' && isBlessingDone && !isBlessingServiceDone){
-    const lookupLine = opts.lookupUrl
-      ? `請至 <a href="${esc(opts.lookupUrl)}" target="_blank" rel="noopener">查詢祈福進度</a> 輸入手機號碼，並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。`
-      : '請至查詢祈福進度輸入手機號碼，並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。';
+  if (context === 'status_update' && isBlessingDone){
+    const serviceName = esc(order?.serviceName || (Array.isArray(order?.items) && order.items[0] && order.items[0].name) || '服務');
+    const lookupLine = `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，您的${serviceName}已順利完成 🙏<br><br>
+我們已完成本次服務流程，相關成果與進度可至會員中心查看。<br>
+希望這次的服務能為您帶來正向的力量與安定。<br><br>
+<strong>✨ 邀請您留下寶貴的回饋</strong><br>
+您的回饋對我們非常重要，<br>
+不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。<br>
+👉 點此留下您的評價：<br>
+<a href="${esc(serviceFeedbackUrl)}" target="_blank" rel="noopener">${esc(serviceFeedbackUrl)}</a>`;
     customerIntro += `<p>${lookupLine}</p>`;
   }
   if (context === 'status_update' && isShipped && trackingNo){
@@ -11047,16 +11037,7 @@ function composeOrderEmail(order, opts = {}) {
   if (opts.admin) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
-    if (isBlessingServiceDone) {
-      textParts.push(`親愛的 ${buyerName} 您好，`);
-      textParts.push(`感謝您選擇 ${opts.siteName || 'Unalomecodes'}，您的${serviceDisplayName}已順利完成 🙏`);
-      textParts.push('我們已完成本次服務流程，相關成果與進度可至會員中心查看。');
-      textParts.push('希望這次的服務能為您帶來正向的力量與安定。');
-      textParts.push('✨ 邀請您留下寶貴的回饋');
-      textParts.push('您的回饋對我們非常重要，不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。');
-      textParts.push(`👉 點此留下您的評價：${serviceFeedbackUrl}`);
-      textParts.push(`如需協助請聯繫 ${supportEmail} 或 LINE ID：${lineLabel}。`);
-    } else if (consultStage === 'appointment_confirmed') {
+    if (consultStage === 'appointment_confirmed') {
       if (isPhoneConsultServiceOrder) {
         textParts.push(`您的預約已確認完成。請加入官方 LINE https://line.me/R/ti/p/@427oaemj 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`);
         textParts.push(`Your appointment has been confirmed. Please add our official LINE https://line.me/R/ti/p/@427oaemj or search ID @427oaemj. Our staff will contact you shortly to arrange the call and explain the next steps.`);
@@ -11082,15 +11063,16 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push(`您的訂單狀態已更新為「${status}」。我們會依照流程持續處理，如有進一步安排，系統將以電子郵件通知您。`);
       textParts.push(`Your order status has been updated to ${status}. We will continue processing your order and notify you by email if there are further updates.`);
     }
-    if (!isBlessingServiceDone){
-      textParts.push(`如需協助請聯繫 ${supportEmail} 或 LINE ID：${lineLabel}。`);
-      textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
-    }
-    if (isBlessingDone && !isBlessingServiceDone){
-      const lookupText = opts.lookupUrl
-        ? `請至 ${opts.lookupUrl} 查詢祈福進度，輸入手機號碼並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。`
-        : '請至查詢祈福進度輸入手機號碼並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看祈福完成的照片。';
-      textParts.push(lookupText);
+    textParts.push(`如需協助請聯繫 ${supportEmail} 或 LINE ID：${lineLabel}。`);
+    textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
+    if (isBlessingDone){
+      const serviceName = order?.serviceName || (Array.isArray(order?.items) && order.items[0] && order.items[0].name) || '服務';
+      textParts.push(`感謝您選擇 ${opts.siteName || 'Unalomecodes'}，您的${serviceName}已順利完成 🙏`);
+      textParts.push('我們已完成本次服務流程，相關成果與進度可至會員中心查看。');
+      textParts.push('希望這次的服務能為您帶來正向的力量與安定。');
+      textParts.push('✨ 邀請您留下寶貴的回饋');
+      textParts.push('您的回饋對我們非常重要，不僅能幫助我們持續優化服務品質，也能讓其他正在猶豫的使用者獲得更多參考。');
+      textParts.push(`👉 點此留下您的評價：${serviceFeedbackUrl}`);
     }
   } else {
     if (isServiceOrder){
