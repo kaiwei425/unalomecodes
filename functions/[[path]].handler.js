@@ -10902,9 +10902,9 @@ function composeOrderEmail(order, opts = {}) {
           ? `感謝您選擇 unalomecodes 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="${esc(serviceFeedbackUrl)}" target="_blank" rel="noopener">${esc(serviceFeedbackUrl)}</a>）。再次感謝您的支持，期待未來再次為您服務。`
         : (isServiceOrder && consultStage === 'done')
           ? `感謝您選擇 ${esc(opts.siteName || 'unalomecodes')} 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="https://unalomecodes.com/service?id=SVT409059d4" target="_blank" rel="noopener">https://unalomecodes.com/service?id=SVT409059d4</a>），讓更多人也能看到這項服務，對自己的命運更加瞭解，讓未來更美好。再次感謝您的支持，期待未來再次為您服務。`
-          : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。我們將依流程持續處理，如有進一步安排會以 Email 通知您。`
+          : (isBlessingDone ? '' : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。我們將依流程持續處理，如有進一步安排會以 Email 通知您。`)
       }</p>
-      <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`
+      ${isBlessingDone ? '' : `<p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`}`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${isServiceOrder
         ? (isPhoneConsultServiceOrder ? `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。` : '')
@@ -11060,11 +11060,15 @@ function composeOrderEmail(order, opts = {}) {
       textParts.push('若您對本次服務有任何心得或建議，誠摯邀請您留下回饋(https://unalomecodes.com/service?id=SVT409059d4)，讓更多人也能看到這項服務，讓更多人也能對於自己的命運更加瞭解，讓未來更美好。');
       textParts.push('再次感謝您的支持，期待未來再次為您服務。');
     } else {
-      textParts.push(`您的訂單狀態已更新為「${status}」。我們會依照流程持續處理，如有進一步安排，系統將以電子郵件通知您。`);
-      textParts.push(`Your order status has been updated to ${status}. We will continue processing your order and notify you by email if there are further updates.`);
+      if (!isBlessingDone){
+        textParts.push(`您的訂單狀態已更新為「${status}」。我們會依照流程持續處理，如有進一步安排，系統將以電子郵件通知您。`);
+        textParts.push(`Your order status has been updated to ${status}. We will continue processing your order and notify you by email if there are further updates.`);
+      }
     }
     textParts.push(`如需協助請聯繫 ${supportEmail} 或 LINE ID：${lineLabel}。`);
-    textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
+    if (!isBlessingDone){
+      textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
+    }
     if (isBlessingDone){
       const serviceName = order?.serviceName || (Array.isArray(order?.items) && order.items[0] && order.items[0].name) || '服務';
       textParts.push(`感謝您選擇 ${opts.siteName || 'Unalomecodes'}，您的${serviceName}已順利完成 🙏`);
