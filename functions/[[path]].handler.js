@@ -4079,6 +4079,22 @@ async function geocodePlace(request, url, env){
 async function getMapsKey(request, env){
   const key = (env.GOOGLE_MAPS_KEY || env.GOOGLE_MAPS_API_KEY || env.GOOGLE_MAP_API_KEY || env.GOOGLE_API_KEY || env.MAPS_API_KEY || env.GMAPS_KEY || "").trim();
   if (!key) return withCORS(json({ ok:false, error:"Missing key" }, 404));
+  const originHeader = (request.headers.get('Origin') || '').trim();
+  if (!originHeader){
+    try{
+      await auditAppend(env, {
+        ts: new Date().toISOString(),
+        action: 'maps_key_no_origin',
+        actorEmail: '',
+        actorRole: 'anonymous',
+        ip: getClientIp(request) || '',
+        ua: request.headers.get('User-Agent') || '',
+        targetType: 'maps_key',
+        targetId: new URL(request.url).pathname,
+        meta: { referer: request.headers.get('Referer') || '' }
+      });
+    }catch(_){}
+  }
   const allowed = isAllowedOrigin(request, env, env.MAPS_KEY_ORIGINS || "");
   if (!allowed) return withCORS(json({ ok:false, error:"Forbidden origin" }, 403));
   return withCORS(json({ ok:true, key }));

@@ -6,6 +6,7 @@ const jsonHeaders = {
 };
 
 const RATE_LIMIT_CACHE = new Map();
+const RATE_LIMIT_CACHE_MAX = 5000;
 
 function resolveOrderIndexLimit(env){
   const raw = Number(env?.ORDER_INDEX_MAX || env?.ORDER_INDEX_LIMIT || 5000);
@@ -109,6 +110,13 @@ async function checkRateLimit(env, key, limit, windowSec){
   }
   next.count += 1;
   RATE_LIMIT_CACHE.set(key, next);
+  if (RATE_LIMIT_CACHE.size > RATE_LIMIT_CACHE_MAX){
+    while (RATE_LIMIT_CACHE.size > RATE_LIMIT_CACHE_MAX){
+      const oldestKey = RATE_LIMIT_CACHE.keys().next().value;
+      if (oldestKey === undefined) break;
+      RATE_LIMIT_CACHE.delete(oldestKey);
+    }
+  }
   return next.count <= limit;
 }
 

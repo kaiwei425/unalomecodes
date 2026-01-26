@@ -118,6 +118,10 @@ export function createOrdersListHandler(deps){
       }
       // Fallback: rebuild from KV if INDEX empty (scan ORDERS KV)
       if (!ids.length && env.ORDERS?.list) {
+        try{
+          const path = new URL(request.url).pathname;
+          console.warn('[orders] index missing, scanning KV', { path });
+        }catch(_){}
         try {
           const l = await env.ORDERS.list(); // list ALL keys
           const allKeys = Array.isArray(l.keys) ? l.keys.map(k => k.name) : [];

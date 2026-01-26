@@ -3157,6 +3157,19 @@ function createAdminHandlers(deps){
       const guard = await requireCronOrAdmin(request, env);
       if (guard) return guard;
     }
+    if (request.method === 'GET'){
+      try{
+        const actor = await buildAuditActor(request, env);
+        await auditAppend(env, {
+          ts: new Date().toISOString(),
+          action: 'cron_get_used',
+          ...actor,
+          targetType: 'cron',
+          targetId: 'release-holds',
+          meta: { path: pathname, query: url.search || '' }
+        });
+      }catch(_){}
+    }
     {
       const actor = await buildAuditActor(request, env);
       const rule = parseRate(env.ADMIN_CRON_RATE_LIMIT || '20/10m');

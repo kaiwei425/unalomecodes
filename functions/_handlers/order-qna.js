@@ -305,7 +305,27 @@ function createOrderQnaHandlers(deps){
           if (Number.isFinite(num) && num > 0) map[orderId] = Math.floor(num);
         }catch(_){}
       }
-      return json({ ok:true, total, orders: map });
+      if (!Object.keys(map).length){
+        return json({ ok:true, total, orders: map });
+      }
+      let effectiveTotal = total;
+      try{
+        // Auto-clean orphaned unread counts (order missing or not owned by user).
+        const cleared = [];
+        for (const orderId of Object.keys(map)){
+          const found = await findOrderByIdForQna(env, orderId);
+          const order = found && found.order;
+          if (!order || !orderBelongsToUser(order, record)){
+            await clearUserUnreadForOrder(env, record.id, orderId, store);
+            delete map[orderId];
+            cleared.push(orderId);
+          }
+        }
+        if (cleared.length){
+          effectiveTotal = await getUserUnreadTotal(env, record.id, store);
+        }
+      }catch(_){}
+      return json({ ok:true, total: effectiveTotal, orders: map });
     }
     if (request.method === 'POST') {
       let body = {};
