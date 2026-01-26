@@ -19,14 +19,11 @@ import { createMiscApiHandlers } from './_handlers/misc-apis.js';
 import { createUploadHandlers } from './_handlers/upload.js';
 import { createAdminHandlers } from './_handlers/admin.js';
 import { createAuthHandlers } from './_handlers/auth.js';
-import { createOrderUtils } from './_handlers/order-utils.js';
 import { createStatsUtils } from './_handlers/stats-utils.js';
-import { createProofUtils } from './_handlers/proof-utils.js';
 import { createProofStoreUtils } from './_handlers/proof-store.js';
 import { createProofAccessUtils } from './_handlers/proof-access.js';
 import { createFileUtils } from './_handlers/file-utils.js';
-import { createCouponUtils } from './_handlers/coupon-utils.js';
-import { createOrderStatusUtils } from './_handlers/order-status-utils.js';
+import { createCoreSharedUtils } from './_handlers/core-shared.js';
 import {
   jsonHeaders,
   resolveOrderIndexLimit,
@@ -62,6 +59,19 @@ const FORTUNE_FORMAT_VERSION = '2.0.0';
 const FORTUNE_STATS_PREFIX = 'FORTUNE_STATS:';
 const FORTUNE_STATS_SEEN_PREFIX = 'FORTUNE_STATS:SEEN:';
 
+const coreShared = createCoreSharedUtils({
+  getAny,
+  arrayBufferToBase64,
+  signSession,
+  verifySessionToken,
+  makeToken,
+  ORDER_INDEX_KEY,
+  decStockCounters,
+  restoreStockCounters,
+  bumpSoldCounters,
+  decSoldCounters
+});
+
 const {
   inferCouponDeity,
   couponKey,
@@ -75,12 +85,7 @@ const {
   issueWelcomeCoupon,
   getUserCouponUnread,
   revokeUserCoupons,
-  redeemCoupon
-} = createCouponUtils({
-  makeToken
-});
-
-const {
+  redeemCoupon,
   proofSecret,
   signProofToken,
   verifyProofToken,
@@ -91,19 +96,10 @@ const {
   readProductById,
   getUserStore,
   getSessionUserRecord,
-  buildOrderItems
-} = createProofUtils({
-  getAny,
-  arrayBufferToBase64,
-  signSession,
-  verifySessionToken
-});
-
-const { orderAmount, orderItemsSummary, normalizeReceiptUrl } = createOrderUtils({
-  isAllowedFileUrl
-});
-
-const {
+  buildOrderItems,
+  orderAmount,
+  orderItemsSummary,
+  normalizeReceiptUrl,
   CANONICAL_STATUS,
   normalizeStatus,
   statusIsPaid,
@@ -123,15 +119,7 @@ const {
   isWaitingVerifyStatus,
   isHoldReleaseCandidate,
   releaseExpiredOrderHolds
-} = createOrderStatusUtils({
-  ORDER_INDEX_KEY,
-  markCouponUsageOnce,
-  releaseCouponUsage,
-  decStockCounters,
-  restoreStockCounters,
-  bumpSoldCounters,
-  decSoldCounters
-});
+} = coreShared;
 
 const { updateDashboardStats } = createStatsUtils({
   orderAmount,
