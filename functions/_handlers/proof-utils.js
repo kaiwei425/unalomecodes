@@ -814,16 +814,47 @@ function createProofUtils(deps){
   }
   async function readProductById(env, id){
     if (!env || !env.PRODUCTS || !id) return null;
-    try{
-      const raw = await env.PRODUCTS.get(`PRODUCT:${id}`);
-      if (!raw) return null;
-      const p = JSON.parse(raw);
+    const pid = normalizeProductId(id);
+    if (!pid) return null;
+    const normalizeProduct = (p)=>{
       if (p && !p.deityCode && p.deity) p.deityCode = getDeityCodeFromName(p.deity);
       if (p) p.category = inferCategory(p);
       return p;
-    }catch(_){
-      return null;
-    }
+    };
+    try{
+      const raw = await env.PRODUCTS.get(`PRODUCT:${pid}`);
+      if (raw){
+        const p = JSON.parse(raw);
+        return normalizeProduct(p);
+      }
+    }catch(_){}
+    try{
+      const indexRaw = await env.PRODUCTS.get('INDEX');
+      const ids = indexRaw ? (JSON.parse(indexRaw) || []) : [];
+      if (Array.isArray(ids) && ids.length){
+        const target = String(pid).toLowerCase();
+        for (const entry of ids.slice(0, 500)){
+          const key = `PRODUCT:${entry}`;
+          const raw = await env.PRODUCTS.get(key);
+          if (!raw) continue;
+          let p = null;
+          try{ p = JSON.parse(raw); }catch(_){ p = null; }
+          if (!p) continue;
+          const candidates = [
+            p.id,
+            entry,
+            p.productId,
+            p.code,
+            p.sku,
+            p.slug
+          ].filter(Boolean).map(v => String(v).toLowerCase());
+          if (candidates.includes(target)){
+            return normalizeProduct(p);
+          }
+        }
+      }
+    }catch(_){}
+    return null;
   }
   function resolveVariant(product, variantName){
     const variants = Array.isArray(product?.variants) ? product.variants : [];
