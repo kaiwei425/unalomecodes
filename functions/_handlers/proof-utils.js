@@ -1028,6 +1028,30 @@ function createProofUtils(deps){
   }
   async function resolveOrderSelection(env, body){
     function isTruthy(x){ return x === true || x === 1 || x === '1' || String(x).toLowerCase() === 'true' || String(x).toLowerCase() === 'yes' || x === 'on'; }
+    const buildItemFromRaw = (it)=>{
+      const qty = Math.max(1, Number(it?.qty ?? it?.quantity ?? 1) || 1);
+      const unit = Number(it?.unitPrice ?? it?.price ?? 0);
+      if (!Number.isFinite(unit) || unit <= 0) return { ok:false, error:'invalid_item_price' };
+      const name = String(it?.productName || it?.name || it?.title || '商品').trim();
+      if (!name) return { ok:false, error:'invalid_item_name' };
+      const variantName = String(it?.variantName || it?.variant || it?.spec || '').trim();
+      return {
+        ok:true,
+        item: {
+          productId: normalizeProductId(it?.id || it?.productId || it?.code || it?.sku || it?.product_id || it?.pid || '') || 'UNKNOWN',
+          productName: name,
+          name,
+          deity: String(it?.deity || it?.deityCode || ''),
+          deityCode: String(it?.deityCode || it?.deity || ''),
+          variantName,
+          price: unit,
+          unitPrice: unit,
+          qty,
+          image: String(it?.image || it?.img || it?.picture || it?.cover || ''),
+          category: String(it?.category || '')
+        }
+      };
+    };
     const hintMode   = (body.mode || '').toLowerCase();
     const directHint = isTruthy(body.directBuy) || isTruthy(body.single) || hintMode === 'direct';
     const hasCart    = Array.isArray(body.cart) && body.cart.length > 0;
@@ -1040,7 +1064,15 @@ function createProofUtils(deps){
       const cartArr = Array.isArray(body.cart) ? body.cart : [];
       for (const it of cartArr){
         const res = await buildItemFromProduct(env, resolveItemId(it), it.variantName || it.variant || '', it.qty || it.quantity || 1);
-        if (!res.ok) return { ok:false, error: res.error || 'invalid_item' };
+        if (!res.ok){
+          if (res.error === 'product_not_found'){
+            const fallback = buildItemFromRaw(it);
+            if (!fallback.ok) return { ok:false, error: fallback.error || 'invalid_item' };
+            items.push(fallback.item);
+            continue;
+          }
+          return { ok:false, error: res.error || 'invalid_item' };
+        }
         items.push(res.item);
       }
     } else {
@@ -1053,7 +1085,15 @@ function createProofUtils(deps){
           const cartArr = Array.isArray(body.cart) ? body.cart : [];
           for (const it of cartArr){
             const r = await buildItemFromProduct(env, resolveItemId(it), it.variantName || it.variant || '', it.qty || it.quantity || 1);
-            if (!r.ok) return { ok:false, error: r.error || 'invalid_item' };
+            if (!r.ok){
+              if (r.error === 'product_not_found'){
+                const fallback = buildItemFromRaw(it);
+                if (!fallback.ok) return { ok:false, error: fallback.error || 'invalid_item' };
+                items.push(fallback.item);
+                continue;
+              }
+              return { ok:false, error: r.error || 'invalid_item' };
+            }
             items.push(r.item);
           }
         } else {
