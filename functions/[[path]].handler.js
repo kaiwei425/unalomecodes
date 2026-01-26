@@ -10777,6 +10777,7 @@ function composeOrderEmail(order, opts = {}) {
   const note = (order.note || '').trim();
   const methodRaw = opts.channelLabel || order.method || '訂單';
   const isServiceOrder = String(order?.type || '').toLowerCase() === 'service' || /服務/.test(String(order?.method||''));
+  const isPhoneConsultServiceOrder = isServiceOrder && String(order?.serviceId || '').trim() === 'SVT409059d4';
   const method = (isServiceOrder && (!order.paymentMethod || /服務/.test(methodRaw))) ? '轉帳匯款' : methodRaw;
   const isCod711 = /貨到付款|cod|711/i.test(method || '');
   const context = opts.context || 'order_created';
@@ -10801,6 +10802,9 @@ function composeOrderEmail(order, opts = {}) {
   const supportEmail = 'bkkaiwei@gmail.com';
   const lineLabel = '@427oaemj';
   const lineInstruction = 'LINE ID：@427oaemj（請於官方 LINE 搜尋加入）';
+  const serviceFeedbackUrl = order?.serviceId
+    ? `https://unalomecodes.com/service?id=${encodeURIComponent(String(order.serviceId))}`
+    : 'https://unalomecodes.com/service';
   const couponLabelHtml = order?.coupon?.code ? `（${esc(order.coupon.code)}）` : '';
   const couponLabelText = order?.coupon?.code ? `（${order.coupon.code}）` : '';
   const plainMode = !!opts.plain;
@@ -10864,14 +10868,22 @@ function composeOrderEmail(order, opts = {}) {
     : '';
   const serviceRescheduleNote = isServiceOrder
     ? (plainMode
-      ? '<p>如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</p>'
-      : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</div>')
+      ? (isPhoneConsultServiceOrder
+        ? '<p>如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</p>'
+        : '<p>如需調整服務時間或內容，請聯繫官方 LINE 客服協助。</p>')
+      : (isPhoneConsultServiceOrder
+        ? '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如欲修改預約時段，請聯繫官方LINE客服，並於48小時前提出申請。</div>'
+        : '<div style="margin-top:12px;padding:12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;">如需調整服務時間或內容，請聯繫官方 LINE 客服協助。</div>'))
     : '';
   const serviceCallNote = '';
   let customerIntro = (context === 'status_update')
     ? `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${(isServiceOrder && consultStage === 'appointment_confirmed')
-        ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`
+        ? (isPhoneConsultServiceOrder
+          ? `您的預約已確認完成。請加入官方 LINE <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">https://line.me/R/ti/p/@427oaemj</a> 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`
+          : `您的服務已完成安排／預約。如需進一步協助，請聯繫客服 Email：${esc(supportEmail)} 或 LINE：${lineLabel}。`)
+        : (isServiceOrder && consultStage === 'done' && !isPhoneConsultServiceOrder)
+          ? `感謝您選擇 unalomecodes 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="${esc(serviceFeedbackUrl)}" target="_blank" rel="noopener">${esc(serviceFeedbackUrl)}</a>）。再次感謝您的支持，期待未來再次為您服務。`
         : (isServiceOrder && consultStage === 'done')
           ? `感謝您選擇 ${esc(opts.siteName || 'unalomecodes')} 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋（<a href="https://unalomecodes.com/service?id=SVT409059d4" target="_blank" rel="noopener">https://unalomecodes.com/service?id=SVT409059d4</a>），讓更多人也能看到這項服務，對自己的命運更加瞭解，讓未來更美好。再次感謝您的支持，期待未來再次為您服務。`
           : `您的訂單狀態已更新為 <strong>${esc(status)}</strong>。我們將依流程持續處理，如有進一步安排會以 Email 通知您。`
@@ -10883,7 +10895,8 @@ function composeOrderEmail(order, opts = {}) {
         : `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。`
       }</p>
       ${isServiceOrder
-        ? `<p>目前正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間；預約確認完成後，系統會再次寄送通知信給您，請留意電子郵件。</p>
+        ? (isPhoneConsultServiceOrder
+          ? `<p>目前正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間；預約確認完成後，系統會再次寄送通知信給您，請留意電子郵件。</p>
       <p>您可至會員中心－我的訂單查詢最新狀態；如需改期，請於預約時間 48 小時前聯繫客服。</p>
       <p>客服 LINE：${lineLabel}</p>
       <p>Dear ${esc(buyerName)},</p>
@@ -10891,6 +10904,17 @@ function composeOrderEmail(order, opts = {}) {
       <p>We are now verifying the payment and preparing the appointment. You will receive another email once the schedule is confirmed.</p>
       <p>You can check the latest status in My Orders. To reschedule, please contact us at least 48 hours in advance.</p>
       <p>LINE Support: ${lineLabel}</p>`
+          : `<p>感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的服務訂單。</p>
+      <p>我們正在核對付款與服務需求，確認無誤後將安排服務流程。</p>
+      <p>安排完成後會再寄送通知信給您，請留意電子郵件。</p>
+      <p>您可至會員中心－我的訂單查看最新狀態；如需調整服務時間或內容，請聯繫客服協助。</p>
+      <p>客服 LINE：${lineLabel}</p>
+      <p>Dear ${esc(buyerName)},</p>
+      <p>Thank you for choosing ${esc(opts.siteName || 'Unalomecodes')}. We have received your service order.</p>
+      <p>We are verifying the payment and service details. Once confirmed, we will arrange the service.</p>
+      <p>You will receive another email once the schedule is confirmed.</p>
+      <p>You can check the latest status in My Orders. For changes, please contact support.</p>
+      <p>LINE Support: ${lineLabel}</p>`)
         : `<p>目前正在核對付款與訂單資料，確認無誤後將安排出貨。</p>
       <p>若為 7-11 店到店，出貨後將另行寄送物流通知。</p>
       <p>如需協助請聯繫客服：${esc(supportEmail)} 或 LINE ID：${lineLabel}。</p>
@@ -10992,8 +11016,17 @@ function composeOrderEmail(order, opts = {}) {
     textParts.push(`${opts.siteName || '商城'} 有一筆新訂單：`);
   } else if (context === 'status_update') {
     if (consultStage === 'appointment_confirmed') {
-      textParts.push(`您的預約已確認完成。請加入官方 LINE https://line.me/R/ti/p/@427oaemj 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`);
-      textParts.push(`Your appointment has been confirmed. Please add our official LINE https://line.me/R/ti/p/@427oaemj or search ID @427oaemj. Our staff will contact you shortly to arrange the call and explain the next steps.`);
+      if (isPhoneConsultServiceOrder) {
+        textParts.push(`您的預約已確認完成。請加入官方 LINE https://line.me/R/ti/p/@427oaemj 或搜尋 ID @427oaemj，後續將由專人與您聯繫安排實際通話時間與流程說明。您也可以至會員中心－我的訂單－問與答留下想詢問的問題（中文即可，將協助翻譯給老師）。`);
+        textParts.push(`Your appointment has been confirmed. Please add our official LINE https://line.me/R/ti/p/@427oaemj or search ID @427oaemj. Our staff will contact you shortly to arrange the call and explain the next steps.`);
+      } else {
+        textParts.push('您的服務已完成安排／預約。');
+        textParts.push(`如需協助請聯繫 ${supportEmail} 或 LINE ID：${lineLabel}。`);
+        textParts.push('Your service schedule has been confirmed.');
+        textParts.push(`For assistance, contact ${supportEmail} or LINE ID: ${lineLabel}.`);
+      }
+    } else if (consultStage === 'done' && !isPhoneConsultServiceOrder) {
+      textParts.push(`感謝您選擇 unalomecodes 的服務，您的訂單已順利完成。若您對本次服務有任何心得或建議，誠摯邀請您留下回饋(${serviceFeedbackUrl})。再次感謝您的支持，期待未來再次為您服務。`);
     } else if (consultStage === 'done') {
       textParts.push(`感謝您選擇 ${opts.siteName || 'unalomecodes'} 的服務，您的訂單已順利完成。`);
       textParts.push('若您對本次服務有任何心得或建議，誠摯邀請您留下回饋(https://unalomecodes.com/service?id=SVT409059d4)，讓更多人也能看到這項服務，讓更多人也能對於自己的命運更加瞭解，讓未來更美好。');
@@ -11012,16 +11045,29 @@ function composeOrderEmail(order, opts = {}) {
     }
   } else {
     if (isServiceOrder){
-      textParts.push(`親愛的 ${buyerName} 您好：感謝您選擇 ${opts.siteName || 'Unalomecodes'}，我們已成功收到您的訂單。`);
-      textParts.push('目前我們正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間。');
-      textParts.push('預約確認完成後，系統將再次寄送通知信給您，請留意電子郵件。');
-      textParts.push('您可至 會員中心 我的訂單 查詢最新狀態。');
-      textParts.push(`如需改期，請於預約時間 48 小時前聯繫客服。客服 LINE：${lineLabel}`);
-      textParts.push(`Dear ${buyerName}, Thank you for choosing ${opts.siteName || 'Unalomecodes'}. We have received your order successfully.`);
-      textParts.push('We are now verifying the payment and preparing the appointment with the consultant.');
-      textParts.push('You will receive another email once the schedule is confirmed.');
-      textParts.push('You can check the latest status in My Orders.');
-      textParts.push(`To reschedule, please contact us at least 48 hours in advance. LINE Support: ${lineLabel}`);
+      if (isPhoneConsultServiceOrder){
+        textParts.push(`親愛的 ${buyerName} 您好：感謝您選擇 ${opts.siteName || 'Unalomecodes'}，我們已成功收到您的訂單。`);
+        textParts.push('目前我們正在確認付款與預約資訊，完成後將協助安排與老師的電話諮詢時間。');
+        textParts.push('預約確認完成後，系統將再次寄送通知信給您，請留意電子郵件。');
+        textParts.push('您可至 會員中心 我的訂單 查詢最新狀態。');
+        textParts.push(`如需改期，請於預約時間 48 小時前聯繫客服。客服 LINE：${lineLabel}`);
+        textParts.push(`Dear ${buyerName}, Thank you for choosing ${opts.siteName || 'Unalomecodes'}. We have received your order successfully.`);
+        textParts.push('We are now verifying the payment and preparing the appointment with the consultant.');
+        textParts.push('You will receive another email once the schedule is confirmed.');
+        textParts.push('You can check the latest status in My Orders.');
+        textParts.push(`To reschedule, please contact us at least 48 hours in advance. LINE Support: ${lineLabel}`);
+      } else {
+        textParts.push(`親愛的 ${buyerName} 您好：感謝您選擇 ${opts.siteName || 'Unalomecodes'}，我們已成功收到您的訂單。`);
+        textParts.push('目前正在核對付款與服務需求，確認無誤後將安排服務流程。');
+        textParts.push('完成安排後會再寄送通知信給您，請留意電子郵件。');
+        textParts.push('您可至 會員中心 我的訂單 查詢最新狀態。');
+        textParts.push(`如需調整服務時間或內容，請聯繫客服。客服 LINE：${lineLabel}`);
+        textParts.push(`Dear ${buyerName}, Thank you for choosing ${opts.siteName || 'Unalomecodes'}. We have received your service order successfully.`);
+        textParts.push('We are verifying the payment and service details. Once confirmed, we will arrange the service.');
+        textParts.push('You will receive another email once the schedule is confirmed.');
+        textParts.push('You can check the latest status in My Orders. For changes, please contact support.');
+        textParts.push(`LINE Support: ${lineLabel}`);
+      }
     }else{
       textParts.push(`親愛的 ${buyerName} 您好：感謝您選擇 ${opts.siteName || 'Unalomecodes'}，我們已成功收到您的訂單。`);
       textParts.push('目前正在核對付款與訂單資料，確認無誤後將安排出貨。');
