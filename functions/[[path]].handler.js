@@ -87,7 +87,8 @@ const {
   extractProofKeyFromUrl,
   isAllowedFileUrl,
   resolveTotalStockForProduct,
-  resolveAvailableStock
+  resolveAvailableStock,
+  readProductById
 } = createProofUtils({
   getAny,
   arrayBufferToBase64,
