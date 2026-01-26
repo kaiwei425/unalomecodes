@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createFileUtils(deps){
+  requireDeps(deps, ['withCORS', 'json'], 'file-utils.js');
   const { withCORS, json } = deps;
 
 async function deleteR2FileByKey(key, env) {

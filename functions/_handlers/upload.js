@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createUploadHandlers(deps){
+  requireDeps(deps, ['withCORS', 'json', 'isAllowedOrigin', 'getSessionUser', 'getAdminSession', 'getAdminRole', 'getClientIp', 'checkRateLimit', 'guessExt', 'safeExt'], 'upload.js');
   const {
     withCORS,
     json,

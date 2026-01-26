@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createServiceOrdersExportHandler(deps){
+  requireDeps(deps, ['isAdmin', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'csvEscape', 'formatTZ'], 'service-orders-export.js');
   const {
     isAdmin,
     forbidIfFulfillmentAdmin,

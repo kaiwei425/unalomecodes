@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createServiceProductsHandlers(deps){
+  requireDeps(deps, ['jsonHeaders', 'jsonHeadersFor', 'requireAdminWrite', 'forbidIfFulfillmentAdmin', 'normalizeLimitedUntil', 'autoDeactivateExpiredItem', 'isLimitedExpired', 'DEFAULT_SERVICE_PRODUCTS'], 'service-products.js');
   const {
     jsonHeaders,
     jsonHeadersFor,

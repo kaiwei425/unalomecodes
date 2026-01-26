@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createTempleUtils(deps){
+  requireDeps(deps, ['getAny', 'parseLatLngPair', 'normalizeHoursFallback'], 'temple-utils.js');
   const {
     getAny,
     parseLatLngPair,
@@ -2622,8 +2630,15 @@ function createTempleUtils(deps){
     }
     return null;
   }
+  function normalizeProductId(raw){
+    const val = String(raw || '').trim();
+    if (!val) return '';
+    if (val.startsWith('PRODUCT:')) return val.slice(8);
+    if (val.startsWith('product:')) return val.slice(8);
+    return val;
+  }
   async function buildItemFromProduct(env, productId, variantName, qty){
-    const pid = String(productId || '').trim();
+    const pid = normalizeProductId(productId);
     if (!pid) return { ok:false, error:'missing_product_id' };
     const product = await readProductById(env, pid);
     if (!product) return { ok:false, error:'product_not_found' };
@@ -2661,22 +2676,24 @@ function createTempleUtils(deps){
     const preferDirect = (hintMode !== 'cart') && (directHint || !!body.productId);
     let useCartOnly = !preferDirect && cartHint;
     let items = [];
+    const resolveItemId = (it)=> normalizeProductId(it?.id || it?.productId || it?.code || it?.sku || it?.product_id || it?.pid || '');
     if (useCartOnly){
       const cartArr = Array.isArray(body.cart) ? body.cart : [];
       for (const it of cartArr){
-        const res = await buildItemFromProduct(env, it.id || it.productId || '', it.variantName || it.variant || '', it.qty || it.quantity || 1);
+        const res = await buildItemFromProduct(env, resolveItemId(it), it.variantName || it.variant || '', it.qty || it.quantity || 1);
         if (!res.ok) return { ok:false, error: res.error || 'invalid_item' };
         items.push(res.item);
       }
     } else {
-      const res = await buildItemFromProduct(env, body.productId || '', body.variantName || body.variant || '', body.qty || 1);
+      const directId = normalizeProductId(body.productId || body.id || body.product_id || body.pid || '');
+      const res = await buildItemFromProduct(env, directId, body.variantName || body.variant || '', body.qty || 1);
       if (!res.ok){
         if (hasCart){
           useCartOnly = true;
           items = [];
           const cartArr = Array.isArray(body.cart) ? body.cart : [];
           for (const it of cartArr){
-            const r = await buildItemFromProduct(env, it.id || it.productId || '', it.variantName || it.variant || '', it.qty || it.quantity || 1);
+            const r = await buildItemFromProduct(env, resolveItemId(it), it.variantName || it.variant || '', it.qty || it.quantity || 1);
             if (!r.ok) return { ok:false, error: r.error || 'invalid_item' };
             items.push(r.item);
           }

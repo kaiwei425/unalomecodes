@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createOrdersListHandler(deps){
+  requireDeps(deps, ['ORDER_INDEX_KEY', 'ORDER_ID_PREFIX', 'ORDER_ID_LEN', 'jsonHeadersFor', 'getClientIp', 'checkRateLimit', 'isAdmin', 'getAny', 'normalizePhone', 'normalizeOrderSuffix', 'matchPhone', 'matchLast5', 'normalizeReceiptUrl', 'redactOrderForPublic', 'attachSignedProofs', 'trimOrderIndex'], 'orders-list.js');
   const {
     ORDER_INDEX_KEY,
     ORDER_ID_PREFIX,

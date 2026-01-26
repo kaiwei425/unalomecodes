@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createServiceResultPhotoHandler(deps){
+  requireDeps(deps, ['jsonHeaders', 'jsonHeadersFor', 'requireAdminWrite', 'getAdminSession', 'hasAdminPermission', 'getAdminRole', 'auditAppend', 'getClientIp'], 'service-result-photo.js');
   const {
     jsonHeaders,
     jsonHeadersFor,

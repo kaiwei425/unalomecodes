@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createCouponUtils(deps){
+  requireDeps(deps, ['makeToken'], 'coupon-utils.js');
   const { makeToken } = deps;
 
 // === Coupon helpers (new in-house system) ===

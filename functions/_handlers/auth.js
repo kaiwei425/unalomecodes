@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createAuthHandlers(deps){
+  requireDeps(deps, ['json', 'jsonHeadersFor', 'makeToken', 'makeSignedState', 'verifySignedState', 'parseCookies', 'ensureUserRecord', 'signSession', 'verifyLineIdToken', 'getSessionUser', 'parseAdminEmails', 'getAdminSecret', 'redirectWithBody', 'base64UrlDecodeToBytes'], 'auth.js');
   const {
     json,
     jsonHeadersFor,

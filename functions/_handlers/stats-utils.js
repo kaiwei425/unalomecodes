@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createStatsUtils(deps){
+  requireDeps(deps, ['orderAmount', 'orderItemsSummary', 'resolveTotalStockForProduct', 'resolveAvailableStock', 'statusIsPaid', 'statusIsCanceled', 'statusIsPaidOrReady', 'statusIsWaitingVerify', 'taipeiDateKey', 'isLimitedExpired', 'readProductById', 'normalizeStatus', 'CANONICAL_STATUS', 'ORDER_INDEX_KEY', 'getUserStore', 'getOrderCreatedTs', 'getOrderPaidTs', 'getOrderAmount'], 'stats-utils.js');
   const {
     orderAmount,
     orderItemsSummary,

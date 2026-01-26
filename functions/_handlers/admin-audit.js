@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createAdminAuditHandler(deps){
+  requireDeps(deps, ['jsonHeadersFor', 'isAdmin', 'getAdminSession', 'getAdminRole'], 'admin-audit.js');
   const {
     jsonHeadersFor,
     isAdmin,

@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createFileHandlers(deps){
+  requireDeps(deps, ['requireAdminWrite', 'forbidIfFulfillmentAdmin', 'requireAdminPermission', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'jsonHeaders', 'deleteR2FileByKey', 'deleteR2FileViaBody', 'extractKeyFromProxyUrl', 'proxyR2File', 'canAccessProof', 'getProofFromStore', 'arrayBufferToBase64'], 'files.js');
   const {
     requireAdminWrite,
     forbidIfFulfillmentAdmin,

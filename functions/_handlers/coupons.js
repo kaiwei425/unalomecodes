@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createCouponHandlers(deps){
+  requireDeps(deps, ['json', 'jsonHeaders', 'jsonHeadersFor', 'requireAdminWrite', 'forbidIfFulfillmentAdmin', 'getAdminSession', 'hasAdminPermission', 'readCoupon', 'inferCouponDeity', 'taipeiDateKey', 'getClientIp', 'checkRateLimit', 'getSessionUserRecord', 'saveUserRecord', 'isAdmin', 'getUserStore', 'loadUserRecord', 'normalizeQuizInput', 'makeCouponCode', 'couponKey', 'saveCoupon', 'ORDER_INDEX_KEY'], 'coupons.js');
   const {
     json,
     jsonHeaders,

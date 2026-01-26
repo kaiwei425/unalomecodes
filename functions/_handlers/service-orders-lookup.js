@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createServiceOrdersLookupHandler(deps){
+  requireDeps(deps, ['jsonHeadersFor', 'normalizeTWPhoneStrict', 'normalizeOrderSuffix', 'lastDigits', 'getClientIp', 'checkRateLimit', 'redactOrderForPublic', 'attachSignedProofs'], 'service-orders-lookup.js');
   const {
     jsonHeadersFor,
     normalizeTWPhoneStrict,

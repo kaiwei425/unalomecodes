@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createProductHandlers(deps){
+  requireDeps(deps, ['isAdmin', 'getDeityCodeFromName', 'inferCategory', 'autoDeactivateExpiredItem', 'isLimitedExpired', 'withCorsOrigin', 'withCORS', 'json', 'normalizeProduct', 'normalizeLimitedUntil', 'pick'], 'products.js');
   const {
     isAdmin,
     getDeityCodeFromName,

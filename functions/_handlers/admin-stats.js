@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createAdminStatsHandler(deps){
+  requireDeps(deps, ['json', 'isAdmin', 'forbidIfFulfillmentAdmin', 'updateDashboardStats', 'pickTrackStore', 'normalizeTrackEvent', 'taipeiDateKey'], 'admin-stats.js');
   const {
     json,
     isAdmin,

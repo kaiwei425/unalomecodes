@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createPaymentHandlers(deps){
+  requireDeps(deps, ['json', 'getSessionUser', 'ensureUserRecord', 'resolveOrderSelection', 'generateOrderId', 'inferCouponDeity', 'computeServerDiscount', 'markCouponUsageOnce', 'redeemCoupon', 'needShippingFee', 'resolveShippingFee', 'makeToken', 'decStockCounters', 'trimOrderIndex', 'ORDER_INDEX_KEY', 'maybeSendOrderEmails', 'updateUserDefaultContact', 'safeExt', 'guessExt', 'isAllowedFileUrl', 'buildOrderDraft', 'ecpayEndpoint', 'ecpayCheckMac', 'releaseCouponUsage', 'restoreStockCounters', 'bumpSoldCounters', 'decSoldCounters', 'shouldNotifyStatus'], 'payment.js');
   const {
     json,
     getSessionUser,

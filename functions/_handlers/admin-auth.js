@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createAdminAuthHandler(deps) {
+  requireDeps(deps, ['json', 'getAdminSession', 'getAdminRole', 'getAdminPermissionsForEmail'], 'admin-auth.js');
   const {
     json,
     getAdminSession,

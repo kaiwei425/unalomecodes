@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createProofAccessUtils(deps){
+  requireDeps(deps, ['getAny', 'verifyProofToken', 'isAdmin'], 'proof-access.js');
   const {
     getAny,
     verifyProofToken,

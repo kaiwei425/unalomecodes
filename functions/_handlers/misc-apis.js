@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createMiscApiHandlers(deps){
+  requireDeps(deps, ['listStories', 'createStory', 'deleteStories', 'requireAdminWrite', 'forbidIfFulfillmentAdmin', 'getMapsKey', 'geocodePlace', 'proxyTat', 'resizeImage'], 'misc-apis.js');
   const {
     listStories,
     createStory,

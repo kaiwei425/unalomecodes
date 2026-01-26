@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createOrderStatusHandler(deps){
+  requireDeps(deps, ['ORDER_INDEX_KEY', 'jsonHeadersFor', 'requireAdminWrite', 'getAdminSession', 'getAdminRole', 'normalizeStatus', 'isFulfillmentOrderTransitionAllowed', 'statusIsPaid', 'statusIsCanceled', 'releaseOrderResources', 'ensureOrderPaidResources', 'buildAuditActor', 'auditAppend', 'shouldNotifyStatus', 'maybeSendOrderEmails'], 'order-status.js');
   const {
     ORDER_INDEX_KEY,
     jsonHeadersFor,

@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createFoodUtils(deps){
+  requireDeps(deps, ['getAny'], 'food-utils.js');
   const {
     getAny
   } = deps;

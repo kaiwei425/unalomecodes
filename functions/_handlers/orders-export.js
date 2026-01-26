@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createOrdersExportHandler(deps){
+  requireDeps(deps, ['ORDER_INDEX_KEY', 'resolveCorsOrigin', 'isAdmin', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'getAny', 'normalizePhone', 'matchPhone', 'matchLast5', 'orderAmount', 'orderItemsSummary', 'normalizeReceiptUrl', 'csvEscape'], 'orders-export.js');
   const {
     ORDER_INDEX_KEY,
     resolveCorsOrigin,

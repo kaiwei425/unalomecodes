@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createServiceOrdersListHandler(deps){
+  requireDeps(deps, ['jsonHeadersFor', 'isAdmin'], 'service-orders-list.js');
   const { jsonHeadersFor, isAdmin } = deps;
 
   return async function handleServiceOrdersList(request, env){

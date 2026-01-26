@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 export function createServiceOrderStatusHandler(deps){
+  requireDeps(deps, ['jsonHeaders', 'requireAdminWrite', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'auditAppend', 'shouldNotifyStatus', 'maybeSendOrderEmails'], 'service-order-status.js');
   const {
     jsonHeaders,
     requireAdminWrite,

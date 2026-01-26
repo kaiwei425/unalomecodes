@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createOrderUtils(deps){
+  requireDeps(deps, ['isAllowedFileUrl'], 'order-utils.js');
   const { isAllowedFileUrl } = deps;
 
   function orderAmount(o){

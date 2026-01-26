@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createOrderFlowHandlers(deps){
+  requireDeps(deps, ['json', 'requireAdminWrite', 'isAllowedFileUrl'], 'order-flow.js');
   const { json, requireAdminWrite, isAllowedFileUrl } = deps;
 
   function headersJSON() {

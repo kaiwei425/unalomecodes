@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createServiceOrderHandlers(deps){
+  requireDeps(deps, ['jsonHeadersFor', 'jsonHeaders', 'cleanupExpiredHolds', 'getSlotConfig', 'getServiceSlotMode', 'getServiceSlotWindow', 'closeExpiredWindowIfNeeded', 'isSlotWindowActive', 'nowMs', 'addDaysDateStr', 'parseDailyWindows', 'minutesToHHMM', 'buildSlotKey', 'resolveSlotEnabled', 'resolveSlotStatus', 'BOOKING_MODE_WINDOWED', 'getTodayDateStr', 'parseSlotKey', 'getSessionUser', 'resolveHoldUserId', 'hasActiveHoldForUser', 'auditAppend', 'getClientIp', 'makeToken', 'getRescheduleConfig', 'parseSlotStartToMs', 'normalizeTWPhoneStrict', 'updateRescheduleIndex', 'buildRescheduleId', 'buildAuditActor', 'getRescheduleNotifyEmails', 'buildRescheduleEmail', 'getPhoneConsultConfig', 'isOwnerOrAdminSession', 'getViewerEmailFromSession', 'isAllowlisted', 'sendEmailMessage', 'generateServiceOrderId', 'ensureUserRecord', 'isPhoneConsultServiceRecord', 'resolvePhoneConsultOptionPrices', 'getPhoneConsultPromoInfo', 'isPromoActive', 'getPhoneConsultTotalForOption', 'getPhoneConsultPromoTotalForOption', 'maybeSendOrderEmails', 'updateUserDefaultContact', 'isAllowedFileUrl'], 'service-orders.js');
   const {
     jsonHeadersFor,
     jsonHeaders,

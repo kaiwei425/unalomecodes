@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createOrderStatusUtils(deps){
+  requireDeps(deps, ['ORDER_INDEX_KEY', 'markCouponUsageOnce', 'releaseCouponUsage', 'decStockCounters', 'restoreStockCounters', 'bumpSoldCounters', 'decSoldCounters'], 'order-status-utils.js');
   const {
     ORDER_INDEX_KEY,
     markCouponUsageOnce,

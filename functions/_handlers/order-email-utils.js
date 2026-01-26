@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createOrderEmailUtils(deps){
+  requireDeps(deps, ['inferCouponDeity', 'redeemCoupon', 'markCouponUsageOnce', 'reserveCouponUsage', 'resolveOrderSelection', 'generateOrderId', 'needShippingFee', 'resolveShippingFee', 'makeToken', 'getBookingNotifyEmails', 'getAdminRole', 'isPhoneConsultOrder', 'buildBilingualOrderEmail', 'buildOrderItems', 'getConsultStageLabel'], 'order-email-utils.js');
   const {
     inferCouponDeity,
     redeemCoupon,

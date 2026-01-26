@@ -1,4 +1,12 @@
+function requireDeps(deps, names, label){
+  const missing = names.filter(name => deps[name] === undefined);
+  if (missing.length){
+    throw new Error(`[deps] ${label} missing: ${missing.join(', ')}`);
+  }
+}
+
 function createOrderQnaHandlers(deps){
+  requireDeps(deps, ['json', 'corsPreflight', 'getSessionUserRecord', 'attachSignedProofs', 'ORDER_INDEX_KEY', 'getAdminSession', 'isAdmin', 'getAdminRole', 'findOrderByIdForQna', 'orderBelongsToUser', 'loadOrderQna', 'saveOrderQna', 'sanitizeQnaItem', 'incrementAdminQnaUnread', 'clearUserUnreadForOrder', 'maybeSendOrderQnaEmail', 'buildOrderItems', 'findUserIdByEmail', 'incrementUserUnreadForOrder', 'requireAdminWrite', 'forbidIfFulfillmentAdmin', 'getAdminQnaUnread', 'clearAdminQnaUnread', 'getQnaMetaStore', 'getUserUnreadTotal', 'clearUserUnreadAll', 'getUserCouponUnread', 'saveUserRecord'], 'order-qna.js');
   const {
     json,
     corsPreflight,
