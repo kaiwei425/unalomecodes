@@ -85,10 +85,16 @@
   const checkoutStep3Amount = document.getElementById('svcStep3Amount');
   const checkoutStep3SlotBkk = document.getElementById('svcStep3SlotBkk');
   const checkoutStep3SlotTpe = document.getElementById('svcStep3SlotTpe');
+  const checkoutStep3SlotRow = document.getElementById('svcStep3SlotRow');
   const checkoutStep3Last5 = document.getElementById('svcStep3Last5');
   const checkoutStep3Buyer = document.getElementById('svcStep3Buyer');
   const checkoutStep3Lookup = document.getElementById('svcStep3Lookup');
   const checkoutStep3Close = document.getElementById('svcStep3Close');
+  const checkoutStep3Intro = document.getElementById('svcStep3Intro');
+  const checkoutStep3IntroSub = document.getElementById('svcStep3IntroSub');
+  const checkoutStep3HintMain = document.getElementById('svcStep3HintMain');
+  const checkoutStep3HintQa = document.getElementById('svcStep3HintQa');
+  const checkoutStep3HintReschedule = document.getElementById('svcStep3HintReschedule');
   const successDialog = document.getElementById('svcSuccess');
   const successIdEl = document.getElementById('svcSuccessId');
   const successCloseBtn = document.getElementById('svcSuccessClose');
@@ -2816,6 +2822,32 @@
 
   function renderCheckoutSuccess(orderId, total){
     setCheckoutStep(3);
+    const hasPhoneConsult = lastCartSnapshot.some(item => isPhoneConsultService(item));
+    if (checkoutStep3Intro){
+      checkoutStep3Intro.textContent = hasPhoneConsult
+        ? '我們已收到匯款資料並建立預約連線算命訂單，請保留以下資訊或截圖備查。'
+        : '我們已收到您的匯款資料並建立服務訂單，請保留以下資訊或截圖備查。';
+    }
+    if (checkoutStep3IntroSub){
+      const sub = hasPhoneConsult
+        ? ''
+        : '確認匯款資料無誤後，會再寄送 Email 通知您，請留意信箱。';
+      checkoutStep3IntroSub.textContent = sub;
+      checkoutStep3IntroSub.style.display = sub ? '' : 'none';
+    }
+    if (checkoutStep3HintMain){
+      checkoutStep3HintMain.textContent = '可至會員中心－我的訂單查詢最新進度。';
+    }
+    if (checkoutStep3HintQa){
+      checkoutStep3HintQa.textContent = hasPhoneConsult
+        ? '提醒：可至右上角「會員中心 → 我的訂單 → 問與答」留下想詢問的問題（中文即可，將協助翻譯給老師）。'
+        : '若此服務需提供補充資料，請至「會員中心 → 我的訂單 → 問與答」留言';
+    }
+    if (checkoutStep3HintReschedule){
+      checkoutStep3HintReschedule.textContent = hasPhoneConsult
+        ? '申請改期請聯繫 LINE 客服。'
+        : '如需調整服務內容，請聯繫 LINE 客服。';
+    }
     if (checkoutStep3OrderId) checkoutStep3OrderId.textContent = orderId || '—';
     const summary = lastCartSnapshot.map(item=>{
       const opt = item.optionName ? `｜${getCartItemOptionLabel(item)}` : '';
@@ -2824,6 +2856,9 @@
     }).join('、');
     if (checkoutStep3Service) checkoutStep3Service.textContent = summary || (checkoutServiceName ? checkoutServiceName.textContent : '服務');
     if (checkoutStep3Amount) checkoutStep3Amount.textContent = formatTWD(total);
+    if (checkoutStep3SlotRow){
+      checkoutStep3SlotRow.style.display = hasPhoneConsult ? '' : 'none';
+    }
     if (checkoutStep3SlotBkk || checkoutStep3SlotTpe){
       const slotItem = lastCartSnapshot.find(item => isPhoneConsultService(item) && item.slotStart);
       const slotStart = slotItem ? String(slotItem.slotStart || '') : '';

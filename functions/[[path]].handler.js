@@ -10908,7 +10908,7 @@ function composeOrderEmail(order, opts = {}) {
       <p>Please do not reply to this email. For assistance, contact ${esc(supportEmail)} or add LINE ID: ${lineLabel}.</p>`
     : `<p>親愛的 ${esc(buyerName)} 您好：</p>
       <p>${isServiceOrder
-        ? `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。`
+        ? (isPhoneConsultServiceOrder ? `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。` : '')
         : `感謝您選擇 ${esc(opts.siteName || 'Unalomecodes')}，我們已成功收到您的訂單。`
       }</p>
       ${isServiceOrder

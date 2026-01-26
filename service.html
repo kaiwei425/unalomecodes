@@ -673,7 +673,8 @@
         <div class="svc-success-icon">✓</div>
         <div style="text-align:center;">
           <div class="svc-step-title">訂單送出成功</div>
-          <p class="svc-bank-hint">我們已收到匯款資料並建立預約連線算命訂單，請保留以下資訊或截圖備查。</p>
+          <p class="svc-bank-hint" id="svcStep3Intro"></p>
+          <p class="svc-bank-hint" id="svcStep3IntroSub"></p>
         </div>
         <div id="svcBookingNotice" style="display:none;margin:12px 0;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
           <div style="font-weight:700;margin-bottom:6px;">【服務須知 / Important Notice】</div>
@@ -690,14 +691,14 @@
           <div><span style="font-size:12px;color:#6b7280;">訂單編號</span><strong id="svcStep3OrderId">SVXXXXXX</strong></div>
           <div>服務內容：<span id="svcStep3Service">—</span></div>
           <div>應付金額：<span id="svcStep3Amount">NT$ 0</span></div>
-          <div>預約時段：<span id="svcStep3SlotBkk">—</span>（曼谷時間）／<span id="svcStep3SlotTpe">—</span>（台灣時間）</div>
+          <div id="svcStep3SlotRow">預約時段：<span id="svcStep3SlotBkk">—</span>（曼谷時間）／<span id="svcStep3SlotTpe">—</span>（台灣時間）</div>
           <div>匯款末五碼：<span id="svcStep3Last5">—</span></div>
           <div>聯絡人：<span id="svcStep3Buyer">—</span></div>
         </div>
         <div class="svc-email-notice">已寄出 Email 通知</div>
-        <div class="svc-bank-hint">可至會員中心－我的訂單查詢最新進度。</div>
-        <div class="svc-bank-hint">提醒：可至右上角「會員中心 → 我的訂單 → 問與答」留下想詢問的問題（中文即可，將協助翻譯給老師）。</div>
-        <div style="margin-top:12px;font-size:12px;color:#64748b;">申請改期請聯繫 LINE 客服。</div>
+        <div class="svc-bank-hint" id="svcStep3HintMain"></div>
+        <div class="svc-bank-hint" id="svcStep3HintQa"></div>
+        <div style="margin-top:12px;font-size:12px;color:#64748b;" id="svcStep3HintReschedule"></div>
         <div class="svc-step-actions">
           <button type="button" class="btn" id="svcStep3Lookup">查詢進度</button>
           <button type="button" class="btn primary" id="svcStep3Close">完成</button>
