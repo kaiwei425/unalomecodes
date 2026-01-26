@@ -304,6 +304,7 @@ function createFoodUtils(deps){
     if (!query) return null;
     return await geocodeQueryForFood(env, query);
   }
+  const resolveFoodLatLng = resolveFoodCoords;
   async function readFood(env, id){
     if (!env.FOODS) return null;
     try{

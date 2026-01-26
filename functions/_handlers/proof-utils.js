@@ -45,6 +45,7 @@ function createProofUtils(deps){
     if (raw.startsWith('/')) return raw.replace(/^\/+/,'');
     return raw;
   }
+  const extractProofKeyFromUrl = extractProofKey;
   async function signProofUrl(env, val, ttlSec=900){
     const key = extractProofKey(val);
     if (!key) return String(val || '');

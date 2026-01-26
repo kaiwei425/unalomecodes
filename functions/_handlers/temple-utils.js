@@ -181,6 +181,7 @@ function createTempleUtils(deps){
       return null;
     }
   }
+  const getTemplesListCacheRaw = readTemplesListCacheRaw;
   async function readTemplesListCache(env){
     if (!env.TEMPLES || !env.TEMPLES.get) return null;
     try{
@@ -196,6 +197,7 @@ function createTempleUtils(deps){
       return null;
     }
   }
+  const getTemplesListCache = readTemplesListCache;
   async function writeTemplesListCache(env, items){
     if (!env.TEMPLES || !env.TEMPLES.put) return;
     if (!Array.isArray(items)) return;
@@ -206,6 +208,7 @@ function createTempleUtils(deps){
       }));
     }catch(_){}
   }
+  const saveTemplesListCache = writeTemplesListCache;
   async function deleteTemplesListCache(env){
     if (!env.TEMPLES || !env.TEMPLES.delete) return;
     try{ await env.TEMPLES.delete(TEMPLES_LIST_KEY); }catch(_){}
