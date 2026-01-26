@@ -21,6 +21,7 @@ function createAdminHandlers(deps){
     updateDashboardStats,
     getUserStore,
     isAdmin,
+    checkRateLimit,
     isPhoneConsultOrder,
     normalizeConsultStage,
     buildBookingNotifyEmail,
@@ -140,6 +141,7 @@ function createAdminHandlers(deps){
     getUserCouponUnread,
     requireCronOrAdmin,
     getAny,
+    readCoupon,
     orderBelongsToUser,
     findOrderByIdForQna,
     sanitizeQnaItem,
@@ -1990,7 +1992,8 @@ function createAdminHandlers(deps){
       const userZodiacElement = (zodiacInfo && zodiacInfo.element) || '';
       const moon = moonPhaseInfo(Date.now());
       const ichSeed = fnv1aHash(`${todayKey}`);
-      const iching = ICHING_NAMES[ichSeed % ICHING_NAMES.length];
+      const ichingNames = Array.isArray(ICHING_NAMES) ? ICHING_NAMES : [];
+      const iching = ichingNames.length ? ichingNames[ichSeed % ichingNames.length] : '—';
       const buddhistYear = parts.year + 543;
       const traitList = Array.isArray(quiz.traits) ? quiz.traits : [];
       const signals = buildUserSignals(quiz);
@@ -2067,10 +2070,13 @@ function createAdminHandlers(deps){
       const hasPersonalTask = !!safePersonalTask.task;
       let fortune = null;
       let source = 'local';
-      const taksaLabel = PHUM_LABEL[taksa.phum] || taksa.phum || '—';
+      const phumLabelMap = (PHUM_LABEL && typeof PHUM_LABEL === 'object') ? PHUM_LABEL : {};
+      const taksaLabel = phumLabelMap[taksa.phum] || taksa.phum || '—';
       const timingBest = (yam.best || []).map(s=>({ start:s.start, end:s.end, level:s.level }));
       const timingAvoid = (yam.forbidden || []).map(s=>({ start:s.start, end:s.end, level:s.level }));
-      const guardianTone = GUARDIAN_TONE[ctx.guardianCode] || '穩定、行動導向';
+      const guardianToneMap = (GUARDIAN_TONE && typeof GUARDIAN_TONE === 'object') ? GUARDIAN_TONE : {};
+      const guardianTone = guardianToneMap[ctx.guardianCode] || '穩定、行動導向';
+      const mantraList = Array.isArray(MANTRA_LIST) ? MANTRA_LIST : [];
       const schema = `{"summary":"","advice":"","ritual":"","mantra":"","action":{"task":"","why":""},"core":{"phum":"","dayPlanetNo":0,"birthDayKey":"","todayWeekdayKey":"","isWarning":false},"timing":{"best":[{"start":"","end":"","level":""}],"avoid":[{"start":"","end":"","level":""}]},"lucky":{"color":"","tabooColor":"","numbers":[0,0]}}`;
       const prompt = [
         `今天日期：${dateText}（台灣時間）`,
@@ -2084,7 +2090,7 @@ function createAdminHandlers(deps){
         `工作類型：${quiz.jobLabel || quiz.job || '—'}`,
         `個人性格關鍵詞：${traitList.join('、') || '—'}`,
         `使用者訊號：${JSON.stringify(signals)}`,
-        `可用短咒語清單（擇一）：${MANTRA_LIST.join(' / ')}`,
+        `可用短咒語清單（擇一）：${mantraList.length ? mantraList.join(' / ') : '—'}`,
         `規則：只回傳 JSON，欄位必須符合 schema，禁止新增欄位；不得使用模糊巴納姆語句。`,
         `summary 第一個句子必須點名「今天是 ${taksaLabel} 日」，不可改寫骨架事實。`,
         `core/timing/lucky 必須與輸入骨架一致，不可改寫；若不一致視為無效輸出。`,
