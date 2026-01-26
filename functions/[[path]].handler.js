@@ -96,6 +96,7 @@ const {
   readProductById,
   getUserStore,
   getSessionUserRecord,
+  saveUserRecord,
   buildOrderItems,
   orderAmount,
   orderItemsSummary,

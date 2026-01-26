@@ -4,8 +4,10 @@ import { createOrderStatusUtils } from './order-status-utils.js';
 import { createOrderUtils } from './order-utils.js';
 
 function createCoreSharedUtils(deps){
-  const proof = createProofUtils(deps);
   const coupons = createCouponUtils(deps);
+  const proof = createProofUtils(Object.assign({}, deps, {
+    issueWelcomeCoupon: coupons.issueWelcomeCoupon
+  }));
   const orderStatus = createOrderStatusUtils(Object.assign({}, deps, {
     markCouponUsageOnce: coupons.markCouponUsageOnce,
     releaseCouponUsage: coupons.releaseCouponUsage

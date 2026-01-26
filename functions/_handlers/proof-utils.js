@@ -3,7 +3,9 @@ function createProofUtils(deps){
     getAny,
     arrayBufferToBase64,
     signSession,
-    verifySessionToken
+    verifySessionToken,
+    makeToken,
+    issueWelcomeCoupon = async ()=>null
   } = deps;
 
   function proofSecret(env){
