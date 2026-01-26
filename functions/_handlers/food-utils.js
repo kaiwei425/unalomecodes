@@ -11,6 +11,11 @@ function createFoodUtils(deps){
     getAny
   } = deps;
 
+  const FOODS_LIST_TTL = 60 * 1000;
+  const FOODS_LIST_KV_TTL = 60 * 10;
+  const FOODS_LIST_KEY = 'FOODS:LIST';
+  const FOODS_LIST_CACHE = { ts: 0, items: null };
+
   // Foods helpers (for food map)
   function foodKey(id){ return `FOOD:${id}`; }
   function parseLatLngPair(lat, lng){
