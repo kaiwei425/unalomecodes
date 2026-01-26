@@ -967,7 +967,8 @@ function createProofUtils(deps){
     isAllowedFileUrl,
     resolveTotalStockForProduct,
     resolveAvailableStock,
-    readProductById
+    readProductById,
+    getUserStore
   };
 }
 

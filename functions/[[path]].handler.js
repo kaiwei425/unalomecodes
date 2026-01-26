@@ -88,7 +88,8 @@ const {
   isAllowedFileUrl,
   resolveTotalStockForProduct,
   resolveAvailableStock,
-  readProductById
+  readProductById,
+  getUserStore
 } = createProofUtils({
   getAny,
   arrayBufferToBase64,
