@@ -274,7 +274,7 @@
       if (f) f.reset();
       // 同步 7-11 門市資訊到匯款視窗（若已在前一步選好）
       try{
-        var storeFromDlg = document.getElementById('dlgStoreInput');
+        var storeFromDlg = document.getElementById('dlgStoreInput') || document.getElementById('bfStorePreview');
         var storeField   = document.getElementById('bfStore');
         // 只同步欄位值，不產生任何額外「查詢門市」按鈕
         if (storeFromDlg || storeField){

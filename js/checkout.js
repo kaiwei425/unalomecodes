@@ -63,6 +63,16 @@ const bfStoreInput = document.getElementById('bfStore');
 function applyBankProfile(profile, force){
   if (!profile) return;
   try{ console.debug && console.debug('[checkout] apply profile', profile); }catch(_){}
+  const hasStoreSelection = (function(){
+    try{
+      const preview = document.getElementById('bfStorePreview');
+      const previewVal = (preview && preview.value || '').trim();
+      const previewSelected = previewVal && !/尚未選擇/.test(previewVal);
+      const currentVal = (bfStoreInput && bfStoreInput.value || '').trim();
+      const hasMeta = bfStoreInput && (bfStoreInput.getAttribute('data-storeid') || bfStoreInput.getAttribute('data-storename'));
+      return previewSelected || (currentVal && hasMeta);
+    }catch(_){ return false; }
+  })();
   const defaults = profile.defaultContact || {};
   const source = Object.assign(
     {},
@@ -85,7 +95,7 @@ function applyBankProfile(profile, force){
     if (ccEmail && (force || !ccEmail.value)) ccEmail.value = source.email || '';
   }catch(_){}
   updateMemberPerkHint(profile);
-  if (bfStoreInput && profile.defaultStore){
+  if (bfStoreInput && profile.defaultStore && !hasStoreSelection){
     const st = profile.defaultStore || {};
     const textParts = [];
     if (st.name) textParts.push(st.name);
