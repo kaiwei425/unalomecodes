@@ -294,6 +294,46 @@
   };
   const supportsDialog = typeof HTMLDialogElement === 'function' && typeof HTMLDialogElement.prototype.showModal === 'function';
   const fallbackBackdrops = new Map();
+
+  function getLang(){
+    try{
+      if (window.UC_I18N && typeof window.UC_I18N.getLang === 'function') return window.UC_I18N.getLang();
+    }catch(_){}
+    return 'zh';
+  }
+
+  function tf(zh, en){
+    return getLang() === 'en' ? (en || zh) : zh;
+  }
+
+  function tOr(key, fallback){
+    try{
+      if (window.UC_I18N && typeof window.UC_I18N.t === 'function'){
+        var v = window.UC_I18N.t(key);
+        if (v && v !== key) return String(v);
+      }
+    }catch(_){}
+    return String(fallback || '');
+  }
+
+  function fmt(template, vars){
+    var out = String(template || '');
+    if (!vars) return out;
+    Object.keys(vars).forEach(function(k){
+      out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), String(vars[k]));
+    });
+    return out;
+  }
+
+  function isEndedBtn(btn){
+    return !!(btn && btn.dataset && btn.dataset.svcEnded === '1');
+  }
+
+  function setEndedBtn(btn, ended){
+    if (!btn || !btn.dataset) return;
+    if (ended) btn.dataset.svcEnded = '1';
+    else delete btn.dataset.svcEnded;
+  }
   function getFallbackBackdrop(el){
     if (!document.body) return null;
     let node = fallbackBackdrops.get(el);
@@ -341,24 +381,25 @@
   async function loadServiceReviews(code){
     if (!reviewListEl) return;
     if (!code){
-      reviewListEl.innerHTML = '<div style="color:#94a3b8;">尚未提供評價。</div>';
+      reviewListEl.innerHTML = '<div style="color:#94a3b8;">' + escapeHtml(tOr('svc.review_none', '尚未提供評價。')) + '</div>';
       return;
     }
-    reviewListEl.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:10px;">讀取中...</div>';
+    reviewListEl.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:10px;">' + escapeHtml(tOr('svc.review_loading', '讀取中...')) + '</div>';
     try{
       const cacheBust = Date.now();
       const res = await fetch(`/api/stories?code=${encodeURIComponent(code)}&_=${cacheBust}`);
       const data = await res.json();
       if (!res.ok || !data || data.ok === false){
-        throw new Error((data && data.error) || '無法讀取留言');
+        throw new Error((data && data.error) || tf('無法讀取留言', 'Unable to load stories'));
       }
       const items = Array.isArray(data.items) ? data.items : [];
       if (!items.length){
-        reviewListEl.innerHTML = '<div style="color:#94a3b8;">還沒有任何分享，歡迎成為第一位分享者！</div>';
+        reviewListEl.innerHTML = '<div style="color:#94a3b8;">' + escapeHtml(tOr('svc.review_empty', '還沒有任何分享，歡迎成為第一位分享者！')) + '</div>';
         return;
       }
       reviewListEl.innerHTML = items.map(item=>{
-        const date = new Date(item.ts).toLocaleString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+        const locale = getLang() === 'en' ? 'en-US' : 'zh-TW';
+        const date = new Date(item.ts).toLocaleString(locale, {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
         const imgUrl = sanitizeImageUrl(item.imageUrl);
         const img = imgUrl ? `<a href="${escapeHtml(imgUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(imgUrl)}" alt="" class="rvImage"></a>` : '';
         return `
@@ -375,7 +416,7 @@
         `;
       }).join('');
     }catch(err){
-      reviewListEl.innerHTML = `<div style="color:#ef4444;padding:10px;">${escapeHtml(err.message || '讀取失敗')}</div>`;
+      reviewListEl.innerHTML = `<div style="color:#ef4444;padding:10px;">${escapeHtml(err.message || tOr('svc.review_load_failed', '讀取失敗'))}</div>`;
     }
   }
   function normalizeResultUrl(raw){
@@ -429,20 +470,27 @@
     if (!ts) return false;
     return Date.now() >= ts;
   }
-  function formatRemainingTime(ms){
-    if (!Number.isFinite(ms)) return '';
-    if (ms <= 0) return '已結束';
+  function formatRemainingTimeParts(ms){
+    if (!Number.isFinite(ms)) return { ended:false, text:'' };
+    if (ms <= 0) return { ended:true, text:'' };
     const totalMinutes = Math.ceil(ms / 60000);
     const days = Math.floor(totalMinutes / 1440);
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const minutes = totalMinutes % 60;
-    if (days > 0) return `${days}天${hours}小時`;
-    if (hours > 0) return `${hours}小時${minutes}分`;
-    return `${minutes}分`;
+    if (getLang() === 'en'){
+      if (days > 0) return { ended:false, text: `${days}d ${hours}h` };
+      if (hours > 0) return { ended:false, text: `${hours}h ${minutes}m` };
+      return { ended:false, text: `${minutes}m` };
+    }
+    if (days > 0) return { ended:false, text: `${days}天${hours}小時` };
+    if (hours > 0) return { ended:false, text: `${hours}小時${minutes}分` };
+    return { ended:false, text: `${minutes}分` };
   }
   function formatLimitedLabel(ts){
-    const text = formatRemainingTime(ts - Date.now());
-    return text === '已結束' ? '已結束' : `剩餘：${text}`;
+    const r = formatRemainingTimeParts(ts - Date.now());
+    const endedLabel = tOr('svc.ended', '已結束');
+    if (r.ended) return endedLabel;
+    return fmt(tOr('svc.remaining_prefix', '剩餘：{text}'), { text: r.text });
   }
   function updateLimitedCountdowns(root){
     try{
@@ -453,8 +501,9 @@
       nodes.forEach(node=>{
         const ts = Number(node.getAttribute('data-limited-until'));
         if (!Number.isFinite(ts) || ts <= 0) return;
-        const text = formatRemainingTime(ts - now);
-        node.textContent = text === '已結束' ? '已結束' : `剩餘：${text}`;
+        const r = formatRemainingTimeParts(ts - now);
+        const endedLabel = tOr('svc.ended', '已結束');
+        node.textContent = r.ended ? endedLabel : fmt(tOr('svc.remaining_prefix', '剩餘：{text}'), { text: r.text });
       });
     }catch(_){}
   }
@@ -789,7 +838,7 @@
   function applyPhotoRequirement(required, serviceName){
     const need = !!required;
     const name = String(serviceName || '').trim();
-    let skipText = '此服務不需上傳個人照片。';
+    let skipText = tf('此服務不需上傳個人照片。', 'This service does not require a personal photo.');
     let isCoffinDonation = /代捐棺/.test(name);
     if (!isCoffinDonation && checkoutForm && checkoutForm.dataset){
       try{
@@ -801,11 +850,11 @@
     }
     if (name){
       if (/義德善堂/.test(name) && /捐/.test(name)){
-        skipText = `${name}不用上傳照片。`;
+        skipText = tf(`${name}不用上傳照片。`, `No photo is required for ${name}.`);
       }else if (isCoffinDonation){
-        skipText = '代捐棺服務不用上傳照片。';
+        skipText = tf('代捐棺服務不用上傳照片。', 'No photo is required for this donation service.');
       }else{
-        skipText = `${name}不需上傳個人照片。`;
+        skipText = tf(`${name}不需上傳個人照片。`, `No personal photo is required for ${name}.`);
       }
     }
     if (checkoutForm && checkoutForm.dataset){
@@ -822,8 +871,8 @@
     }
     if (contactPhotoTitle){
       contactPhotoTitle.textContent = need
-        ? '上傳個人照片（祈福使用，必填）'
-        : '上傳個人照片（祈福使用，可略過）';
+        ? tf('上傳個人照片（祈福使用，必填）', 'Upload a personal photo (required)')
+        : tf('上傳個人照片（祈福使用，可略過）', 'Upload a personal photo (optional)');
     }
     if (isCoffinDonation && contactPhotoWrap) contactPhotoWrap.style.display = 'none';
     if (!need){
@@ -851,7 +900,10 @@
     if (contactNoteInput){
       if (!notePlaceholderOriginal) notePlaceholderOriginal = contactNoteInput.placeholder || '';
       contactNoteInput.placeholder = isPhone
-        ? '可先將要問的問題寫在這裡，或之後至會員中心「我的訂單 → 問與答」內留言。'
+        ? tf(
+          '可先將要問的問題寫在這裡，或之後至會員中心「我的訂單 → 問與答」內留言。',
+          'Write your questions here, or later leave a message via Account > My orders > Q&A.'
+        )
         : notePlaceholderOriginal;
       contactNoteInput.required = false;
     }
@@ -869,16 +921,16 @@
 
   function applyCheckoutLabels(isPhone){
     if (cartCheckoutBtn){
-      cartCheckoutBtn.textContent = isPhone ? '填寫預約資料' : cartCheckoutLabelDefault;
+      cartCheckoutBtn.textContent = isPhone ? tf('填寫預約資料', 'Booking details') : tOr('svc.checkout_fill', cartCheckoutLabelDefault || '填寫訂單資料');
     }
     if (checkoutNextBtn){
-      checkoutNextBtn.textContent = isPhone ? '填寫預約資料' : checkoutNextLabelDefault;
+      checkoutNextBtn.textContent = isPhone ? tf('填寫預約資料', 'Booking details') : tOr('svc.checkout_next', checkoutNextLabelDefault || '下一步');
     }
   }
 
   function getServiceQtyLabel(service){
     const label = service && (service.qtyLabel || service.quantityLabel || service.unitLabel);
-    return String(label || '數量');
+    return String(label || tOr('svc.qty', '數量'));
   }
 
   function getServiceFee(service){
@@ -889,7 +941,7 @@
 
   function getServiceFeeLabel(service){
     const label = service && (service.feeLabel || service.serviceFeeLabel);
-    return String(label || '車馬費');
+    return String(label || tOr('svc.fee_label', '車馬費'));
   }
 
   function getCartFee(list){
@@ -898,7 +950,7 @@
   }
 
   function getCartFeeLabel(list){
-    if (!Array.isArray(list) || !list.length) return '車馬費';
+    if (!Array.isArray(list) || !list.length) return tOr('svc.fee_label', '車馬費');
     return getServiceFeeLabel(list[0]);
   }
 
@@ -1228,7 +1280,9 @@
   function updateSlotToggleButton(){
     if (!slotToggleBookableBtn) return;
     slotToggleBookableBtn.classList.toggle('is-active', slotShowOnlyBookable);
-    slotToggleBookableBtn.textContent = slotShowOnlyBookable ? '顯示全部時段' : '只顯示可預約時段';
+    slotToggleBookableBtn.textContent = slotShowOnlyBookable
+      ? tOr('svc.slot_show_all', '顯示全部時段')
+      : tOr('svc.slot_show_bookable', '只顯示可預約時段');
   }
 
   function updateSlotHintText(){
@@ -1252,7 +1306,7 @@
     const openFrom = Number(win.openFrom || 0);
     const openUntil = Number(win.openUntil || 0);
     if (!openFrom || !openUntil){
-      slotHintEl.textContent = '目前未開放預約';
+      slotHintEl.textContent = tf('目前未開放預約', 'Booking is currently closed');
       slotHintEl.classList.remove('is-alert');
       return;
     }
@@ -1267,7 +1321,7 @@
         }
       }
       if (remain <= 0){
-        slotHintEl.textContent = '目前未開放預約';
+        slotHintEl.textContent = tf('目前未開放預約', 'Booking is currently closed');
         slotHintEl.classList.remove('is-alert');
         if (slotWindowTimerId){
           clearInterval(slotWindowTimerId);
@@ -1279,7 +1333,7 @@
       const secs = Math.floor((remain % 60000) / 1000);
       const mm = String(Math.max(0, mins)).padStart(2,'0');
       const ss = String(Math.max(0, secs)).padStart(2,'0');
-      slotHintEl.textContent = `預約倒數 ${mm}:${ss}（台灣時間）`;
+      slotHintEl.textContent = tf(`預約倒數 ${mm}:${ss}（台灣時間）`, `Booking countdown ${mm}:${ss} (Taipei time)`);
       slotHintEl.classList.add('is-alert');
     };
     updateCountdown();
@@ -1434,7 +1488,7 @@
         if (slotDaysNext) slotDaysNext.style.display = 'none';
         if (slotGridEl) slotGridEl.style.display = 'none';
         setSlotStateText('目前暫無可預約時段', true);
-        if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+        if (detailAddBtn && !isEndedBtn(detailAddBtn)){
           detailAddBtn.disabled = true;
           detailAddBtn.textContent = '目前無法預約';
         }
@@ -1468,7 +1522,7 @@
       if (slotDaysNext) slotDaysNext.style.display = 'none';
       if (slotGridEl) slotGridEl.style.display = 'none';
       setSlotStateText(msg || '目前暫無可預約時段', !!isError);
-      if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+      if (detailAddBtn && !isEndedBtn(detailAddBtn)){
         detailAddBtn.disabled = true;
         detailAddBtn.textContent = '目前無法預約';
       }
@@ -1486,7 +1540,7 @@
     }else{
       setSlotStateText('目前暫無可預約時段', true);
     }
-    if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+    if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = true;
       detailAddBtn.textContent = '目前無法預約';
     }
@@ -1660,7 +1714,8 @@
     if (slotMoreBtn){
       slotMoreBtn.style.display = 'none';
       slotMoreBtn.disabled = false;
-      slotMoreBtn.textContent = '載入更多';
+      delete slotMoreBtn.dataset.noMore;
+      slotMoreBtn.textContent = tOr('svc.load_more', '載入更多');
     }
   }
 
@@ -1742,7 +1797,32 @@
 
   function setSlotStateText(msg, isError){
     if (!slotStateEl) return;
-    slotStateEl.textContent = msg || '';
+    slotStateEl.dataset.rawMsg = String(msg || '');
+    slotStateEl.dataset.isError = isError ? '1' : '0';
+    var m = String(msg || '');
+    if (m){
+      // Translate common, user-facing slot status strings without changing flow logic.
+      if (m === '目前暫無可預約時段') m = tf('目前暫無可預約時段', 'No available slots right now');
+      else if (m === '目前無法預約') m = tf('目前無法預約', 'Not available');
+      else if (m === '已恢復保留的時段') m = tf('已恢復保留的時段', 'Restored your held slot');
+      else if (m === '保留已到期，請重新選擇') m = tf('保留已到期，請重新選擇', 'Hold expired. Please choose again.');
+      else if (m === '保留中…') m = tf('保留中…', 'Holding…');
+      else if (m === '目前非開放預約時間，請稍後再試') m = tf('目前非開放預約時間，請稍後再試', 'Booking is not open right now. Please try again later.');
+      else if (m === '已有保留時段，請先按修改時間') m = tf('已有保留時段，請先按修改時間', 'You already have a held slot. Please tap \"Change time\" first.');
+      else if (m === '目前無法釋放原本時段，請稍後再試') m = tf('目前無法釋放原本時段，請稍後再試', 'Unable to release the previous slot. Please try again later.');
+      else if (m === '請先登入後再預約時段') m = tf('請先登入後再預約時段', 'Please sign in to book a slot.');
+      else if (m === '保留失敗，請稍後再試') m = tf('保留失敗，請稍後再試', 'Failed to hold the slot. Please try again later.');
+      else if (m === '請先選擇預約時段') m = tf('請先選擇預約時段', 'Please select a time slot first.');
+      else if (m === '已選擇時段，按填寫預約資料後保留 15 分鐘') m = tf('已選擇時段，按填寫預約資料後保留 15 分鐘', 'Slot selected. Tap \"Checkout\" to hold it for 15 minutes.');
+      else if (/^已選擇\\s+.+，按填寫預約資料後保留\\s+15\\s+分鐘$/.test(m)){
+        var start = m.replace(/^已選擇\\s+/, '').replace(/，按填寫預約資料後保留\\s+15\\s+分鐘$/, '');
+        m = tf(`已選擇 ${start}，按填寫預約資料後保留 15 分鐘`, `Selected ${start}. Tap \"Checkout\" to hold for 15 minutes.`);
+      }else if (/^已保留此時段\\s+\\d{2}:\\d{2}（請於倒數內完成下單）$/.test(m)){
+        var t = m.replace(/^已保留此時段\\s+/, '').replace(/（請於倒數內完成下單）$/, '');
+        m = tf(`已保留此時段 ${t}（請於倒數內完成下單）`, `Slot held ${t}. Please complete checkout before it expires.`);
+      }
+    }
+    slotStateEl.textContent = m;
     slotStateEl.classList.toggle('err', !!isError);
     slotStateEl.classList.toggle('ok', !isError && !!msg);
   }
@@ -1758,7 +1838,10 @@
     const secs = Math.floor((remainMs % 60000) / 1000);
     const mm = String(mins).padStart(2,'0');
     const ss = String(secs).padStart(2,'0');
-    holdCountdownEl.textContent = `時段保留 15 分鐘，請於 ${mm}:${ss} 內完成訂單`;
+    holdCountdownEl.textContent = tf(
+      `時段保留 15 分鐘，請於 ${mm}:${ss} 內完成訂單`,
+      `Slot held for 15 minutes. Please complete checkout within ${mm}:${ss}.`
+    );
     holdCountdownEl.style.display = 'flex';
   }
 
@@ -1859,16 +1942,19 @@
 
   function mapUserErrorMessage(code){
     const key = String(code || '').toUpperCase();
-    if (key === 'SLOT_CONFLICT' || key === 'SLOT_UNAVAILABLE') return '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看';
-    if (key === 'SLOT_EXPIRED') return '此時段已過期，請重新選擇';
-    if (key === 'TOO_LATE') return '已超過可改期時間';
-    if (key === 'ALREADY_REQUESTED') return '已送出改期申請';
-    if (key === 'UNAUTHORIZED') return '請先登入';
-    if (key === 'SLOT_NOT_PUBLISHED') return '此時段尚未開放';
-    if (key === 'SLOT_HOLD_EXPIRED') return '此時段已過期，請重新選擇';
-    if (key === 'HOLD_LIMIT_REACHED') return '你已有一筆時段保留中，請先完成訂單或等待 15 分鐘後再試';
-    if (key === 'INVALID_SLOT') return '時段資訊不一致，請重新整理後再試';
-    if (key === 'SLOT_REQUIRED_BUT_NOT_CONFIGURED') return '目前無法預約此時段，請稍後再試';
+    if (key === 'SLOT_CONFLICT' || key === 'SLOT_UNAVAILABLE') return tf(
+      '該時段目前已暫時被預訂保留中（若未完成訂單建立會自動釋放），請於 15 分鐘後再查看',
+      'This slot is temporarily held by another booking. Please try again in 15 minutes.'
+    );
+    if (key === 'SLOT_EXPIRED') return tf('此時段已過期，請重新選擇', 'This slot has expired. Please choose another one.');
+    if (key === 'TOO_LATE') return tf('已超過可改期時間', 'It is too late to reschedule.');
+    if (key === 'ALREADY_REQUESTED') return tf('已送出改期申請', 'Reschedule request has already been submitted.');
+    if (key === 'UNAUTHORIZED') return tf('請先登入', 'Please sign in first.');
+    if (key === 'SLOT_NOT_PUBLISHED') return tf('此時段尚未開放', 'This slot is not available yet.');
+    if (key === 'SLOT_HOLD_EXPIRED') return tf('此時段已過期，請重新選擇', 'This slot has expired. Please choose another one.');
+    if (key === 'HOLD_LIMIT_REACHED') return tf('你已有一筆時段保留中，請先完成訂單或等待 15 分鐘後再試', 'You already have a held slot. Please finish your order or wait 15 minutes.');
+    if (key === 'INVALID_SLOT') return tf('時段資訊不一致，請重新整理後再試', 'Slot info mismatch. Please refresh and try again.');
+    if (key === 'SLOT_REQUIRED_BUT_NOT_CONFIGURED') return tf('目前無法預約此時段，請稍後再試', 'This slot cannot be booked right now. Please try again later.');
     return '';
   }
 
@@ -1883,8 +1969,9 @@
     CURRENT_DETAIL_SLOT.holdUntilMs = until;
     startHoldTimer();
     setSlotStateText('已恢復保留的時段', false);
-    if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+    if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = false;
+      setEndedBtn(detailAddBtn, false);
       detailAddBtn.textContent = '加入購物車';
     }
     return true;
@@ -2052,7 +2139,7 @@
     if (!nextDate) return;
     if (slotMoreBtn){
       slotMoreBtn.disabled = true;
-      slotMoreBtn.textContent = '載入中…';
+      slotMoreBtn.textContent = tOr('common.loading', '載入中…');
     }
     try{
       const result = await fetchSlots(serviceId, nextDate, SLOT_DAYS_STEP);
@@ -2084,7 +2171,8 @@
       refreshSlotDisplay();
       if (slotMoreBtn){
         slotMoreBtn.disabled = false;
-        slotMoreBtn.textContent = '載入更多';
+        delete slotMoreBtn.dataset.noMore;
+        slotMoreBtn.textContent = tOr('svc.load_more', '載入更多');
       }
     }catch(_){
       const fallback = buildPlaceholderDays(nextDate, SLOT_DAYS_STEP);
@@ -2095,7 +2183,7 @@
       refreshSlotDisplay();
       setSlotStateText('目前暫無可預約時段', true);
     }finally{
-      if (slotMoreBtn && slotMoreBtn.textContent !== '沒有更多時段'){
+      if (slotMoreBtn && slotMoreBtn.dataset.noMore !== '1'){
         slotMoreBtn.disabled = false;
       }
     }
@@ -2113,8 +2201,9 @@
         btn.classList.toggle('is-held', key && key === slot.slotKey);
       });
     }
-    if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+    if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = false;
+      setEndedBtn(detailAddBtn, false);
       detailAddBtn.textContent = '加入購物車';
     }
     if (start){
@@ -2125,9 +2214,10 @@
   }
 
   function updateAddBtnStateForSlot(){
-    if (!detailAddBtn || detailAddBtn.textContent === '已結束') return;
+    if (!detailAddBtn || isEndedBtn(detailAddBtn)) return;
     const hasSelection = !!(CURRENT_DETAIL_SLOT.slotHoldToken || CURRENT_DETAIL_SLOT.pendingSlotKey);
     detailAddBtn.disabled = !hasSelection;
+    setEndedBtn(detailAddBtn, false);
     detailAddBtn.textContent = '加入購物車';
   }
 
@@ -2200,7 +2290,7 @@
         CURRENT_DETAIL_SLOT.pendingSlotStart = '';
         setSlotStateText('保留已到期，請重新選擇', true);
         updateHoldCountdown(0);
-        if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+        if (detailAddBtn && !isEndedBtn(detailAddBtn)){
           detailAddBtn.disabled = true;
           detailAddBtn.textContent = '目前無法預約';
         }
@@ -2272,8 +2362,9 @@
         holdUntilMs: CURRENT_DETAIL_SLOT.holdUntilMs
       });
       startHoldTimer();
-      if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+      if (detailAddBtn && !isEndedBtn(detailAddBtn)){
         detailAddBtn.disabled = false;
+        setEndedBtn(detailAddBtn, false);
         detailAddBtn.textContent = '加入購物車';
       }
       if (slotGridEl){
@@ -2448,7 +2539,7 @@
     if (slotGridEl) slotGridEl.style.display = 'none';
     if (slotMoreBtn) slotMoreBtn.style.display = 'none';
     setSlotStateText(msg || '目前暫無可預約時段', true);
-    if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+    if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = true;
       detailAddBtn.textContent = '目前無法預約';
     }
@@ -2477,7 +2568,7 @@
     }
     if (slotRefreshBtn){
       slotRefreshBtn.disabled = false;
-      slotRefreshBtn.textContent = '重新整理可預約時段';
+      slotRefreshBtn.textContent = tOr('svc.slot_refresh', '重新整理可預約時段');
     }
     updateSlotToggleButton();
     if (slotToggleBookableBtn && !slotToggleBookableBtn.__bound){
@@ -2574,12 +2665,13 @@
             slotMoreBtn.addEventListener('click', loadMoreSlots);
           }
           slotMoreBtn.disabled = false;
-          slotMoreBtn.textContent = '載入更多';
+          delete slotMoreBtn.dataset.noMore;
+          slotMoreBtn.textContent = tOr('svc.load_more', '載入更多');
         }
         const hasFree = items.some(day => Array.isArray(day.slots) && day.slots.some(slot => isSlotBookable(slot)));
         if (!hasFree){
           setSlotStateText('目前暫無可預約時段', true);
-          if (detailAddBtn && detailAddBtn.textContent !== '已結束'){
+          if (detailAddBtn && !isEndedBtn(detailAddBtn)){
             detailAddBtn.disabled = true;
             detailAddBtn.textContent = '目前無法預約';
           }
@@ -2601,14 +2693,14 @@
     if (!serviceId) return;
     if (slotRefreshBtn){
       slotRefreshBtn.disabled = true;
-      slotRefreshBtn.textContent = '更新中…';
+      slotRefreshBtn.textContent = tOr('svc.refreshing', '更新中…');
     }
     clearSlotCache(serviceId);
     FORCE_SLOT_REFRESH = true;
     await initSlotPicker(detailDataset);
     if (slotRefreshBtn){
       slotRefreshBtn.disabled = false;
-      slotRefreshBtn.textContent = '重新整理可預約時段';
+      slotRefreshBtn.textContent = tOr('svc.slot_refresh', '重新整理可預約時段');
     }
   }
 
@@ -3838,12 +3930,12 @@
     if (isPhoneConsultService(service) && !canShowPhoneConsultToViewer(service)){
       console.log('[admin-preview] phone-consult blocked for non-admin');
       const cfg = PHONE_CONSULT_CFG || {};
-      let msg = '此服務目前尚未開放 / This service is not available yet';
+      let msg = tf('此服務目前尚未開放', 'This service is not available yet');
       const mode = String(cfg.mode || '').toLowerCase();
       if (mode === 'allowlist' && !cfg.allowlisted){
-        msg = '僅限邀請名單 / Invite-only';
+        msg = tf('僅限邀請名單', 'Invite-only');
       }
-      if (detailTitle) detailTitle.textContent = service.name || '服務';
+      if (detailTitle) detailTitle.textContent = service.name || tf('服務', 'Service');
       if (detailDesc) detailDesc.textContent = msg;
       if (detailOptionsWrap) detailOptionsWrap.style.display = 'none';
       if (detailQtyWrap) detailQtyWrap.style.display = 'none';
@@ -3851,7 +3943,8 @@
       if (slotSection) slotSection.style.display = 'none';
       if (detailAddBtn){
         detailAddBtn.disabled = true;
-        detailAddBtn.textContent = '尚未開放';
+        setEndedBtn(detailAddBtn, false);
+        detailAddBtn.textContent = tf('尚未開放', 'Not available');
       }
       openDialog(detailDialog);
       return;
@@ -3860,13 +3953,13 @@
       getPhoneConsultSlotAvailability(service).catch(()=>{});
     }
     if (resumeCheckoutIfHeld(service)) return;
-    if (detailTitle) detailTitle.textContent = service.name || '服務';
+    if (detailTitle) detailTitle.textContent = service.name || tf('服務', 'Service');
     if (detailDesc) detailDesc.textContent = service.description || service.desc || '';
     const limitedTs = parseLimitedUntil(service && service.limitedUntil);
     const limitedExpired = limitedTs ? Date.now() >= limitedTs : false;
     if (detailLimited){
       if (limitedTs){
-        detailLimited.textContent = '限時服務';
+        detailLimited.textContent = tf('限時服務', 'Limited-time');
         detailLimited.style.display = 'inline-flex';
       }else{
         detailLimited.textContent = '';
@@ -3886,11 +3979,12 @@
     }
     if (detailAddBtn){
       detailAddBtn.disabled = !!limitedExpired;
-      detailAddBtn.textContent = limitedExpired ? '已結束' : '加入購物車';
+      setEndedBtn(detailAddBtn, !!limitedExpired);
+      detailAddBtn.textContent = limitedExpired ? tOr('svc.ended', '已結束') : tOr('svc.add_to_cart', '加入購物車');
     }
     if (detailIncludes){
       const includes = Array.isArray(service.includes) ? service.includes : [];
-      detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : '<li>老師依實際情況安排內容</li>';
+      detailIncludes.innerHTML = includes.length ? includes.map(item => `<li>${escapeHtml(item)}</li>`).join('') : `<li>${escapeHtml(tf('老師依實際情況安排內容', 'Items will be arranged as appropriate.'))}</li>`;
     }
     if (detailQtyWrap && detailQtyInput){
       const qtyEnabled = isQtyEnabled(service);
@@ -5206,6 +5300,48 @@
     updateCartBadge();
     renderCartPanel();
   });
+
+  function refreshI18nDynamic(){
+    try{ updateSlotToggleButton(); }catch(_){}
+    try{ updateLimitedCountdowns(detailDialog || document); }catch(_){}
+    try{
+      if (slotStateEl && Object.prototype.hasOwnProperty.call(slotStateEl.dataset || {}, 'rawMsg')){
+        setSlotStateText(slotStateEl.dataset.rawMsg || '', slotStateEl.dataset.isError === '1');
+      }
+    }catch(_){}
+    try{
+      if (detailAddBtn){
+        if (isEndedBtn(detailAddBtn)){
+          detailAddBtn.textContent = tOr('svc.ended', '已結束');
+        }else if (detailAddBtn.textContent === '加入購物車' || detailAddBtn.textContent === 'Add to cart'){
+          detailAddBtn.textContent = tOr('svc.add_to_cart', '加入購物車');
+        }
+      }
+    }catch(_){}
+    try{
+      if (slotMoreBtn && slotMoreBtn.style.display !== 'none'){
+        if (slotMoreBtn.disabled){
+          slotMoreBtn.textContent = tOr('common.loading', '載入中…');
+        }else{
+          slotMoreBtn.textContent = tOr('svc.load_more', '載入更多');
+        }
+      }
+    }catch(_){}
+    try{
+      if (slotRefreshBtn){
+        if (slotRefreshBtn.disabled){
+          slotRefreshBtn.textContent = tOr('svc.refreshing', '更新中…');
+        }else{
+          slotRefreshBtn.textContent = tOr('svc.slot_refresh', '重新整理可預約時段');
+        }
+      }
+    }catch(_){}
+  }
+
+  try{
+    window.addEventListener('uc_lang_change', refreshI18nDynamic);
+  }catch(_){}
+
   function resolveServiceId(service){
     if (!service) return '';
     return service.serviceId || service.service_id || service.id || service._id || service.key || service._key || '';

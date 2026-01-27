@@ -51,6 +51,8 @@ html,body{
 .top-actions-right{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
   select,input{width:100%;padding:11px 12px;border:1px solid var(--line);background:linear-gradient(180deg,#fff, #f8fafc);color:var(--fg);border-radius:12px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);}
 
+.top-actions-right .lang-btn{order:-10;}
+
 .auth-widget{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.08);min-height:52px;}
 .auth-widget .auth-status{font-size:13px;font-weight:700;color:#475569;}
 .auth-widget.is-authed .auth-status{color:#15803d;}

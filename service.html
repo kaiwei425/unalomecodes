@@ -51,21 +51,22 @@
         </picture>
         <div>
         <div class="t1">Unalomecodes 懂玩泰國</div>
-        <div class="t2"><span id="pageSubtitle">服務型商品專區 / 提供蠟燭祈福・法會・義德善堂捐棺助人服務等。</span><button type="button" id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯副標題">✏️</button></div>
+        <div class="t2"><span id="pageSubtitle">服務型商品專區 / 提供蠟燭祈福・法會・義德善堂捐棺助人服務等。</span><button type="button" id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯副標題" data-i18n-attr="title:svc.edit_subtitle">✏️</button></div>
         </div>
       </div>
       <div class="top-actions-right">
+        <button type="button" id="btnLang" class="lang-btn" aria-label="Language">ZH/EN</button>
         <div class="member-menu">
           <button type="button" id="memberMenuBtnSvc">
-            <span class="member-menu-label">會員中心</span>
+            <span class="member-menu-label" data-i18n="common.member_center">會員中心</span>
             <span class="member-menu-arrow" id="memberMenuArrowSvc">▾</span>
             <span class="member-menu-badge" id="memberMenuBadgeSvc" style="display:none;">0</span>
           </button>
           <div class="member-menu-panel" id="memberMenuPanelSvc">
-            <a href="#" data-profile>基本資料</a>
-            <a href="/account-coupons" id="userCouponsLinkSvc" class="qna-link">我的優惠券 <span class="qna-badge" id="userCouponBadgeSvc">0</span></a>
-            <a href="/account-orders" id="userOrdersLinkSvc" class="qna-link">我的訂單 <span class="qna-badge" id="userQnaBadgeSvc">0</span></a>
-            <a href="/account-store">門市預設</a>
+            <a href="#" data-profile data-i18n="svc.profile">基本資料</a>
+            <a href="/account-coupons" id="userCouponsLinkSvc" class="qna-link"><span data-i18n="svc.my_coupons">我的優惠券</span> <span class="qna-badge" id="userCouponBadgeSvc">0</span></a>
+            <a href="/account-orders" id="userOrdersLinkSvc" class="qna-link"><span data-i18n="svc.my_orders">我的訂單</span> <span class="qna-badge" id="userQnaBadgeSvc">0</span></a>
+            <a href="/account-store" data-i18n="svc.store_preset">門市預設</a>
             <a href="/admin/orders" id="adminQnaLinkSvc" class="qna-link" data-admin-only data-admin-perm="admin_panel_view" data-admin-href="/admin/orders" style="display:none;">訂單問答 <span class="qna-badge" id="adminQnaBadgeSvc">0</span></a>
             <a href="/admin" data-admin-only data-admin-perm="admin_panel_view" data-admin-href="/admin" style="display:none;">後台管理</a>
           </div>
@@ -81,28 +82,28 @@
       <div class="fortune-shell">
         <div class="fortune-head">
           <div>
-            <div class="fortune-title">今日專屬日籤</div>
+            <div class="fortune-title" data-i18n="svc.fortune_title">今日專屬日籤</div>
             <div class="fortune-date" id="fortuneDate">—</div>
           </div>
           <button type="button" class="fortune-close" id="fortuneClose">✕</button>
         </div>
         <div class="fortune-body">
-          <div id="fortuneLoading" class="fortune-loading">正在翻牌中…</div>
+          <div id="fortuneLoading" class="fortune-loading" data-i18n="svc.fortune_loading">正在翻牌中…</div>
           <div id="fortuneError" class="fortune-error" style="display:none;"></div>
           <div id="fortuneCard" class="fortune-card" style="display:none;">
             <div class="fortune-stars" id="fortuneStars"></div>
             <div class="fortune-summary" id="fortuneSummary"></div>
             <div class="fortune-section">
-              <div class="fortune-label">生活小建議</div>
+              <div class="fortune-label" data-i18n="svc.fortune_advice_label">生活小建議</div>
               <div class="fortune-text" id="fortuneAdvice"></div>
             </div>
             <div class="fortune-section">
-              <div class="fortune-label" id="fortuneRitualLabel">守護神想對你說</div>
+              <div class="fortune-label" id="fortuneRitualLabel" data-i18n="svc.guardian_says_default">守護神想對你說</div>
               <div class="fortune-text" id="fortuneRitual"></div>
             </div>
             <div class="fortune-meta" id="fortuneMeta"></div>
             <div class="fortune-actions">
-              <button type="button" class="fortune-share-btn" id="fortuneShareBtn">自動截圖分享</button>
+              <button type="button" class="fortune-share-btn" id="fortuneShareBtn" data-i18n="svc.share_button">自動截圖分享</button>
             </div>
           </div>
         </div>
@@ -112,26 +113,26 @@
     <div class="store service-layout">
       <aside id="sideDeities">
         <div class="side-cart">
-          <button id="cartFab" type="button" title="查看購物車"><span class="lbl">服務購物車</span><span id="cartBadge">0</span></button>
+          <button id="cartFab" type="button" title="查看購物車" data-i18n-attr="title:svc.view_cart"><span class="lbl" data-i18n="svc.cart">服務購物車</span><span id="cartBadge">0</span></button>
         </div>
         <div class="tools-box">
-          <h4>常用連結</h4>
+          <h4 data-i18n="svc.links">常用連結</h4>
           <div class="list">
-            <a href="/">返回首頁</a>
-            <a href="/shop">返回商城</a>
-            <button id="svcHotToggle" class="side-cat-btn" type="button">熱賣中服務</button>
+            <a href="/" data-i18n="svc.back_home">返回首頁</a>
+            <a href="/shop" data-i18n="svc.back_shop">返回商城</a>
+            <button id="svcHotToggle" class="side-cat-btn" type="button" data-i18n="svc.hot_services">熱賣中服務</button>
           </div>
         </div>
         <div class="tools-box">
-          <h4>實用工具連結</h4>
+          <h4 data-i18n="svc.tools">實用工具連結</h4>
           <div class="list">
             <a href="https://unalomecodes.com/food-map" class="tool-link">
-              <span class="tool-link-title"><span class="tool-link-dot"></span>泰國美食地圖</span>
+              <span class="tool-link-title"><span class="tool-link-dot"></span><span data-i18n="svc.food_map">泰國美食地圖</span></span>
             </a>
             <a href="https://unalomecodes.com/templemap" class="tool-link">
-              <span class="tool-link-title"><span class="tool-link-dot"></span>泰國寺廟地圖</span>
+              <span class="tool-link-title"><span class="tool-link-dot"></span><span data-i18n="svc.temple_map">泰國寺廟地圖</span></span>
             </a>
-            <a class="line-support-btn" href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener">官方LINE客服</a>
+            <a class="line-support-btn" href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener" data-i18n="svc.line_support">官方LINE客服</a>
           </div>
         </div>
       </aside>
@@ -140,30 +141,31 @@
         <div id="svcAdminPreviewBadge" class="svc-preview-badge" style="display:none">ADMIN PREVIEW</div>
         <div id="svcLaunchToggle" class="svc-launch-toggle" style="display:none">
           <div class="toggle-row">
-            <div class="toggle-label">Phone Consult 上線模式</div>
+            <div class="toggle-label" data-i18n="svc.launch_mode_label">Phone Consult 上線模式</div>
             <select id="phoneLaunchMode">
               <option value="admin_only">Admin only</option>
               <option value="allowlist">Allowlist</option>
               <option value="public">Public</option>
             </select>
           </div>
-          <textarea id="phoneAllowlist" rows="3" style="display:none" placeholder="allowlist emails, comma or newline separated"></textarea>
-          <div class="toggle-hint">此開關僅 owner 可見，儲存在本機（localStorage），不需重新部署</div>
+          <textarea id="phoneAllowlist" rows="3" style="display:none" placeholder="allowlist emails, comma or newline separated"
+            data-i18n-attr="placeholder:svc.allowlist_placeholder"></textarea>
+          <div class="toggle-hint" data-i18n="svc.launch_mode_hint">此開關僅 owner 可見，儲存在本機（localStorage），不需重新部署</div>
         </div>
 <section id="svcPromoPhone" class="svc-promo" style="display:none">
   <div class="svc-promo-card">
-    <button type="button" id="promoEditToggle" class="svc-promo-edit" style="display:none">編輯</button>
+    <button type="button" id="promoEditToggle" class="svc-promo-edit" style="display:none" data-i18n="svc.promo_edit">編輯</button>
     <div class="svc-promo-left">
       <div class="svc-promo-media">
-        <img id="svcPromoImg" alt="電話算命預約">
+        <img id="svcPromoImg" alt="電話算命預約" data-i18n-attr="alt:svc.promo_image_alt">
       </div>
       <div id="svcPromoKicker" class="svc-promo-kicker">NEW</div>
       <h2 id="svcPromoTitle" class="svc-promo-title">電話算命預約（含即時翻譯）</h2>
       <div id="svcPromoSub" class="svc-promo-sub">泰國老師（泰文）× 中文 / 英文即時翻譯｜可自行全程錄音</div>
       <ul id="svcPromoBullets" class="svc-promo-bullets">
-        <li>電話進行，不需視訊</li>
-        <li>方案價格：中文 NT$ 4,000｜英文 NT$ 3,500</li>
-        <li>可加購「轉譯＋重點摘要整理」+NT$500</li>
+        <li data-i18n="svc.promo_bullet_1">電話進行，不需視訊</li>
+        <li data-i18n="svc.promo_bullet_2">方案價格：中文 NT$ 4,000｜英文 NT$ 3,500</li>
+        <li data-i18n="svc.promo_bullet_3">可加購「轉譯＋重點摘要整理」+NT$500</li>
       </ul>
       <div id="svcPromoNote" class="svc-promo-note">改期需在預約時間 48 小時前提出</div>
     </div>
@@ -180,20 +182,20 @@
         <span id="svcPromoPriceNew" class="svc-price-new"></span>
       </div>
       <div id="svcPromoLimited" class="svc-promo-limited" style="display:none">
-        <span class="svc-promo-limited-label">限時優惠</span>
+        <span class="svc-promo-limited-label" data-i18n="svc.promo_limited_label">限時優惠</span>
         <span id="svcPromoPeriod" class="svc-promo-period"></span>
         <span id="svcPromoEarlyBird" class="svc-promo-earlybird">早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價</span>
         <span id="svcPromoCountdown" class="svc-promo-countdown"></span>
       </div>
-      <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta">查看並預約</button>
+      <button type="button" id="svcPromoCta" class="btn primary svc-promo-cta" data-i18n="svc.promo_cta">查看並預約</button>
       <div id="svcPromoMini" class="svc-promo-mini">可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問</div>
       <div id="svcPromoStories" class="svc-promo-stories" style="display:none">
-        <div class="svc-promo-stories-head">顧客反饋</div>
+        <div class="svc-promo-stories-head" data-i18n="svc.promo_stories_head">顧客反饋</div>
         <div class="svc-promo-story-media">
           <img id="svcPromoStoryImg" alt="">
         </div>
         <div id="svcPromoStoryMsg" class="svc-promo-story-msg"></div>
-        <button type="button" id="svcPromoStoryMore" class="svc-promo-story-more" style="display:none">顯示更多</button>
+        <button type="button" id="svcPromoStoryMore" class="svc-promo-story-more" style="display:none" data-i18n="svc.show_more">顯示更多</button>
         <div class="svc-promo-story-meta">
           <span id="svcPromoStoryName"></span>
           <span id="svcPromoStoryTime"></span>
@@ -202,72 +204,73 @@
     </div>
   </div>
   <div id="svcPromoAdmin" class="svc-promo-admin" style="display:none">
-    <div class="svc-promo-admin-head">Admin 編輯</div>
+    <div class="svc-promo-admin-head" data-i18n="svc.promo_admin_head">Admin 編輯</div>
     <div class="svc-promo-admin-grid">
-      <label>小標
+      <label><span data-i18n="svc.promo_admin_kicker">小標</span>
         <input type="text" id="promoKickerInput">
       </label>
-      <label>標題
+      <label><span data-i18n="svc.promo_admin_title">標題</span>
         <input type="text" id="promoTitleInput">
       </label>
-      <label>副標
+      <label><span data-i18n="svc.promo_admin_subtitle">副標</span>
         <textarea id="promoSubInput" rows="2"></textarea>
       </label>
-      <label>重點列表（每行一條）
+      <label><span data-i18n="svc.promo_admin_bullets">重點列表（每行一條）</span>
         <textarea id="promoBulletsInput" rows="3"></textarea>
       </label>
-      <label>提醒
+      <label><span data-i18n="svc.promo_admin_note">提醒</span>
         <input type="text" id="promoNoteInput">
       </label>
-      <label>優惠說明
-        <input type="text" id="promoEarlyBirdInput" placeholder="早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價">
+      <label><span data-i18n="svc.promo_admin_earlybird">優惠說明</span>
+        <input type="text" id="promoEarlyBirdInput" placeholder="早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價"
+          data-i18n-attr="placeholder:svc.promo_earlybird_placeholder">
       </label>
-      <label>方案標題
+      <label><span data-i18n="svc.promo_admin_pack_label">方案標題</span>
         <input type="text" id="promoPackLabelInput">
       </label>
-      <label>英文方案文字
+      <label><span data-i18n="svc.promo_admin_pack_en">英文方案文字</span>
         <input type="text" id="promoPackEnInput">
       </label>
-      <label>中文方案文字
+      <label><span data-i18n="svc.promo_admin_pack_zh">中文方案文字</span>
         <input type="text" id="promoPackZhInput">
       </label>
-      <label>CTA 按鈕文字
+      <label><span data-i18n="svc.promo_admin_cta">CTA 按鈕文字</span>
         <input type="text" id="promoCtaInput">
       </label>
-      <label>補充文字
+      <label><span data-i18n="svc.promo_admin_mini">補充文字</span>
         <textarea id="promoMiniInput" rows="2"></textarea>
       </label>
-      <label>服務內容（詳情顯示）
+      <label><span data-i18n="svc.promo_admin_service_desc">服務內容（詳情顯示）</span>
         <textarea id="promoServiceDescInput" rows="4"></textarea>
       </label>
-      <label>優惠價
-        <input type="number" id="promoPriceInput" inputmode="numeric" placeholder="例如 3500">
+      <label><span data-i18n="svc.promo_admin_price">優惠價</span>
+        <input type="number" id="promoPriceInput" inputmode="numeric" placeholder="例如 3500" data-i18n-attr="placeholder:svc.promo_price_placeholder">
       </label>
-      <label>優惠開始
+      <label><span data-i18n="svc.promo_admin_start">優惠開始</span>
         <input type="datetime-local" id="promoStartInput">
       </label>
-      <label>優惠結束
+      <label><span data-i18n="svc.promo_admin_end">優惠結束</span>
         <input type="datetime-local" id="promoEndInput">
       </label>
-      <label>照片 URL
-        <input type="text" id="promoImageInput" placeholder="https://...">
+      <label><span data-i18n="svc.promo_admin_image_url">照片 URL</span>
+        <input type="text" id="promoImageInput" placeholder="https://..." data-i18n-attr="placeholder:svc.promo_image_placeholder">
       </label>
       <input type="hidden" id="promoImagePosXInput">
       <input type="hidden" id="promoImagePosYInput">
     </div>
-    <div class="svc-promo-admin-hint muted">可直接拖曳上方照片調整顯示位置</div>
+    <div class="svc-promo-admin-hint muted" data-i18n="svc.promo_admin_drag_hint">可直接拖曳上方照片調整顯示位置</div>
     <div class="svc-promo-admin-actions">
-      <button type="button" class="btn" id="promoReset">還原</button>
-      <button type="button" class="btn primary" id="promoSave">儲存</button>
+      <button type="button" class="btn" id="promoReset" data-i18n="svc.reset">還原</button>
+      <button type="button" class="btn primary" id="promoSave" data-i18n="common.save">儲存</button>
     </div>
-    <div class="svc-promo-admin-hint muted">僅管理員可見，儲存後會寫回服務商品設定。</div>
+    <div class="svc-promo-admin-hint muted" data-i18n="svc.promo_admin_owner_hint">僅管理員可見，儲存後會寫回服務商品設定。</div>
   </div>
 </section>
 <dialog id="svcStoryModal" class="svc-dialog svc-story-modal">
   <div class="svc-dialog-body">
     <div class="svc-story-head">
-      <div class="svc-story-title">顧客反饋</div>
-      <button type="button" class="svc-story-close" data-close-dialog="1" aria-label="關閉">×</button>
+      <div class="svc-story-title" data-i18n="svc.promo_stories_head">顧客反饋</div>
+      <button type="button" class="svc-story-close" data-close-dialog="1" aria-label="關閉" data-i18n-attr="aria-label:common.close">×</button>
     </div>
     <div class="svc-story-card">
       <div class="svc-story-media">
@@ -280,28 +283,28 @@
       </div>
     </div>
     <div class="svc-story-actions">
-      <button type="button" id="svcStoryPrev" class="btn">上一則</button>
-      <button type="button" id="svcStoryNext" class="btn primary">下一則</button>
+      <button type="button" id="svcStoryPrev" class="btn" data-i18n="svc.prev">上一則</button>
+      <button type="button" id="svcStoryNext" class="btn primary" data-i18n="svc.next">下一則</button>
     </div>
   </div>
 </dialog>
         <section id="svcHotSection" class="hot-section" style="display:none;">
           <div class="hot-head">
-            <div class="hot-title">熱賣中服務</div>
-            <div class="hot-sub">人氣排行</div>
+            <div class="hot-title" data-i18n="svc.hot_services">熱賣中服務</div>
+            <div class="hot-sub" data-i18n="svc.hot_sub">人氣排行</div>
           </div>
           <div id="svcHotList" class="grid hot-grid service-grid"></div>
         </section>
         <section>
           <div id="svcList" class="grid service-grid">
-            <div id="svcListEmpty">載入中…</div>
+            <div id="svcListEmpty" data-i18n="common.loading">載入中…</div>
           </div>
         </section>
       </div>
     </div>
 
     <div class="footer">
-      <div class="footer-logos" aria-label="付款方式">
+      <div class="footer-logos" aria-label="付款方式" data-i18n-attr="aria-label:svc.footer_payments_aria">
         <span class="logo-item" title="Visa">
           <img src="/img/brand/logo-visa.svg" alt="Visa" width="32" height="32" decoding="async">
         </span>
@@ -322,7 +325,7 @@
         </span>
       </div>
       <div class="footer-contact">
-        <div class="footer-social" aria-label="社群連結">
+        <div class="footer-social" aria-label="社群連結" data-i18n-attr="aria-label:svc.footer_social_aria">
           <a class="logo-item logo-item--social" href="https://www.instagram.com/unalomecodes" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
             <img src="/img/brand/logo-instagram.png" alt="Instagram" width="32" height="32" decoding="async">
           </a>
@@ -333,17 +336,17 @@
             <img src="/img/brand/logo-line.png" alt="LINE" width="32" height="32" decoding="async">
           </a>
         </div>
-        <strong>聯絡我們</strong>
+        <strong data-i18n="svc.contact_us">聯絡我們</strong>
         <div>bkkaiwei@gmail.com</div>
-        <div>客服LINE official @427oaemj</div>
-        <div>2025-2026©unalomecodes ｜ <a href="#" id="privacyLink" class="policy-link">隱私權政策</a> ｜ <a href="/faq" class="policy-link">常見問題</a> ｜ <a href="/service-guide" class="policy-link">服務介紹</a></div>
+        <div data-i18n="svc.footer_line_official">客服LINE official @427oaemj</div>
+        <div>2025-2026©unalomecodes ｜ <a href="#" id="privacyLink" class="policy-link" data-i18n="svc.privacy_title">隱私權政策</a> ｜ <a href="/faq" class="policy-link" data-i18n="svc.faq">常見問題</a> ｜ <a href="/service-guide" class="policy-link" data-i18n="svc.service_guide">服務介紹</a></div>
       </div>
     </div>
   </div>
 
   <dialog id="privacyDialog" class="policy-dialog">
-    <header>隱私權政策</header>
-    <div class="body">
+    <header data-i18n="svc.privacy_title">隱私權政策</header>
+    <div class="body" data-i18n-html="svc.privacy_body_html">
       <p>感謝您使用 unalomecodes 服務商品，我們遵循一般電商平台對個資與交易資料的保護做法，以下條列服務型商品專區的個資使用方式：</p>
       <ol>
         <li><strong>蒐集來源：</strong>您透過下單表單、祈福進度查詢、顧客故事分享所提供的姓名、聯絡方式、祈福需求與上傳檔案。</li>
@@ -358,54 +361,54 @@
       <p>使用本服務即表示您同意上述條款。如有疑問，歡迎透過官方 LINE 客服聯繫。</p>
     </div>
     <footer>
-      <button type="button" class="btn" id="privacyClose">關閉</button>
+      <button type="button" class="btn" id="privacyClose" data-i18n="common.close">關閉</button>
     </footer>
   </dialog>
 
   <dialog id="profileDialogSvc" class="policy-dialog">
-    <header>基本資料</header>
+    <header data-i18n="svc.profile">基本資料</header>
     <div class="body">
-      <label>姓名</label>
+      <label data-i18n="shop.name">姓名</label>
       <input id="profileNameSvc" type="text">
-      <label>Email</label>
+      <label data-i18n="shop.email">Email</label>
       <input id="profileEmailSvc" type="email">
-      <label>手機號碼</label>
-      <input id="profilePhoneSvc" type="tel" placeholder="請輸入手機號碼">
-      <p class="muted" style="font-size:12px;margin-top:8px;">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
+      <label data-i18n="shop.phone">手機號碼</label>
+      <input id="profilePhoneSvc" type="tel" placeholder="請輸入手機號碼" data-i18n-attr="placeholder:shop.phone_placeholder">
+      <p class="muted" style="font-size:12px;margin-top:8px;" data-i18n="shop.profile_note">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
       <div id="profileStatusSvc" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
     </div>
     <footer>
-      <button type="button" class="btn" id="profileCloseSvc">取消</button>
-      <button type="button" class="btn primary" id="profileSaveSvc">儲存</button>
+      <button type="button" class="btn" id="profileCloseSvc" data-i18n="common.cancel">取消</button>
+      <button type="button" class="btn primary" id="profileSaveSvc" data-i18n="common.save">儲存</button>
     </footer>
   </dialog>
 
   <dialog id="svcLookup" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;">
     <header>
-      <div style="font-weight:800;font-size:18px;">祈福進度查詢</div>
-      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;">輸入手機並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看服務最新狀態。</p>
+      <div style="font-weight:800;font-size:18px;" data-i18n="svc.lookup_title">祈福進度查詢</div>
+      <p style="margin:6px 0 0;color:#6b7280;font-size:13px;" data-i18n="svc.lookup_desc">輸入手機並搭配訂單編號末五碼（英數）或匯款帳號末五碼，即可查看服務最新狀態。</p>
     </header>
     <form id="svcLookupForm">
       <label>
-        手機號碼
-        <input type="tel" name="phone" required placeholder="請輸入下單時的電話" pattern="09\d{8}">
+        <span data-i18n="shop.phone">手機號碼</span>
+        <input type="tel" name="phone" required placeholder="請輸入下單時的電話" pattern="09\d{8}" data-i18n-attr="placeholder:svc.lookup_phone_placeholder">
       </label>
       <label>
-        訂單編號末五碼（英數）
-        <input type="text" name="orderDigits" inputmode="text" pattern="[A-Za-z0-9]{5}" placeholder="A1B2C">
+        <span data-i18n="svc.lookup_order_last5">訂單編號末五碼（英數）</span>
+        <input type="text" name="orderDigits" inputmode="text" pattern="[A-Za-z0-9]{5}" placeholder="A1B2C" data-i18n-attr="placeholder:svc.lookup_order_last5_placeholder">
       </label>
       <label>
-        匯款帳號末五碼
-        <input type="text" name="bankDigits" inputmode="numeric" pattern="\d{5}" placeholder="12345">
+        <span data-i18n="svc.lookup_bank_last5">匯款帳號末五碼</span>
+        <input type="text" name="bankDigits" inputmode="numeric" pattern="\d{5}" placeholder="12345" data-i18n-attr="placeholder:svc.lookup_bank_last5_placeholder">
       </label>
       <div class="actions">
-        <button type="button" class="btn" id="svcLookupClose">關閉</button>
-        <button type="submit" class="btn primary">查詢</button>
+        <button type="button" class="btn" id="svcLookupClose" data-i18n="common.close">關閉</button>
+        <button type="submit" class="btn primary" data-i18n="checkout.search">查詢</button>
       </div>
-      <p id="svcLookupHint" style="margin:0;font-size:12px;color:#94a3b8;">查詢結果載入後會顯示於下方。</p>
+      <p id="svcLookupHint" style="margin:0;font-size:12px;color:#94a3b8;" data-i18n="svc.lookup_hint">查詢結果載入後會顯示於下方。</p>
     </form>
     <div id="svcLookupResult" style="display:none;">
-      <div style="font-weight:700;margin-bottom:6px;">查詢結果</div>
+      <div style="font-weight:700;margin-bottom:6px;" data-i18n="checkout.search_result">查詢結果</div>
       <div id="svcLookupCards" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
   </dialog>
@@ -424,25 +427,25 @@
         <div id="svcDetailInstagram" class="svc-ig" style="display:none;"></div>
       </div>
       <div>
-        <div style="font-weight:700;color:#6b7280;margin-bottom:4px;">服務內容</div>
+        <div style="font-weight:700;color:#6b7280;margin-bottom:4px;" data-i18n="svc.detail_content">服務內容</div>
         <div class="dlgTags svc-tags">
           <span id="svcDetailLimited" class="dlgTag dlgTag--limited" style="display:none;"></span>
           <span id="svcDetailRemaining" class="dlgTag dlgTag--remaining" style="display:none;"></span>
         </div>
-        <div id="svcDetailDesc" style="font-size:14px;line-height:1.7;border:1px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap;max-height:220px;overflow:auto;">服務說明</div>
+        <div id="svcDetailDesc" style="font-size:14px;line-height:1.7;border:1px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap;max-height:220px;overflow:auto;" data-i18n="svc.detail_desc_placeholder">服務說明</div>
         <ul id="svcDetailIncludes" class="svc-includes">
-          <li>蠟燭祈請</li>
+          <li data-i18n="svc.detail_includes_placeholder">蠟燭祈請</li>
         </ul>
         <div id="svcDetailOptionsWrap" style="margin-top:12px;">
-          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px;">服務項目（選擇後加入購物車，可重複加入不同選項）</label>
+          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px;" data-i18n="svc.detail_variant_label">服務項目（選擇後加入購物車，可重複加入不同選項）</label>
           <select id="svcDetailVariant" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);font-size:14px;"></select>
         </div>
         <div id="svcDetailQtyWrap" style="margin-top:12px;display:none;">
-          <label id="svcDetailQtyLabel" for="svcDetailQty" style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px;">數量</label>
+          <label id="svcDetailQtyLabel" for="svcDetailQty" style="display:block;font-size:12px;color:#6b7280;margin-bottom:6px;" data-i18n="svc.qty">數量</label>
           <div class="qty-stepper">
-            <button type="button" id="svcDetailQtyMinus" aria-label="減少數量">−</button>
+            <button type="button" id="svcDetailQtyMinus" aria-label="減少數量" data-i18n-attr="aria-label:svc.qty_minus">−</button>
             <input id="svcDetailQty" type="number" min="1" step="1" value="1" inputmode="numeric" style="padding:10px;border-radius:10px;border:1px solid var(--line);font-size:14px;">
-            <button type="button" id="svcDetailQtyPlus" aria-label="增加數量">+</button>
+            <button type="button" id="svcDetailQtyPlus" aria-label="增加數量" data-i18n-attr="aria-label:svc.qty_plus">+</button>
             <span id="svcDetailFeeHint" style="font-size:12px;color:#6b7280;white-space:nowrap;"></span>
           </div>
           <div id="svcDetailPriceHint" style="font-size:12px;color:#6b7280;margin-top:6px;display:none;"></div>
@@ -453,44 +456,44 @@
           <span id="svcDetailPrice">0</span>
         </div>
         <div id="svcDetailPromoLimited" class="svc-promo-limited" style="display:none">
-          <span class="svc-promo-limited-label">限時優惠</span>
+          <span class="svc-promo-limited-label" data-i18n="svc.promo_limited_label">限時優惠</span>
           <span id="svcDetailPromoPeriod" class="svc-promo-period"></span>
           <span id="svcDetailPromoEarlyBird" class="svc-promo-earlybird">早鳥優惠 前10名完成預約享有該折扣，結束後恢復原價</span>
           <span id="svcDetailPromoCountdown" class="svc-promo-countdown"></span>
         </div>
         <div id="svcConsultPack" class="svc-pack" style="display:none">
           <div class="svc-pack-head">
-            <div class="svc-pack-title">連線算命方案</div>
-            <div class="svc-pack-sub">泰國RANI師父（僅泰文）｜方案已含即時翻譯</div>
+            <div class="svc-pack-title" data-i18n="svc.pack_title">連線算命方案</div>
+            <div class="svc-pack-sub" data-i18n="svc.pack_sub">泰國RANI師父（僅泰文）｜方案已含即時翻譯</div>
           </div>
           <div class="svc-pack-grid">
             <button class="svc-pack-pill" data-pack="zh">
-              <div class="pill-title">中文翻譯</div>
+              <div class="pill-title" data-i18n="svc.pack_zh">中文翻譯</div>
               <div class="pill-price">NT$ 4,000</div>
             </button>
             <button class="svc-pack-pill" data-pack="en">
-              <div class="pill-title">英文翻譯</div>
+              <div class="pill-title" data-i18n="svc.pack_en">英文翻譯</div>
               <div class="pill-price">NT$ 3,500</div>
             </button>
           </div>
           <div class="svc-pack-addon">
-            <label for="svcConsultAddonSummary" class="addon-label">加購（選填）</label>
+            <label for="svcConsultAddonSummary" class="addon-label" data-i18n="svc.addon_label">加購（選填）</label>
             <select id="svcConsultAddonSummary" class="svc-addon-select">
-              <option value="0">不加購</option>
-              <option value="1">加購：轉譯＋重點摘要整理 + NT$ 500</option>
+              <option value="0" data-i18n="svc.addon_none">不加購</option>
+              <option value="1" data-i18n="svc.addon_yes">加購：轉譯＋重點摘要整理 + NT$ 500</option>
             </select>
             <div class="addon-hint">
-              可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問
+              <span data-i18n="svc.promo_mini">可事先將想詢問的問題整理好，通話時由翻譯人員協助向老師提問</span>
             </div>
           </div>
           <div class="svc-pack-policy">
-            <div>・改期需於預約時間 48 小時前提出</div>
-            <div>・可自行全程錄音</div>
+            <div data-i18n="svc.pack_policy_1">・改期需於預約時間 48 小時前提出</div>
+            <div data-i18n="svc.pack_policy_2">・可自行全程錄音</div>
           </div>
         </div>
         <section id="svcSlotSection" class="svc-slot-section" style="display:none">
           <div class="svc-slot-head">
-            <div class="svc-slot-title">可預約時段</div>
+            <div class="svc-slot-title" data-i18n="svc.slot_title">可預約時段</div>
             <div id="svcSlotHint" class="svc-slot-hint"></div>
           </div>
           <div id="svcSlotTzHint" class="svc-slot-tz"></div>
@@ -501,31 +504,31 @@
           </div>
           <div id="svcSlotGrid" class="svc-slot-grid"></div>
           <div class="svc-slot-actions">
-            <button type="button" id="svcSlotRefresh" class="btn">重新整理可預約時段</button>
+            <button type="button" id="svcSlotRefresh" class="btn" data-i18n="svc.slot_refresh">重新整理可預約時段</button>
             <button type="button" id="svcSlotToggleBookable" class="btn">只顯示可預約時段</button>
           </div>
           <div id="svcSlotState" class="svc-slot-state"></div>
         </section>
         <div style="margin-top:12px;">
-          <button id="svcDetailAddCart" class="btn primary" style="width:100%;">加入購物車</button>
+          <button id="svcDetailAddCart" class="btn primary" style="width:100%;" data-i18n="svc.add_to_cart">加入購物車</button>
         </div>
         <div class="reviews" style="margin-top:20px;">
-          <div style="font-weight:800;margin-bottom:6px">顧客評價／真實故事</div>
+          <div style="font-weight:800;margin-bottom:6px" data-i18n="svc.reviews_title">顧客評價／真實故事</div>
           <div id="svcRvList"></div>
           <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px;">
             <div style="display:grid;gap:12px;margin-bottom:12px;">
               <div style="display:grid;gap:6px;">
-                <label for="svcRvNick" style="font-size:12px;color:#6b7280">您的名字 (或暱稱)</label>
-                <input id="svcRvNick" type="text" placeholder="例：林小姐" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                <label for="svcRvNick" style="font-size:12px;color:#6b7280" data-i18n="svc.review_name_label">您的名字 (或暱稱)</label>
+                <input id="svcRvNick" type="text" placeholder="例：林小姐" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;" data-i18n-attr="placeholder:svc.review_name_placeholder">
               </div>
               <div style="display:grid;gap:6px;">
-                <label for="svcRvFile" style="font-size:12px;color:#6b7280">上傳圖片 (選填)</label>
+                <label for="svcRvFile" style="font-size:12px;color:#6b7280" data-i18n="svc.review_image_label">上傳圖片 (選填)</label>
                 <input id="svcRvFile" type="file" accept="image/*" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
               </div>
             </div>
-            <textarea id="svcRvText" placeholder="分享您的真實體驗、感應或故事..." style="min-height:100px;"></textarea>
+            <textarea id="svcRvText" placeholder="分享您的真實體驗、感應或故事..." style="min-height:100px;" data-i18n-attr="placeholder:svc.review_msg_placeholder"></textarea>
             <div class="cta" style="margin-top:8px;">
-              <button class="btn primary" id="svcRvSubmit">送出分享</button>
+              <button class="btn primary" id="svcRvSubmit" data-i18n="svc.review_submit">送出分享</button>
             </div>
           </div>
         </div>
@@ -535,40 +538,40 @@
 
   <dialog id="svcCartPanel" style="border:none;border-radius:16px;padding:0;max-width:640px;width:95%;box-shadow:0 30px 60px rgba(15,23,42,.35);">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line);">
-      <div style="font-weight:800;font-size:18px;">服務購物車</div>
+      <div style="font-weight:800;font-size:18px;" data-i18n="svc.cart">服務購物車</div>
       <button type="button" id="svcCartPanelClose" class="xbtn">✕</button>
     </div>
     <div id="svcCartList" style="max-height:50vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
     <div style="padding:0 18px 12px;">
       <div style="display:flex;justify-content:space-between;font-weight:700;">
-        <span>應付金額</span>
+        <span data-i18n="svc.amount_due">應付金額</span>
         <span id="svcCartAmount">NT$ 0</span>
       </div>
     </div>
     <div class="svc-cart-actions">
-      <button class="btn" id="svcCartPanelBack">返回上一頁</button>
-      <button class="btn" id="svcCartClear">清空購物車</button>
-      <button class="btn primary" id="svcCartCheckout">填寫訂單資料</button>
+      <button class="btn" id="svcCartPanelBack" data-i18n="common.back_prev">返回上一頁</button>
+      <button class="btn" id="svcCartClear" data-i18n="svc.cart_clear">清空購物車</button>
+      <button class="btn primary" id="svcCartCheckout" data-i18n="svc.checkout_fill">填寫訂單資料</button>
     </div>
   </dialog>
 
   <dialog id="svcCart" class="svc-dialog" data-bank-name="中國信託 (822)" data-bank-account="148540417073" style="width:min(920px,96vw);max-height:92vh;overflow:hidden;">
     <div class="svc-stepper">
-      <span data-step="1" class="active">1. 確認服務</span>
-      <span data-step="2">2. 匯款資料</span>
-      <span data-step="3">3. 完成</span>
+      <span data-step="1" class="active" data-i18n="svc.step1">1. 確認服務</span>
+      <span data-step="2" data-i18n="svc.step2">2. 匯款資料</span>
+      <span data-step="3" data-i18n="svc.step3">3. 完成</span>
     </div>
     <div id="svcHoldCountdown" class="svc-hold-countdown" style="display:none;"></div>
     <form id="svcCartForm" class="svc-form" enctype="multipart/form-data" novalidate>
       <input type="hidden" id="svcCartServiceId">
       <div class="svc-step-content active" id="svcCartStep1" data-step="1">
         <div>
-          <div class="svc-step-title">確認服務與填寫基本資料</div>
-          <p class="svc-bank-hint">請先確認服務內容，再填寫聯絡資訊與祈福需求，下一步即可查看匯款帳戶並上傳憑證。</p>
+          <div class="svc-step-title" data-i18n="svc.step1_title">確認服務與填寫基本資料</div>
+          <p class="svc-bank-hint" data-i18n="svc.step1_hint">請先確認服務內容，再填寫聯絡資訊與祈福需求，下一步即可查看匯款帳戶並上傳憑證。</p>
         </div>
         <div class="svc-summary">
           <div>
-            <div style="font-size:12px;color:#6b7280;font-weight:700;">服務內容確認</div>
+            <div style="font-size:12px;color:#6b7280;font-weight:700;" data-i18n="svc.summary_title">服務內容確認</div>
             <div id="svcCartServiceName" style="font-weight:700;font-size:16px;margin-top:4px;">服務名稱</div>
             <ul id="svcCartSummary" style="margin:6px 0 0;padding-left:18px;color:#475569;font-size:13px;line-height:1.5;"></ul>
           </div>
@@ -576,38 +579,38 @@
         </div>
         <section class="svc-form-section">
           <label>
-            聯絡人姓名（必填）
-            <input type="text" name="name" required placeholder="請輸入姓名">
+            <span data-i18n="svc.form_name">聯絡人姓名（必填）</span>
+            <input type="text" name="name" required placeholder="請輸入姓名" data-i18n-attr="placeholder:svc.form_name_placeholder">
           </label>
           <label>
-            英文姓名（必填）
-            <input type="text" name="nameEn" required placeholder="請輸入英文名字（護照/拼音）">
+            <span data-i18n="svc.form_name_en">英文姓名（必填）</span>
+            <input type="text" name="nameEn" required placeholder="請輸入英文名字（護照/拼音）" data-i18n-attr="placeholder:svc.form_name_en_placeholder">
           </label>
           <label>
-            手機號碼（必填）
-            <input type="tel" name="phone" required placeholder="例：0969123456" inputmode="tel">
+            <span data-i18n="svc.form_phone">手機號碼（必填）</span>
+            <input type="tel" name="phone" required placeholder="例：0969123456" inputmode="tel" data-i18n-attr="placeholder:svc.form_phone_placeholder">
           </label>
           <label>
-            Email（必填）
-            <input type="email" name="email" required placeholder="請輸入通知用 Email">
+            <span data-i18n="svc.form_email">Email（必填）</span>
+            <input type="email" name="email" required placeholder="請輸入通知用 Email" data-i18n-attr="placeholder:svc.form_email_placeholder">
           </label>
           <label>
-            生日（西元年/月/日，必填）
+            <span data-i18n="svc.form_birth">生日（西元年/月/日，必填）</span>
             <input type="date" name="birth" required>
           </label>
           <label>
-            指定祈福日期（可留白）
+            <span data-i18n="svc.form_request_date">指定祈福日期（可留白）</span>
             <input type="date" name="requestDate">
-            <span class="svc-bank-hint">如中午前完成下單，可選擇當日祈福；超過 12:00 請改選翌日以後。</span>
+            <span class="svc-bank-hint" data-i18n="svc.form_request_date_hint">如中午前完成下單，可選擇當日祈福；超過 12:00 請改選翌日以後。</span>
           </label>
           <div id="svcRequestTimeWrap" class="svc-field" style="display:none">
-            <label for="svcRequestTime" class="svc-label">時間</label>
+            <label for="svcRequestTime" class="svc-label" data-i18n="svc.form_request_time">時間</label>
             <input type="time" id="svcRequestTime" class="svc-input" />
-            <div class="muted" id="svcRequestTimeHint">改期需在預約時間 48 小時前提出</div>
+            <div class="muted" id="svcRequestTimeHint" data-i18n="svc.reschedule_48h">改期需在預約時間 48 小時前提出</div>
           </div>
           <label>
-            備註
-            <textarea name="note" placeholder="可輸入希望代許的願望，例如：身體健康、事業順利 或回向給眾生等等..."></textarea>
+            <span data-i18n="svc.form_note">備註</span>
+            <textarea name="note" placeholder="可輸入希望代許的願望，例如：身體健康、事業順利 或回向給眾生等等..." data-i18n-attr="placeholder:svc.form_note_placeholder"></textarea>
           </label>
           <label id="svcContactPhotoWrap">
             <span id="svcContactPhotoTitle">上傳個人照片（祈福使用，必填）</span>
@@ -615,68 +618,68 @@
             <span class="svc-bank-hint" id="svcContactPhotoHint">建議上傳清晰的正面照片，僅供老師祈福使用。</span>
             <span class="svc-bank-hint" id="svcContactPhotoName"></span>
           </label>
-          <div class="svc-bank-hint" id="svcContactPhotoSkipHint" style="display:none;">此服務不需上傳個人照片。</div>
+          <div class="svc-bank-hint" id="svcContactPhotoSkipHint" style="display:none;" data-i18n="svc.photo_skip_hint">此服務不需上傳個人照片。</div>
         </section>
         <div class="svc-step-actions">
-          <button type="button" class="btn" id="svcCartBack">返回</button>
-          <button type="button" class="btn" id="svcSlotChangeBtn" style="display:none;">修改時間</button>
-          <button type="button" class="btn primary" id="svcCartNext">前往匯款資料</button>
+          <button type="button" class="btn" id="svcCartBack" data-i18n="common.back">返回</button>
+          <button type="button" class="btn" id="svcSlotChangeBtn" style="display:none;" data-i18n="svc.change_time">修改時間</button>
+          <button type="button" class="btn primary" id="svcCartNext" data-i18n="svc.go_payment">前往匯款資料</button>
         </div>
       </div>
 
       <div class="svc-step-content" id="svcCartStep2" data-step="2">
         <div>
-          <div class="svc-step-title">填寫匯款資料並上傳憑證</div>
-          <p class="svc-bank-hint">請先完成轉帳，再輸入匯款末五碼並上傳匯款憑證，以便我們核帳、成立訂單。</p>
+          <div class="svc-step-title" data-i18n="svc.step2_title">填寫匯款資料並上傳憑證</div>
+          <p class="svc-bank-hint" data-i18n="svc.step2_hint">請先完成轉帳，再輸入匯款末五碼並上傳匯款憑證，以便我們核帳、成立訂單。</p>
         </div>
         <div class="svc-bank-box">
           <div class="info">
-            <span>匯款銀行</span>
+            <span data-i18n="svc.bank_name">匯款銀行</span>
             <strong id="svcBankName">中國信託 (822)</strong>
           </div>
           <div class="info">
-            <span>匯款帳號</span>
+            <span data-i18n="svc.bank_account">匯款帳號</span>
             <strong id="svcBankAccount">148540417073</strong>
           </div>
-          <button type="button" class="svc-bank-copy" id="svcBankCopy">複製帳號</button>
+          <button type="button" class="svc-bank-copy" id="svcBankCopy" data-i18n="svc.copy_account">複製帳號</button>
         </div>
         <section class="svc-form-section">
           <label>
-            匯款金額（NT$）
+            <span data-i18n="svc.amount_due_twd">匯款金額（NT$）</span>
             <input type="text" id="svcBankAmount" readonly>
-            <span class="svc-bank-hint">系統自動帶入，請勿修改。</span>
+            <span class="svc-bank-hint" data-i18n="svc.amount_auto">系統自動帶入，請勿修改。</span>
             <span class="svc-bank-hint" id="svcMemberPerkHint" style="display:none;"></span>
           </label>
           <label>
-            匯款末五碼
-            <input type="text" id="svcBankLast5" placeholder="12345" inputmode="numeric" pattern="\d{5}" required>
+            <span data-i18n="svc.bank_last5">匯款末五碼</span>
+            <input type="text" id="svcBankLast5" placeholder="12345" inputmode="numeric" pattern="\d{5}" required data-i18n-attr="placeholder:svc.bank_last5_placeholder">
           </label>
           <label>
-            上傳匯款憑證（照片或截圖）
+            <span data-i18n="svc.upload_receipt">上傳匯款憑證（照片或截圖）</span>
             <input type="file" id="svcBankReceipt" accept="image/*,application/pdf" required>
-            <span class="svc-upload-hint">檔案需 20MB 以下，建議上傳清晰照片或 PDF。</span>
+            <span class="svc-upload-hint" data-i18n="svc.upload_hint">檔案需 20MB 以下，建議上傳清晰照片或 PDF。</span>
             <span class="svc-bank-hint" id="svcBankReceiptName"></span>
           </label>
           <label>
-            匯款補充說明（可留白）
-            <textarea id="svcBankMemo" placeholder="例：匯款人姓名與帳號、備註事項"></textarea>
+            <span data-i18n="svc.bank_memo">匯款補充說明（可留白）</span>
+            <textarea id="svcBankMemo" placeholder="例：匯款人姓名與帳號、備註事項" data-i18n-attr="placeholder:svc.bank_memo_placeholder"></textarea>
           </label>
         </section>
         <div class="svc-step-actions">
-          <button type="button" class="btn" id="svcBankBack">上一步</button>
-          <button type="submit" id="svcBankSubmit" class="btn primary">送出匯款資料</button>
+          <button type="button" class="btn" id="svcBankBack" data-i18n="svc.prev_step">上一步</button>
+          <button type="submit" id="svcBankSubmit" class="btn primary" data-i18n="svc.submit_payment">送出匯款資料</button>
         </div>
-        <div class="submit-tip" id="svcSubmitTip">若上傳圖片檔案較大，送出訂單時間會較久，請耐心等待。</div>
+        <div class="submit-tip" id="svcSubmitTip" data-i18n="svc.submit_tip">若上傳圖片檔案較大，送出訂單時間會較久，請耐心等待。</div>
       </div>
 
       <div class="svc-step-content" id="svcCartStep3" data-step="3">
         <div class="svc-success-icon">✓</div>
         <div style="text-align:center;">
-          <div class="svc-step-title">訂單送出成功</div>
+          <div class="svc-step-title" data-i18n="svc.order_submitted">訂單送出成功</div>
           <p class="svc-bank-hint" id="svcStep3Intro"></p>
           <p class="svc-bank-hint" id="svcStep3IntroSub"></p>
         </div>
-        <div id="svcBookingNotice" style="display:none;margin:12px 0;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+        <div id="svcBookingNotice" style="display:none;margin:12px 0;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;" data-i18n-html="svc.booking_notice_html">
           <div style="font-weight:700;margin-bottom:6px;">【服務須知 / Important Notice】</div>
           <div style="font-size:13px;line-height:1.7;color:#0f172a;">
             <div>• 本服務為預約制</div>
@@ -688,20 +691,20 @@
           </div>
         </div>
         <div class="svc-step3-card">
-          <div><span style="font-size:12px;color:#6b7280;">訂單編號</span><strong id="svcStep3OrderId">SVXXXXXX</strong></div>
-          <div>服務內容：<span id="svcStep3Service">—</span></div>
-          <div>應付金額：<span id="svcStep3Amount">NT$ 0</span></div>
-          <div id="svcStep3SlotRow">預約時段：<span id="svcStep3SlotBkk">—</span>（曼谷時間）／<span id="svcStep3SlotTpe">—</span>（台灣時間）</div>
-          <div>匯款末五碼：<span id="svcStep3Last5">—</span></div>
-          <div>聯絡人：<span id="svcStep3Buyer">—</span></div>
+          <div><span style="font-size:12px;color:#6b7280;" data-i18n="svc.order_id">訂單編號</span><strong id="svcStep3OrderId">SVXXXXXX</strong></div>
+          <div><span data-i18n="svc.service_content">服務內容：</span><span id="svcStep3Service">—</span></div>
+          <div><span data-i18n="svc.amount_due_label">應付金額：</span><span id="svcStep3Amount">NT$ 0</span></div>
+          <div id="svcStep3SlotRow"><span data-i18n="svc.slot_label">預約時段：</span><span id="svcStep3SlotBkk">—</span>（<span data-i18n="svc.tz_bkk">曼谷時間</span>）／<span id="svcStep3SlotTpe">—</span>（<span data-i18n="svc.tz_tpe">台灣時間</span>）</div>
+          <div><span data-i18n="svc.bank_last5_label">匯款末五碼：</span><span id="svcStep3Last5">—</span></div>
+          <div><span data-i18n="svc.contact_label">聯絡人：</span><span id="svcStep3Buyer">—</span></div>
         </div>
-        <div class="svc-email-notice">已寄出 Email 通知</div>
+        <div class="svc-email-notice" data-i18n="svc.email_sent">已寄出 Email 通知</div>
         <div class="svc-bank-hint" id="svcStep3HintMain"></div>
         <div class="svc-bank-hint" id="svcStep3HintQa"></div>
         <div style="margin-top:12px;font-size:12px;color:#64748b;" id="svcStep3HintReschedule"></div>
         <div class="svc-step-actions">
-          <button type="button" class="btn" id="svcStep3Lookup">查詢進度</button>
-          <button type="button" class="btn primary" id="svcStep3Close">完成</button>
+          <button type="button" class="btn" id="svcStep3Lookup" data-i18n="svc.lookup_progress">查詢進度</button>
+          <button type="button" class="btn primary" id="svcStep3Close" data-i18n="svc.done">完成</button>
         </div>
       </div>
     </form>
@@ -709,51 +712,38 @@
 
   <dialog id="svcSuccess" class="svc-dialog">
     <div class="closeBar">
-      <strong>祈福訂單已送出</strong>
+      <strong data-i18n="svc.success_title">祈福訂單已送出</strong>
       <button id="svcSuccessClose" class="xbtn" type="button">✕</button>
     </div>
     <div class="svc-success-body">
       <div>
-        <div style="color:#6b7280;font-size:13px;">訂單編號</div>
+        <div style="color:#6b7280;font-size:13px;" data-i18n="svc.order_id">訂單編號</div>
         <div id="svcSuccessId" class="order-id">SVXXXXXX</div>
       </div>
       <div class="svc-notice" id="svcSuccessNotice" style="display:none;margin-top:12px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
-        <h4 style="margin:0 0 8px;font-size:14px;">服務須知 / Important Notice</h4>
-        <ul style="margin:0 0 10px 18px;padding:0;line-height:1.7;">
-          <li>本服務為預約制</li>
-          <li>可於 48 小時前申請改期</li>
-          <li>本服務不提供退款</li>
-          <li>通話時可直接提問</li>
-          <li>若需整理問題可事先準備</li>
-        </ul>
-        <hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0;">
-        <ul class="en" style="margin:0 0 0 18px;padding:0;line-height:1.7;color:#475569;">
-          <li>This is a scheduled phone consultation</li>
-          <li>Reschedule must be requested at least 48 hours in advance</li>
-          <li>No refunds after booking</li>
-          <li>You may ask questions directly during the call</li>
-          <li>Please prepare your questions in advance if needed</li>
-        </ul>
+        <div data-i18n-html="svc.booking_notice_html"></div>
       </div>
-      <div id="svcSuccessHint" style="font-size:14px;color:#374151;line-height:1.7;">
+      <div id="svcSuccessHint" style="font-size:14px;color:#374151;line-height:1.7;" data-i18n="svc.success_hint">
         我們會在指定時間完成祈福並透過 Email/LINE 通知，亦可使用左側「查祈福進度」功能查看最新狀態。
       </div>
-      <div class="svc-email-notice">已寄出 Email 通知</div>
-      <div style="margin-top:12px;font-size:12px;color:#64748b;">申請改期請聯繫 LINE 客服。</div>
+      <div class="svc-email-notice" data-i18n="svc.email_sent">已寄出 Email 通知</div>
+      <div style="margin-top:12px;font-size:12px;color:#64748b;" data-i18n="svc.reschedule_line_hint">申請改期請聯繫 LINE 客服。</div>
     </div>
     <footer>
-      <button class="btn" id="svcSuccessLookup">查詢進度</button>
+      <button class="btn" id="svcSuccessLookup" data-i18n="svc.lookup_progress">查詢進度</button>
     </footer>
   </dialog>
   <dialog id="svcWaitOverlay" class="svc-wait-overlay" aria-live="polite">
     <div class="svc-wait-card">
       <div class="svc-wait-spinner" aria-hidden="true"></div>
-      <div class="svc-wait-title">處理中…</div>
-      <div class="svc-wait-sub">正在保留預約時段</div>
+      <div class="svc-wait-title" data-i18n="svc.wait_title">處理中…</div>
+      <div class="svc-wait-sub" data-i18n="svc.wait_sub_hold">正在保留預約時段</div>
     </div>
   </dialog>
 
   <script src="/js/service.inline-1.js"></script>
+  <script src="/js/uc-i18n-core.js"></script>
+  <script src="/js/uc-i18n-service.js"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="/js/auth.js?v=20240930"></script>
   <script src="/js/track.js"></script>

@@ -1,4 +1,26 @@
     (function(){
+      function t(key, fallback){
+        try{
+          var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+          if (!fn) return fallback;
+          var v = fn(key);
+          if (!v || v === key) return fallback;
+          return v;
+        }catch(_){
+          return fallback;
+        }
+      }
+      function tf(key, vars, fallback){
+        var out = String(t(key, fallback) || '');
+        var obj = vars && typeof vars === 'object' ? vars : {};
+        try{
+          Object.keys(obj).forEach(function(k){
+            out = out.split('{' + k + '}').join(String(obj[k]));
+          });
+        }catch(_){}
+        return out;
+      }
+
       const subEl = document.getElementById('pageSubtitle');
       const btn = document.getElementById('btnEditSubtitle');
       if (!subEl || !btn) return;
@@ -15,7 +37,7 @@
       }
       btn.addEventListener('click', async () => {
         const oldVal = subEl.textContent;
-        const newVal = prompt('編輯副標題', oldVal);
+        const newVal = prompt(t('svc.subtitle_edit_prompt','編輯副標題'), oldVal);
         if (!newVal || newVal === oldVal) return;
         try{
           const res = await fetch('/api/service/meta', {
@@ -28,10 +50,10 @@
           if (data.ok){
             subEl.textContent = newVal;
           } else {
-            alert('儲存失敗：' + (data.error || '未知錯誤'));
+            alert(tf('svc.subtitle_save_failed', { msg: (data && data.error) ? data.error : t('common.unknown_error','未知錯誤') }, '儲存失敗：{msg}'));
           }
         }catch(err){
-          alert('儲存失敗：' + err.message);
+          alert(tf('svc.subtitle_save_failed', { msg: err && err.message ? err.message : t('common.unknown_error','未知錯誤') }, '儲存失敗：{msg}'));
         }
       });
       fetch('/api/service/meta', { credentials: 'include' })

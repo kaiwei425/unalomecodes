@@ -394,6 +394,15 @@ function applyFilter(){
   renderList(viewItems);
 }
 
+try{
+  // Product cards are rendered dynamically; rerender on language change so texts match the current language.
+  window.addEventListener('uc_lang_change', function(){
+    try{
+      if (typeof applyFilter === 'function') applyFilter();
+    }catch(_){}
+  });
+}catch(_){}
+
 function renderHotItems(items){
   if (!hotSection || !hotList) return;
   if (window.__currentCategoryFilter === '__hot__'){
