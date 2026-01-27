@@ -40,6 +40,29 @@
   flex-wrap:wrap;
 }
 
+.admin-shell-applied [data-admin-page="staff-manual"] .langToggle{
+  display:flex;
+  gap:8px;
+  padding:4px;
+  border-radius:999px;
+  border:1px solid var(--admin-border-soft);
+  background:var(--admin-surface-2);
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .langToggle button{
+  border:1px solid transparent;
+  background:transparent;
+  color:#0f172a;
+  border-radius:999px;
+  padding:8px 10px;
+  font-size:12px;
+  font-weight:950;
+  cursor:pointer;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .langToggle button.is-active{
+  background:#0f172a;
+  color:#fff;
+}
+
 .admin-shell-applied [data-admin-page="staff-manual"] .toc-list{
   display:flex;
   flex-direction:column;
