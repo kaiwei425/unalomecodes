@@ -773,7 +773,7 @@ function buildEvidence(opts){
   }
 
   items.sort((a,b)=> b.weight - a.weight);
-  return items.slice(0, 3).map(it => it.text);
+  return items.map(it => it.text);
 }
 
 function pickRitualLine(deity, lang, seed){
