@@ -1494,12 +1494,18 @@ function setOptionActive(container, value){
 
 function bindOptionGroup(container, onSelect){
   if (!container) return;
-  container.addEventListener('click', (ev)=>{
+  if (container._optionClickHandler){
+    container.removeEventListener('click', container._optionClickHandler);
+  }
+  if (container._optionKeyHandler){
+    container.removeEventListener('keydown', container._optionKeyHandler);
+  }
+  container._optionClickHandler = (ev)=>{
     const btn = ev.target.closest('[data-option]');
     if (!btn) return;
     onSelect(btn.dataset.option);
-  });
-  container.addEventListener('keydown', (ev)=>{
+  };
+  container._optionKeyHandler = (ev)=>{
     const keys = ['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'];
     if (!keys.includes(ev.key)) return;
     ev.preventDefault();
@@ -1509,7 +1515,9 @@ function bindOptionGroup(container, onSelect){
     const dir = (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') ? 1 : -1;
     const nextIndex = (currentIndex + dir + items.length) % items.length;
     items[nextIndex].focus();
-  });
+  };
+  container.addEventListener('click', container._optionClickHandler);
+  container.addEventListener('keydown', container._optionKeyHandler);
 }
 
 function renderDow(){
