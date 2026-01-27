@@ -2,6 +2,18 @@
   const state = { ids: [], ready: false };
   const listeners = [];
 
+  function t(key, fallback){
+    try{
+      var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+      if (!fn) return fallback;
+      var v = fn(key);
+      if (!v || v === key) return fallback;
+      return v;
+    }catch(_){
+      return fallback;
+    }
+  }
+
   function notify(){
     listeners.forEach(fn=>{
       try{ fn(state.ids.slice()); }catch(_){}
@@ -38,7 +50,7 @@
     if (!productId) return Promise.reject(new Error('missing productId'));
     if (!window.authState || !window.authState.isLoggedIn()){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
-        window.authState.promptLogin('請先登入後再收藏商品。');
+        window.authState.promptLogin(t('wishlist.need_login','請先登入後再收藏商品。'));
       }
       return Promise.reject(new Error('login_required'));
     }
@@ -50,7 +62,7 @@
     }).then(async res=>{
       const data = await res.json().catch(()=>({}));
       if (!res.ok || (data && data.ok === false)){
-        throw new Error((data && data.error) || '更新收藏失敗');
+        throw new Error((data && data.error) || t('wishlist.update_failed','更新收藏失敗'));
       }
       state.ids = Array.isArray(data.wishlist) ? data.wishlist : [];
       fetchWishlist(); // refresh items for account page

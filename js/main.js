@@ -12,6 +12,18 @@ let pendingProductSource = '';
 const ESIM_AFFIL_URL = 'https://esimconnect.com.tw/#/access/esimbuy?referencecode=Unalomecodes';
 const ESIM_PRODUCT_ID = 'esimconnect-affiliate';
 
+function t(key, fallback){
+  try{
+    var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+    if (!fn) return fallback;
+    var v = fn(key);
+    if (!v || v === key) return fallback;
+    return v;
+  }catch(_){
+    return fallback;
+  }
+}
+
 function openExternal(url, meta){
   const eventName = (meta && (meta.event || meta.eventName)) ? String(meta.event || meta.eventName) : 'outbound_click';
   try{
@@ -33,15 +45,15 @@ function buildEsimProduct(){
   const customBadges = String(meta.badges || '').split(',').map(s=>s.trim()).filter(Boolean);
   return {
     id: ESIM_PRODUCT_ID,
-    name: String(meta.name || '泰國 eSIM 上網卡'),
+    name: String(meta.name || t('shop.esim_name_default','泰國 eSIM 上網卡')),
     category: 'eSIM',
     basePrice: 0,
     sold: 0,
     stock: null,
     images: [String(meta.imageUrl || '/img/esim.svg')],
     externalUrl: String(meta.url || ESIM_AFFIL_URL),
-    priceText: String(meta.priceText || '依方案計價'),
-    badges: customBadges.length ? customBadges : ['合作商品']
+    priceText: String(meta.priceText || t('shop.esim_price_default','依方案計價')),
+    badges: customBadges.length ? customBadges : [t('shop.esim_badge_default','合作商品')]
   };
 }
 // 安全補丁：避免呼叫未定義
@@ -233,10 +245,10 @@ function buildProductCard(p, opts = {}){
     const tags = Array.isArray(p.badges) ? p.badges.filter(Boolean) : [];
     metaBottom.innerHTML = tags.length
       ? tags.map(t => `<span class="badge badge-sold">${escapeHtml(String(t))}</span>`).join(' ')
-      : `<span class="badge badge-sold">合作商品</span>`;
+      : `<span class="badge badge-sold">${escapeHtml(t('shop.esim_badge_default','合作商品'))}</span>`;
   }else{
     metaBottom.innerHTML = `
-      <span class="badge badge-sold">已售出：${escapeHtml(String(Number(p.sold||0)))}</span>
+      <span class="badge badge-sold">${escapeHtml(t('shop.sold_prefix','已售出：'))}${escapeHtml(String(Number(p.sold||0)))}</span>
       ${stockBadge}
     `;
   }
@@ -254,11 +266,11 @@ function buildProductCard(p, opts = {}){
   const btn = document.createElement('button');
   btn.className = 'btn primary';
   if (isExternal){
-    btn.textContent = '前往購買';
+    btn.textContent = t('shop.esim_buy','前往購買');
     btn.addEventListener('click', () => openExternal(p.externalUrl, { event:'esim_click', url: p.externalUrl, placement:'shop', productId: String(p.id || '') }));
   }else{
     btn.setAttribute('data-open-detail', '1');
-    btn.textContent = '查看商品';
+    btn.textContent = t('shop.view_product','查看商品');
     btn.addEventListener('click', () => openDetail(p));
   }
   ctaDiv.appendChild(btn);

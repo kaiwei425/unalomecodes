@@ -57,6 +57,19 @@ html,body{
 .auth-btn{border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 10px 20px rgba(16,149,214,.25);transition:transform .2s ease,filter .2s ease;}
 .auth-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
 .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
+.lang-btn{
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:800;
+  font-size:13px;
+  background:linear-gradient(180deg,#fff, #f8fafc);
+  color:#0f172a;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(15,23,42,.08);
+  transition:transform .2s ease, filter .2s ease, border-color .2s ease;
+}
+.lang-btn:hover{transform:translateY(-1px);filter:brightness(1.01);border-color:#cbd5e1;}
 .guardian-badge{
   display:flex;
   align-items:center;

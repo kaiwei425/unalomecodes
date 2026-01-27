@@ -1,6 +1,18 @@
 const dlg = document.getElementById('dlg');
 const dlgInstagram = document.getElementById('dlgInstagram');
 
+function t(key, fallback){
+  try{
+    var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+    if (!fn) return fallback;
+    var v = fn(key);
+    if (!v || v === key) return fallback;
+    return v;
+  }catch(_){
+    return fallback;
+  }
+}
+
 function storyCodeFromProduct(p){
   try{
     if (p && p.deityCode){
@@ -44,7 +56,7 @@ function openDetail(p){
   document.getElementById('dlgName').textContent = p.name;
   const chipEl=document.getElementById('dlgChip');
   if (chipEl){
-    chipEl.textContent = `已售出：${Number(p.sold||0)}`;
+    chipEl.textContent = `${t('shop.sold_prefix','已售出：')}${Number(p.sold||0)}`;
     chipEl.classList.remove('badge');
     chipEl.classList.add('dlgTag','dlgTag--sold');
   }
@@ -157,7 +169,9 @@ function openDetail(p){
         stockEl.classList.remove('ok','zero');
       } else {
         stockEl.style.display = 'inline-flex';
-        stockEl.textContent = available > 0 ? `庫存：${available}` : '庫存：0（已售完）';
+        stockEl.textContent = available > 0
+          ? `${t('shop.stock_prefix','庫存：')}${available}`
+          : t('shop.stock_zero','庫存：0（已售完）');
         stockEl.classList.toggle('ok', available > 0);
         stockEl.classList.toggle('zero', available <= 0);
       }
@@ -201,7 +215,7 @@ function openDetail(p){
   // 直接結帳功能已移除，僅保留加入購物車
   if (btnAdd){
     btnAdd.disabled = !!limitedExpired;
-    btnAdd.textContent = limitedExpired ? '已結束' : '加入購物車';
+    btnAdd.textContent = limitedExpired ? t('shop.ended','已結束') : t('shop.add_to_cart','加入購物車');
   }
 
   function isCandleItem(obj){
@@ -232,7 +246,7 @@ function openDetail(p){
           if (typeof window.authState.login === 'function'){
             window.authState.login();
           }else if (typeof window.authState.promptLogin === 'function'){
-            window.authState.promptLogin('請先登入會員才能加入購物車。');
+            window.authState.promptLogin(t('shop.need_login_add_cart','請先登入會員才能加入購物車。'));
           }
           return;
         }
@@ -240,7 +254,7 @@ function openDetail(p){
     }catch(_){}
     const limitedTs = parseLimitedUntil(p && p.limitedUntil);
     if (limitedTs && Date.now() >= limitedTs){
-      alert('此商品已結束上架');
+      alert(t('shop.listing_ended','此商品已結束上架'));
       return;
     }
     const sel = document.getElementById('dlgVariant');
@@ -253,11 +267,11 @@ function openDetail(p){
     const available = resolveVariantStock(idx);
     if (available !== null){
       if (available <= 0){
-        alert('該商品已無庫存');
+        alert(t('shop.no_stock','該商品已無庫存'));
         return;
       }
       if (qty > available){
-        alert('該商品庫存不足');
+        alert(t('shop.not_enough_stock','該商品庫存不足'));
         return;
       }
     }
@@ -293,23 +307,23 @@ function openDetail(p){
       const cartHasNormal  = cart.some(it=> !isCandleItem(it));
       // 禁止混放：如果 cart 已有蠟燭就只能放蠟燭；若 cart 有一般商品就不能放蠟燭
       if (incomingIsCandle && cartHasNormal){
-        alert('蠟燭祈福商品需單獨結帳，請先清空購物車或完成當前訂單。');
+        alert(t('checkout.candle_need_separate_1','蠟燭祈福商品需單獨結帳，請先清空購物車或完成當前訂單。'));
         return;
       }
       if (!incomingIsCandle && cartHasCandle){
-        alert('購物車目前是蠟燭祈福商品，需單獨結帳，請先完成或清空後再加入其他商品。');
+        alert(t('checkout.candle_need_separate_2','購物車目前是蠟燭祈福商品，需單獨結帳，請先完成或清空後再加入其他商品。'));
         return;
       }
       cart.push(item);
       localStorage.setItem('cart', JSON.stringify(cart));
-      showToast('已加入購物車');
+      showToast(t('shop.added_to_cart','已加入購物車'));
       updateCartBadge();
       openCart();
       try{
         if (window.trackEvent) window.trackEvent('add_to_cart', { itemId: p.id, qty, value: unit * qty });
       }catch(_){}
       try{ window.__coupon && window.__coupon.updateTotalsDisplay(); }catch(e){}
-    }catch(e){ alert('加入購物車失敗'); }
+    }catch(e){ alert(t('shop.add_to_cart_failed','加入購物車失敗')); }
   };
 
 function stashPendingDetail(){

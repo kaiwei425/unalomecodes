@@ -13,6 +13,28 @@ const PROFILE_URL = (function(){
   catch(_){ return '/api/me/profile'; }
 })();
 
+function t(key, fallback){
+  try{
+    var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+    if (!fn) return fallback;
+    var v = fn(key);
+    if (!v || v === key) return fallback;
+    return v;
+  }catch(_){
+    return fallback;
+  }
+}
+function tf(key, vars, fallback){
+  var out = String(t(key, fallback) || '');
+  var obj = vars && typeof vars === 'object' ? vars : {};
+  try{
+    Object.keys(obj).forEach(function(k){
+      out = out.split('{' + k + '}').join(String(obj[k]));
+    });
+  }catch(_){}
+  return out;
+}
+
 function isCandleItemLike(obj){
   try{
     var text = '';
@@ -333,7 +355,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var dlg = document.getElementById('dlgOrderSuccess');
       if (!dlg){
         try{ window.__orderSuccessWillOpen = false; }catch(_){}
-        alert('訂單已送出，已寄出 Email 通知。訂單編號：' + (opts.orderId || opts.id || ''));
+        alert(tf('checkout.order_submitted_email', { id: (opts.orderId || opts.id || '') }, '訂單已送出，已寄出 Email 通知。訂單編號：{id}'));
         return;
       }
       try{
@@ -359,10 +381,14 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       if (!amount && items.length){
         amount = items.reduce(function(sum, it){ return sum + (Number(it.total)||0); }, 0) + shipping;
       }
-      var title = opts.title || '訂單建立成功';
-      var desc = opts.desc || '感謝您的訂購，核對無誤後將儘速安排出貨。';
-      var note = opts.note || '已寄出 Email 通知，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。';
-      var badge = opts.badge || (opts.channel === 'credit' ? '信用卡付款' : ((opts.channel === 'cod' || opts.channel === 'cod-711') ? '貨到付款(7-11)' : '轉帳匯款'));
+      var title = opts.title || t('checkout.success_title','訂單建立成功');
+      var desc = opts.desc || t('checkout.success_desc','感謝您的訂購，核對無誤後將儘速安排出貨。');
+      var note = opts.note || t('checkout.success_note','已寄出 Email 通知，之後可在左側「查詢訂單狀態」輸入手機號碼查看處理進度。');
+      var badge = opts.badge || (opts.channel === 'credit'
+        ? t('checkout.badge_credit','信用卡付款')
+        : ((opts.channel === 'cod' || opts.channel === 'cod-711')
+          ? t('checkout.badge_cod','貨到付款(7-11)')
+          : t('checkout.badge_bank','轉帳匯款')));
       var lookupDigits = opts.orderLookupDigits || suffixId;
       var phone = opts.phone || '';
       var last5 = opts.last5 || (order.transferLast5 || '');
@@ -387,12 +413,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       if (badgeEl) badgeEl.textContent = badge;
       if (itemsEl){
         if (!items.length){
-          itemsEl.innerHTML = '<div class="os-item muted">暫無商品資訊</div>';
+          itemsEl.innerHTML = '<div class="os-item muted">' + escHtml(t('checkout.no_items','暫無商品資訊')) + '</div>';
         }else{
           itemsEl.innerHTML = '';
           items.forEach(function(it){
             var spec = it.spec ? '<span class="os-item-spec">'+ escHtml(it.spec) +'</span>' : '';
-            var meta = '<div class="os-item-meta">數量：'+ it.qty +'</div>';
+            var meta = '<div class="os-item-meta">'+ escHtml(t('checkout.qty_prefix','數量：')) + it.qty +'</div>';
             var node = document.createElement('div');
             node.className = 'os-item';
             node.innerHTML = '<div><div class="os-item-name">'+ escHtml(it.name) +'</div>'+ spec + meta +'</div>'
@@ -403,9 +429,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       }
       if (metaEl){
         var rows = [];
-        if (store) rows.push({ label:'取貨門市', value:store });
-        if (shipping > 0) rows.push({ label:'運費', value:'+NT$ '+ fmtPrice(shipping) });
-        if (discount > 0) rows.push({ label:'優惠折抵', value:'-NT$ '+ fmtPrice(discount), warn:true });
+        if (store) rows.push({ label:t('checkout.pickup_store','取貨門市'), value:store });
+        if (shipping > 0) rows.push({ label:t('checkout.shipping_fee','運費'), value:'+NT$ '+ fmtPrice(shipping) });
+        if (discount > 0) rows.push({ label:t('checkout.discount','優惠折抵'), value:'-NT$ '+ fmtPrice(discount), warn:true });
         if (rows.length){
           metaEl.style.display = 'flex';
           metaEl.innerHTML = rows.map(function(r){
@@ -418,13 +444,13 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       }
       if (lookupBtn){
         lookupBtn.disabled = !phone;
-        lookupBtn.textContent = '查詢訂單狀態';
+        lookupBtn.textContent = t('checkout.lookup_status','查詢訂單狀態');
         lookupBtn.onclick = function(){
           closeSuccessDialog();
           if (phone && typeof window.openOrderLookup === 'function'){
             window.openOrderLookup(phone, last5, lookupDigits || (id ? id.slice(-5) : ''), { focusPhone: false });
           } else if (!phone){
-            alert('請至左側「查詢訂單狀態」輸入手機號碼與資料。');
+            alert(t('checkout.lookup_hint_alert','請至左側「查詢訂單狀態」輸入手機號碼與資料。'));
           }
         };
       }
@@ -448,8 +474,8 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
                 ta.remove();
               }
             }
-            copyBtn.textContent = '已複製';
-            setTimeout(function(){ copyBtn.textContent = '複製'; }, 2000);
+            copyBtn.textContent = t('common.copied','已複製');
+            setTimeout(function(){ copyBtn.textContent = t('common.copy','複製'); }, 2000);
           }catch(_){}
         };
       }
@@ -463,7 +489,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       if (continueBtn){
         if (callback){
           continueBtn.style.display = '';
-          continueBtn.textContent = opts.continueLabel || '前往下一步';
+          continueBtn.textContent = opts.continueLabel || t('checkout.next_step','前往下一步');
           continueBtn.onclick = function(){
             closeSuccessDialog();
             runCallback();
@@ -511,7 +537,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
             window.__runPendingOrderReload();
           }
         }catch(_){}
-        alert('訂單已送出，已寄出 Email 通知。訂單編號：'+ (id || ''));
+        alert(tf('checkout.order_submitted_email', { id: (id || '') }, '訂單已送出，已寄出 Email 通知。訂單編號：{id}'));
       }
     }catch(err){
       console.error(err);
@@ -521,7 +547,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           window.__runPendingOrderReload();
         }
       }catch(_){}
-      try{ alert('訂單已送出，已寄出 Email 通知。'); }catch(_){}
+      try{ alert(t('checkout.order_submitted_email_no_id','訂單已送出，已寄出 Email 通知。')); }catch(_){}
     }
   };
 
@@ -530,7 +556,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     try{ navigator.clipboard.writeText(text); }catch(e){
       const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
     }
-    alert('已複製付款資訊');
+    alert(t('checkout.payment_info_copied','已複製付款資訊'));
   }
 
   window.openBankDialog = function(from){
@@ -552,7 +578,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         const dlgStore = document.getElementById('dlgStore');
         if (dlgStore){
           dlgStore.setAttribute('data-channel', 'bank');
-          if (typeof renderStepBar === 'function') renderStepBar('dlgStore', 2, ['確認訂單','選擇門市','填寫付款資料']);
+          if (typeof renderStepBar === 'function') renderStepBar('dlgStore', 2, [
+            t('checkout.step_confirm_order','確認訂單'),
+            t('checkout.step_choose_store','選擇門市'),
+            t('checkout.step_payment_info','填寫付款資料')
+          ]);
           if (typeof dlgStore.showModal === 'function'){
             dlgStore.showModal();
             return;
@@ -562,7 +592,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
     }catch(_){}
     try{
       const dlg = document.getElementById('dlgBank');
-      if(!dlg) return alert('無法顯示結帳視窗');
+      if(!dlg) return alert(t('checkout.unable_to_open_checkout','無法顯示結帳視窗'));
       // 先清表單，避免之後回填被 reset 掉
       const f = document.getElementById('bankForm');
       if (f) f.reset();
@@ -1959,8 +1989,8 @@ function __cartPricing(includePendingDetail, opts){
 
   // 返回上一頁修改門市（信用卡）
   document.addEventListener('click', function(e){
-    const t = e.target;
-    if (!t || t.id !== 'ccBackStore') return;
+    const target = e.target;
+    if (!target || target.id !== 'ccBackStore') return;
     e.preventDefault();
     try{
       const dlg = document.getElementById('dlgCC');
@@ -1969,7 +1999,11 @@ function __cartPricing(includePendingDetail, opts){
     try{
       const storeDlg = document.getElementById('dlgStore');
       if (storeDlg && typeof storeDlg.showModal === 'function'){
-        if (typeof renderStepBar === 'function') renderStepBar('dlgStore', 2, ['確認訂單','選擇門市','填寫付款資料']);
+        if (typeof renderStepBar === 'function') renderStepBar('dlgStore', 2, [
+          t('checkout.step_confirm_order','確認訂單'),
+          t('checkout.step_choose_store','選擇門市'),
+          t('checkout.step_payment_info','填寫付款資料')
+        ]);
         storeDlg.showModal();
       }
     }catch(_){}
@@ -1977,7 +2011,7 @@ function __cartPricing(includePendingDetail, opts){
 
   function submitECPayForm(action, params){
     if (!action || !params) {
-      alert('缺少付款資訊，請稍後再試');
+      alert(t('checkout.missing_payment_info','缺少付款資訊，請稍後再試'));
       return;
     }
     const form = document.createElement('form');
@@ -1999,12 +2033,12 @@ function __cartPricing(includePendingDetail, opts){
   document.addEventListener('DOMContentLoaded', function(){
     const payBtn = document.getElementById('payCC');
     if (payBtn){
-      payBtn.textContent = '信用卡付款';
+      payBtn.textContent = t('checkout.badge_credit','信用卡付款');
       payBtn.onclick = function(ev){ ev.preventDefault(); openCreditDialog('detail'); };
     }
     const cartBtn = document.getElementById('cartPayCC');
     if (cartBtn){
-      cartBtn.textContent = '信用卡付款';
+      cartBtn.textContent = t('checkout.badge_credit','信用卡付款');
       cartBtn.onclick = function(ev){ ev.preventDefault(); openCreditDialog('cart'); };
     }
   });

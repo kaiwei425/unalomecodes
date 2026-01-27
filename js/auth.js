@@ -12,6 +12,28 @@
   const liffId = window.LIFF_ID || '';
   let liffReady = false;
   let liffInitPromise = null;
+
+  function t(key, fallback){
+    try{
+      var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+      if (!fn) return fallback;
+      var v = fn(key);
+      if (!v || v === key) return fallback;
+      return v;
+    }catch(_){
+      return fallback;
+    }
+  }
+  function tf(key, vars, fallback){
+    var out = String(t(key, fallback) || '');
+    var obj = vars && typeof vars === 'object' ? vars : {};
+    try{
+      Object.keys(obj).forEach(function(k){
+        out = out.split('{' + k + '}').join(String(obj[k]));
+      });
+    }catch(_){}
+    return out;
+  }
   function isLineWebView(){
     const ua = (navigator.userAgent || '').toLowerCase();
     if (ua.includes('line')) return true;
@@ -43,19 +65,19 @@
     });
     document.querySelectorAll('[data-auth-status]').forEach(el=>{
       if (!state.ready && state.loading){
-        el.textContent = '登入狀態載入中…';
+        el.textContent = t('common.login_loading','登入狀態載入中…');
       }else{
         el.textContent = logged
-          ? (state.user.name || state.user.email || '已登入')
-          : '尚未登入';
+          ? (state.user.name || state.user.email || t('auth.logged_in','已登入'))
+          : t('auth.not_logged_in','尚未登入');
       }
     });
     document.querySelectorAll('[data-auth-btn]').forEach(btn=>{
       if (logged){
-        btn.textContent = '登出';
+        btn.textContent = t('auth.logout','登出');
         btn.dataset.authAction = 'logout';
       }else{
-        btn.textContent = '登入會員';
+        btn.textContent = t('common.login','登入會員');
         btn.dataset.authAction = 'login';
       }
       if (!state.loading || state.ready){
@@ -156,7 +178,7 @@
         if (localStorage.getItem(seenKey)) return;
       }catch(_){}
       const amount = Number(welcome.amount || 200) || 200;
-      showToast(`🎁 歡迎禮已發放：NT$${amount} 全館折價券（14天內有效）`);
+      showToast(tf('auth.welcome_coupon_toast', { amount: 'NT$' + amount }, `🎁 歡迎禮已發放：NT$${amount} 全館折價券（14天內有效）`));
       try{ localStorage.setItem(seenKey, String(Date.now())); }catch(_){}
     }catch(_){}
   }
@@ -414,8 +436,8 @@
     const item = {
       id: pending.id || pending.productId || '',
       productId: pending.productId || pending.id || '',
-      name: pending.name || pending.productName || '商品',
-      productName: pending.productName || pending.name || '商品',
+      name: pending.name || pending.productName || t('shop.item_fallback','商品'),
+      productName: pending.productName || pending.name || t('shop.item_fallback','商品'),
       deity: pending.deity || '',
       deityCode: pending.deityCode || '',
       variantName: pending.variantName || '',
@@ -446,11 +468,11 @@
     const cartHasCandle = cart.some(isCandle);
     const cartHasNormal = cart.some(it=> !isCandle(it));
     if (incomingIsCandle && cartHasNormal){
-      alert('蠟燭祈福商品需單獨結帳，請先清空購物車或完成當前訂單。');
+      alert(t('checkout.candle_need_separate_1','蠟燭祈福商品需單獨結帳，請先清空購物車或完成當前訂單。'));
       return false;
     }
     if (!incomingIsCandle && cartHasCandle){
-      alert('購物車目前是蠟燭祈福商品，需單獨結帳，請先完成或清空後再加入其他商品。');
+      alert(t('checkout.candle_need_separate_2','購物車目前是蠟燭祈福商品，需單獨結帳，請先完成或清空後再加入其他商品。'));
       return false;
     }
     cart.push(item);
@@ -558,9 +580,9 @@
     modal.innerHTML = `
       <div class="auth-login-backdrop" data-auth-login-close></div>
       <div class="auth-login-panel" role="dialog" aria-modal="true">
-        <div class="auth-login-title">登入會員</div>
-        <div class="auth-login-desc">請選擇登入方式</div>
-        <div class="auth-login-legal">
+        <div class="auth-login-title" data-i18n="auth.login_title">登入會員</div>
+        <div class="auth-login-desc" data-i18n="auth.login_desc">請選擇登入方式</div>
+        <div class="auth-login-legal" data-i18n-html="auth.login_legal_html">
           為完成會員登入與服務，我們會取得您的基本資料（姓名、Email、帳號識別碼、頭像），並僅用於：
           <ul>
             <li>會員身分識別與登入狀態維持</li>
@@ -571,13 +593,13 @@
         </div>
         <div class="auth-login-actions">
           <button type="button" class="auth-login-btn line" data-auth-login-provider="line">
-            <span class="auth-login-icon line" aria-hidden="true"></span>LINE 登入
+            <span class="auth-login-icon line" aria-hidden="true"></span><span data-i18n="auth.login_line">LINE 登入</span>
           </button>
           <button type="button" class="auth-login-btn google" data-auth-login-provider="google">
-            <span class="auth-login-icon google" aria-hidden="true"></span>Google 登入
+            <span class="auth-login-icon google" aria-hidden="true"></span><span data-i18n="auth.login_google">Google 登入</span>
           </button>
         </div>
-        <div class="auth-login-cancel" data-auth-login-close>取消</div>
+        <div class="auth-login-cancel" data-auth-login-close data-i18n="common.cancel">取消</div>
       </div>
     `;
     modal.addEventListener('click', ev=>{
@@ -592,6 +614,11 @@
       }
     });
     document.body.appendChild(modal);
+    try{
+      if (window.UC_I18N && typeof window.UC_I18N.apply === 'function'){
+        window.UC_I18N.apply(modal);
+      }
+    }catch(_){}
     loginDialog = modal;
     return loginDialog;
   }
@@ -644,7 +671,7 @@
       if (lineLoginEnabled){
         lineLogin();
       }else{
-        alert('LINE 內建瀏覽器無法使用 Google 登入，請改用外部瀏覽器開啟。');
+        alert(t('auth.google_disabled_in_line','LINE 內建瀏覽器無法使用 Google 登入，請改用外部瀏覽器開啟。'));
       }
       return;
     }
@@ -683,7 +710,7 @@
   }
 
   function promptLogin(message){
-    const msg = message || '請先登入以使用完整功能。';
+    const msg = message || t('auth.login_required','請先登入以使用完整功能。');
     if (window.confirm(msg)){
       login();
     }

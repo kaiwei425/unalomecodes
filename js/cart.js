@@ -7,6 +7,18 @@ try {
   }
 } catch(_){}
 
+function i18nCart(key, fallback){
+  try{
+    var t = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+    if (!t) return fallback;
+    var v = t(key);
+    if (!v || v === key) return fallback;
+    return v;
+  }catch(_){
+    return fallback;
+  }
+}
+
 function cartLoad(){ 
   try{
     if (useOptimizedStorage && window.__storageManager) {
@@ -53,30 +65,34 @@ function renderCart(){
   if (couponBox){ couponBox.style.display = isCandleOnly ? 'none' : 'grid'; }
   list.innerHTML = '';
   if (!arr.length){
-    list.innerHTML = '<div class="empty">購物車目前是空的</div>';
+    list.innerHTML = '<div class="empty">' + escapeHtml(i18nCart('shop.cart_empty','購物車目前是空的')) + '</div>';
   } else {
     for (let i=0;i<arr.length;i++){
       const it = arr[i];
       const div = document.createElement('div');
       div.className = 'cartItem';
-      const name = escapeHtml(it.name||'商品');
+      const name = escapeHtml(it.name||i18nCart('shop.item_fallback','商品'));
       const deity = escapeHtml(it.deity||'');
       const img = sanitizeImageUrl(it.image||'');
       const imgSafe = img ? escapeHtml(img) : '';
       const unit = Number(it.price||0);
       const qty = Math.max(1, Number(it.qty||1));
+      const specLabel = i18nCart('shop.cart_spec','規格');
+      const qtyLabel = i18nCart('shop.cart_qty','數量');
+      const unitLabel = i18nCart('shop.cart_unit','單價');
+      const rmLabel = i18nCart('shop.cart_remove','移除');
       div.innerHTML = `\
         <img src="${imgSafe||''}" alt="">\
         <div>\
           <div class="cartTitle">${name}</div>\
           <div class="muted">${deity}</div>\
-          <div class="muted">規格：${escapeHtml(it.variantName||"")}｜數量：${qty}｜單價 ${formatPrice(unit)}</div>\
+          <div class="muted">${escapeHtml(specLabel)}：${escapeHtml(it.variantName||"")}｜${escapeHtml(qtyLabel)}：${qty}｜${escapeHtml(unitLabel)} ${formatPrice(unit)}</div>\
         </div>\
         <div class="cartCtl" data-idx="${i}">\
           <button class="btn" data-act="dec">-</button>\
           <input type="number" min="1" value="${qty}" data-act="qty">\
           <button class="btn" data-act="inc">+</button>\
-          <button class="btn link" data-act="rm">移除</button>\
+          <button class="btn link" data-act="rm">${escapeHtml(rmLabel)}</button>\
         </div>`;
       list.appendChild(div);
     }

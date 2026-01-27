@@ -62,6 +62,18 @@
       el.textContent = String(val);
     });
 
+    scope.querySelectorAll('[data-i18n-html]').forEach(function(el){
+      var key = el.getAttribute('data-i18n-html');
+      if (!key) return;
+      var val = (pack && Object.prototype.hasOwnProperty.call(pack, key)) ? pack[key] : null;
+      if (val === null || typeof val === 'undefined'){
+        var fallback = dict.zh || {};
+        if (Object.prototype.hasOwnProperty.call(fallback, key)) val = fallback[key];
+      }
+      if (val === null || typeof val === 'undefined') return;
+      el.innerHTML = String(val);
+    });
+
     scope.querySelectorAll('[data-i18n-attr]').forEach(function(el){
       var spec = String(el.getAttribute('data-i18n-attr') || '').trim();
       if (!spec) return;
@@ -110,4 +122,3 @@
     bindToggle: bindToggle
   };
 })();
-
