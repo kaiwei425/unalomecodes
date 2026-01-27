@@ -11,23 +11,28 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="backLink"><a class="backBtn" href="/">← 返回首頁</a></div>
-    <h1>我的優惠券</h1>
+    <div class="backLink" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <a class="backBtn" href="/" data-i18n="account_coupons.back">← 返回首頁</a>
+      <button type="button" class="tab-btn" id="btnLang" data-i18n-attr="aria-label:account.lang">ZH/EN</button>
+    </div>
+    <h1 data-i18n="account_coupons.title">我的優惠券</h1>
     <div class="card">
       <div class="controls">
-        <input id="q" placeholder="搜尋券碼 / 神祇">
-        <input id="addCode" placeholder="輸入券碼加入">
-        <button id="btnAdd">加入我的優惠券</button>
-        <button id="btnReload">重新整理</button>
+        <input id="q" placeholder="搜尋券碼 / 神祇" data-i18n-attr="placeholder:account_coupons.search_ph">
+        <input id="addCode" placeholder="輸入券碼加入" data-i18n-attr="placeholder:account_coupons.add_ph">
+        <button id="btnAdd" data-i18n="account_coupons.add_btn">加入我的優惠券</button>
+        <button id="btnReload" data-i18n="account_coupons.reload">重新整理</button>
       </div>
       <div class="tabs" id="couponTabs">
-        <button class="tab-btn active" data-tab="unused">未使用</button>
-        <button class="tab-btn" data-tab="used">已使用</button>
+        <button class="tab-btn active" data-tab="unused" data-i18n="account_coupons.tab_unused">未使用</button>
+        <button class="tab-btn" data-tab="used" data-i18n="account_coupons.tab_used">已使用</button>
       </div>
-      <div id="usedHint" class="tab-hint" style="display:none">已使用的優惠券 7 天後會自動消失。</div>
-      <div id="list" class="list"><div class="muted">載入中…</div></div>
+      <div id="usedHint" class="tab-hint" style="display:none" data-i18n="account_coupons.used_hint">已使用的優惠券 7 天後會自動消失。</div>
+      <div id="list" class="list"><div class="muted" data-i18n="account.loading">載入中…</div></div>
     </div>
   </div>
+<script src="/js/uc-i18n-core.js"></script>
+<script src="/js/uc-i18n-account.js"></script>
 <script src="/js/account-coupons.inline-1.js"></script>
 </body>
 </html>

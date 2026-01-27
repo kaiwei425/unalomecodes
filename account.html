@@ -19,29 +19,32 @@
           <img src="/img/logo.png" alt="unalomecodes">
         </picture>
         <div>
-          <div class="t1">泰國寺廟map ©️ unalomecodes</div>
-          <div class="t2">會員中心｜我的訂單</div>
+          <div class="t1" data-i18n="account.brand">泰國寺廟map ©️ unalomecodes</div>
+          <div class="t2" data-i18n="account.title">會員中心｜我的訂單</div>
         </div>
       </div>
+      <button type="button" class="pill-btn" id="btnLang" style="padding:9px 14px;" data-i18n-attr="aria-label:account.lang">ZH/EN</button>
       <div class="auth-widget" data-auth-widget>
         <span class="auth-status" data-auth-status>登入狀態載入中…</span>
         <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
       </div>
     </div>
 
-    <div id="accountStatus">載入中…</div>
+    <div id="accountStatus" data-i18n="account.loading">載入中…</div>
     <div class="account-grid" id="accountGrid" style="display:none;">
       <div class="account-card">
-        <h2>實體商品訂單</h2>
+        <h2 data-i18n="account.physical_title">實體商品訂單</h2>
         <div id="accountPhysical"></div>
       </div>
       <div class="account-card">
-        <h2>服務商品訂單</h2>
+        <h2 data-i18n="account.service_title">服務商品訂單</h2>
         <div id="accountService"></div>
       </div>
     </div>
   </div>
 
+  <script src="/js/uc-i18n-core.js"></script>
+  <script src="/js/uc-i18n-account.js"></script>
   <script src="/js/auth.js?v=20240930"></script>
   <script src="/js/account.js"></script>
 </body>

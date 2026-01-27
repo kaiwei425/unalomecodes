@@ -3,31 +3,40 @@
   const addCode = document.getElementById('addCode');
   const tabs = document.getElementById('couponTabs');
   const usedHint = document.getElementById('usedHint');
+  const t = (window.UC_I18N && typeof window.UC_I18N.t === 'function')
+    ? window.UC_I18N.t
+    : function(k){ return k; };
   let items = [];
   let activeTab = 'unused';
 
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c)); }
 
   function typeLabel(c){
-    const t = (c.type||'DEITY').toUpperCase();
-    if (t === 'ALL') return '全館折扣券（全站適用，每次限用一張）';
-    if (t === 'SHIP') return '免運券（折抵運費，每次限用一張）';
-    return '神祇券';
+    const typ = (c.type||'DEITY').toUpperCase();
+    if (typ === 'ALL') return t('coupon_type_all');
+    if (typ === 'SHIP') return t('coupon_type_ship');
+    return t('coupon_type_deity');
   }
   function deityLabel(c){
-    const map = {FM:'四面神',GA:'象神',CD:'崇迪',KP:'坤平',HM:'哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神',WE:'五眼四耳',XZ:'徐祝老人',HP:'魂魄勇'};
+    const isEn = (window.UC_I18N && window.UC_I18N.getLang && window.UC_I18N.getLang() === 'en');
+    const map = isEn
+      ? {FM:'Brahma',GA:'Ganesha',CD:'Somdej',KP:'Khun Paen',HM:'Hanuman',RH:'Rahu',JL:'Garuda',ZD:'Jatukam',ZF:'Lakshmi',WE:'Five Eyes Four Ears',XZ:'Elder Xu Zhu',HP:'Hun Po Yong'}
+      : {FM:'四面神',GA:'象神',CD:'崇迪',KP:'坤平',HM:'哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神',WE:'五眼四耳',XZ:'徐祝老人',HP:'魂魄勇'};
     const d = (c.deity||'').toUpperCase();
     if (!d || d==='ALL' || d==='SHIP') return '';
     return map[d] ? `${map[d]}（${d}）` : d;
   }
   function usageText(c){
-    const t = (c.type||'DEITY').toUpperCase();
+    const typ = (c.type||'DEITY').toUpperCase();
     const d = (c.deity||'').toUpperCase();
-    const map = {FM:'四面神',GA:'象神',CD:'崇迪',KP:'坤平',HM:'哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神',WE:'五眼四耳',XZ:'徐祝老人',HP:'魂魄勇'};
-    if (t === 'ALL') return '可用於全館任一商品；全館券與神祇券擇一使用（不可同時套用）。';
-    if (t === 'SHIP') return '折抵運費，可搭配折扣券使用。';
-    if (d && map[d]) return `可用於「${map[d]}」系列商品。`;
-    return '可用於指定守護神商品。';
+    const isEn = (window.UC_I18N && window.UC_I18N.getLang && window.UC_I18N.getLang() === 'en');
+    const map = isEn
+      ? {FM:'Brahma',GA:'Ganesha',CD:'Somdej',KP:'Khun Paen',HM:'Hanuman',RH:'Rahu',JL:'Garuda',ZD:'Jatukam',ZF:'Lakshmi',WE:'Five Eyes Four Ears',XZ:'Elder Xu Zhu',HP:'Hun Po Yong'}
+      : {FM:'四面神',GA:'象神',CD:'崇迪',KP:'坤平',HM:'哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神',WE:'五眼四耳',XZ:'徐祝老人',HP:'魂魄勇'};
+    if (typ === 'ALL') return t('coupon_usage_all');
+    if (typ === 'SHIP') return t('coupon_usage_ship');
+    if (d && map[d]) return isEn ? (`Applicable to "${map[d]}" products.`) : (`可用於「${map[d]}」系列商品。`);
+    return t('coupon_usage_deity_fallback');
   }
   function isUsedExpired(c, days){
     if (!c || !c.used) return false;
@@ -45,43 +54,43 @@
       list = list.filter(c=> c.used && !isUsedExpired(c, 7));
     }
     if (key){ list = list.filter(x=> JSON.stringify(x).toLowerCase().includes(key)); }
-    if (!list.length){ listEl.innerHTML = '<div class="muted">目前沒有優惠券</div>'; return; }
+    if (!list.length){ listEl.innerHTML = '<div class="muted">' + escapeHtml(t('account_coupons.none')) + '</div>'; return; }
     listEl.innerHTML = list.map(c=>{
       const used = !!c.used;
       const chips = [
-        `<span class="chip">類型：${escapeHtml(typeLabel(c))}</span>`
+        `<span class="chip">${escapeHtml(t('account_coupons.type'))}：${escapeHtml(typeLabel(c))}</span>`
       ];
       const dLabel = deityLabel(c);
       if (dLabel){
-        chips.push(`<span class="chip">守護神：${escapeHtml(dLabel)}</span>`);
+        chips.push(`<span class="chip">${escapeHtml(t('account_coupons.deity'))}：${escapeHtml(dLabel)}</span>`);
       }else if ((c.deity||'').toUpperCase()==='ALL'){
-        chips.push(`<span class="chip">適用範圍：全館</span>`);
+        chips.push(`<span class="chip">${escapeHtml(t('account_coupons.scope'))}：${escapeHtml(t('account_coupons.scope_all'))}</span>`);
       }else if ((c.deity||'').toUpperCase()==='SHIP'){
-        chips.push(`<span class="chip">適用範圍：運費</span>`);
+        chips.push(`<span class="chip">${escapeHtml(t('account_coupons.scope'))}：${escapeHtml(t('account_coupons.scope_ship'))}</span>`);
       }
-      chips.push(`<span class="chip ${used?'warn':'ok'}">${used?'已使用':'未使用'}</span>`);
+      chips.push(`<span class="chip ${used?'warn':'ok'}">${escapeHtml(used ? t('account_coupons.used') : t('account_coupons.unused'))}</span>`);
       return `<div class="coupon">
         <div>
           <h3>${escapeHtml(c.code||'')}</h3>
-          <div class="muted">折抵：NT$ ${Number(c.amount||0)}｜${escapeHtml(typeLabel(c))}</div>
-          <div class="muted">發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+          <div class="muted">${escapeHtml(t('account_coupons.amount'))}：NT$ ${Number(c.amount||0)}｜${escapeHtml(typeLabel(c))}</div>
+          <div class="muted">${escapeHtml(t('account_coupons.issued'))}：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
           <div class="muted">${escapeHtml(usageText(c))}</div>
-          ${c.startAt ? `<div class="muted">生效：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
-          ${c.expireAt ? `<div class="muted">到期：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
-          ${c.usedAt ? `<div class="muted">使用時間：${new Date(c.usedAt).toLocaleString('zh-TW')}</div>` : ''}
-          ${c.orderId ? `<div class="muted">使用訂單：${escapeHtml(c.orderId)}</div>` : ''}
+          ${c.startAt ? `<div class="muted">${escapeHtml(t('account_coupons.starts'))}：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
+          ${c.expireAt ? `<div class="muted">${escapeHtml(t('account_coupons.expires'))}：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
+          ${c.usedAt ? `<div class="muted">${escapeHtml(t('account_coupons.used_at'))}：${new Date(c.usedAt).toLocaleString('zh-TW')}</div>` : ''}
+          ${c.orderId ? `<div class="muted">${escapeHtml(t('account_coupons.used_order'))}：${escapeHtml(c.orderId)}</div>` : ''}
           <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">${chips.join('')}</div>
         </div>
         <div class="actions">
-          <button class="btn" data-act="copy" data-code="${escapeHtml(c.code||'')}">複製</button>
-          ${used ? '' : `<button class="btn primary" data-act="apply" data-code="${escapeHtml(c.code||'')}" data-deity="${escapeHtml(c.deity||'')}" data-amount="${Number(c.amount||0)}" data-type="${escapeHtml(c.type||'DEITY')}">套用到購物車</button>`}
+          <button class="btn" data-act="copy" data-code="${escapeHtml(c.code||'')}">${escapeHtml(t('account_coupons.copy'))}</button>
+          ${used ? '' : `<button class="btn primary" data-act="apply" data-code="${escapeHtml(c.code||'')}" data-deity="${escapeHtml(c.deity||'')}" data-amount="${Number(c.amount||0)}" data-type="${escapeHtml(c.type||'DEITY')}">${escapeHtml(t('account_coupons.apply'))}</button>`}
         </div>
       </div>`;
     }).join('');
   }
 
   async function load(){
-    listEl.innerHTML = '<div class="muted">載入中…</div>';
+    listEl.innerHTML = '<div class="muted">' + escapeHtml(t('account.loading')) + '</div>';
     try{
       const res = await fetch('/api/me/coupons?mark=1',{credentials:'include',cache:'no-store'});
       const data = await res.json().catch(()=>({}));
@@ -89,7 +98,7 @@
       items = Array.isArray(data.items) ? data.items : [];
       render();
     }catch(err){
-      listEl.innerHTML = `<div class="muted">讀取失敗：${escapeHtml(err.message||err)}</div>`;
+      listEl.innerHTML = `<div class="muted">${escapeHtml(t('account_coupons.load_failed'))}：${escapeHtml(err.message||err)}</div>`;
     }
   }
 
@@ -102,7 +111,7 @@
       if (!res.ok || !data.ok) throw new Error(data.error||('HTTP '+res.status));
       addCode.value='';
       await load();
-    }catch(err){ alert('加入失敗：'+(err.message||err)); }
+    }catch(err){ alert(t('account_coupons.add_failed') + '：' + (err.message||err)); }
   }
 
   function applyToCart(code,deity,amount){
@@ -116,8 +125,8 @@
       const coupons = [payload];
       try{ localStorage.setItem('__cartCoupons__', JSON.stringify(coupons)); }catch(_){ }
       try{ window.__cartCouponState = window.__cartCouponState || {}; window.__cartCouponState.coupons = coupons.slice(); }catch(_){ }
-      alert('已將優惠券套用到購物車，請回購物車查看金額。');
-    }catch(_){ alert('套用失敗，請回購物車重試。'); }
+      alert(t('account_coupons.apply_ok'));
+    }catch(_){ alert(t('account_coupons.apply_failed')); }
   }
 
   listEl.addEventListener('click', e=>{
@@ -127,7 +136,7 @@
     const code = btn.dataset.code;
     if (act === 'copy'){
       navigator.clipboard && navigator.clipboard.writeText(code).catch(()=>{});
-      btn.textContent = '已複製'; setTimeout(()=> btn.textContent='複製', 800);
+      btn.textContent = t('account_coupons.copied'); setTimeout(()=> btn.textContent=t('account_coupons.copy'), 800);
       return;
     }
     if (act === 'apply'){
@@ -148,5 +157,8 @@
       if (usedHint) usedHint.style.display = (activeTab === 'used') ? '' : 'none';
       render();
     });
+  }
+  if (window.UC_I18N){
+    window.addEventListener('uc_lang_change', ()=>{ render(); });
   }
   load();

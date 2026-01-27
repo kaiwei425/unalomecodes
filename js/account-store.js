@@ -7,6 +7,9 @@
   const saveBtn = document.getElementById('saveStore');
   const backBtn = document.getElementById('backBtn');
   const openBtn = document.getElementById('openCvsMap');
+  const t = (window.UC_I18N && typeof window.UC_I18N.t === 'function')
+    ? window.UC_I18N.t
+    : function(k){ return k; };
 
   function fill(store){
     if (!store) return;
@@ -18,22 +21,22 @@
 
   async function loadStore(){
     if (!statusEl) return;
-    statusEl.textContent = '載入中…';
+    statusEl.textContent = t('account.loading');
     try{
       const res = await fetch('/api/me/store', { credentials:'include' });
       if (res.status === 401){
-        statusEl.textContent = '請先登入以設定門市。';
+        statusEl.textContent = t('account_store.need_login');
         return;
       }
       const data = await res.json().catch(()=>({}));
       if (data.ok === false){
-        statusEl.textContent = data.error || '讀取門市失敗';
+        statusEl.textContent = data.error || t('account_store.load_failed');
         return;
       }
       fill(data.store || {});
-      statusEl.textContent = '已載入，儲存後將套用於結帳的門市步驟。';
+      statusEl.textContent = t('account_store.loaded');
     }catch(_){
-      statusEl.textContent = '讀取門市失敗';
+      statusEl.textContent = t('account_store.load_failed');
     }
   }
 
@@ -45,7 +48,7 @@
       address: (addrEl && addrEl.value) || '',
       tel: (telEl && telEl.value) || ''
     };
-    statusEl.textContent = '儲存中…';
+    statusEl.textContent = t('account_store.saving');
     saveBtn && (saveBtn.disabled = true);
     try{
       const res = await fetch('/api/me/store', {
@@ -56,12 +59,12 @@
       });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || data.ok === false){
-        statusEl.textContent = (data && data.error) ? ('儲存失敗：' + data.error) : '儲存失敗';
+        statusEl.textContent = (data && data.error) ? (t('account_store.save_failed') + '：' + data.error) : t('account_store.save_failed');
       }else{
-        statusEl.textContent = '已儲存，之後結帳會自動帶入。';
+        statusEl.textContent = t('account_store.save_ok');
       }
     }catch(_){
-      statusEl.textContent = '儲存失敗';
+      statusEl.textContent = t('account_store.save_failed');
     }finally{
       saveBtn && (saveBtn.disabled = false);
     }
@@ -106,7 +109,7 @@
         tel: d.storetel || ''
       };
       fill(store);
-      statusEl && (statusEl.textContent = '已選擇門市，按下儲存即可套用。');
+      statusEl && (statusEl.textContent = t('account_store.selected'));
     }catch(_){}
   });
 
@@ -115,7 +118,7 @@
       if (user){
         loadStore();
       }else{
-        statusEl.textContent = '請先登入以設定門市。';
+        statusEl.textContent = t('account_store.need_login');
       }
     });
   }

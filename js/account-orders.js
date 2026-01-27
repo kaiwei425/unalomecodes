@@ -4,6 +4,9 @@
   const physicalEl = document.getElementById('ordersPhysical');
   const serviceEl = document.getElementById('ordersService');
   const backBtn = document.getElementById('backBtn');
+  const t = (window.UC_I18N && typeof window.UC_I18N.t === 'function')
+    ? window.UC_I18N.t
+    : function(k){ return k; };
 
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -65,12 +68,12 @@
     const safeItems = Array.isArray(items) ? items : [];
     qnaCache.set(orderId, safeItems);
     if (!safeItems.length){
-      listEl.innerHTML = '<div class="empty-msg">尚無留言，歡迎提出問題。</div>';
+      listEl.innerHTML = '<div class="empty-msg">' + escapeHtml(t('orders.qna_empty')) + '</div>';
       return;
     }
     listEl.innerHTML = safeItems.map(item=>{
-      const role = item.role === 'admin' ? '客服' : '你';
-      const edited = item.edited ? '（已編輯）' : '';
+      const role = item.role === 'admin' ? t('orders.qna_support') : t('orders.qna_you');
+      const edited = item.edited ? t('orders.qna_edited') : '';
       const allowEdit = item.role === 'user';
       return `
         <div class="qna-item ${item.role === 'admin' ? 'admin' : ''}">
@@ -81,8 +84,8 @@
           <div class="qna-text">${escapeHtml(item.text || '')}</div>
           ${allowEdit ? `
             <div class="qna-actions">
-              <button type="button" data-qna-edit="1" data-id="${escapeHtml(item.id||'')}" data-order-id="${escapeHtml(orderId)}">編輯</button>
-              <button type="button" data-qna-del="1" data-id="${escapeHtml(item.id||'')}" data-order-id="${escapeHtml(orderId)}">刪除</button>
+              <button type="button" data-qna-edit="1" data-id="${escapeHtml(item.id||'')}" data-order-id="${escapeHtml(orderId)}">${escapeHtml(t('orders.qna_edit'))}</button>
+              <button type="button" data-qna-del="1" data-id="${escapeHtml(item.id||'')}" data-order-id="${escapeHtml(orderId)}">${escapeHtml(t('orders.qna_delete'))}</button>
             </div>
           ` : ''}
         </div>
@@ -189,7 +192,7 @@
     items.forEach(order=>{
       const div = document.createElement('div');
       div.className = 'order-item';
-      const status = escapeHtml(order.status || '處理中');
+      const status = escapeHtml(order.status || t('orders.processing'));
       const amount = typeof order.amount === 'number' ? order.amount : Number(order.total || 0);
       const buyer = order.buyer || {};
       const svcLine = order.serviceName
@@ -219,7 +222,7 @@
       ? order.items.map(it=>{
           const vn = it.variantName ? `（${escapeHtml(it.variantName)}）` : '';
           return {
-            text: `${escapeHtml(it.productName||it.name||'商品')}${vn}×${Math.max(1, Number(it.qty||1))}`,
+            text: `${escapeHtml(it.productName||it.name||t('orders.item_fallback'))}${vn}×${Math.max(1, Number(it.qty||1))}`,
             image: it.image || it.cover || it.thumb || ''
           };
         })
@@ -230,8 +233,8 @@
     const scheduleTpe = scheduleRaw && isPhoneOrder ? formatTaipeiFromBkk(scheduleRaw) : '';
     const scheduleLine = scheduleRaw
       ? (isPhoneOrder && scheduleTpe
-        ? `指定日期：${escapeHtml(scheduleRaw)}（曼谷時間） <span style="color:#dc2626;">${escapeHtml(scheduleTpe)}（台灣時間）</span>`
-        : `指定日期：${escapeHtml(scheduleRaw)}`)
+        ? (escapeHtml(t('orders.schedule')) + '：' + escapeHtml(scheduleRaw) + '（' + escapeHtml(t('orders.tz_bkk')) + '） <span style="color:#dc2626;">' + escapeHtml(scheduleTpe) + '（' + escapeHtml(t('orders.tz_tpe')) + '）</span>')
+        : (escapeHtml(t('orders.schedule')) + '：' + escapeHtml(scheduleRaw)))
       : '';
     const itemCards = itemsLine.map(it=>{
       const imgUrl = sanitizeImageUrl(it.image);
@@ -245,24 +248,24 @@
     div.setAttribute('data-order-id', orderId);
     div.innerHTML = `
       <div class="order-id">${escapeHtml(orderId)}<span class="qna-unread" data-qna-unread="1">0</span></div>
-      <div class="order-meta">狀態：<span class="badge-status">${status}</span></div>
-      <div class="order-meta">建立時間：${escapeHtml(dateStr)}</div>
-      <div class="order-meta">金額：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
-      <div class="order-meta">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
-      <div class="order-meta">Email：${escapeHtml(buyer.email || '')}</div>
-      ${storeText ? `<div class="order-meta">取貨門市：${storeText}</div>` : ''}
-      ${order.note ? `<div class="order-meta">備註：${escapeHtml(order.note)}</div>` : ''}
-      ${svcLine ? `<div class="order-meta">服務：${svcLine}</div>` : ''}
+      <div class="order-meta">${escapeHtml(t('orders.status'))}：<span class="badge-status">${status}</span></div>
+      <div class="order-meta">${escapeHtml(t('orders.created_at'))}：${escapeHtml(dateStr)}</div>
+      <div class="order-meta">${escapeHtml(t('orders.amount'))}：NT$ ${Number(amount||0).toLocaleString('zh-TW')}</div>
+      <div class="order-meta">${escapeHtml(t('orders.contact'))}：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
+      <div class="order-meta">${escapeHtml(t('orders.email'))}：${escapeHtml(buyer.email || '')}</div>
+      ${storeText ? `<div class="order-meta">${escapeHtml(t('orders.pickup_store'))}：${storeText}</div>` : ''}
+      ${order.note ? `<div class="order-meta">${escapeHtml(t('orders.note'))}：${escapeHtml(order.note)}</div>` : ''}
+      ${svcLine ? `<div class="order-meta">${escapeHtml(t('orders.service'))}：${svcLine}</div>` : ''}
       ${scheduleLine ? `<div class="order-meta">${scheduleLine}</div>` : ''}
       ${itemCards}
       <div class="order-qna" data-qna="1">
-        <button type="button" class="qna-toggle" data-qna-toggle="1">訂單問與答 <span class="qna-unread" data-qna-unread="1">0</span></button>
+        <button type="button" class="qna-toggle" data-qna-toggle="1">${escapeHtml(t('orders.qna_title'))} <span class="qna-unread" data-qna-unread="1">0</span></button>
         <span class="qna-status" data-qna-status="1"></span>
         <div class="qna-body" data-qna-body="1">
           <div class="qna-list" data-qna-list="1"></div>
           <div class="qna-form">
-            <textarea placeholder="輸入訊息..." data-qna-input="1"></textarea>
-            <button type="button" data-qna-send="1">送出</button>
+            <textarea placeholder="${escapeHtml(t('orders.qna_placeholder'))}" data-qna-input="1"></textarea>
+            <button type="button" data-qna-send="1">${escapeHtml(t('orders.qna_send'))}</button>
           </div>
         </div>
       </div>
@@ -273,32 +276,32 @@
 
   async function loadOrders(){
     if (!statusEl) return;
-    statusEl.textContent = '載入訂單中…';
+    statusEl.textContent = t('account.loading_data');
     try{
       const res = await fetch('/api/me/orders', { credentials:'include' });
       if (res.status === 401){
-        statusEl.textContent = '請先登入以查看訂單。';
+        statusEl.textContent = t('account.need_login');
         return;
       }
       if (!res.ok){
-        statusEl.textContent = '讀取訂單失敗，請稍後再試。';
+        statusEl.textContent = t('account.load_failed');
         return;
       }
       const data = await res.json().catch(()=>({}));
       if (data.ok === false){
-        statusEl.textContent = data.error || '讀取訂單失敗';
+        statusEl.textContent = data.error || t('account.load_failed');
         return;
       }
-      statusEl.textContent = '以下為您的訂單。';
+      statusEl.textContent = t('account.orders_intro');
       if (wrapEl) wrapEl.style.display = 'grid';
-      renderOrders(physicalEl, Array.isArray(data.orders?.physical) ? data.orders.physical : [], '尚無實體商品訂單');
-      renderOrders(serviceEl, Array.isArray(data.orders?.service) ? data.orders.service : [], '尚無服務型商品訂單');
+      renderOrders(physicalEl, Array.isArray(data.orders?.physical) ? data.orders.physical : [], t('account.empty_physical'));
+      renderOrders(serviceEl, Array.isArray(data.orders?.service) ? data.orders.service : [], t('account.empty_service'));
       try{
         const map = await fetchUnreadMap();
         applyUnreadMap(map);
       }catch(_){}
     }catch(_){
-      statusEl.textContent = '讀取訂單失敗，請稍後再試。';
+      statusEl.textContent = t('account.load_failed');
     }
   }
 
@@ -316,14 +319,14 @@
     const statusEl = root.querySelector('[data-qna-status]');
     const listEl = root.querySelector('[data-qna-list]');
     if (!orderId || !listEl) return;
-    if (statusEl) statusEl.textContent = '載入中…';
+    if (statusEl) statusEl.textContent = t('orders.qna_loading');
     try{
       const items = await fetchQna(orderId);
       renderQnaList(listEl, items, orderId);
       if (statusEl) statusEl.textContent = '';
     }catch(err){
-      if (statusEl) statusEl.textContent = '讀取失敗';
-      if (listEl) listEl.innerHTML = `<div class="empty-msg">${escapeHtml(err.message || '讀取失敗')}</div>`;
+      if (statusEl) statusEl.textContent = t('orders.qna_failed');
+      if (listEl) listEl.innerHTML = `<div class="empty-msg">${escapeHtml(err.message || t('orders.qna_failed'))}</div>`;
     }
   }
 
@@ -358,11 +361,11 @@
       if (!orderId || !input) return;
       const text = input.value.trim();
       if (!text){
-        alert('請先輸入訊息');
+        alert(t('orders.qna_input_required'));
         return;
       }
       sendBtn.disabled = true;
-      sendBtn.textContent = '送出中…';
+      sendBtn.textContent = t('orders.qna_sending');
       try{
         await postQna(orderId, text);
         input.value = '';
@@ -373,10 +376,10 @@
           applyUnreadMap(map);
         }catch(_){}
       }catch(err){
-        alert(err.message || '送出失敗');
+        alert(err.message || t('orders.qna_send_failed'));
       }finally{
         sendBtn.disabled = false;
-        sendBtn.textContent = '送出';
+        sendBtn.textContent = t('orders.qna_send');
       }
       return;
     }
@@ -388,11 +391,11 @@
       const items = qnaCache.get(orderId) || [];
       const target = items.find(it => it && it.id === msgId);
       if (!target) return;
-      const next = prompt('修改留言', target.text || '');
+      const next = prompt(t('orders.qna_edit_prompt'), target.text || '');
       if (next == null) return;
       const text = String(next).trim();
       if (!text){
-        alert('留言內容不能空白');
+        alert(t('orders.qna_empty_not_allowed'));
         return;
       }
       try{
@@ -405,7 +408,7 @@
           applyUnreadMap(map);
         }catch(_){}
       }catch(err){
-        alert(err.message || '更新失敗');
+        alert(err.message || t('orders.qna_update_failed'));
       }
       return;
     }
@@ -414,7 +417,7 @@
       const orderId = delBtn.getAttribute('data-order-id') || '';
       const msgId = delBtn.getAttribute('data-id') || '';
       if (!orderId || !msgId) return;
-      const ok = confirm('確定要刪除這則留言？');
+      const ok = confirm(t('orders.qna_delete_confirm'));
       if (!ok) return;
       try{
         await deleteQna(orderId, msgId);
@@ -426,20 +429,20 @@
           applyUnreadMap(map);
         }catch(_){}
       }catch(err){
-        alert(err.message || '刪除失敗');
+        alert(err.message || t('orders.qna_delete_failed'));
       }
     }
   });
 
   function ensureLogin(){
     if (!window.authState){
-      statusEl.textContent = '需要登入模組載入失敗。';
+      statusEl.textContent = t('account.login_module_missing');
       return;
     }
     if (window.authState.isLoggedIn && window.authState.isLoggedIn()){
       loadOrders();
     }else{
-      statusEl.textContent = '請先登入以查看訂單。';
+      statusEl.textContent = t('account.need_login');
     }
   }
 
@@ -449,7 +452,7 @@
         loadOrders();
       }else{
         if (wrapEl) wrapEl.style.display = 'none';
-        if (statusEl) statusEl.textContent = '請先登入以查看訂單。';
+        if (statusEl) statusEl.textContent = t('account.need_login');
       }
     });
   }

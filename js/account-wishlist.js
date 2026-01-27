@@ -3,6 +3,9 @@
   const wrapEl = document.getElementById('accountWrap');
   const listEl = document.getElementById('wishlistList');
   const backBtn = document.getElementById('backBtn');
+  const t = (window.UC_I18N && typeof window.UC_I18N.t === 'function')
+    ? window.UC_I18N.t
+    : function(k){ return k; };
 
   function escapeHtml(str){
     return String(str||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -20,27 +23,27 @@
 
   async function loadWishlist(){
     if (!statusEl) return;
-    statusEl.textContent = '載入收藏中…';
+    statusEl.textContent = t('account_wishlist.loading');
     try{
       const res = await fetch('/api/me/wishlist', { credentials:'include' });
       if (res.status === 401){
-        statusEl.textContent = '請先登入以查看收藏。';
+        statusEl.textContent = t('account_wishlist.need_login');
         return;
       }
       if (!res.ok){
-        statusEl.textContent = '讀取收藏失敗，請稍後再試。';
+        statusEl.textContent = t('account_wishlist.load_failed');
         return;
       }
       const data = await res.json().catch(()=>({}));
       if (data.ok === false){
-        statusEl.textContent = data.error || '讀取收藏失敗';
+        statusEl.textContent = data.error || t('account_wishlist.load_failed');
         return;
       }
-      statusEl.textContent = '以下為您的收藏。';
+      statusEl.textContent = t('account_wishlist.intro');
       if (wrapEl) wrapEl.style.display = 'grid';
       renderList(Array.isArray(data.items) ? data.items : []);
     }catch(_){
-      statusEl.textContent = '讀取收藏失敗，請稍後再試。';
+      statusEl.textContent = t('account_wishlist.load_failed');
     }
   }
 
@@ -48,7 +51,7 @@
     if (!listEl) return;
     listEl.innerHTML = '';
     if (!items.length){
-      listEl.innerHTML = '<div class="empty-msg">目前沒有收藏的商品。</div>';
+      listEl.innerHTML = '<div class="empty-msg">' + escapeHtml(t('account_wishlist.empty')) + '</div>';
       return;
     }
     items.forEach(item=>{
@@ -62,11 +65,11 @@
         <div class="meta">
           <a class="name" href="${link}" target="_blank" rel="noopener" style="color:#0f172a;text-decoration:none;">${escapeHtml(item.name || '')}</a>
           <div class="price">NT$ ${Number(item.price || item.basePrice || 0).toLocaleString('zh-TW')}</div>
-          <div class="price">神祇：${escapeHtml(item.deity || '—')}</div>
+          <div class="price">${escapeHtml(t('account_wishlist.deity'))}：${escapeHtml(item.deity || '—')}</div>
         </div>
         <div class="actions">
-          <a class="btn primary" href="${link}" target="_blank" rel="noopener">查看商品</a>
-          <button class="btn" data-remove="${escapeHtml(item.id||'')}">移除</button>
+          <a class="btn primary" href="${link}" target="_blank" rel="noopener">${escapeHtml(t('account_wishlist.view'))}</a>
+          <button class="btn" data-remove="${escapeHtml(item.id||'')}">${escapeHtml(t('account_wishlist.remove'))}</button>
         </div>
       `;
       listEl.appendChild(div);
@@ -98,13 +101,13 @@
 
   function ensureLogin(){
     if (!window.authState){
-      statusEl.textContent = '需要登入模組載入失敗。';
+      statusEl.textContent = t('account.login_module_missing');
       return;
     }
     if (window.authState.isLoggedIn && window.authState.isLoggedIn()){
       loadWishlist();
     }else{
-      statusEl.textContent = '請先登入以查看收藏。';
+      statusEl.textContent = t('account_wishlist.need_login');
     }
   }
 
@@ -114,7 +117,7 @@
         loadWishlist();
       }else{
         if (wrapEl) wrapEl.style.display = 'none';
-        if (statusEl) statusEl.textContent = '請先登入以查看收藏。';
+        if (statusEl) statusEl.textContent = t('account_wishlist.need_login');
       }
     });
   }

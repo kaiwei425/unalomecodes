@@ -19,12 +19,13 @@
           <img src="/img/logo.png" alt="unalomecodes">
         </picture>
         <div>
-          <div class="t1">泰國寺廟map ©️ unalomecodes</div>
-          <div class="t2">常用 7-11 門市設定</div>
+          <div class="t1" data-i18n="account.brand">泰國寺廟map ©️ unalomecodes</div>
+          <div class="t2" data-i18n="account_store.title">常用 7-11 門市設定</div>
         </div>
       </div>
       <div class="top-actions-right">
-        <button type="button" class="pill-btn" id="backBtn">← 返回</button>
+        <button type="button" class="pill-btn" id="btnLang" style="padding:9px 14px;" data-i18n-attr="aria-label:account.lang">ZH/EN</button>
+        <button type="button" class="pill-btn" id="backBtn" data-i18n="account.back">← 返回</button>
         <div class="auth-widget" data-auth-widget>
           <span class="auth-status" data-auth-status>登入狀態載入中…</span>
           <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
@@ -32,33 +33,35 @@
       </div>
     </div>
 
-    <div id="storeStatus" style="font-size:14px;color:#6b7280;">載入中…</div>
+    <div id="storeStatus" style="font-size:14px;color:#6b7280;" data-i18n="account.loading">載入中…</div>
     <div class="card">
-      <h2>設定常用門市</h2>
+      <h2 data-i18n="account_store.card_title">設定常用門市</h2>
       <div class="actions" style="justify-content:flex-start;margin-bottom:6px;">
-        <button type="button" class="pill-btn" id="openCvsMap">查詢 7-11 門市</button>
+        <button type="button" class="pill-btn" id="openCvsMap" data-i18n="account_store.open_map">查詢 7-11 門市</button>
       </div>
       <div class="form-grid">
-        <label>門市名稱
-          <input id="storeName" type="text" placeholder="請先點上方查詢門市" readonly>
+        <label><span data-i18n="account_store.name">門市名稱</span>
+          <input id="storeName" type="text" placeholder="請先點上方查詢門市" data-i18n-attr="placeholder:account_store.placeholder" readonly>
         </label>
-        <label>門市代碼
-          <input id="storeId" type="text" placeholder="請先點上方查詢門市" readonly>
+        <label><span data-i18n="account_store.id">門市代碼</span>
+          <input id="storeId" type="text" placeholder="請先點上方查詢門市" data-i18n-attr="placeholder:account_store.placeholder" readonly>
         </label>
-        <label>門市地址
-          <input id="storeAddress" type="text" placeholder="請先點上方查詢門市" readonly>
+        <label><span data-i18n="account_store.address">門市地址</span>
+          <input id="storeAddress" type="text" placeholder="請先點上方查詢門市" data-i18n-attr="placeholder:account_store.placeholder" readonly>
         </label>
-        <label>門市電話
-          <input id="storeTel" type="text" placeholder="請先點上方查詢門市" readonly>
+        <label><span data-i18n="account_store.tel">門市電話</span>
+          <input id="storeTel" type="text" placeholder="請先點上方查詢門市" data-i18n-attr="placeholder:account_store.placeholder" readonly>
         </label>
       </div>
-      <div class="hint">小提醒：之後購物流程的門市步驟會自動帶入此資訊，仍可在步驟中重新選擇其他門市。</div>
+      <div class="hint" data-i18n="account_store.hint">小提醒：之後購物流程的門市步驟會自動帶入此資訊，仍可在步驟中重新選擇其他門市。</div>
       <div class="actions">
-        <button type="button" class="save-btn" id="saveStore">儲存門市</button>
+        <button type="button" class="save-btn" id="saveStore" data-i18n="account_store.save">儲存門市</button>
       </div>
     </div>
   </div>
 
+  <script src="/js/uc-i18n-core.js"></script>
+  <script src="/js/uc-i18n-account.js"></script>
   <script src="/js/auth.js?v=20240930"></script>
   <script src="/js/account-store.js"></script>
 </body>
