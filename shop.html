@@ -71,6 +71,7 @@
       </div>
     </div>
     <div class="top-actions-right">
+      <button type="button" id="btnLang" class="lang-btn" aria-label="Language">EN</button>
       <div class="member-menu">
         <button type="button" id="memberMenuBtn">
           <span class="member-menu-label" data-i18n="common.member_center">會員中心</span>
@@ -86,10 +87,9 @@
           <a href="/admin" data-admin-only data-admin-perm="admin_panel_view" data-admin-href="/admin" style="display:none;">後台管理</a>
         </div>
       </div>
-      <button type="button" id="btnLang" class="lang-btn" aria-label="Language">EN</button>
       <div class="auth-widget" data-auth-widget>
-        <span class="auth-status" data-auth-status data-i18n="common.login_loading">登入狀態載入中…</span>
-        <button type="button" class="auth-btn" data-auth-btn data-i18n="common.login">登入會員</button>
+        <span class="auth-status" data-auth-status>登入狀態載入中…</span>
+        <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
       </div>
       <div id="guardianBadge" class="guardian-badge" style="display:none;"></div>
     </div>
@@ -98,48 +98,48 @@
   <div class="store">
     <aside id="sideDeities">
     <div class="side-cart">
-      <button id="cartFab" type="button" title="查看購物車"><span class="lbl">購物車</span><span id="cartBadge">0</span></button>
+      <button id="cartFab" type="button" title="查看購物車" data-i18n-attr="title:shop.view_cart"><span class="lbl" data-i18n="shop.cart">購物車</span><span id="cartBadge">0</span></button>
     </div>
-    <h3>連結</h3>
+    <h3 data-i18n="shop.links">連結</h3>
     <div class="list">
-      <a href="/">返回首頁</a>
-      <a href="#" id="linkOrderLookup">查詢訂單狀態</a>
-      <a href="/deity">神祇介紹</a>
-      <a href="/faq">常見問題</a>
+      <a href="/" data-i18n="common.back_home">返回首頁</a>
+      <a href="#" id="linkOrderLookup" data-i18n="shop.order_lookup">查詢訂單狀態</a>
+      <a href="/deity" data-i18n="shop.deity_intro">神祇介紹</a>
+      <a href="/faq" data-i18n="shop.faq">常見問題</a>
     </div>
     <div class="tools-box">
-      <h4>泰國旅遊 / 寺廟小工具</h4>
+      <h4 data-i18n="shop.tools_title">泰國旅遊 / 寺廟小工具</h4>
       <div class="list">
         <a href="https://unalomecodes.com/food-map" class="tool-link">
-          <span class="tool-link-title"><span class="tool-link-dot"></span>泰國美食地圖</span>
+          <span class="tool-link-title"><span class="tool-link-dot"></span><span data-i18n="shop.tools_food_map">泰國美食地圖</span></span>
         </a>
         <a href="https://unalomecodes.com/templemap" class="tool-link">
-          <span class="tool-link-title"><span class="tool-link-dot"></span>泰國寺廟地圖</span>
+          <span class="tool-link-title"><span class="tool-link-dot"></span><span data-i18n="shop.tools_temple_map">泰國寺廟地圖</span></span>
         </a>
       </div>
-      <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;">敬請期待更多實用小工具。</div>
+      <div class="muted" style="font-size:12px;line-height:1.6;margin:6px 0 10px;" data-i18n="shop.tools_more_soon">敬請期待更多實用小工具。</div>
     </div>
 </aside>
     <div class="main">
       <div id="filterBar" style="margin:6px 0 12px 0;">
         <select id="fDeity" style="min-width:150px;">
-          <option value="">全部神祇</option>
+          <option value="" data-i18n="shop.all_deities">全部神祇</option>
         </select>
         <select id="fSort" style="min-width:150px;">
-          <option value="">排序：預設</option>
-          <option value="sold-desc">已售出（多→少）</option>
-          <option value="price-asc">價格（低→高）</option>
-          <option value="price-desc">價格（高→低）</option>
-          <option value="newest">最新上架</option>
+          <option value="" data-i18n="shop.sort_default">排序：預設</option>
+          <option value="sold-desc" data-i18n="shop.sort_sold_desc">已售出（多→少）</option>
+          <option value="price-asc" data-i18n="shop.sort_price_asc">價格（低→高）</option>
+          <option value="price-desc" data-i18n="shop.sort_price_desc">價格（高→低）</option>
+          <option value="newest" data-i18n="shop.sort_newest">最新上架</option>
         </select>
-        <input id="fMin" type="number" placeholder="最低價" style="width:130px;">
-        <input id="fMax" type="number" placeholder="最高價" style="width:130px;">
+        <input id="fMin" type="number" placeholder="最低價" style="width:130px;" data-i18n-attr="placeholder:shop.min_price">
+        <input id="fMax" type="number" placeholder="最高價" style="width:130px;" data-i18n-attr="placeholder:shop.max_price">
       </div>
       <div id="hotSection" class="hot-section" style="display:none;">
         <div class="hot-head">
           <div class="hot-meta">
-            <div class="hot-title">熱賣中商品</div>
-            <div class="hot-sub">人氣排行</div>
+            <div class="hot-title" data-i18n="shop.hot_title">熱賣中商品</div>
+            <div class="hot-sub" data-i18n="shop.hot_sub">人氣排行</div>
           </div>
         </div>
         <div id="hotList" class="grid hot-grid"></div>

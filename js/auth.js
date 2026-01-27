@@ -100,6 +100,11 @@
     });
   }
 
+  // When language changes, only re-render text labels; keep auth state unchanged.
+  window.addEventListener('uc_lang_change', function(){
+    try{ updateWidgets(); }catch(_){}
+  });
+
   async function initLiff(){
     if (!liffId || !window.liff || typeof window.liff.init !== 'function') return false;
     if (liffInitPromise) return liffInitPromise;
