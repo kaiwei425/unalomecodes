@@ -8,6 +8,38 @@ let rawItems = [];
 let viewItems = [];
 let pendingProductId = '';
 let pendingProductSource = '';
+
+const ESIM_AFFIL_URL = 'https://esimconnect.com.tw/#/access/esimbuy?referencecode=Unalomecodes';
+const ESIM_PRODUCT_ID = 'esimconnect-affiliate';
+
+function openExternal(url, meta){
+  const eventName = (meta && (meta.event || meta.eventName)) ? String(meta.event || meta.eventName) : 'outbound_click';
+  try{
+    if (typeof window.track === 'function') window.track(eventName, meta || { url });
+    else if (typeof window.trackEvent === 'function') window.trackEvent(eventName, meta || { url });
+  }catch(_){}
+  try{
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }catch(_){
+    // Fallback: allow navigation if popup blocked.
+    try{ window.location.href = url; }catch(__){}
+  }
+}
+
+function buildEsimProduct(){
+  return {
+    id: ESIM_PRODUCT_ID,
+    name: '泰國 eSIM 上網卡',
+    category: 'eSIM',
+    basePrice: 0,
+    sold: 0,
+    stock: null,
+    images: ['/img/esim.svg'],
+    externalUrl: ESIM_AFFIL_URL,
+    priceText: '依方案計價',
+    badges: ['合作商品']
+  };
+}
 // 安全補丁：避免呼叫未定義
 function refreshWishlistButtons() {
   try{
@@ -110,7 +142,11 @@ function openProductFromUrl(){
   pendingProductSource = '';
   if (!item) return;
   try{
-    openDetail(item);
+    if (item && item.externalUrl){
+      openExternal(item.externalUrl, { event:'esim_click', url: item.externalUrl, placement:'shop_deeplink', productId: String(item.id || '') });
+    }else{
+      openDetail(item);
+    }
     clearProductUrl(source);
   }catch(err){
     console.error('openDetail failed', err);
@@ -135,6 +171,7 @@ function buildLimitedRow(p, labelText){
 }
 
 function buildProductCard(p, opts = {}){
+  const isExternal = !!(p && p.externalUrl);
   const img = sanitizeImageUrl((p.images && p.images[0]) ? p.images[0] : '');
   const price = minPrice(p);
   const stockTotal = resolveTotalStock(p);
@@ -188,24 +225,38 @@ function buildProductCard(p, opts = {}){
   
   const metaBottom = document.createElement('div');
   metaBottom.className = 'meta meta-bottom';
-  metaBottom.innerHTML = `
-    <span class="badge badge-sold">已售出：${escapeHtml(String(Number(p.sold||0)))}</span>
-    ${stockBadge}
-  `;
+  if (isExternal){
+    const tags = Array.isArray(p.badges) ? p.badges.filter(Boolean) : [];
+    metaBottom.innerHTML = tags.length
+      ? tags.map(t => `<span class="badge badge-sold">${escapeHtml(String(t))}</span>`).join(' ')
+      : `<span class="badge badge-sold">合作商品</span>`;
+  }else{
+    metaBottom.innerHTML = `
+      <span class="badge badge-sold">已售出：${escapeHtml(String(Number(p.sold||0)))}</span>
+      ${stockBadge}
+    `;
+  }
   bodyDiv.appendChild(metaBottom);
   
   const priceDiv = document.createElement('div');
   priceDiv.className = 'price';
-  priceDiv.textContent = `NT$ ${formatPrice(price)}`;
+  priceDiv.textContent = isExternal && p.priceText
+    ? String(p.priceText)
+    : `NT$ ${formatPrice(price)}`;
   bodyDiv.appendChild(priceDiv);
   
   const ctaDiv = document.createElement('div');
   ctaDiv.className = 'cta';
   const btn = document.createElement('button');
   btn.className = 'btn primary';
-  btn.setAttribute('data-open-detail', '1');
-  btn.textContent = '查看商品';
-  btn.addEventListener('click', () => openDetail(p));
+  if (isExternal){
+    btn.textContent = '前往購買';
+    btn.addEventListener('click', () => openExternal(p.externalUrl, { event:'esim_click', url: p.externalUrl, placement:'shop', productId: String(p.id || '') }));
+  }else{
+    btn.setAttribute('data-open-detail', '1');
+    btn.textContent = '查看商品';
+    btn.addEventListener('click', () => openDetail(p));
+  }
   ctaDiv.appendChild(btn);
   bodyDiv.appendChild(ctaDiv);
   
@@ -241,6 +292,8 @@ async function loadProducts(){
     const data = await res.json();
     if (data.ok === false){ throw new Error('API error'); }
     rawItems = Array.isArray(data.items) ? data.items : [];
+    // Add external affiliate "product" (not part of cart/checkout).
+    rawItems = rawItems.concat([buildEsimProduct()]);
     try{ window.rawItems = rawItems; }catch(_){}
     populateDeityFilter(rawItems);
     renderHotItems(rawItems);
