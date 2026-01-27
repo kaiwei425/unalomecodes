@@ -8,8 +8,8 @@
     var stored = '';
     try{ stored = localStorage.getItem(LANG_KEY) || ''; }catch(_){}
     if (stored === 'zh' || stored === 'en') return stored;
-    var nav = String(navigator.language || '').toLowerCase();
-    return nav && nav.indexOf('zh') === 0 ? 'zh' : 'en';
+    // Force default to Chinese unless user explicitly switches to English.
+    return 'zh';
   }
 
   function getLang(){
