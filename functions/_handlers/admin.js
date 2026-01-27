@@ -824,6 +824,10 @@ function createAdminHandlers(deps){
       await cleanupExpiredHolds(env);
       const guard = await requireAdminSlotsManage(request, env);
       if (guard) return guard;
+      // Owner-only: releasing booked slots is destructive (clears bookings).
+      if (!(await isOwnerAdmin(request, env))){
+        return new Response(JSON.stringify({ ok:false, error:'forbidden_role' }), { status:403, headers: jsonHeadersFor(request, env) });
+      }
       if (!env?.SERVICE_SLOTS_KV){
         return new Response(JSON.stringify({ ok:false, error:'slots_kv_not_configured' }), { status:501, headers: jsonHeadersFor(request, env) });
       }

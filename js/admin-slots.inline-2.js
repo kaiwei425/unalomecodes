@@ -339,6 +339,7 @@
   var selectedSlotMeta = new Map();
   var selectedServiceId = '';
   var scheduleContext = null;
+  var CAN_RELEASE_BOOKED = false;
 
   function ensureServiceIdDisplay(){
     var wrap = document.querySelector('.slot-controls');
@@ -870,7 +871,7 @@
 
       var action = '';
       if (status === 'booked'){
-        action = 'release';
+        action = CAN_RELEASE_BOOKED ? 'release' : '';
       }else if (status === 'free' && !enabled){
         action = 'publish';
       }else if (status === 'free' && enabled){
@@ -1492,6 +1493,10 @@
   }
 
   function handleReleaseBooked(){
+    if (!CAN_RELEASE_BOOKED){
+      setStatus(t('msg_forbidden'), true);
+      return;
+    }
     if (!confirm('確定要解除已預約時段？此動作會清空該時段的預約並重新開放。')) return;
     var slotKeys = collectSlotKeys('release');
     if (!slotKeys.length){
@@ -1535,6 +1540,10 @@
       setGuard(t('hint_owner_booking_only'));
       return;
     }
+    CAN_RELEASE_BOOKED = role === 'owner';
+    if (!CAN_RELEASE_BOOKED && btnReleaseBooked){
+      btnReleaseBooked.style.display = 'none';
+    }
     try{
       if (adminSlotsWarning){
         var warned = localStorage.getItem('adminSlotWarningSeen') === 'true';
@@ -1547,7 +1556,7 @@
     initDateNav();
     if (btnPublish) btnPublish.addEventListener('click', handlePublish);
     if (btnUnpublish) btnUnpublish.addEventListener('click', function(){ handleBlock(true); });
-    if (btnReleaseBooked) btnReleaseBooked.addEventListener('click', handleReleaseBooked);
+    if (CAN_RELEASE_BOOKED && btnReleaseBooked) btnReleaseBooked.addEventListener('click', handleReleaseBooked);
     if (btnPublishWindow) btnPublishWindow.addEventListener('click', handlePublishWithWindow);
     if (btnPublishSchedule) btnPublishSchedule.addEventListener('click', handlePublishSchedule);
     if (btnCancelSchedule) btnCancelSchedule.addEventListener('click', handleCancelSchedule);
