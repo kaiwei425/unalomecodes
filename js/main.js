@@ -27,17 +27,21 @@ function openExternal(url, meta){
 }
 
 function buildEsimProduct(){
+  const meta = (window.__shopPageMeta && window.__shopPageMeta.esim && typeof window.__shopPageMeta.esim === 'object')
+    ? window.__shopPageMeta.esim
+    : {};
+  const customBadges = String(meta.badges || '').split(',').map(s=>s.trim()).filter(Boolean);
   return {
     id: ESIM_PRODUCT_ID,
-    name: '泰國 eSIM 上網卡',
+    name: String(meta.name || '泰國 eSIM 上網卡'),
     category: 'eSIM',
     basePrice: 0,
     sold: 0,
     stock: null,
-    images: ['/img/esim.svg'],
-    externalUrl: ESIM_AFFIL_URL,
-    priceText: '依方案計價',
-    badges: ['合作商品']
+    images: [String(meta.imageUrl || '/img/esim.svg')],
+    externalUrl: String(meta.url || ESIM_AFFIL_URL),
+    priceText: String(meta.priceText || '依方案計價'),
+    badges: customBadges.length ? customBadges : ['合作商品']
   };
 }
 // 安全補丁：避免呼叫未定義
@@ -288,9 +292,18 @@ function getHotItems(items){
 
 async function loadProducts(){
   try{
-    const res = await fetch('/api/products?active=true',{cache:'no-store'});
-    const data = await res.json();
+    const [prodRes, metaRes] = await Promise.all([
+      fetch('/api/products?active=true',{cache:'no-store'}),
+      fetch('/api/shop/meta',{cache:'no-store'}).catch(()=>null)
+    ]);
+    const data = await prodRes.json();
     if (data.ok === false){ throw new Error('API error'); }
+    try{
+      const metaData = metaRes ? await metaRes.json().catch(()=>null) : null;
+      window.__shopPageMeta = (metaData && metaData.ok && metaData.meta) ? (metaData.meta || {}) : {};
+    }catch(_){
+      window.__shopPageMeta = {};
+    }
     rawItems = Array.isArray(data.items) ? data.items : [];
     // Add external affiliate "product" (not part of cart/checkout).
     rawItems = rawItems.concat([buildEsimProduct()]);

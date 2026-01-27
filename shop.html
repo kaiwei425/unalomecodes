@@ -63,7 +63,11 @@
       </picture>
       <div>
         <div class="t1">Unalomecodes 懂玩泰國</div>
-        <div class="t2"><span id="pageSubtitle">unalome象徵人生修行並通往覺悟的道路</span><button type="button" id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯副標題">✏️</button></div>
+        <div class="t2">
+          <span id="pageSubtitle">unalome象徵人生修行並通往覺悟的道路</span>
+          <button type="button" id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯副標題">✏️</button>
+          <button type="button" id="btnEditEsim" style="display:none;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;margin-left:6px;vertical-align:middle;" title="編輯 eSIM 商品卡">📶</button>
+        </div>
       </div>
     </div>
     <div class="top-actions-right">
@@ -221,6 +225,34 @@
   <footer>
     <button type="button" class="btn" id="profileClose">取消</button>
     <button type="button" class="btn primary" id="profileSave">儲存</button>
+  </footer>
+</dialog>
+
+<dialog id="esimDialog" class="policy-dialog">
+  <header>eSIM 商品卡設定</header>
+  <div class="body">
+    <label>商品名稱</label>
+    <input id="esimName" type="text" placeholder="泰國 eSIM 上網卡">
+    <label>價格顯示文字</label>
+    <input id="esimPriceText" type="text" placeholder="依方案計價">
+    <label>徽章（逗號分隔）</label>
+    <input id="esimBadges" type="text" placeholder="合作商品">
+    <label>導購連結 URL</label>
+    <input id="esimUrl" type="url" placeholder="https://...">
+    <label>封面圖</label>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button type="button" class="btn" id="esimUploadBtn">上傳封面圖</button>
+      <input id="esimImageFile" type="file" accept="image/*" style="display:none">
+      <input id="esimImageUrl" type="text" readonly placeholder="上傳後會自動填入網址" style="flex:1;min-width:220px;">
+    </div>
+    <div style="margin-top:10px;">
+      <img id="esimImagePreview" alt="eSIM 封面預覽" style="width:100%;max-width:420px;border-radius:12px;border:1px solid #e5e7eb;display:none">
+    </div>
+    <div id="esimStatus" style="color:#ef4444;font-size:13px;min-height:18px;margin-top:8px;"></div>
+  </div>
+  <footer>
+    <button type="button" class="btn" id="esimClose">取消</button>
+    <button type="button" class="btn primary" id="esimSave">儲存</button>
   </footer>
 </dialog>
 
