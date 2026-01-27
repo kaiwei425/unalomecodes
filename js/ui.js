@@ -375,7 +375,7 @@ function stashPendingDetail(){
   document.getElementById('rvSubmit').onclick = () => {
     const ta = document.getElementById('rvText');
     const txt = (ta.value||'').trim();
-    if (!txt) return alert('請先輸入你的分享內容～');
+    if (!txt) return alert(t('shop.review_need_text','請先輸入你的分享內容～'));
     (async()=>{
       try{
         const payload = { code: storyCodeFromProduct(p), nick: '訪客', msg: txt, productName: (p && p.name) ? p.name : '' };
@@ -390,10 +390,10 @@ function stashPendingDetail(){
         }
         ta.value='';
         renderReviews(storyCodeFromProduct(p));
-        alert('已送出，感謝你的分享！');
+        alert(t('shop.review_submitted','已送出，感謝你的分享！'));
       }catch(e){
         console.error(e);
-        alert('送出失敗，請稍後再試');
+        alert(t('shop.review_submit_failed','送出失敗，請稍後再試'));
       }
     })();
   };
@@ -433,13 +433,13 @@ function renderReviews(pidOrCode){
     '';
   const code = toDeityCode(raw) || __kvOnlyCode(raw);
   if (!code){
-    box.innerHTML = '<div class="rvItem" style="opacity:.85">暫時無法取得留言代碼</div>';
+    box.innerHTML = '<div class="rvItem" style="opacity:.85">' + escapeHtml(t('shop.review_code_unavailable','暫時無法取得留言代碼')) + '</div>';
     return;
   }
   if (typeof window.loadReviews === 'function') {
     return window.loadReviews(code);
   }
-  box.innerHTML = '<div class="rvItem" style="opacity:.7">讀取中…</div>';
+  box.innerHTML = '<div class="rvItem" style="opacity:.7">' + escapeHtml(t('common.loading','讀取中…')) + '</div>';
   (async()=>{
     try{
       const r = await fetch(`/api/stories?code=${encodeURIComponent(code)}`, { cache:'no-store' });
@@ -447,7 +447,7 @@ function renderReviews(pidOrCode){
       const data = await r.json().catch(()=>[]);
       const arr = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
       if(!arr.length){
-        box.innerHTML = '<div class="rvItem" style="opacity:.85">尚無真實故事，成為第一位分享者吧！</div>';
+        box.innerHTML = '<div class="rvItem" style="opacity:.85">' + escapeHtml(t('shop.review_empty','尚無真實故事，成為第一位分享者吧！')) + '</div>';
         return;
       }
       box.innerHTML = '';
@@ -466,7 +466,7 @@ function renderReviews(pidOrCode){
       });
     }catch(e){
       console.error('KV read error', e);
-      box.innerHTML = '<div class="rvItem" style="opacity:.85">讀取失敗，稍後再試</div>';
+      box.innerHTML = '<div class="rvItem" style="opacity:.85">' + escapeHtml(t('shop.review_load_failed','讀取失敗，稍後再試')) + '</div>';
     }
   })();
 }

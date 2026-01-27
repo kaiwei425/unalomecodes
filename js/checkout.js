@@ -325,7 +325,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       var total = Number(it.total ?? 0);
       if (!total) total = unit * qty;
       var spec = it.variantName || it.spec || it.deity || '';
-      var name = it.name || it.productName || it.title || '商品';
+      var name = it.name || it.productName || it.title || t('shop.item_fallback','商品');
       var img = it.image || it.cover || it.thumb || '';
       arr.push({ name:name, spec:spec, qty:qty, unit:unit, total:total, image:img });
     });
@@ -728,12 +728,12 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       (function(){
         var hint = document.getElementById('bfAmtHint');
         if (!hint) return;
-        var baseText = '系統自動帶入金額，無需修改';
+        var baseText = t('shop.amount_auto','系統自動帶入金額，無需修改');
         if (shippingFee > 0){
-          baseText = '含 7-11 店到店運費 NT$' + COD_SHIPPING_FEE + '，請確認金額後再送出';
+          baseText = tf('checkout.cod_shipping_note', { amount: 'NT$ ' + COD_SHIPPING_FEE }, '含 7-11 店到店運費 {amount}，請確認金額後再送出');
         }
         if (off > 0){
-          hint.textContent = '已套用優惠折抵 NT$' + (Number(off)||0) + (shippingFee>0 ? '；' + baseText : '');
+          hint.textContent = tf('checkout.discount_applied_note', { amount: 'NT$ ' + (Number(off)||0) }, '已套用優惠折抵 {amount}') + (shippingFee>0 ? '；' + baseText : '');
           hint.style.color = '#059669';
         }else{
           hint.textContent = baseText;
@@ -748,7 +748,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
       try{ document.querySelectorAll('dialog[open]').forEach(d=>{ if(d!==dlg) d.close(); }); }catch{}
       // 顯示 Dialog
       if (typeof dlg.showModal === 'function') dlg.showModal();
-      else alert('請使用支援對話框的瀏覽器');
+      else alert(t('checkout.dialog_not_supported','請使用支援對話框的瀏覽器'));
 
       // 移除匯款頁最下方「文字版購物車摘要」區塊（本次匯款金額包含以下購物車商品：...）
       // 只刪掉純文字摘要，不碰上方圖片版訂單確認表格
@@ -765,7 +765,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
       }catch(e){}
 
-    }catch(e){ console.error(e); alert('開啟結帳視窗失敗'); }
+    }catch(e){ console.error(e); alert(t('checkout.open_checkout_failed','開啟結帳視窗失敗')); }
   };
 
   document.addEventListener('click', (e)=>{
@@ -784,7 +784,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           try{
             var f = rec.files && rec.files[0];
             if (f && f.size > 20 * 1024 * 1024){
-              alert('匯款憑證檔案過大（上限 20MB）');
+              alert(t('checkout.proof_too_large','匯款憑證檔案過大（上限 20MB）'));
               rec.value = '';
             }
           }catch(e){}
@@ -809,7 +809,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         pendingOverlay.style.justifyContent = 'center';
         pendingOverlay.style.background = 'rgba(15,23,42,0.45)';
         pendingOverlay.style.backdropFilter = 'blur(2px)';
-        pendingOverlay.innerHTML = '<div id="orderPendingOverlayBox" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:#ffffff;box-shadow:0 10px 25px rgba(15,23,42,0.35);font-size:14px;color:#374151;"><div id="orderPendingSpinner" style="width:18px;height:18px;border-radius:999px;border:2px solid #e5e7eb;border-top-color:#4b5563;animation:orderPendingSpin 0.8s linear infinite;"></div><div id="orderPendingText">訂單送出中，請稍候...</div></div>';
+        pendingOverlay.innerHTML = '<div id="orderPendingOverlayBox" style="display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:#ffffff;box-shadow:0 10px 25px rgba(15,23,42,0.35);font-size:14px;color:#374151;"><div id="orderPendingSpinner" style="width:18px;height:18px;border-radius:999px;border:2px solid #e5e7eb;border-top-color:#4b5563;animation:orderPendingSpin 0.8s linear infinite;"></div><div id="orderPendingText">'+ escHtml(t('checkout.order_pending','訂單送出中，請稍候...')) +'</div></div>';
         (dlg || document.body).appendChild(pendingOverlay);
         if (!document.getElementById('orderPendingSpinStyle')) {
           const st = document.createElement('style');
@@ -827,9 +827,9 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
           submitBtn.disabled = false;
         }
         if (auth && typeof auth.promptLogin === 'function'){
-          auth.promptLogin('請先登入後再送出訂單。');
+          auth.promptLogin(t('checkout.login_required_submit','請先登入後再送出訂單。'));
         }else{
-          alert('請先登入後再送出訂單。');
+          alert(t('checkout.login_required_submit','請先登入後再送出訂單。'));
           window.location.href = '/api/auth/google/login?prompt=select_account';
         }
         return;
@@ -837,7 +837,7 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
 
       if (pendingOverlay) {
         pendingOverlay.style.display = 'flex';
-        if (pendingText) pendingText.textContent = '訂單送出中，請稍候...';
+        if (pendingText) pendingText.textContent = t('checkout.order_pending','訂單送出中，請稍候...');
       }
       if (submitBtn) {
         submitBtn.disabled = true;
@@ -941,15 +941,15 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         }
         if (success) {
           if (typeof showToast === 'function') {
-            showToast('✅ 已送出訂單，我們將盡快安排出貨！');
+            showToast(t('checkout.submitted_ship_soon','✅ 已送出訂單，我們將盡快安排出貨！'));
           } else {
-            alert('✅ 已送出訂單，我們將盡快安排出貨！');
+            alert(t('checkout.submitted_ship_soon','✅ 已送出訂單，我們將盡快安排出貨！'));
           }
         } else {
           if (typeof showToast === 'function') {
-            showToast('✅ 已送出，感謝！');
+            showToast(t('checkout.submitted_thanks','✅ 已送出，感謝！'));
           } else {
-            alert('✅ 已送出，感謝！');
+            alert(t('checkout.submitted_thanks','✅ 已送出，感謝！'));
           }
         }
         if (success){
@@ -1025,11 +1025,11 @@ var scheduleOrderRefresh = window.__scheduleOrderRefresh;
         try{ sessionStorage.removeItem('__pendingDetail__'); }catch(e){}
         
         // 用户友好的错误提示
-        const errorMsg = err.message || '訂單提交失敗，請稍後再試';
+        const errorMsg = err.message || t('checkout.submit_failed','訂單提交失敗，請稍後再試');
         if (typeof showToast === 'function') {
           showToast(`❌ ${errorMsg}`);
         } else {
-          alert(`❌ ${errorMsg}\n\n如果問題持續，請聯繫客服。`);
+          alert(`❌ ${errorMsg}\n\n${t('checkout.contact_support','如果問題持續，請聯繫客服。')}`);
         }
         if (dlg) dlg.close();
         return; // 不要继续执行
@@ -1358,7 +1358,7 @@ function __cartPricing(includePendingDetail, opts){
     if (!box || !wrap) return;
     box.innerHTML = '';
     if (!Array.isArray(arr) || !arr.length){
-      box.innerHTML = '<div class="ok-muted">查無符合條件的訂單，請確認輸入再嘗試。</div>';
+      box.innerHTML = '<div class="ok-muted">'+ escHtml(t('checkout.lookup_no_match','查無符合條件的訂單，請確認輸入再嘗試。')) +'</div>';
       wrap.style.display = '';
       return;
     }
@@ -1487,7 +1487,7 @@ function __cartPricing(includePendingDetail, opts){
   // ---------- UI wiring ----------
   function openLookup(){
     var d = document.getElementById('dlgLookup');
-    if (!d) return alert('無法顯示查詢視窗');
+    if (!d) return alert(t('checkout.lookup_dialog_unavailable','無法顯示查詢視窗'));
     try{
       // reset form and result box on every open
       var f = document.getElementById('lookupForm');
@@ -1507,7 +1507,7 @@ function __cartPricing(includePendingDetail, opts){
         }catch(e){}
       }, 50);
     }catch(e){
-      alert('請使用支援對話框的瀏覽器');
+      alert(t('checkout.dialog_not_supported','請使用支援對話框的瀏覽器'));
     }
   }
   document.addEventListener('click', function(e){
@@ -1775,7 +1775,7 @@ function __cartPricing(includePendingDetail, opts){
               return 0;
             }
             ctx.items.forEach((it, idx)=>{
-              const name = (it.name || it.productName || '商品');
+              const name = (it.name || it.productName || t('shop.item_fallback','商品'));
               const spec = it.variantName ? `（${it.variantName}）` : '';
               const qty  = Math.max(1, Number(it.qty||1));
               const unit = Number(it.price||0);
@@ -1793,17 +1793,17 @@ function __cartPricing(includePendingDetail, opts){
               row.style.borderRadius = '10px';
               row.innerHTML =
                 `<div style="width:60px;height:60px;border-radius:10px;overflow:hidden;background:#fff;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">`+
-                  (img ? `<img src="${escapeHtml(img)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : `<div style="font-size:12px;color:#9ca3af;">無圖</div>`) +
+                  (img ? `<img src="${escapeHtml(img)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : `<div style="font-size:12px;color:#9ca3af;">${escapeHtml(t('shop.no_image','無圖'))}</div>`) +
                 `</div>`+
                 `<div style="font-size:13px;line-height:1.5;">`+
                   `<div style="font-weight:700;color:#111827;">${escapeHtml(name)}${spec}</div>`+
-                  `<div style="color:#6b7280;">數量：${qty}</div>`+
+                  `<div style="color:#6b7280;">${escapeHtml(t('checkout.qty_prefix','數量：'))}${qty}</div>`+
                   (discount>0
                     ? `<div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
                          <span style="text-decoration:line-through;color:#9ca3af;">NT$ ${formatPrice(total)}</span>
                          <span style="color:#dc2626;font-weight:700;">NT$ ${formatPrice(finalTotal)}</span>
                        </div>`
-                    : `<div style="color:#6b7280;">合計：NT$ ${formatPrice(total)}</div>`)+
+                    : `<div style="color:#6b7280;">${escapeHtml(t('checkout.total_prefix','合計：'))}NT$ ${formatPrice(total)}</div>`)+
                 `</div>`;
               box.appendChild(row);
             });
@@ -1816,7 +1816,7 @@ function __cartPricing(includePendingDetail, opts){
       if (shipNote){
         if (ctx.shipping > 0){
           shipNote.style.display = 'block';
-          shipNote.textContent = `此金額包含 7-11 店到店運費 NT$ ${formatPrice(ctx.shipping)}。`;
+          shipNote.textContent = tf('checkout.shipping_included', { amount: 'NT$ ' + formatPrice(ctx.shipping) }, `此金額包含 7-11 店到店運費 NT$ ${formatPrice(ctx.shipping)}。`);
         }else{
           shipNote.style.display = 'none';
         }
@@ -1830,10 +1830,10 @@ function __cartPricing(includePendingDetail, opts){
       }
       const dlgCheckout = document.getElementById('dlgCheckout');
       if (dlgCheckout && typeof dlgCheckout.close === 'function') dlgCheckout.close();
-      if (typeof dlg.showModal === 'function') dlg.showModal(); else alert('請使用最新瀏覽器進行付款');
+      if (typeof dlg.showModal === 'function') dlg.showModal(); else alert(t('checkout.require_modern_browser','請使用最新瀏覽器進行付款'));
     }catch(err){
       console.error('openCreditDialog error', err);
-      alert('顯示信用卡付款視窗時發生錯誤，請重新整理再試。');
+      alert(t('checkout.cc_open_error','顯示信用卡付款視窗時發生錯誤，請重新整理再試。'));
     }
   };
 

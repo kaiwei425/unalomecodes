@@ -76,8 +76,43 @@
   const STREAK_COUNT_KEY = 'FORTUNE_STREAK_COUNT';
   const STREAK_LAST_KEY = 'FORTUNE_STREAK_LAST_DATE';
   const FORTUNE_CACHE_KEY = '__fortune_payload__';
-  const map = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
-  const PHUM_FEEDBACK = {
+  function t(key, fallback){
+    try{
+      var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+      if (!fn) return fallback;
+      var v = fn(key);
+      if (!v || v === key) return fallback;
+      return v;
+    }catch(_){
+      return fallback;
+    }
+  }
+  function tf(key, vars, fallback){
+    var out = String(t(key, fallback) || '');
+    var obj = vars && typeof vars === 'object' ? vars : {};
+    try{
+      Object.keys(obj).forEach(function(k){
+        out = out.split('{' + k + '}').join(String(obj[k]));
+      });
+    }catch(_){}
+    return out;
+  }
+  function getLang(){
+    try{
+      if (window.UC_I18N && typeof window.UC_I18N.getLang === 'function') return window.UC_I18N.getLang();
+    }catch(_){}
+    return 'zh';
+  }
+
+  const GUARDIAN_NAME_ZH = {FM:'四面神',GA:'象神',CD:'崇迪佛',KP:'坤平',HP:'魂魄勇',XZ:'徐祝老人',WE:'五眼四耳',HM:'猴神哈魯曼',RH:'拉胡',JL:'迦樓羅',ZD:'澤度金',ZF:'招財女神'};
+  const GUARDIAN_NAME_EN = {FM:'Brahma (Four-Faced)',GA:'Ganesha',CD:'Somdej Buddha',KP:'Khun Paen',HP:'Hoon Payon',XZ:'Elder Xu Zhu',WE:'Five-Eyed Four-Eared',HM:'Hanuman',RH:'Rahu',JL:'Garuda',ZD:'Jatukam Rammathep',ZF:'Lakshmi'};
+  function guardianName(code){
+    var c = String(code||'').trim().toUpperCase();
+    if (getLang() === 'en') return GUARDIAN_NAME_EN[c] || t('shop.guardian','Guardian');
+    return GUARDIAN_NAME_ZH[c] || t('shop.guardian','守護神');
+  }
+
+  const PHUM_FEEDBACK_ZH = {
     AYU: { title:'續航回正', body:'Ayu 日重點在節奏與續航。你完成這個小任務，等於把能量拉回可持續狀態。' },
     DECH:{ title:'行動到位', body:'Dech 日主打行動與決斷。你完成這一步，能把卡關點推進。' },
     SRI:{ title:'順流啟動', body:'Sri 日偏向順流與收穫。這個小步驟會讓機會更容易到位。' },
@@ -87,48 +122,43 @@
     BORIWAN:{ title:'節奏整理', body:'Boriwan 日著重安排與分配。完成這件事有助於聚焦。' },
     KALAKINI:{ title:'避險成功', body:'Kalakini 日重點是降低風險與誤判。你完成這步，等於先把地雷排掉。' }
   };
-  const TAKSA_EXPLAIN = {
-    AYU: {
-      title: "為什麼今天是 Ayu（日）？",
-      description: "Ayu（壽）日在泰國 Maha Taksa 命理中，代表的是身心節奏、續航力與穩定狀態。當你的出生日與今天的星期形成 Ayu 組合時，命理上不適合急推結果，而適合先把節奏調回正軌。",
-      howToUse: "今天只要完成一件「讓你恢復節奏的小事」（例如整理環境、減少干擾），就是在順著運勢走。"
-    },
-    SRI: {
-      title: "為什麼今天是 Sri（日）？",
-      description: "Sri（日）代表財運、吸引力與順流。這一天適合讓好事自然發生，而不是用力推進。",
-      howToUse: "今天適合曝光、分享、談錢或接受他人的善意。"
-    },
-    DECH: {
-      title: "為什麼今天是 Dech（日）？",
-      description: "Dech（日）象徵權力、行動與決斷力。這一天適合主動出擊。",
-      howToUse: "今天適合做決定、談判或推動卡關的事情。"
-    },
-    KALAKINI: {
-      title: "為什麼今天是 Kalakini（日）？",
-      description: "Kalakini（日）代表阻礙與雜訊。不是倒楣，而是提醒你避開衝突。",
-      howToUse: "今天不宜硬碰硬，適合保守行事或做轉運、清理型行動。"
-    },
-    BORIWAN: {
-      title: "為什麼今天是 Boriwan（日）？",
-      description: "Boriwan（日）代表整合、協調與資源調度。這一天適合安排與分配，讓事情更有秩序。",
-      howToUse: "今天適合整理手邊資源、分配工作或調整行程。"
-    },
-    MULA: {
-      title: "為什麼今天是 Mula（日）？",
-      description: "Mula（日）象徵根基、土地與安全感。這一天適合把基礎打穩，而不是冒進。",
-      howToUse: "今天適合補洞、整理基礎、處理需要長期堆疊的事。"
-    },
-    UTSAHA: {
-      title: "為什麼今天是 Utsaha（日）？",
-      description: "Utsaha（日）代表努力與推進。這一天適合用穩定的步驟把事情往前推。",
-      howToUse: "今天適合把一件事情推到下一個可見的里程碑。"
-    },
-    MONTRI: {
-      title: "為什麼今天是 Montri（日）？",
-      description: "Montri（日）代表幫助、支持與貴人運。這一天適合合作、請求資源或建立信任。",
-      howToUse: "今天適合聯絡重要的人、協調資源或請求協助。"
-    }
+  const PHUM_FEEDBACK_EN = {
+    AYU: { title:'Steady rhythm', body:'Ayu day is about pacing and sustainability. Completing this task helps you return to a steady rhythm.' },
+    DECH:{ title:'Decisive action', body:'Dech day emphasizes action and decision. This step helps you move past a stuck point.' },
+    SRI:{ title:'Flow and gains', body:'Sri day supports flow and receiving. A small step can make opportunities easier to land.' },
+    MULA:{ title:'Solid foundation', body:'Mula day focuses on foundations and order. Completing this first stabilizes everything else.' },
+    UTSAHA:{ title:'Strong progress', body:'Utsaha day highlights pushing forward. This task helps move progress to the next milestone.' },
+    MONTRI:{ title:'Smooth coordination', body:'Montri day is about support and collaboration. This step makes communication smoother.' },
+    BORIWAN:{ title:'Organize your pace', body:'Boriwan day focuses on arranging and allocating. This helps you refocus.' },
+    KALAKINI:{ title:'Risk avoided', body:'Kalakini day is about reducing risk and misjudgment. Completing this helps you avoid hidden pitfalls.' }
   };
+  function phumFeedback(phum){
+    return getLang() === 'en' ? PHUM_FEEDBACK_EN[phum] : PHUM_FEEDBACK_ZH[phum];
+  }
+
+  const TAKSA_EXPLAIN_ZH = {
+    AYU: { title:'為什麼今天是 Ayu（日）？', description:'Ayu（壽）日在泰國 Maha Taksa 命理中，代表的是身心節奏、續航力與穩定狀態。當你的出生日與今天的星期形成 Ayu 組合時，命理上不適合急推結果，而適合先把節奏調回正軌。', howToUse:'今天只要完成一件「讓你恢復節奏的小事」（例如整理環境、減少干擾），就是在順著運勢走。' },
+    SRI: { title:'為什麼今天是 Sri（日）？', description:'Sri（日）代表財運、吸引力與順流。這一天適合讓好事自然發生，而不是用力推進。', howToUse:'今天適合曝光、分享、談錢或接受他人的善意。' },
+    DECH: { title:'為什麼今天是 Dech（日）？', description:'Dech（日）象徵權力、行動與決斷力。這一天適合主動出擊。', howToUse:'今天適合做決定、談判或推動卡關的事情。' },
+    KALAKINI: { title:'為什麼今天是 Kalakini（日）？', description:'Kalakini（日）代表阻礙與雜訊。不是倒楣，而是提醒你避開衝突。', howToUse:'今天不宜硬碰硬，適合保守行事或做轉運、清理型行動。' },
+    BORIWAN: { title:'為什麼今天是 Boriwan（日）？', description:'Boriwan（日）代表整合、協調與資源調度。這一天適合安排與分配，讓事情更有秩序。', howToUse:'今天適合整理手邊資源、分配工作或調整行程。' },
+    MULA: { title:'為什麼今天是 Mula（日）？', description:'Mula（日）象徵根基、土地與安全感。這一天適合把基礎打穩，而不是冒進。', howToUse:'今天適合補洞、整理基礎、處理需要長期堆疊的事。' },
+    UTSAHA: { title:'為什麼今天是 Utsaha（日）？', description:'Utsaha（日）代表努力與推進。這一天適合用穩定的步驟把事情往前推。', howToUse:'今天適合把一件事情推到下一個可見的里程碑。' },
+    MONTRI: { title:'為什麼今天是 Montri（日）？', description:'Montri（日）代表幫助、支持與貴人運。這一天適合合作、請求資源或建立信任。', howToUse:'今天適合聯絡重要的人、協調資源或請求協助。' }
+  };
+  const TAKSA_EXPLAIN_EN = {
+    AYU: { title:'Why is today Ayu day?', description:'In Maha Taksa, Ayu relates to rhythm, stamina, and stability. It favors restoring pace over forcing outcomes.', howToUse:'Do one small thing that helps you regain rhythm (tidy up, reduce distractions, etc.).' },
+    SRI: { title:'Why is today Sri day?', description:'Sri is associated with attraction, flow, and gains. It supports letting good things come naturally rather than pushing hard.', howToUse:'Great for sharing, visibility, money talks, or receiving support.' },
+    DECH: { title:'Why is today Dech day?', description:'Dech represents power, action, and decisiveness. It is a good day to move forward proactively.', howToUse:'Make decisions, negotiate, or push a stuck task forward.' },
+    KALAKINI: { title:'Why is today Kalakini day?', description:'Kalakini relates to noise and obstacles. It is not bad luck-just a reminder to avoid conflict and reduce risk.', howToUse:'Avoid head-on clashes; choose safe, cleaning, or protective actions.' },
+    BORIWAN: { title:'Why is today Boriwan day?', description:'Boriwan is about integration, coordination, and resource allocation. It favors planning and structure.', howToUse:'Organize resources, allocate tasks, or adjust your schedule.' },
+    MULA: { title:'Why is today Mula day?', description:'Mula relates to foundations and security. It favors building a strong base over risky moves.', howToUse:'Patch holes, strengthen basics, and work on long-term stacking tasks.' },
+    UTSAHA: { title:'Why is today Utsaha day?', description:'Utsaha is effort and forward progress. It favors steady steps toward a visible milestone.', howToUse:'Push one thing to the next concrete milestone.' },
+    MONTRI: { title:'Why is today Montri day?', description:'Montri relates to help, support, and benefactors. It favors collaboration and trust-building.', howToUse:'Contact key people, coordinate resources, or ask for help.' }
+  };
+  function taksaExplain(phum){
+    return getLang() === 'en' ? TAKSA_EXPLAIN_EN[phum] : TAKSA_EXPLAIN_ZH[phum];
+  }
   const badgeIcon = (function(){
     if (window.GUARDIAN_BADGE_ICON) return window.GUARDIAN_BADGE_ICON;
     return '/img/guardian-emblem.png'; // 請將圖檔放在此路徑
@@ -238,7 +268,7 @@
       fortuneTaskStreak.style.display = 'none';
       return;
     }
-    fortuneTaskStreak.textContent = `🔥 已連續完成 ${count} 天`;
+    fortuneTaskStreak.textContent = tf('shop.task_streak', { count: count }, `🔥 已連續完成 ${count} 天`);
     fortuneTaskStreak.style.display = '';
   }
   function isTodayKey(dateKey){
@@ -331,7 +361,7 @@
     }, delay + 200);
   }
   function getRecommendedItems(code){
-    const name = map[code] || '';
+    const name = guardianName(code) || '';
     const items = Array.isArray(window.rawItems) ? window.rawItems : [];
     if (!name || !items.length) return [];
     return items.filter(p => p && String(p.deity||'').trim() === name);
@@ -340,18 +370,18 @@
     if (!recommendDialog || !recommendList) return;
     const g = readGuardian();
     if (!g){
-      if (recommendName) recommendName.textContent = '尚未完成測驗';
-      recommendList.innerHTML = '<div class="guardian-recommend-empty">請先完成守護神測驗後再查看推薦商品。</div>';
+      if (recommendName) recommendName.textContent = t('shop.quiz_not_completed','尚未完成測驗');
+      recommendList.innerHTML = '<div class="guardian-recommend-empty">'+ escapeHtml(t('shop.recommend_need_quiz','請先完成守護神測驗後再查看推薦商品。')) +'</div>';
       return;
     }
     const code = String(g.code||'').toUpperCase();
-    const name = map[code] || '守護神';
+    const name = guardianName(code);
     if (recommendName) recommendName.textContent = name;
     const ready = Array.isArray(window.rawItems) && window.rawItems.length;
     const items = getRecommendedItems(code);
     currentRecommendItems = items.slice(0, 6);
     if (!ready){
-      recommendList.innerHTML = '<div class="guardian-recommend-empty">推薦商品載入中…</div>';
+      recommendList.innerHTML = '<div class="guardian-recommend-empty">'+ escapeHtml(t('shop.recommend_loading','推薦商品載入中…')) +'</div>';
       if (recommendRetry < 8){
         recommendRetry += 1;
         setTimeout(renderRecommendDialog, 600);
@@ -359,13 +389,13 @@
       return;
     }
     if (!currentRecommendItems.length){
-      recommendList.innerHTML = '<div class="guardian-recommend-empty">暫無推薦商品</div>';
+      recommendList.innerHTML = '<div class="guardian-recommend-empty">'+ escapeHtml(t('shop.recommend_empty','暫無推薦商品')) +'</div>';
       return;
     }
     recommendList.innerHTML = currentRecommendItems.map((p, idx)=>(
       `<button type="button" class="guardian-recommend-item" data-recommend-item="${idx}">
-        <span>${escapeHtml(p.name || '未命名商品')}</span>
-        <em>查看</em>
+        <span>${escapeHtml(p.name || t('shop.item_unnamed','未命名商品'))}</span>
+        <em>${escapeHtml(t('shop.view_short','查看'))}</em>
       </button>`
     )).join('');
     recommendList.querySelectorAll('[data-recommend-item]').forEach(btn=>{
@@ -384,7 +414,7 @@
       : false;
     if (!loggedIn){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
-        window.authState.promptLogin('請先登入後再查看推薦商品。');
+        window.authState.promptLogin(t('shop.recommend_need_login','請先登入後再查看推薦商品。'));
       }
       return;
     }
@@ -410,7 +440,7 @@
   }
   function setFortuneError(message){
     if (fortuneError){
-      fortuneError.textContent = message || '暫時無法取得日籤，請稍後再試。';
+      fortuneError.textContent = message || t('shop.fortune_unavailable','暫時無法取得日籤，請稍後再試。');
       fortuneError.style.display = '';
     }
     if (fortuneLoading) fortuneLoading.style.display = 'none';
@@ -419,13 +449,13 @@
   function renderExplain(fortune){
     if (!fortuneExplain || !fortuneExplainToggle || !fortuneExplainBody) return;
     const phum = fortune && fortune.core ? fortune.core.phum : '';
-    const explain = phum ? TAKSA_EXPLAIN[phum] : null;
+    const explain = phum ? taksaExplain(phum) : null;
     if (!explain){
       fortuneExplain.style.display = 'none';
       return;
     }
     fortuneExplain.style.display = '';
-    fortuneExplainToggle.textContent = `📖 為什麼今天是 ${phum} 日？`;
+    fortuneExplainToggle.textContent = tf('shop.fortune_explain_toggle', { phum: phum }, `📖 為什麼今天是 ${phum} 日？`);
     if (fortuneExplainTitle) fortuneExplainTitle.textContent = explain.title;
     if (fortuneExplainDesc) fortuneExplainDesc.textContent = explain.description;
     if (fortuneExplainHow) fortuneExplainHow.textContent = explain.howToUse;
@@ -465,7 +495,7 @@
         const isHistory = dateKey && !isTodayKey(dateKey);
         fortuneTaskWrap.dataset.isHistory = isHistory ? '1' : '';
         fortuneTaskToggle.setAttribute('aria-pressed', done ? 'true' : 'false');
-        fortuneTaskToggle.textContent = done ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
+        fortuneTaskToggle.textContent = done ? t('shop.task_done_label','✅ 已完成（+1 功德）') : t('shop.task_mark_done_label','☐ 我完成了');
         renderStreak(dateKey, done);
         if (done) renderTaskFeedback(fortune, data);
         else if (fortuneTaskFeedback){
@@ -491,7 +521,9 @@
     if (fortuneRitualLabel){
       const gName = (meta && meta.guardianName) || (fortune.meta && fortune.meta.guardianName) || '';
       lastGuardianName = gName || lastGuardianName;
-      fortuneRitualLabel.textContent = gName ? `守護神 ${gName} 想對你說` : '守護神想對你說';
+      fortuneRitualLabel.textContent = gName
+        ? tf('shop.guardian_says', { name: gName }, `守護神 ${gName} 想對你說`)
+        : t('shop.guardian_says_default','守護神想對你說');
     }
     ensureShareButton();
     if (fortuneLoading) fortuneLoading.style.display = 'none';
@@ -501,7 +533,7 @@
   function renderTaskFeedback(fortune, data){
     if (!fortuneTaskFeedback) return;
     const phum = fortune && fortune.core ? fortune.core.phum : '';
-    const base = PHUM_FEEDBACK[phum];
+    const base = phumFeedback(phum);
     if (!base){
       fortuneTaskFeedback.style.display = 'none';
       fortuneTaskFeedback.innerHTML = '';
@@ -512,9 +544,9 @@
     const focus = signals && Array.isArray(signals.focus) ? signals.focus[0] : '';
     const job = signals && signals.job ? String(signals.job) : '';
     if (focus){
-      body = `${body} 尤其在「${focus}」上，先做可控的小步驟會更順。`;
+      body = body + ' ' + tf('shop.task_feedback_focus', { focus: focus }, `尤其在「${focus}」上，先做可控的小步驟會更順。`);
     }else if (job){
-      body = `${body} 對${job}來說，先完成可驗證的小步驟會更有效。`;
+      body = body + ' ' + tf('shop.task_feedback_job', { job: job }, `對${job}來說，先完成可驗證的小步驟會更有效。`);
     }
     fortuneTaskFeedback.textContent = '';
     const strong = document.createElement('strong');
@@ -531,15 +563,15 @@
       const res = await fetch('/api/fortune', { cache:'no-store', credentials:'include' });
       const data = await res.json().catch(()=>({}));
       if (!res.ok || !data || data.ok === false){
-        if (data && data.needQuiz) throw new Error('請先完成守護神測驗後再領取日籤。');
-        throw new Error((data && data.error) || '取得日籤失敗');
+        if (data && data.needQuiz) throw new Error(t('shop.fortune_need_quiz','請先完成守護神測驗後再領取日籤。'));
+        throw new Error((data && data.error) || t('shop.fortune_fetch_error','取得日籤失敗'));
       }
       const fortune = data.fortune || null;
       renderFortune(fortune, data && data.meta ? data.meta : null, data || null);
       if (fortune) markFortuneClaimed();
       writeFortuneCache(data || null);
     }catch(err){
-      setFortuneError(err && err.message ? err.message : '暫時無法取得日籤');
+      setFortuneError(err && err.message ? err.message : t('shop.fortune_fetch_failed','暫時無法取得日籤'));
     }
   }
   async function openFortuneDialog(){
@@ -549,7 +581,7 @@
     if (!loggedIn){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
         try{ sessionStorage.setItem(SHOP_FORTUNE_PENDING, '1'); }catch(_){}
-        window.authState.promptLogin('請先登入後再領取日籤。');
+        window.authState.promptLogin(t('shop.fortune_need_login','請先登入後再領取日籤。'));
       }
       return;
     }
@@ -559,7 +591,7 @@
       if (window.authState && typeof window.authState.syncPendingQuizToAccount === 'function'){
         const res = await window.authState.syncPendingQuizToAccount();
         if (res && res.ok === false){
-          alert('同步失敗，請回到結果頁重新嘗試或重新測驗。');
+          alert(t('shop.fortune_sync_failed','同步失敗，請回到結果頁重新嘗試或重新測驗。'));
           return;
         }
       }
@@ -688,7 +720,7 @@
     ctx.fillText('unalomecodes', pad + 140, 240);
     ctx.fillStyle = '#f8fafc';
     ctx.font = '800 42px system-ui, -apple-system, "Segoe UI", sans-serif';
-    ctx.fillText('今日專屬日籤', pad + 40, 320);
+    ctx.fillText(t('shop.fortune_title','今日專屬日籤'), pad + 40, 320);
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 24px system-ui, -apple-system, "Segoe UI", sans-serif';
     ctx.fillText(lastFortune.date || '', pad + 40, 360);
@@ -696,7 +728,7 @@
     if (lastGuardianName){
       ctx.fillStyle = '#cbd5f5';
       ctx.font = '600 24px system-ui, -apple-system, "Segoe UI", sans-serif';
-      ctx.fillText(`守護神：${lastGuardianName}`, pad + 40, 398);
+      ctx.fillText(tf('shop.guardian_prefix', { name: lastGuardianName }, `守護神：${lastGuardianName}`), pad + 40, 398);
     }
     const starLine = lastFortune.stars || '';
     if (starLine){
@@ -711,13 +743,15 @@
     let y = summaryEnd + 70;
     ctx.fillStyle = '#94a3b8';
     ctx.font = '600 22px system-ui, -apple-system, "Segoe UI", sans-serif';
-    ctx.fillText('生活小建議', pad + 40, y);
+    ctx.fillText(t('shop.fortune_advice_label','生活小建議'), pad + 40, y);
     y += 50;
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '500 28px system-ui, -apple-system, "Segoe UI", sans-serif';
     const adviceEnd = wrapText(ctx, lastFortune.advice || '', pad + 40, y, w - pad * 2 - 80, 40);
     y = adviceEnd + 70;
-    const label = lastGuardianName ? `守護神 ${lastGuardianName} 想對你說` : '守護神想對你說';
+    const label = lastGuardianName
+      ? tf('shop.guardian_says', { name: lastGuardianName }, `守護神 ${lastGuardianName} 想對你說`)
+      : t('shop.guardian_says_default','守護神想對你說');
     ctx.fillStyle = '#94a3b8';
     ctx.font = '600 22px system-ui, -apple-system, "Segoe UI", sans-serif';
     ctx.fillText(label, pad + 40, y);
@@ -733,15 +767,15 @@
     if (!lastFortune) return;
     if (fortuneShareBtn) {
       fortuneShareBtn.disabled = true;
-      fortuneShareBtn.textContent = '產生中…';
+      fortuneShareBtn.textContent = t('shop.share_generating','產生中…');
     }
     try{
       const blob = await buildFortuneShareImage();
-      if (!blob) throw new Error('圖片產生失敗');
+      if (!blob) throw new Error(t('shop.share_image_failed','圖片產生失敗'));
       const fileName = `fortune-${(lastFortune.date || '').replace(/\//g,'-') || 'today'}.png`;
       const file = new File([blob], fileName, { type:'image/png' });
       if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
-        await navigator.share({ title:'我的今日日籤', files:[file] });
+        await navigator.share({ title: t('shop.share_title','我的今日日籤'), files:[file] });
       }else{
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -753,11 +787,11 @@
         setTimeout(()=> URL.revokeObjectURL(url), 500);
       }
     }catch(err){
-      alert(err && err.message ? err.message : '分享失敗，請稍後再試。');
+      alert(err && err.message ? err.message : t('shop.share_failed','分享失敗，請稍後再試。'));
     }finally{
       if (fortuneShareBtn) {
         fortuneShareBtn.disabled = false;
-        fortuneShareBtn.textContent = '自動截圖分享';
+        fortuneShareBtn.textContent = t('shop.share_button','自動截圖分享');
       }
     }
   }
@@ -770,7 +804,7 @@
       fortuneShareBtn = document.createElement('button');
       fortuneShareBtn.type = 'button';
       fortuneShareBtn.className = 'fortune-share-btn';
-      fortuneShareBtn.textContent = '自動截圖分享';
+      fortuneShareBtn.textContent = t('shop.share_button','自動截圖分享');
       fortuneCard.appendChild(fortuneShareBtn);
       fortuneShareBtn.addEventListener('click', shareFortuneImage);
     }
@@ -821,7 +855,7 @@
       return;
     }
     const code = String(g.code||'').toUpperCase();
-    const name = map[code] || '守護神';
+    const name = guardianName(code);
     lastGuardianCode = code;
     lastGuardianName = name;
     badge.dataset.guardianCode = code;
@@ -833,7 +867,7 @@
     badge.setAttribute('aria-expanded', 'false');
     const menuHtml = window.GuardianMenu
       ? window.GuardianMenu.buildMenuHTML({ actionAttr:'data-guardian-action' })
-      : `<button type="button" data-guardian-action="fortune">領取日籤 <span class="guardian-menu-badge" data-guardian-menu-badge aria-hidden="true">1</span></button>`;
+      : `<button type="button" data-guardian-action="fortune">${escapeHtml(t('shop.menu_fortune','領取日籤'))} <span class="guardian-menu-badge" data-guardian-menu-badge aria-hidden="true">1</span></button>`;
     badge.textContent = '';
     const alert = document.createElement('span');
     alert.className = 'guardian-alert';
@@ -842,14 +876,14 @@
     alert.textContent = '1';
     const img = document.createElement('img');
     img.src = badgeIcon;
-    img.alt = '守護神';
+    img.alt = t('shop.guardian','守護神');
     const meta = document.createElement('div');
     meta.className = 'guardian-meta';
     const strong = document.createElement('strong');
-    strong.textContent = `守護神：${name}`;
+    strong.textContent = tf('shop.guardian_prefix', { name: name }, `守護神：${name}`);
     const sub = document.createElement('span');
     sub.className = 'guardian-sub';
-    sub.textContent = '點擊徽章開啟選單';
+    sub.textContent = t('shop.menu_open_hint','點擊徽章開啟選單');
     meta.append(strong, sub);
     const menu = document.createElement('div');
     menu.className = 'guardian-menu';
@@ -878,7 +912,7 @@
               : false;
             if (!loggedIn){
               if (window.authState && typeof window.authState.promptLogin === 'function'){
-                window.authState.promptLogin('請先登入後再查看近期日籤。');
+                window.authState.promptLogin(t('shop.history_need_login','請先登入後再查看近期日籤。'));
               }
               return;
             }
@@ -993,7 +1027,7 @@
       if (!dateKey || !task) return;
       const next = toggleTaskDone(dateKey, task);
       toggleBtn.setAttribute('aria-pressed', next ? 'true' : 'false');
-      toggleBtn.textContent = next ? '✅ 已完成（+1 功德）' : '☐ 我完成了';
+      toggleBtn.textContent = next ? t('shop.task_done_label','✅ 已完成（+1 功德）') : t('shop.task_mark_done_label','☐ 我完成了');
       if (next && wrap && wrap.dataset && wrap.dataset.isHistory !== '1'){
         updateStreakOnComplete(dateKey);
       }
@@ -1006,6 +1040,19 @@
       }
     });
   }
+
+  // When language changes, re-render the already-loaded fortune UI (without refetching).
+  window.addEventListener('uc_lang_change', function(){
+    try{
+      if (lastFortune){
+        var meta = (lastFortunePayload && lastFortunePayload.meta) ? lastFortunePayload.meta : null;
+        renderFortune(lastFortune, meta, lastFortunePayload);
+      }
+      if (fortuneShareBtn){
+        fortuneShareBtn.textContent = t('shop.share_button','自動截圖分享');
+      }
+    }catch(_){}
+  });
 
   window.addEventListener('fortune:open', (ev)=>{
     const payload = ev && ev.detail ? ev.detail : null;

@@ -2,6 +2,34 @@
   if (window.__cartCouponPatchedMulti__) return; 
   window.__cartCouponPatchedMulti__ = true;
 
+  function t(key, fallback){
+    try{
+      var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+      if (!fn) return fallback;
+      var v = fn(key);
+      if (!v || v === key) return fallback;
+      return v;
+    }catch(_){
+      return fallback;
+    }
+  }
+  function tf(key, vars, fallback){
+    var out = String(t(key, fallback) || '');
+    var obj = vars && typeof vars === 'object' ? vars : {};
+    try{
+      Object.keys(obj).forEach(function(k){
+        out = out.split('{' + k + '}').join(String(obj[k]));
+      });
+    }catch(_){}
+    return out;
+  }
+  function getLang(){
+    try{
+      if (window.UC_I18N && typeof window.UC_I18N.getLang === 'function') return window.UC_I18N.getLang();
+    }catch(_){}
+    return 'zh';
+  }
+
   // 初始化多券狀態：優先讀取 localStorage
   var __cartCouponsMem = [];
   var __cartCouponsMemSig = '';
@@ -462,7 +490,7 @@
 
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = '移除';
+      btn.textContent = t('shop.cart_remove','移除');
       btn.setAttribute('data-coupon-code', String(cpn.code||''));
       btn.style.fontSize = '12px';
       btn.style.padding = '4px 8px';
@@ -578,7 +606,10 @@
         if (shipVal){
           var labelFee = shippingFee;
           if (shipOff > 0){
-            shipVal.textContent = '+NT$ ' + formatPrice(labelFee) + '（已折抵 NT$ ' + formatPrice(shipOff) + '）';
+            shipVal.textContent = tf('checkout.shipping_discount_line', {
+              fee: 'NT$ ' + formatPrice(labelFee),
+              off: 'NT$ ' + formatPrice(shipOff)
+            }, '+NT$ ' + formatPrice(labelFee) + '（已折抵 NT$ ' + formatPrice(shipOff) + '）');
           }else{
             shipVal.textContent = '+' + tw(labelFee).replace(/^NT\$\s*/, 'NT$ ');
           }
@@ -605,11 +636,14 @@
         hint.style.display = '';
         var effectiveOff = off;
         if (off > 0){
-          hint.textContent = '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(effectiveOff).replace(/^NT\$\s*/, 'NT$ ');
+          hint.textContent = tf('checkout.coupons_applied', {
+            count: coupons.length,
+            amount: tw(effectiveOff).replace(/^NT\\$\\s*/, 'NT$ ')
+          }, '已套用 ' + coupons.length + ' 張優惠券，總折抵 ' + tw(effectiveOff).replace(/^NT\\$\\s*/, 'NT$ '));
           hint.style.color = '#059669';
           hint.setAttribute('data-state', 'ok');
         }else{
-          hint.textContent = '已輸入 ' + coupons.length + ' 張優惠券，目前尚未符合折扣條件';
+          hint.textContent = tf('checkout.coupons_entered_pending', { count: coupons.length }, '已輸入 ' + coupons.length + ' 張優惠券，目前尚未符合折扣條件');
           hint.style.color = '#d97706';
           hint.setAttribute('data-state', 'pending');
         }
@@ -733,7 +767,7 @@
 
       var items = readCart();
       if (!items.length){
-        alert('購物車內沒有商品，無法套用優惠券');
+        alert(t('checkout.cart_no_items_coupon','購物車內沒有商品，無法套用優惠券'));
         return;
       }
 
@@ -746,10 +780,10 @@
         var h1 = document.getElementById('cartCouponHint');
         if (h1){
           h1.style.display = '';
-          h1.textContent = '此優惠碼已套用，無需重複使用';
+          h1.textContent = t('checkout.coupon_already_applied','此優惠碼已套用，無需重複使用');
           h1.style.color = '#ef4444';
         }else{
-          alert('此優惠碼已套用，無需重複使用');
+          alert(t('checkout.coupon_already_applied','此優惠碼已套用，無需重複使用'));
         }
         return;
       }
@@ -764,14 +798,14 @@
         var msg;
         // 如果是在同一台裝置上重複輸入同一張券，或後端判定該券已使用過
         if (res && (res.reason === 'already_used' || res.reason === 'already_used_local')){
-          msg = '此優惠券已使用過，無法再次使用';
+          msg = t('checkout.coupon_used','此優惠券已使用過，無法再次使用');
         }else if (res && res.reason === 'not_started'){
-          msg = '此優惠券尚未生效，開始時間：' + (res.startAt ? new Date(res.startAt).toLocaleString('zh-TW') : '');
+          msg = tf('checkout.coupon_not_started', { date: (res.startAt ? new Date(res.startAt).toLocaleString(getLang()==='en'?'en-US':'zh-TW') : '') }, '此優惠券尚未生效，開始時間：{date}');
         }else if (res && res.reason === 'expired'){
-          msg = '此優惠券已過期';
+          msg = t('checkout.coupon_expired','此優惠券已過期');
         }else{
           // 其他情況（後端回傳無效、守護神不符等等）維持原本文案
-          msg = '優惠碼無效、已使用，或不適用此守護神商品';
+          msg = t('checkout.coupon_invalid','優惠碼無效、已使用，或不適用此守護神商品');
         }
         if (h2){
           h2.style.display = '';
@@ -825,7 +859,7 @@
       var okAssign = canAssignCoupon(items, existing, newCoupon);
       if (!okAssign){
         var h3 = document.getElementById('cartCouponHint');
-        var msg = '目前購物車內沒有可套用此優惠券的商品，或相關商品已使用其他優惠。';
+        var msg = t('checkout.coupon_no_applicable_items','目前購物車內沒有可套用此優惠券的商品，或相關商品已使用其他優惠。');
         if (h3){
           h3.style.display = '';
           h3.textContent = msg;
@@ -847,7 +881,7 @@
       var hint = document.getElementById('cartCouponHint');
       if (hint){
         hint.style.display = '';
-        hint.textContent = '已套用優惠碼 ' + newCoupon.code + '，目前共 ' + existing.length + ' 張優惠券生效';
+        hint.textContent = tf('checkout.coupon_applied_summary', { code: newCoupon.code, count: existing.length }, '已套用優惠碼 {code}，目前共 {count} 張優惠券生效');
         hint.style.color = '#059669';
         hint.style.background = 'transparent';
         hint.style.padding = '0';
@@ -877,28 +911,34 @@
         const res = await fetch('/api/me/coupons', { credentials:'include', cache:'no-store' });
         const data = await res.json().catch(()=>({}));
         if (!res.ok || !data || data.ok === false){
-          alert('讀取優惠券失敗，請先登入再試。');
+          alert(t('checkout.coupons_load_failed_login','讀取優惠券失敗，請先登入再試。'));
           return;
         }
         const items = Array.isArray(data.items) ? data.items.filter(c=>!c.used) : [];
         if (!items.length){
-          alert('沒有可用的已儲存優惠券');
+          alert(t('checkout.coupons_none_saved','沒有可用的已儲存優惠券'));
           return;
         }
 
         // 建立優惠券選擇 Dialog（卡片版）
         function openPicker(list){
           function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c)); }
-          const deityNames = {
-            FM:'四面神', GA:'象神', CD:'崇迪', KP:'坤平', HM:'哈魯曼',
-            RH:'拉胡', JL:'迦樓羅', ZD:'澤度金', ZF:'招財女神',
-            WE:'五眼四耳', XZ:'徐祝老人', HP:'魂魄勇'
-          };
+          const deityNames = (getLang() === 'en')
+            ? {
+                FM:'Brahma (Four-Faced)', GA:'Ganesha', CD:'Somdej', KP:'Khun Paen', HM:'Hanuman',
+                RH:'Rahu', JL:'Garuda', ZD:'Jatukam', ZF:'Lakshmi',
+                WE:'Five-Eyed Four-Eared', XZ:'Elder Xu Zhu', HP:'Hoon Payon'
+              }
+            : {
+                FM:'四面神', GA:'象神', CD:'崇迪', KP:'坤平', HM:'哈魯曼',
+                RH:'拉胡', JL:'迦樓羅', ZD:'澤度金', ZF:'招財女神',
+                WE:'五眼四耳', XZ:'徐祝老人', HP:'魂魄勇'
+              };
           function typeLabel(c){
-            const t = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
-            if (t === 'ALL') return '全館折扣券（全站適用）';
-            if (t === 'SHIP') return '免運券（運費折抵）';
-            return '神祇券';
+            const typ = (c.type || (c.deity ? 'DEITY':'ALL')).toUpperCase();
+            if (typ === 'ALL') return t('checkout.coupon_type_all','全館折扣券（全站適用）');
+            if (typ === 'SHIP') return t('checkout.coupon_type_ship','免運券（運費折抵）');
+            return t('checkout.coupon_type_deity','神祇券');
           }
           function deityLabel(c){
             const d = (c.deity||'').toUpperCase();
@@ -906,12 +946,12 @@
             return deityNames[d] ? `${deityNames[d]}（${d}）` : d;
           }
           function usageText(c){
-            const t = (c.type||'DEITY').toUpperCase();
+            const typ = (c.type||'DEITY').toUpperCase();
             const d = (c.deity||'').toUpperCase();
-            if (t === 'ALL') return '可用於全館任一商品（全館券與神祇券擇一）。';
-            if (t === 'SHIP') return '折抵運費，可搭配折扣券使用。';
-            if (d && deityNames[d]) return `可用於「${deityNames[d]}」系列商品。`;
-            return '可用於指定守護神商品。';
+            if (typ === 'ALL') return t('checkout.coupon_usage_all','可用於全館任一商品（全館券與神祇券擇一）。');
+            if (typ === 'SHIP') return t('checkout.coupon_usage_ship','折抵運費，可搭配折扣券使用。');
+            if (d && deityNames[d]) return tf('checkout.coupon_usage_deity_named', { name: deityNames[d] }, `可用於「${deityNames[d]}」系列商品。`);
+            return t('checkout.coupon_usage_deity','可用於指定守護神商品。');
           }
 
           const overlay = document.createElement('div');
@@ -922,8 +962,8 @@
 
           panel.innerHTML = `
             <div class="coupon-dialog-header">
-              <div class="coupon-dialog-title">選擇要套用的優惠券</div>
-              <button type="button" class="coupon-dialog-close" aria-label="關閉">×</button>
+              <div class="coupon-dialog-title">${esc(t('checkout.coupon_picker_title','選擇要套用的優惠券'))}</div>
+              <button type="button" class="coupon-dialog-close" aria-label="${esc(t('common.close','關閉'))}">×</button>
             </div>
             <div class="coupon-dialog-list"></div>
           `;
@@ -932,29 +972,29 @@
           listBox.innerHTML = list.map(c=>{
             const dLabel = deityLabel(c);
             const chips = [
-              `<span class="coupon-chip">類型：${esc(typeLabel(c))}</span>`
+              `<span class="coupon-chip">${esc(t('checkout.coupon_chip_type','類型：'))}${esc(typeLabel(c))}</span>`
             ];
             if (dLabel){
-              chips.push(`<span class="coupon-chip">守護神：${esc(dLabel)}</span>`);
+              chips.push(`<span class="coupon-chip">${esc(t('checkout.coupon_chip_guardian','守護神：'))}${esc(dLabel)}</span>`);
             }else if ((c.deity||'').toUpperCase()==='ALL'){
-              chips.push(`<span class="coupon-chip">適用範圍：全館</span>`);
+              chips.push(`<span class="coupon-chip">${esc(t('checkout.coupon_chip_scope','適用範圍：'))}${esc(t('checkout.coupon_scope_all','全館'))}</span>`);
             }else if ((c.deity||'').toUpperCase()==='SHIP'){
-              chips.push(`<span class="coupon-chip">適用範圍：運費</span>`);
+              chips.push(`<span class="coupon-chip">${esc(t('checkout.coupon_chip_scope','適用範圍：'))}${esc(t('checkout.coupon_scope_shipping','運費'))}</span>`);
             }
-            chips.push(`<span class="coupon-chip ok">未使用</span>`);
+            chips.push(`<span class="coupon-chip ok">${esc(t('checkout.coupon_unused','未使用'))}</span>`);
             return `
               <div class="coupon-card">
                 <div>
                   <div class="coupon-code">${esc(c.code||'')}</div>
-                  <div class="coupon-meta">折抵：NT$ ${Number(c.amount||0)}｜${esc(typeLabel(c))}</div>
-                  <div class="coupon-meta">發放：${c.issuedAt ? new Date(c.issuedAt).toLocaleString('zh-TW') : '—'}</div>
+                  <div class="coupon-meta">${esc(t('checkout.coupon_amount_prefix','折抵：'))}NT$ ${Number(c.amount||0)}｜${esc(typeLabel(c))}</div>
+                  <div class="coupon-meta">${esc(t('checkout.coupon_issued_prefix','發放：'))}${c.issuedAt ? new Date(c.issuedAt).toLocaleString(getLang()==='en'?'en-US':'zh-TW') : esc(t('common.dash','—'))}</div>
                   <div class="coupon-meta">${esc(usageText(c))}</div>
-                  ${c.startAt ? `<div class="coupon-meta">生效：${new Date(c.startAt).toLocaleString('zh-TW')}</div>` : ''}
-                  ${c.expireAt ? `<div class="coupon-meta">到期：${new Date(c.expireAt).toLocaleString('zh-TW')}</div>` : ''}
+                  ${c.startAt ? `<div class="coupon-meta">${esc(t('checkout.coupon_start_prefix','生效：'))}${new Date(c.startAt).toLocaleString(getLang()==='en'?'en-US':'zh-TW')}</div>` : ''}
+                  ${c.expireAt ? `<div class="coupon-meta">${esc(t('checkout.coupon_expire_prefix','到期：'))}${new Date(c.expireAt).toLocaleString(getLang()==='en'?'en-US':'zh-TW')}</div>` : ''}
                   <div class="coupon-chips">${chips.join('')}</div>
                 </div>
                 <div class="coupon-actions">
-                  <button type="button" class="btn primary" data-coupon-code="${esc(c.code||'')}">套用</button>
+                  <button type="button" class="btn primary" data-coupon-code="${esc(c.code||'')}">${esc(t('checkout.apply','套用'))}</button>
                 </div>
               </div>
             `;
@@ -984,7 +1024,7 @@
 
         openPicker(items);
       }catch(err){
-        alert('無法載入優惠券，請稍後再試');
+        alert(t('checkout.coupons_load_failed','無法載入優惠券，請稍後再試'));
       }
     });
   })();

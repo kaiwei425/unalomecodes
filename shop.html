@@ -212,48 +212,48 @@
 </dialog>
 
 <dialog id="profileDialog" class="policy-dialog">
-  <header>基本資料</header>
+  <header data-i18n="shop.profile_title">基本資料</header>
   <div class="body">
-    <label>姓名</label>
+    <label data-i18n="shop.name">姓名</label>
     <input id="profileName" type="text">
-    <label>Email</label>
+    <label data-i18n="shop.email">Email</label>
     <input id="profileEmail" type="email">
-    <label>手機號碼</label>
-    <input id="profilePhone" type="tel" placeholder="請輸入手機號碼">
-    <p class="muted" style="font-size:12px;margin-top:8px;">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
+    <label data-i18n="shop.phone">手機號碼</label>
+    <input id="profilePhone" type="tel" placeholder="請輸入手機號碼" data-i18n-attr="placeholder:shop.phone_placeholder">
+    <p class="muted" style="font-size:12px;margin-top:8px;" data-i18n="shop.profile_note">儲存後，實體商品與服務商品結帳會自動帶入這三項資料。</p>
     <div id="profileStatus" style="color:#ef4444;font-size:13px;min-height:18px;"></div>
   </div>
   <footer>
-    <button type="button" class="btn" id="profileClose">取消</button>
-    <button type="button" class="btn primary" id="profileSave">儲存</button>
+    <button type="button" class="btn" id="profileClose" data-i18n="common.cancel">取消</button>
+    <button type="button" class="btn primary" id="profileSave" data-i18n="common.save">儲存</button>
   </footer>
 </dialog>
 
 <dialog id="esimDialog" class="policy-dialog">
-  <header>eSIM 商品卡設定</header>
+  <header data-i18n="shop.esim_settings_title">eSIM 商品卡設定</header>
   <div class="body">
-    <label>商品名稱</label>
-    <input id="esimName" type="text" placeholder="泰國 eSIM 上網卡">
-    <label>價格顯示文字</label>
-    <input id="esimPriceText" type="text" placeholder="依方案計價">
-    <label>徽章（逗號分隔）</label>
-    <input id="esimBadges" type="text" placeholder="合作商品">
-    <label>導購連結 URL</label>
+    <label data-i18n="shop.esim_name_label">商品名稱</label>
+    <input id="esimName" type="text" placeholder="泰國 eSIM 上網卡" data-i18n-attr="placeholder:shop.esim_name_placeholder">
+    <label data-i18n="shop.esim_price_label">價格顯示文字</label>
+    <input id="esimPriceText" type="text" placeholder="依方案計價" data-i18n-attr="placeholder:shop.esim_price_placeholder">
+    <label data-i18n="shop.esim_badges_label">徽章（逗號分隔）</label>
+    <input id="esimBadges" type="text" placeholder="合作商品" data-i18n-attr="placeholder:shop.esim_badges_placeholder">
+    <label data-i18n="shop.esim_url_label">導購連結 URL</label>
     <input id="esimUrl" type="url" placeholder="https://...">
-    <label>封面圖</label>
+    <label data-i18n="shop.cover_image">封面圖</label>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <button type="button" class="btn" id="esimUploadBtn">上傳封面圖</button>
+      <button type="button" class="btn" id="esimUploadBtn" data-i18n="shop.upload_cover">上傳封面圖</button>
       <input id="esimImageFile" type="file" accept="image/*" style="display:none">
-      <input id="esimImageUrl" type="text" readonly placeholder="上傳後會自動填入網址" style="flex:1;min-width:220px;">
+      <input id="esimImageUrl" type="text" readonly placeholder="上傳後會自動填入網址" style="flex:1;min-width:220px;" data-i18n-attr="placeholder:shop.upload_fills_url">
     </div>
     <div style="margin-top:10px;">
-      <img id="esimImagePreview" alt="eSIM 封面預覽" style="width:100%;max-width:420px;border-radius:12px;border:1px solid #e5e7eb;display:none">
+      <img id="esimImagePreview" alt="eSIM 封面預覽" style="width:100%;max-width:420px;border-radius:12px;border:1px solid #e5e7eb;display:none" data-i18n-attr="alt:shop.esim_cover_alt">
     </div>
     <div id="esimStatus" style="color:#ef4444;font-size:13px;min-height:18px;margin-top:8px;"></div>
   </div>
   <footer>
-    <button type="button" class="btn" id="esimClose">取消</button>
-    <button type="button" class="btn primary" id="esimSave">儲存</button>
+    <button type="button" class="btn" id="esimClose" data-i18n="common.cancel">取消</button>
+    <button type="button" class="btn primary" id="esimSave" data-i18n="common.save">儲存</button>
   </footer>
 </dialog>
 
@@ -261,13 +261,13 @@
   <div class="fortune-shell">
     <div class="fortune-head">
       <div>
-        <div class="fortune-title">今日專屬日籤</div>
+        <div class="fortune-title" data-i18n="shop.fortune_title">今日專屬日籤</div>
         <div class="fortune-date" id="fortuneDate">—</div>
       </div>
       <button type="button" class="fortune-close" id="fortuneClose">✕</button>
     </div>
     <div class="fortune-body">
-      <div id="fortuneLoading" class="fortune-loading">正在翻牌中…</div>
+      <div id="fortuneLoading" class="fortune-loading" data-i18n="shop.fortune_loading">正在翻牌中…</div>
       <div id="fortuneError" class="fortune-error" style="display:none;"></div>
       <div id="fortuneCard" class="fortune-card" style="display:none;">
         <div class="fortune-stars" id="fortuneStars"></div>
@@ -281,12 +281,12 @@
           </div>
         </div>
         <div class="fortune-section">
-          <div class="fortune-label">生活小建議</div>
+          <div class="fortune-label" data-i18n="shop.fortune_advice_label">生活小建議</div>
           <div class="fortune-text" id="fortuneAdvice"></div>
         </div>
         <div class="fortune-yam" id="fortuneYam" data-yam-container></div>
         <div class="fortune-section fortune-task" id="fortuneTaskWrapShop" style="display:none;">
-          <div class="fortune-label">今日任務</div>
+          <div class="fortune-label" data-i18n="shop.fortune_task_label">今日任務</div>
           <div class="fortune-text" id="fortuneTaskTextShop"></div>
           <div class="fortune-task-streak" id="fortuneTaskStreakShop" style="display:none;"></div>
           <div class="fortune-task-feedback" id="fortuneTaskFeedbackShop" style="display:none;"></div>
@@ -306,21 +306,21 @@
   <div class="guardian-recommend-shell">
     <div class="guardian-recommend-head">
       <div>
-        <div class="guardian-recommend-title">守護神推薦商品</div>
+        <div class="guardian-recommend-title" data-i18n="shop.recommend_title">守護神推薦商品</div>
         <div class="guardian-recommend-sub" id="guardianRecommendName">—</div>
       </div>
       <button type="button" class="guardian-recommend-close" id="guardianRecommendClose">✕</button>
     </div>
     <div class="guardian-recommend-list" id="guardianRecommendList">
-      <div class="guardian-recommend-empty">推薦商品載入中…</div>
+      <div class="guardian-recommend-empty" data-i18n="shop.recommend_loading">推薦商品載入中…</div>
     </div>
   </div>
 </dialog>
 <dialog id="fortuneHistoryDialog" class="fortune-history-dialog">
   <div class="fortune-history-card">
     <div class="fortune-history-head">
-      <div class="fortune-history-title">近期日籤（近七天）</div>
-      <button type="button" class="fortune-history-close" data-guardian-history-close aria-label="關閉">✕</button>
+      <div class="fortune-history-title" data-i18n="shop.fortune_history_title">近期日籤（近七天）</div>
+      <button type="button" class="fortune-history-close" data-guardian-history-close aria-label="關閉" data-i18n-attr="aria-label:common.close">✕</button>
     </div>
     <div class="fortune-history-error" id="fortuneHistoryError" style="display:none;"></div>
     <div class="fortune-history-list" id="fortuneHistoryList"></div>
@@ -354,15 +354,15 @@
 
       <div class="row" style="margin-top:10px">
         <div class="field">
-          <label>規格</label>
+          <label data-i18n="shop.cart_spec">規格</label>
           <select id="dlgVariant"></select>
         </div>
         <div class="field">
-          <label>庫存</label>
+          <label data-i18n="shop.stock_label">庫存</label>
           <div id="dlgStock" class="dlgStockVal" style="display:none;">—</div>
         </div>
         <div class="field">
-          <label>數量</label>
+          <label data-i18n="shop.cart_qty">數量</label>
           <input id="dlgQty" type="number" value="1" min="1">
         </div>
       </div>
@@ -372,27 +372,27 @@
       </div>
 
       <div class="cta" style="margin-top:10px;flex-wrap:wrap">
-        <button class="btn primary" id="btnAddCart">加入購物車</button>
+        <button class="btn primary" id="btnAddCart" data-i18n="shop.add_to_cart">加入購物車</button>
       </div>
 
       <!-- 顧客評價 / 真實故事 -->
       <div class="reviews">
-        <div style="font-weight:800;margin-bottom:6px">顧客評價／真實故事</div>
+        <div style="font-weight:800;margin-bottom:6px" data-i18n="shop.reviews_title">顧客評價／真實故事</div>
         <div id="rvList"></div>
         <div style="margin-top:12px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
           <div style="display:grid; gap:12px; margin-bottom:12px;">
             <div style="display:grid; gap:6px;">
-              <label for="rvNick" style="font-size:12px;color:#6b7280">您的名字 (或暱稱)</label>
-              <input id="rvNick" type="text" placeholder="例：林小姐" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+              <label for="rvNick" style="font-size:12px;color:#6b7280" data-i18n="shop.review_name_label">您的名字 (或暱稱)</label>
+              <input id="rvNick" type="text" placeholder="例：林小姐" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;" data-i18n-attr="placeholder:shop.review_name_placeholder">
             </div>
             <div style="display:grid; gap:6px;">
-              <label for="rvFile" style="font-size:12px;color:#6b7280">上傳圖片 (選填)</label>
+              <label for="rvFile" style="font-size:12px;color:#6b7280" data-i18n="shop.review_image_label">上傳圖片 (選填)</label>
               <input id="rvFile" type="file" accept="image/*" style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
             </div>
           </div>
-          <textarea id="rvText" placeholder="分享您的真實體驗、感應或故事..."></textarea>
+          <textarea id="rvText" placeholder="分享您的真實體驗、感應或故事..." data-i18n-attr="placeholder:shop.review_text_placeholder"></textarea>
           <div class="cta" style="margin-top:8px">
-            <button class="btn primary" id="rvSubmit">送出分享</button>
+            <button class="btn primary" id="rvSubmit" data-i18n="shop.review_submit">送出分享</button>
           </div>
         </div>
       </div>
@@ -403,16 +403,16 @@
   <!-- 信用卡付款 Dialog -->
   <dialog id="dlgCC" style="border:none;border-radius:16px;padding:0;max-width:520px;width:96%;">
     <div style="padding:18px 18px 6px;">
-      <div style="font-weight:800;font-size:18px;">信用卡付款</div>
-      <div style="color:#6b7280;font-size:14px;margin-top:4px">填寫收件聯絡資訊後，將導向綠界安全頁面完成刷卡。</div>
+      <div style="font-weight:800;font-size:18px;" data-i18n="checkout.badge_credit">信用卡付款</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px" data-i18n="shop.cc_desc">填寫收件聯絡資訊後，將導向綠界安全頁面完成刷卡。</div>
     </div>
     <form id="ccForm" style="padding:0 18px 16px;display:grid;gap:12px;">
       <div id="ccOrderInfo" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:grid;gap:10px;">
-        <div style="font-size:14px;color:#6b7280;">確認商品資訊</div>
+        <div style="font-size:14px;color:#6b7280;" data-i18n="shop.confirm_items">確認商品資訊</div>
         <div id="ccOrderItems" style="display:grid;gap:10px;"></div>
       </div>
       <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:14px;color:#6b7280;">應付金額</div>
+        <div style="font-size:14px;color:#6b7280;" data-i18n="shop.amount_due">應付金額</div>
         <div id="ccAmount" style="font-size:18px;font-weight:800;color:#111827;">NT$ 0</div>
       </div>
       <div id="ccShippingNote" style="display:none;font-size:12px;color:#6b7280;line-height:1.6;">
@@ -421,31 +421,31 @@
       <div id="ccShipDiscount" style="display:none;font-size:12px;color:#2563eb;line-height:1.6;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px"></div>
       <div id="ccCouponHint" style="display:none;font-size:12px;color:#16a34a;line-height:1.6;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px"></div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">收件人姓名</label>
-        <input name="name" id="ccName" type="text" placeholder="請輸入收件人姓名" required>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.recipient_name">收件人姓名</label>
+        <input name="name" id="ccName" type="text" placeholder="請輸入收件人姓名" required data-i18n-attr="placeholder:shop.recipient_name_ph">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">手機號碼</label>
-        <input name="phone" id="ccPhone" type="tel" placeholder="例：0969123456" pattern="^(\\+?886[-\\s]?9\\d{8}|09\\d{8}|9\\d{8})$" inputmode="tel" required>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.phone">手機號碼</label>
+        <input name="phone" id="ccPhone" type="tel" placeholder="例：0969123456" pattern="^(\\+?886[-\\s]?9\\d{8}|09\\d{8}|9\\d{8})$" inputmode="tel" required data-i18n-attr="placeholder:shop.phone_example">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">電子郵件（收據）</label>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.cc_email_receipt">電子郵件（收據）</label>
         <input name="email" id="ccEmail" type="email" placeholder="name@example.com" inputmode="email" autocomplete="email">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">收件 7-11 門市（蠟燭類商品不用填寫此欄位）</label>
-        <input name="store" id="ccStore" type="text" placeholder="請先於上一步選擇門市" readonly required>
-        <button type="button" id="ccBackStore" class="btn store-edit-btn">修改門市</button>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.pickup_store_note">收件 7-11 門市（蠟燭類商品不用填寫此欄位）</label>
+        <input name="store" id="ccStore" type="text" placeholder="請先於上一步選擇門市" readonly required data-i18n-attr="placeholder:shop.pickup_store_ph">
+        <button type="button" id="ccBackStore" class="btn store-edit-btn" data-i18n="shop.edit_store">修改門市</button>
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">備註（可選）</label>
-        <textarea name="note" id="ccNote" placeholder="想補充的資料（如：商品規格、地址、祈福資訊）"></textarea>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.note_optional">備註（可選）</label>
+        <textarea name="note" id="ccNote" placeholder="想補充的資料（如：商品規格、地址、祈福資訊）" data-i18n-attr="placeholder:shop.note_placeholder"></textarea>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-        <button type="button" id="ccCancel" class="btn">取消</button>
-        <button type="submit" id="ccSubmit" class="btn primary">前往刷卡</button>
+        <button type="button" id="ccCancel" class="btn" data-i18n="common.cancel">取消</button>
+        <button type="submit" id="ccSubmit" class="btn primary" data-i18n="shop.cc_submit">前往刷卡</button>
       </div>
-      <div style="font-size:12px;color:#6b7280;line-height:1.6">提交後會跳轉至綠界安全刷卡頁面，刷卡成功會自動返回「付款結果」頁。</div>
+      <div style="font-size:12px;color:#6b7280;line-height:1.6" data-i18n="shop.cc_note">提交後會跳轉至綠界安全刷卡頁面，刷卡成功會自動返回「付款結果」頁。</div>
     </form>
   </dialog>
 
@@ -453,47 +453,47 @@
   <dialog id="dlgCart">
     <div class="cartWrap">
       <div class="cartHead">
-        <div>購物車</div>
-        <button id="cartClose" class="btn link">關閉</button>
+        <div data-i18n="shop.cart">購物車</div>
+        <button id="cartClose" class="btn link" data-i18n="common.close">關閉</button>
       </div>
       <div id="cartList" class="cartList"></div>
       <div class="cartSum">
-        <div>小計</div>
+        <div data-i18n="checkout.subtotal">小計</div>
         <div id="cartTotal">NT$ 0</div>
       </div>
       <!-- Coupon input widget -->
           <div class="cartCoupon" style="display:grid;gap:8px;margin:8px 0 0">
-            <label for="cartCouponInput" style="font-size:12px;color:#6b7280">優惠碼</label>
+            <label for="cartCouponInput" style="font-size:12px;color:#6b7280" data-i18n="checkout.coupon_code">優惠碼</label>
             <div style="display:flex;gap:8px;align-items:center">
               <input id="cartCouponInput" type="text" inputmode="latin" placeholder="請輸入優惠碼"
-                     style="flex:1 1 auto;padding:10px;border:1px solid #e5e7eb;border-radius:10px">
-              <button id="cartApply" class="btn" style="flex:0 0 auto">套用</button>
-              <button id="cartSelectSaved" class="btn" style="flex:0 0 auto;background:#eef2ff;color:#1d4ed8;">我的優惠券</button>
+                     style="flex:1 1 auto;padding:10px;border:1px solid #e5e7eb;border-radius:10px" data-i18n-attr="placeholder:checkout.coupon_placeholder">
+              <button id="cartApply" class="btn" style="flex:0 0 auto" data-i18n="checkout.apply">套用</button>
+              <button id="cartSelectSaved" class="btn" style="flex:0 0 auto;background:#eef2ff;color:#1d4ed8;" data-i18n="shop.my_coupons">我的優惠券</button>
             </div>
             <div id="cartCouponHint" style="display:none;font-size:12px;color:#6b7280;line-height:1.6"></div>
           </div>
 
       <!-- Discount row (hidden until a valid coupon is applied) -->
       <div class="cartSum cartDiscount" style="display:none;margin-top:6px">
-        <div>折扣</div>
+        <div data-i18n="checkout.discount">折扣</div>
         <div id="cartOff">-NT$ 0</div>
       </div>
 
       <!-- Shipping row -->
       <div class="cartSum cartShip" style="display:none;margin-top:6px">
-        <div>運費</div>
+        <div data-i18n="checkout.shipping_fee">運費</div>
         <div id="cartShipping">+NT$ 0</div>
       </div>
 
       <!-- Grand total -->
       <div class="cartSum">
-        <div style="font-weight:800">應付金額</div>
+        <div style="font-weight:800" data-i18n="shop.amount_due">應付金額</div>
         <div id="cartGrandTotal" style="font-weight:800">NT$ 0</div>
       </div>
       <div class="cartActions">
-        <button id="cartClear" class="btn">清空購物車</button>
-        <a id="cartPayCC" class="btn pay-cc" target="_blank" rel="noopener" style="text-decoration:none;">信用卡付款</a>
-        <a id="cartGo711" class="btn pay-711" target="_blank" rel="noopener">貨到付款</a>
+        <button id="cartClear" class="btn" data-i18n="shop.cart_clear">清空購物車</button>
+        <a id="cartPayCC" class="btn pay-cc" target="_blank" rel="noopener" style="text-decoration:none;" data-i18n="checkout.badge_credit">信用卡付款</a>
+        <a id="cartGo711" class="btn pay-711" target="_blank" rel="noopener" data-i18n="checkout.badge_cod">貨到付款</a>
       </div>
     </div>
   </dialog>
@@ -501,36 +501,36 @@
   <!-- 訂單完成提示 Dialog -->
   <dialog id="dlgOrderSuccess" class="order-success-dialog" style="border:none;border-radius:20px;padding:0;max-width:540px;width:95%;">
     <div class="order-success-card">
-      <button type="button" class="os-close" id="successClose" aria-label="關閉">×</button>
+      <button type="button" class="os-close" id="successClose" aria-label="關閉" data-i18n-attr="aria-label:common.close">×</button>
       <div class="os-icon">✨</div>
-      <div class="os-title" id="successTitle">訂單建立成功</div>
-      <div class="os-desc" id="successDesc">感謝您的訂購，核對無誤後將儘速安排出貨。</div>
+      <div class="os-title" id="successTitle" data-i18n="checkout.success_title">訂單建立成功</div>
+      <div class="os-desc" id="successDesc" data-i18n="checkout.success_desc">感謝您的訂購，核對無誤後將儘速安排出貨。</div>
       <div class="os-order-line">
         <div>
-          <div class="os-label">訂單編號</div>
+          <div class="os-label" data-i18n="checkout.order_id">訂單編號</div>
           <div class="os-order-id" id="successOrderId">—</div>
         </div>
-        <button type="button" class="os-copy" id="successCopyId">複製</button>
+        <button type="button" class="os-copy" id="successCopyId" data-i18n="common.copy">複製</button>
       </div>
       <div class="os-items" id="successItems">
-        <div class="os-item muted">商品資訊載入中…</div>
+        <div class="os-item muted" data-i18n="common.loading">商品資訊載入中…</div>
       </div>
       <div class="os-meta" id="successMeta" style="display:none"></div>
       <div class="os-amount">
         <div>
-          <div class="os-label">應付金額</div>
+          <div class="os-label" data-i18n="shop.amount_due">應付金額</div>
           <div class="os-amount-value" id="successAmount">NT$ 0</div>
         </div>
         <div class="os-chip" id="successBadge">訂單資訊</div>
       </div>
-      <div class="os-note" id="successHint">
+      <div class="os-note" id="successHint" data-i18n="checkout.success_note">
         已寄出 Email 通知，日後可在左側「查詢訂單狀態」輸入資料查看處理進度。
       </div>
       <div class="os-actions">
-        <button type="button" class="btn ghost" id="successLookup">查看訂單狀態</button>
+        <button type="button" class="btn ghost" id="successLookup" data-i18n="checkout.lookup_status">查看訂單狀態</button>
         <div style="flex:1"></div>
-        <button type="button" class="btn" id="successDone">知道了</button>
-        <button type="button" class="btn primary" id="successContinue" style="display:none">前往下一步</button>
+        <button type="button" class="btn" id="successDone" data-i18n="common.ok">知道了</button>
+        <button type="button" class="btn primary" id="successContinue" style="display:none" data-i18n="checkout.next_step">前往下一步</button>
       </div>
     </div>
   </dialog>
@@ -547,49 +547,49 @@
   <!-- 轉帳匯款 Dialog -->
   <dialog id="dlgBank" style="border:none;border-radius:16px;padding:0;max-width:680px;width:96%;">
   <div style="padding:18px 18px 10px;">
-    <div style="font-weight:800;font-size:18px;">收件人資料</div>
-    <div style="color:#6b7280;font-size:14px;margin-top:4px">請填寫收件人資料後送出訂單。</div>
+    <div style="font-weight:800;font-size:18px;" data-i18n="shop.recipient_info_title">收件人資料</div>
+    <div style="color:#6b7280;font-size:14px;margin-top:4px" data-i18n="shop.bank_desc">請填寫收件人資料後送出訂單。</div>
   </div>
   <div style="padding:0 18px 16px;display:grid;gap:10px;">
 
     <form id="bankForm" enctype="multipart/form-data" style="display:grid;gap:10px">
-      <div id="bfCouponBackHint" style="font-size:12px;color:#6b7280;line-height:1.6;margin-top:4px">
+      <div id="bfCouponBackHint" style="font-size:12px;color:#6b7280;line-height:1.6;margin-top:4px" data-i18n="shop.coupon_back_hint">
         若欲使用優惠券，請返回上一頁輸入優惠券並套用。
       </div>
       <div id="memberPerkHint" style="display:none;font-size:12px;color:#16a34a;line-height:1.6;"></div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">收件人姓名</label>
-        <input id="bfName" name="name" required type="text" placeholder="請輸入收件人姓名">
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.recipient_name">收件人姓名</label>
+        <input id="bfName" name="name" required type="text" placeholder="請輸入收件人姓名" data-i18n-attr="placeholder:shop.recipient_name_ph">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">手機號碼</label>
-        <input id="bfContact" name="phone" type="tel" placeholder="例：0969123456" pattern="^09\d{8}$" inputmode="tel" title="請輸入有效手機號碼" required>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.phone">手機號碼</label>
+        <input id="bfContact" name="phone" type="tel" placeholder="例：0969123456" pattern="^09\d{8}$" inputmode="tel" title="請輸入有效手機號碼" required data-i18n-attr="placeholder:shop.phone_example;title:shop.phone_title">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">電子郵件</label>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.email">電子郵件</label>
         <input id="bfEmail" name="email" type="email" placeholder="name@example.com" inputmode="email" autocomplete="email">
       </div>
       <div class="bank-field" style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">收件 7-11 門市（蠟燭類商品不用填寫此欄位）</label>
-        <input id="bfStore" name="store" type="text" placeholder="尚未選擇門市" readonly>
-        <div style="margin-top:4px;font-size:12px;color:#555">若需修改門市，請返回上一步</div>
-        <button type="button" id="bfBackToStoreBtn" class="btn store-edit-btn" style="margin-top:4px;">修改門市</button>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.pickup_store_note">收件 7-11 門市（蠟燭類商品不用填寫此欄位）</label>
+        <input id="bfStore" name="store" type="text" placeholder="尚未選擇門市" readonly data-i18n-attr="placeholder:shop.store_not_selected">
+        <div style="margin-top:4px;font-size:12px;color:#555" data-i18n="shop.store_edit_back">若需修改門市，請返回上一步</div>
+        <button type="button" id="bfBackToStoreBtn" class="btn store-edit-btn" style="margin-top:4px;" data-i18n="shop.edit_store">修改門市</button>
       </div>
       <div class="bank-field" style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">應付金額（NT$）</label>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.amount_due_ntd">應付金額（NT$）</label>
         <input id="bfAmount" name="amount" type="number" min="1" required>
-        <div id="bfAmtHint" style="font-size:12px;color:#6b7280">系統自動帶入金額，無需修改</div>
+        <div id="bfAmtHint" style="font-size:12px;color:#6b7280" data-i18n="shop.amount_auto">系統自動帶入金額，無需修改</div>
       </div>
       <div class="bank-field" style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">備註（可選）</label>
-        <textarea id="bfNote" name="note" placeholder="想補充的資料（如：訂購人姓名、地址、商品規格）"></textarea>
+        <label style="font-size:12px;color:#6b7280" data-i18n="shop.note_optional">備註（可選）</label>
+        <textarea id="bfNote" name="note" placeholder="想補充的資料（如：訂購人姓名、地址、商品規格）" data-i18n-attr="placeholder:shop.bank_note_placeholder"></textarea>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-        <button type="button" id="bfCancel" class="btn">取消</button>
-        <button type="submit" id="bfSubmit" class="btn primary">送出訂單</button>
+        <button type="button" id="bfCancel" class="btn" data-i18n="common.cancel">取消</button>
+        <button type="submit" id="bfSubmit" class="btn primary" data-i18n="shop.submit_order">送出訂單</button>
       </div>
     </form>
-    <div id="bfHint" style="font-size:12px;color:#6b7280;line-height:1.6">
+    <div id="bfHint" style="font-size:12px;color:#6b7280;line-height:1.6" data-i18n="shop.bank_submit_hint">
       送出後請等待5至10秒才會跳出送出成功，請勿重複點「送出訂單」按鈕。另外送出後可至左邊連結查詢訂單狀態，確認訂單是否成功建立。
     </div>
   </div>
@@ -621,8 +621,8 @@
   <!-- 統一訂單確認 Dialog（購物車 & 直接結帳共用） -->
   <dialog id="dlgOrderConfirm" style="border:none;border-radius:16px;padding:0;max-width:960px;width:96%;max-height:90vh;overflow:auto;">
     <div style="padding:18px 18px 10px;">
-      <div style="font-weight:800;font-size:18px;">確認訂單內容</div>
-      <div style="color:#6b7280;font-size:14px;margin-top:4px">
+      <div style="font-weight:800;font-size:18px;" data-i18n="checkout.confirm_title">確認訂單內容</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px" data-i18n="checkout.confirm_desc">
         請先確認商品、數量與優惠折扣是否正確，再按下一步填寫付款 / 收件資訊。
       </div>
     </div>
@@ -631,15 +631,15 @@
 
     <div id="orderCouponArea" style="padding:0 18px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;">
       <div style="display:grid;gap:6px">
-        <label for="orderCouponInput" style="font-size:12px;color:#6b7280;">優惠碼</label>
-        <input id="orderCouponInput" type="text" placeholder="請輸入優惠碼"
+        <label for="orderCouponInput" style="font-size:12px;color:#6b7280;" data-i18n="checkout.coupon_code">優惠碼</label>
+        <input id="orderCouponInput" type="text" placeholder="請輸入優惠碼" data-i18n-attr="placeholder:checkout.coupon_placeholder"
                style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;">
         <div id="orderCouponHint" style="font-size:12px;color:#6b7280;line-height:1.6;"></div>
       </div>
       <div style="align-self:flex-end">
         <button type="button" id="orderCouponApply"
                 style="padding:10px 16px;border-radius:10px;border:1px solid #16a34a;background:#16a34a;color:#fff;font-weight:600;cursor:pointer;">
-          套用
+          <span data-i18n="checkout.apply">套用</span>
         </button>
       </div>
     </div>
@@ -648,19 +648,19 @@
       <div style="display:flex;justify-content:flex-end;font-size:14px;margin-top:6px;">
         <div style="min-width:220px;display:grid;row-gap:4px;">
           <div style="display:flex;justify-content:space-between;">
-            <span>小計</span>
+            <span data-i18n="checkout.subtotal">小計</span>
             <span id="orderSubtotalText">NT$ 0</span>
           </div>
           <div style="display:flex;justify-content:space-between;">
-            <span>折扣</span>
+            <span data-i18n="checkout.discount">折扣</span>
             <span id="orderDiscountText">-NT$ 0</span>
           </div>
           <div id="orderShippingRow" style="display:none;justify-content:space-between;">
-            <span>運費</span>
+            <span data-i18n="checkout.shipping_fee">運費</span>
             <span id="orderShippingText">+NT$ 0</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;margin-top:4px;">
-            <span>應付金額</span>
+            <span data-i18n="shop.amount_due">應付金額</span>
             <span id="orderGrandText">NT$ 0</span>
           </div>
         </div>
@@ -674,11 +674,11 @@
     <div style="padding:0 18px 16px;display:flex;justify-content:flex-end;gap:10px;">
       <button type="button" id="orderCancelBtn"
               style="padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;">
-        返回
+        <span data-i18n="common.back">返回</span>
       </button>
       <button type="button" id="orderNextBtn"
               style="padding:8px 16px;border-radius:10px;border:none;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;">
-        下一步：填寫資料
+        <span data-i18n="checkout.next_fill_info">下一步：填寫資料</span>
       </button>
     </div>
   </dialog>
@@ -686,19 +686,20 @@
   <!-- 選擇門市 Dialog（插在訂單確認與匯款資料之間） -->
   <dialog id="dlgStore" style="border:none;border-radius:16px;padding:0;max-width:680px;width:96%;max-height:90vh;overflow:auto;">
     <div style="padding:18px 18px 10px;">
-      <div style="font-weight:800;font-size:18px;">選擇取貨門市</div>
-    <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;">
+      <div style="font-weight:800;font-size:18px;" data-i18n="checkout.choose_store_title">選擇取貨門市</div>
+    <div style="color:#6b7280;font-size:14px;margin-top:4px;line-height:1.6;" data-i18n="checkout.choose_store_desc">
       請先選擇 7-11 取貨門市，再進入貨到付款或信用卡資料頁面。
     </div>
     </div>
 
     <form id="storeForm" style="padding:0 18px 16px;display:grid;gap:10px;">
       <div style="display:grid;gap:6px;">
-        <label for="bfStorePreview" style="font-size:12px;color:#6b7280;">取貨門市</label>
+        <label for="bfStorePreview" style="font-size:12px;color:#6b7280;" data-i18n="checkout.pickup_store">取貨門市</label>
         <input id="bfStorePreview" type="text" readonly
                placeholder="尚未選擇門市"
+               data-i18n-attr="placeholder:shop.store_not_selected"
                style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;background:#f9fafb;color:#4b5563;">
-        <div style="font-size:12px;color:#6b7280;">
+        <div style="font-size:12px;color:#6b7280;" data-i18n="checkout.store_hint">
           請點選下方「查詢 7-11 門市」按鈕，於地圖中選擇門市後，這裡與付款資料頁面會自動帶入相同門市
         </div>
       </div>
@@ -707,18 +708,18 @@
         <!-- 使用原本的 7-11 查詢門市連結邏輯：這個按鈕只負責觸發 popup，由既有腳本接收回填 -->
         <button type="button" id="storeOpenCvsBtn"
                 style="padding:8px 12px;border-radius:999px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:13px;cursor:pointer;">
-          查詢 7-11 門市
+          <span data-i18n="checkout.search_711">查詢 7-11 門市</span>
         </button>
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
         <button type="button" id="storeBackBtn"
                 style="padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#ffffff;color:#374151;font-size:13px;cursor:pointer;">
-          返回上一頁
+          <span data-i18n="common.back_prev">返回上一頁</span>
         </button>
         <button type="button" id="storeNextBtn"
                 style="padding:8px 16px;border-radius:10px;border:none;background:#16a34a;color:#ffffff;font-weight:700;font-size:13px;cursor:pointer;">
-          下一步：填寫付款資料
+          <span data-i18n="checkout.next_payment_info">下一步：填寫付款資料</span>
         </button>
       </div>
     </form>
@@ -729,39 +730,42 @@
   <!-- 訂單狀態查詢 Dialog -->
   <dialog id="dlgLookup" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;">
     <div style="padding:18px 18px 10px;">
-      <div style="font-weight:800;font-size:18px;">查詢訂單狀態</div>
-      <div style="color:#6b7280;font-size:14px;margin-top:4px">
+      <div style="font-weight:800;font-size:18px;" data-i18n="checkout.lookup_status">查詢訂單狀態</div>
+      <div style="color:#6b7280;font-size:14px;margin-top:4px" data-i18n-html="checkout.lookup_desc_html">
         查詢需輸入 <b>手機號碼</b>，並搭配 <b>匯款末五碼</b> 或 <b>訂單編號末五碼（英數）</b>（信用卡）。
       </div>
     </div>
     <form id="lookupForm" style="padding:0 18px 16px;display:grid;gap:10px">
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">手機號碼（必填）</label>
+        <label style="font-size:12px;color:#6b7280" data-i18n="checkout.phone_required">手機號碼（必填）</label>
         <input id="qPhone" name="phone" type="tel" inputmode="tel"
                pattern="^(?:\+?886[-\s]?9\d{8}|09\d{8}|\d{9,13})$" required
                placeholder="例：0969123456 或 +886 969 123 456"
                title="請輸入 09 開頭或 +8869 開頭的手機號碼（允許空白與破折號）"
                autocomplete="tel-national"
+               data-i18n-attr="placeholder:checkout.phone_placeholder;title:checkout.phone_title"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">匯款末五碼</label>
+        <label style="font-size:12px;color:#6b7280" data-i18n="checkout.transfer_last5">匯款末五碼</label>
         <input id="qLast5" name="last5" type="text" inputmode="numeric" pattern="\d{5}" placeholder="12345"
                title="請輸入匯款末五碼（5 位數字）"
+               data-i18n-attr="title:checkout.transfer_last5_title"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div style="display:grid;gap:6px">
-        <label style="font-size:12px;color:#6b7280">訂單編號末五碼（英數，信用卡）</label>
+        <label style="font-size:12px;color:#6b7280" data-i18n="checkout.order_last5_credit">訂單編號末五碼（英數，信用卡）</label>
         <input id="qOrder" name="order" type="text" inputmode="text" pattern="[A-Za-z0-9]{5,}"
                placeholder="輸入訂單編號末 5 位（英數）" title="請輸入訂單編號末 5 位（英數）"
+               data-i18n-attr="placeholder:checkout.order_last5_placeholder;title:checkout.order_last5_title"
                autocomplete="one-time-code"
                style="padding:10px;border:1px solid #e5e7eb;border-radius:10px">
       </div>
       <div class="cta" style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
-        <button type="button" id="lookupCancel" class="btn">關閉</button>
-        <button type="submit" id="lookupSubmit" class="btn primary">查詢</button>
+        <button type="button" id="lookupCancel" class="btn" data-i18n="common.close">關閉</button>
+        <button type="submit" id="lookupSubmit" class="btn primary" data-i18n="checkout.search">查詢</button>
       </div>
-      <div id="lookupHint" style="font-size:12px;color:#6b7280;line-height:1.6">
+      <div id="lookupHint" style="font-size:12px;color:#6b7280;line-height:1.6" data-i18n="checkout.lookup_hint">
         每筆查詢皆需輸入手機號碼，並搭配匯款末五碼或訂單編號末五碼（英數，信用卡）。
       </div>
     </form>
@@ -769,7 +773,7 @@
     <div id="lookupResultHint" style="padding:0 18px 8px;color:#6b7280;font-size:12px;line-height:1.6"></div>
 
     <div id="lookupResult" style="display:none;padding:0 18px 18px">
-      <div style="font-weight:800;margin:4px 0 8px">查詢結果</div>
+      <div style="font-weight:800;margin:4px 0 8px" data-i18n="checkout.search_result">查詢結果</div>
       <div id="lookupList" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
   </dialog>
