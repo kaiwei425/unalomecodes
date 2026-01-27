@@ -22,7 +22,6 @@
       { href: '/admin/audit-logs', label: '審計日誌', icon: '📋', group: 'extra' },
       { href: '/admin/admin-roles', label: '權限管理', icon: '🛡️', group: 'extra' },
       { href: '/admin/admin-guide', label: '管理員手冊', icon: '📘', group: 'extra' },
-      { href: '/admin/phone-consult-template', label: '電話算命模板', icon: '🧩', group: 'extra' },
       { href: '/admin/staff-manual', label: 'Staff Manual', icon: '📝', group: 'extra' }
     ];
 
@@ -207,8 +206,7 @@
             item.href !== '/admin/admin-guide' &&
             item.href !== '/admin/admin-roles' &&
             item.href !== '/admin/slots' &&
-            item.href !== '/admin/dashboard' &&
-            item.href !== '/admin/phone-consult-template';
+            item.href !== '/admin/dashboard';
         });
       }
       renderShell(finalItems, info);
