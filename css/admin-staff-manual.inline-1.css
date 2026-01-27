@@ -1,0 +1,275 @@
+/* Admin: Staff Manual
+   Scoped to avoid side effects on other admin pages. */
+
+.admin-shell-applied [data-admin-page="staff-manual"] .page-body{
+  display:block;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-layout{
+  display:grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap:14px;
+  align-items:start;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-toc{
+  position:sticky;
+  top:14px;
+  padding:14px;
+  border-radius:18px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-head{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--admin-border-soft);
+  margin-bottom:10px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-title{
+  font-weight:900;
+  font-size:14px;
+  color:#0f172a;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-list{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  max-height:calc(100vh - 240px);
+  overflow:auto;
+  padding-right:6px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-link{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid transparent;
+  text-decoration:none;
+  color:#0f172a;
+  font-weight:800;
+  font-size:12px;
+  line-height:1.3;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-link:hover{
+  background:var(--admin-surface-2);
+  border-color:var(--admin-border-soft);
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-link.is-active{
+  background:#0f172a;
+  color:#fff;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-indent{
+  opacity:.7;
+  font-weight:800;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-foot{
+  padding-top:10px;
+  border-top:1px solid var(--admin-border-soft);
+  margin-top:10px;
+  font-size:12px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .toc-foot .dot{
+  padding:0 6px;
+  opacity:.6;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-main .panel{
+  border-radius:18px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-main h2{
+  margin:0 0 10px;
+  font-size:18px;
+  letter-spacing:.1px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .mini-card{
+  border:1px solid var(--admin-border-soft);
+  background:var(--admin-surface-2);
+  border-radius:16px;
+  padding:12px 12px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .mini-title{
+  font-weight:900;
+  font-size:13px;
+  color:#0f172a;
+  margin-bottom:8px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .mini-list{
+  margin:0;
+  padding-left:18px;
+  color:#0f172a;
+  font-weight:650;
+  font-size:13px;
+  line-height:1.55;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .kbd{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid var(--admin-border);
+  background:#fff;
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.1px;
+  white-space:nowrap;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .kbd.danger{
+  border-color:rgba(220,38,38,.24);
+  background:#fff1f2;
+  color:#b91c1c;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .callout{
+  border:1px solid var(--admin-border-soft);
+  background:#fff;
+  border-radius:16px;
+  padding:12px 12px;
+  margin-top:12px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .callout-title{
+  font-weight:900;
+  font-size:13px;
+  margin-bottom:6px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .callout-body{
+  font-weight:650;
+  font-size:13px;
+  color:#0f172a;
+  line-height:1.55;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .callout.warn{
+  border-color:rgba(245,158,11,.30);
+  background:#fffbeb;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .callout.ok{
+  border-color:rgba(16,185,129,.30);
+  background:#ecfdf5;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .callout.danger{
+  border-color:rgba(220,38,38,.30);
+  background:#fff1f2;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .sop-card{
+  border:1px solid var(--admin-border-soft);
+  background:#fff;
+  border-radius:16px;
+  padding:12px 12px;
+  margin-bottom:12px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .sop-title{
+  font-weight:950;
+  font-size:14px;
+  color:#0f172a;
+  margin-bottom:8px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .sop-steps{
+  margin:0;
+  padding-left:18px;
+  font-weight:650;
+  font-size:13px;
+  color:#0f172a;
+  line-height:1.6;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .sop-variants{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+  margin-top:8px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .variant{
+  border:1px dashed rgba(15,23,42,.16);
+  border-radius:14px;
+  padding:10px 10px;
+  background:#fbfbfc;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .variant-title{
+  font-weight:900;
+  font-size:12px;
+  margin-bottom:6px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .danger-list{
+  color:#b91c1c;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .faq{
+  border:1px solid var(--admin-border-soft);
+  background:#fff;
+  border-radius:16px;
+  padding:10px 12px;
+  margin-top:12px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .faq > summary{
+  cursor:pointer;
+  font-weight:900;
+  font-size:13px;
+  color:#0f172a;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .faq-body{
+  padding-top:10px;
+}
+
+.admin-shell-applied [data-admin-page="staff-manual"] .table-wrap{
+  overflow:auto;
+  border-radius:14px;
+  border:1px solid var(--admin-border-soft);
+  background:#fff;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:720px;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-table th,
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-table td{
+  padding:12px;
+  border-bottom:1px solid var(--admin-border-soft);
+  text-align:left;
+  vertical-align:top;
+  font-size:13px;
+  line-height:1.55;
+}
+.admin-shell-applied [data-admin-page="staff-manual"] .manual-table th{
+  background:#fbfbfc;
+  font-weight:950;
+}
+
+@media(max-width: 980px){
+  .admin-shell-applied [data-admin-page="staff-manual"] .manual-layout{
+    grid-template-columns:1fr;
+  }
+  .admin-shell-applied [data-admin-page="staff-manual"] .manual-toc{
+    position:static;
+  }
+  .admin-shell-applied [data-admin-page="staff-manual"] .manual-grid{
+    grid-template-columns:1fr;
+  }
+  .admin-shell-applied [data-admin-page="staff-manual"] .sop-variants{
+    grid-template-columns:1fr;
+  }
+}
