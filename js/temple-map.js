@@ -232,7 +232,14 @@ let mainMap = null;
 let mainMarkers = [];
 let mainInfoWindow = null;
 const tripResultModal = document.getElementById('tripResultModal');
-let currentLang = 'zh';
+let currentLang = (function(){
+  try{
+    const v = localStorage.getItem('uc_lang') || '';
+    if (v === 'zh' || v === 'en') return v;
+    localStorage.setItem('uc_lang', 'zh');
+  }catch(_){}
+  return 'zh';
+})();
 const TAG_OPTIONS = [
   { value:'photo', zh:'拍照點', en:'Photo spot' },
   { value:'family', zh:'親子友善', en:'Family' },
@@ -1516,6 +1523,7 @@ async function checkAdmin(){
 
 function setLanguage(lang) {
   currentLang = lang;
+  try{ localStorage.setItem('uc_lang', lang === 'en' ? 'en' : 'zh'); }catch(_){}
   if (btnLang){
     btnLang.textContent = 'ZH/EN';
     btnLang.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : 'Switch to English');

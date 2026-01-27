@@ -290,7 +290,8 @@
     account: checkoutDialog ? (checkoutDialog.getAttribute('data-bank-account') || checkoutDialog.dataset.bankAccount || '148540417073') : '148540417073'
   };
   const STATUS_LABELS = {
-    '祈福進行中': '已確認付款，祈福進行中'
+    // Keys are backend status values. Values are bilingual display strings.
+    '祈福進行中': { zh:'已確認付款，祈福進行中', en:'Payment confirmed. Ritual in progress.' }
   };
   const supportsDialog = typeof HTMLDialogElement === 'function' && typeof HTMLDialogElement.prototype.showModal === 'function';
   const fallbackBackdrops = new Map();
@@ -314,6 +315,17 @@
       }
     }catch(_){}
     return String(fallback || '');
+  }
+
+  function statusLabel(status){
+    const s = String(status || '');
+    const entry = STATUS_LABELS[s];
+    if (!entry) return s || tf('處理中', 'Processing');
+    if (typeof entry === 'string') return entry;
+    if (entry && typeof entry === 'object'){
+      return getLang() === 'en' ? (entry.en || entry.zh || s) : (entry.zh || entry.en || s);
+    }
+    return s || tf('處理中', 'Processing');
   }
 
   function fmt(template, vars){
@@ -1075,14 +1087,14 @@
   }
 
   function getCartItemOptionLabel(item){
-    const base = item.optionName || '標準服務';
+    const base = item.optionName || tf('標準服務', 'Standard');
     if (item.addonSummary) return `${base} + ${item.addonSummary}`;
     return base;
   }
 
   function updateEmailNotice(status){
     if (!emailNoticeEls.length) return;
-    let text = '已寄出 Email 通知';
+    let text = tf('已寄出 Email 通知', 'Email notification sent');
     let warn = false;
     if (status){
       const sentCustomer = status.sentCustomer === true;
@@ -1090,19 +1102,19 @@
       const mustFail = reason === 'missing_config' || reason === 'no_recipients' || status.sentCustomer === false;
       if (status.ok === false && !mustFail){
         warn = false;
-        text = '已寄出 Email 通知';
+        text = tf('已寄出 Email 通知', 'Email notification sent');
       }else if (status.ok === false || status.sentCustomer === false){
         warn = true;
         if (reason === 'missing_config'){
-          text = 'Email 尚未寄出（寄信設定缺失）';
+          text = tf('Email 尚未寄出（寄信設定缺失）', 'Email not sent (missing mail configuration)');
         }else if (reason === 'no_recipients'){
-          text = 'Email 尚未寄出（收件人未設定）';
+          text = tf('Email 尚未寄出（收件人未設定）', 'Email not sent (recipient not configured)');
         }else{
-          text = 'Email 寄送失敗，請稍後再試';
+          text = tf('Email 寄送失敗，請稍後再試', 'Email delivery failed. Please try again later.');
         }
       }else if (sentCustomer){
         warn = false;
-        text = '已寄出 Email 通知';
+        text = tf('已寄出 Email 通知', 'Email notification sent');
       }
     }
     emailNoticeEls.forEach(el=>{
@@ -1490,7 +1502,8 @@
         setSlotStateText('目前暫無可預約時段', true);
         if (detailAddBtn && !isEndedBtn(detailAddBtn)){
           detailAddBtn.disabled = true;
-          detailAddBtn.textContent = '目前無法預約';
+          if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'not_available';
+          detailAddBtn.textContent = tf('目前無法預約', 'Not available');
         }
         return;
       }
@@ -1524,7 +1537,8 @@
       setSlotStateText(msg || '目前暫無可預約時段', !!isError);
       if (detailAddBtn && !isEndedBtn(detailAddBtn)){
         detailAddBtn.disabled = true;
-        detailAddBtn.textContent = '目前無法預約';
+        if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'not_available';
+        detailAddBtn.textContent = tf('目前無法預約', 'Not available');
       }
       return;
     }
@@ -1542,7 +1556,8 @@
     }
     if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = true;
-      detailAddBtn.textContent = '目前無法預約';
+      if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'not_available';
+      detailAddBtn.textContent = tf('目前無法預約', 'Not available');
     }
   }
 
@@ -1566,9 +1581,9 @@
 
   function resolveConsultPack(key){
     if (key === 'en'){
-      return { key:'en', label:'英文翻譯', price: Number(CONSULT_PACK_PRICES.en || 0) };
+      return { key:'en', label: tOr('svc.pack_en', '英文翻譯'), price: Number(CONSULT_PACK_PRICES.en || 0) };
     }
-    return { key:'zh', label:'中文翻譯', price: Number(CONSULT_PACK_PRICES.zh || 0) };
+    return { key:'zh', label: tOr('svc.pack_zh', '中文翻譯'), price: Number(CONSULT_PACK_PRICES.zh || 0) };
   }
 
   function getPhoneBasePrice(){
@@ -1592,11 +1607,12 @@
     wrap.innerHTML = '';
     const label = document.createElement('label');
     label.className = 'addon-label';
-    label.textContent = '加購（選填）';
+    label.textContent = tOr('svc.addon_label', '加購（選填）');
     const select = document.createElement('select');
     select.id = 'svcConsultAddonSummary';
     select.className = 'svc-addon-select';
-    select.innerHTML = '<option value="0">不加購</option><option value="1">加購：轉譯＋重點摘要整理 + NT$ 500</option>';
+    select.innerHTML = '<option value="0">' + escapeHtml(tOr('svc.addon_none','不加購')) + '</option>' +
+      '<option value="1">' + escapeHtml(tOr('svc.addon_yes','加購：轉譯＋重點摘要整理 + NT$ 500')) + '</option>';
     wrap.appendChild(label);
     wrap.appendChild(select);
     if (hintNode) wrap.appendChild(hintNode);
@@ -1972,7 +1988,8 @@
     if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = false;
       setEndedBtn(detailAddBtn, false);
-      detailAddBtn.textContent = '加入購物車';
+      if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'add_to_cart';
+      detailAddBtn.textContent = tOr('svc.add_to_cart', '加入購物車');
     }
     return true;
   }
@@ -2204,7 +2221,8 @@
     if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = false;
       setEndedBtn(detailAddBtn, false);
-      detailAddBtn.textContent = '加入購物車';
+      if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'add_to_cart';
+      detailAddBtn.textContent = tOr('svc.add_to_cart', '加入購物車');
     }
     if (start){
       setSlotStateText(`已選擇 ${start}，按填寫預約資料後保留 15 分鐘`, false);
@@ -2218,7 +2236,8 @@
     const hasSelection = !!(CURRENT_DETAIL_SLOT.slotHoldToken || CURRENT_DETAIL_SLOT.pendingSlotKey);
     detailAddBtn.disabled = !hasSelection;
     setEndedBtn(detailAddBtn, false);
-    detailAddBtn.textContent = '加入購物車';
+    if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'add_to_cart';
+    detailAddBtn.textContent = tOr('svc.add_to_cart', '加入購物車');
   }
 
   function renderSlotGrid(item){
@@ -2292,7 +2311,7 @@
         updateHoldCountdown(0);
         if (detailAddBtn && !isEndedBtn(detailAddBtn)){
           detailAddBtn.disabled = true;
-          detailAddBtn.textContent = '目前無法預約';
+          detailAddBtn.textContent = tf('目前無法預約', 'Not available');
         }
         return;
       }
@@ -2365,7 +2384,8 @@
       if (detailAddBtn && !isEndedBtn(detailAddBtn)){
         detailAddBtn.disabled = false;
         setEndedBtn(detailAddBtn, false);
-        detailAddBtn.textContent = '加入購物車';
+        if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'add_to_cart';
+        detailAddBtn.textContent = tOr('svc.add_to_cart', '加入購物車');
       }
       if (slotGridEl){
         Array.from(slotGridEl.querySelectorAll('.svc-slot-btn')).forEach(btn=>{
@@ -2429,7 +2449,7 @@
         rescheduleContext.selectedDate = item.date || '';
         Array.from(rescheduleGridEl.querySelectorAll('.svc-slot-btn')).forEach(node=> node.classList.remove('is-held'));
         btn.classList.add('is-held');
-        setRescheduleStateText('已選取改期時段', false);
+        setRescheduleStateText(tf('已選取改期時段', 'Reschedule slot selected'), false);
       });
       rescheduleGridEl.appendChild(btn);
     });
@@ -2443,7 +2463,7 @@
 
   async function loadRescheduleSlots(serviceId){
     if (!serviceId) return;
-    setRescheduleStateText('載入中…', false);
+    setRescheduleStateText(tOr('common.loading', '載入中…'), false);
     try{
       const res = await fetchSlots(serviceId, '', 7);
       const data = res.data || {};
@@ -2461,7 +2481,7 @@
       if (rescheduleGridEl) rescheduleGridEl.style.display = '';
       renderRescheduleDays(items);
       if (items && items.length) renderRescheduleGrid(items[0]);
-      if (rescheduleHintEl) rescheduleHintEl.textContent = '請選擇可預約時段';
+      if (rescheduleHintEl) rescheduleHintEl.textContent = tf('請選擇可預約時段', 'Please select an available slot');
       setRescheduleStateText('', false);
     }catch(_){
       hideRescheduleSlotPicker('目前暫無可預約時段');
@@ -2476,7 +2496,7 @@
     if (rescheduleNoteInput) rescheduleNoteInput.value = '';
     if (rescheduleSubmitBtn){
       rescheduleSubmitBtn.disabled = false;
-      rescheduleSubmitBtn.textContent = '送出改期申請';
+      rescheduleSubmitBtn.textContent = tf('送出改期申請', 'Submit reschedule request');
     }
     setRescheduleStateText('', false);
     openDialog(rescheduleDialog);
@@ -2486,12 +2506,12 @@
   async function submitRescheduleRequest(){
     if (!rescheduleContext.order) return;
     if (!rescheduleContext.slotKey){
-      setRescheduleStateText('請先選擇時段', true);
+      setRescheduleStateText(tf('請先選擇時段', 'Please select a slot first'), true);
       return;
     }
     if (rescheduleSubmitBtn){
       rescheduleSubmitBtn.disabled = true;
-      rescheduleSubmitBtn.textContent = '送出中…';
+      rescheduleSubmitBtn.textContent = tf('送出中…', 'Submitting…');
     }
     try{
       const payload = {
@@ -2516,20 +2536,20 @@
         setRescheduleStateText(msg, true);
         if (rescheduleSubmitBtn){
           rescheduleSubmitBtn.disabled = false;
-          rescheduleSubmitBtn.textContent = '送出改期申請';
+          rescheduleSubmitBtn.textContent = tf('送出改期申請', 'Submit reschedule request');
         }
         return;
       }
-      setRescheduleStateText('已送出改期申請，等待確認', false);
+      setRescheduleStateText(tf('已送出改期申請，等待確認', 'Reschedule request submitted. Waiting for confirmation.'), false);
       if (rescheduleSubmitBtn){
         rescheduleSubmitBtn.disabled = true;
-        rescheduleSubmitBtn.textContent = '已送出';
+        rescheduleSubmitBtn.textContent = tf('已送出', 'Submitted');
       }
     }catch(_){
       setRescheduleStateText('送出失敗，請稍後再試', true);
       if (rescheduleSubmitBtn){
         rescheduleSubmitBtn.disabled = false;
-        rescheduleSubmitBtn.textContent = '送出改期申請';
+        rescheduleSubmitBtn.textContent = tf('送出改期申請', 'Submit reschedule request');
       }
     }
   }
@@ -2541,7 +2561,7 @@
     setSlotStateText(msg || '目前暫無可預約時段', true);
     if (detailAddBtn && !isEndedBtn(detailAddBtn)){
       detailAddBtn.disabled = true;
-      detailAddBtn.textContent = '目前無法預約';
+      detailAddBtn.textContent = tf('目前無法預約', 'Not available');
     }
   }
 
@@ -2597,7 +2617,7 @@
       slotLastDate = slotItems.length ? (slotItems[slotItems.length - 1].date || '') : '';
       refreshSlotDisplay();
     }else{
-      ensurePlaceholderSlots('載入中…', false);
+      ensurePlaceholderSlots(tOr('common.loading','載入中…'), false);
     }
     if (slotDaysPrev && !slotDaysPrev.__bound){
       slotDaysPrev.__bound = true;
@@ -2673,7 +2693,7 @@
           setSlotStateText('目前暫無可預約時段', true);
           if (detailAddBtn && !isEndedBtn(detailAddBtn)){
             detailAddBtn.disabled = true;
-            detailAddBtn.textContent = '目前無法預約';
+            detailAddBtn.textContent = tf('目前無法預約', 'Not available');
           }
         }else{
           updateAddBtnStateForSlot();
@@ -2738,11 +2758,11 @@
       saveCart(cart);
     }
     if (!cart.length){
-      cartListEl.innerHTML = '<div style="color:#6b7280;">購物車尚無服務。</div>';
+      cartListEl.innerHTML = '<div style="color:#6b7280;">' + escapeHtml(tf('購物車尚無服務。', 'Your cart is empty.')) + '</div>';
     }else{
       cartListEl.innerHTML = cart.map(item => {
         const tzLine = item.slotStart && isPhoneConsultService(item)
-          ? `<div class="meta" style="color:#dc2626;">台灣時間：${escapeHtml(formatTaipeiFromBkk(item.slotStart))}</div>`
+          ? `<div class="meta" style="color:#dc2626;">${escapeHtml(tf('台灣時間：','Taipei time: '))}${escapeHtml(formatTaipeiFromBkk(item.slotStart))}</div>`
           : '';
         const promoPriceHtml = item.promoActive && item.promoDisplayPrice
           ? `<div class="price"><span class="price-old">${formatTWD(Number(item.promoOriginalPrice||0) * getItemQty(item))}</span><span class="price-new">${formatTWD(Number(item.promoDisplayPrice||0) * getItemQty(item))}</span></div>`
@@ -2752,12 +2772,12 @@
           <div class="info">
             ${sanitizeImageUrl(item.image) ? `<img src="${escapeHtml(sanitizeImageUrl(item.image))}" alt="">` : ''}
             <div>
-              <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||'服務')}</div>
+              <div style="font-weight:700;font-size:14px;">${escapeHtml(item.serviceName||tf('服務','Service'))}</div>
               <div class="meta">${escapeHtml(getCartItemOptionLabel(item))}${(!isDonationService(item) && !item.qtyEnabled && getItemQty(item) > 1) ? ` × ${getItemQty(item)}` : ''}</div>
-              ${item.slotStart ? `<div class="meta">預約時段：${escapeHtml(item.slotStart)}</div>` : ''}
+              ${item.slotStart ? `<div class="meta">${escapeHtml(tf('預約時段：','Time slot: '))}${escapeHtml(item.slotStart)}</div>` : ''}
               ${tzLine}
-              ${item.consultPackLabel ? `<div class="meta">方案：${escapeHtml(item.consultPackLabel)}</div>` : ''}
-              ${item.consultAddonSummary ? `<div class="meta">加購：轉譯＋摘要</div>` : ''}
+              ${item.consultPackLabel ? `<div class="meta">${escapeHtml(tf('方案：','Pack: '))}${escapeHtml(item.consultPackLabel)}</div>` : ''}
+              ${item.consultAddonSummary ? `<div class="meta">${escapeHtml(tf('加購：轉譯＋摘要','Add-on: Translation + summary'))}</div>` : ''}
               ${(item.qtyEnabled || isDonationService(item)) ? `
                 <div class="svc-cart-qty">
                   <button type="button" class="svc-cart-qty-btn" data-qty="dec" data-uid="${escapeHtml(item.uid||'')}">-</button>
@@ -2768,7 +2788,7 @@
             </div>
           </div>
           ${promoPriceHtml}
-          <button type="button" class="svc-cart-remove" data-remove="${escapeHtml(item.uid||'')}">移除</button>
+          <button type="button" class="svc-cart-remove" data-remove="${escapeHtml(item.uid||'')}">${escapeHtml(tf('移除','Remove'))}</button>
         </div>
       `;
       }).join('');
@@ -2832,31 +2852,31 @@
     const requestDate = String(fd.get('requestDate')||'').trim();
     const note = String(fd.get('note')||'').trim();
     if (!name){
-      alert('請輸入聯絡人姓名');
+      alert(tf('請輸入聯絡人姓名', 'Please enter the contact name'));
       return null;
     }
     const cart = loadCart();
     const isPhone = Array.isArray(cart) && cart.some(item => isPhoneConsultService(item));
     if (!isPhone && !nameEn){
-      alert('請輸入英文姓名');
+      alert(tf('請輸入英文姓名', 'Please enter the English name'));
       return null;
     }
     const phoneDigits = phoneRaw.replace(/\D+/g,'');
     if (!/^09\d{8}$/.test(phoneDigits)){
-      alert('請輸入有效的手機號碼（09 開頭，共 10 碼）');
+      alert(tf('請輸入有效的手機號碼（09 開頭，共 10 碼）', 'Please enter a valid phone number (starts with 09, 10 digits)'));
       return null;
     }
     if (!email){
-      alert('請輸入 Email');
+      alert(tf('請輸入 Email', 'Please enter your email'));
       return null;
     }
     if (!isPhone && !birth){
-      alert('請填寫生日');
+      alert(tf('請填寫生日', 'Please fill in your birth date'));
       return null;
     }
     if (!isPhone && isCheckoutPhotoRequired()){
       if (!contactPhotoInput || !contactPhotoInput.files || !contactPhotoInput.files[0]){
-        alert('請上傳祈福用照片');
+        alert(tf('請上傳祈福用照片', 'Please upload the photo for the ritual'));
         if (contactPhotoInput) contactPhotoInput.focus();
         return null;
       }
@@ -2868,10 +2888,10 @@
     const file = bankReceiptInput && bankReceiptInput.files && bankReceiptInput.files[0];
     if (!file){
       if (checkoutReceipt.url) return checkoutReceipt.url;
-      throw new Error('請上傳匯款憑證');
+      throw new Error(tf('請上傳匯款憑證', 'Please upload the transfer receipt'));
     }
     if (file.size > RECEIPT_MAX_SIZE){
-      throw new Error('匯款憑證檔案過大（上限 20MB）');
+      throw new Error(tf('匯款憑證檔案過大（上限 20MB）', 'Receipt file is too large (max 20MB)'));
     }
     if (checkoutReceipt.url && checkoutReceipt.name === file.name){
       return checkoutReceipt.url;
@@ -2881,7 +2901,7 @@
     const res = await fetch('/api/upload', { method:'POST', body: form });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false || !Array.isArray(data.files) || !data.files.length){
-      throw new Error((data && data.error) || '匯款憑證上傳失敗');
+      throw new Error((data && data.error) || tf('匯款憑證上傳失敗', 'Receipt upload failed'));
     }
     checkoutReceipt = { url: data.files[0].url, name: file.name };
     return checkoutReceipt.url;
@@ -2895,7 +2915,7 @@
       return checkoutRitualPhoto.url || '';
     }
     if (file.size > RECEIPT_MAX_SIZE){
-      throw new Error('祈福照片檔案過大（上限 20MB）');
+      throw new Error(tf('祈福照片檔案過大（上限 20MB）', 'Ritual photo is too large (max 20MB)'));
     }
     if (checkoutRitualPhoto.url && checkoutRitualPhoto.name === file.name){
       return checkoutRitualPhoto.url;
@@ -2905,7 +2925,7 @@
     const res = await fetch('/api/upload', { method:'POST', body: form });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false || !Array.isArray(data.files) || !data.files.length){
-      throw new Error((data && data.error) || '祈福照片上傳失敗');
+      throw new Error((data && data.error) || tf('祈福照片上傳失敗', 'Ritual photo upload failed'));
     }
     checkoutRitualPhoto = { url: data.files[0].url, name: file.name };
     if (contactPhotoName) contactPhotoName.textContent = file.name;
@@ -2917,36 +2937,36 @@
     const hasPhoneConsult = lastCartSnapshot.some(item => isPhoneConsultService(item));
     if (checkoutStep3Intro){
       checkoutStep3Intro.textContent = hasPhoneConsult
-        ? '我們已收到匯款資料並建立預約連線算命訂單，請保留以下資訊或截圖備查。'
-        : '我們已收到您的匯款資料並建立服務訂單，請保留以下資訊或截圖備查。';
+        ? tf('我們已收到匯款資料並建立預約連線算命訂單，請保留以下資訊或截圖備查。', 'We have received your transfer info and created your phone consultation order. Please keep the details below.')
+        : tf('我們已收到您的匯款資料並建立服務訂單，請保留以下資訊或截圖備查。', 'We have received your transfer info and created your service order. Please keep the details below.');
     }
     if (checkoutStep3IntroSub){
       const sub = hasPhoneConsult
         ? ''
-        : '確認匯款資料無誤後，會再寄送 Email 通知您，請留意信箱。';
+        : tf('確認匯款資料無誤後，會再寄送 Email 通知您，請留意信箱。', 'After we verify your transfer, we will send an email confirmation. Please check your inbox.');
       checkoutStep3IntroSub.textContent = sub;
       checkoutStep3IntroSub.style.display = sub ? '' : 'none';
     }
     if (checkoutStep3HintMain){
-      checkoutStep3HintMain.textContent = '可至會員中心－我的訂單查詢最新進度。';
+      checkoutStep3HintMain.textContent = tf('可至會員中心－我的訂單查詢最新進度。', 'You can check the latest status via Account > My orders.');
     }
     if (checkoutStep3HintQa){
       checkoutStep3HintQa.textContent = hasPhoneConsult
-        ? '提醒：可至右上角「會員中心 → 我的訂單 → 問與答」留下想詢問的問題（中文即可，將協助翻譯給老師）。'
-        : '若此服務需提供補充資料，請至「會員中心 → 我的訂單 → 問與答」留言';
+        ? tf('提醒：可至右上角「會員中心 → 我的訂單 → 問與答」留下想詢問的問題（中文即可，將協助翻譯給老師）。', 'Tip: You can leave your questions via Account > My orders > Q&A (Chinese is OK; we will translate for the teacher).')
+        : tf('若此服務需提供補充資料，請至「會員中心 → 我的訂單 → 問與答」留言', 'If you need to provide extra information, please leave a message via Account > My orders > Q&A.');
     }
     if (checkoutStep3HintReschedule){
       checkoutStep3HintReschedule.textContent = hasPhoneConsult
-        ? '申請改期請聯繫 LINE 客服。'
-        : '如需調整服務內容，請聯繫 LINE 客服。';
+        ? tf('申請改期請聯繫 LINE 客服。', 'To reschedule, please contact LINE support.')
+        : tf('如需調整服務內容，請聯繫 LINE 客服。', 'To adjust service details, please contact LINE support.');
     }
     if (checkoutStep3OrderId) checkoutStep3OrderId.textContent = orderId || '—';
     const summary = lastCartSnapshot.map(item=>{
       const opt = item.optionName ? `｜${getCartItemOptionLabel(item)}` : '';
-      const slot = item.slotStart ? `（預約：${item.slotStart}）` : '';
-      return `${item.serviceName || '服務'}${opt}${slot}`;
+      const slot = item.slotStart ? tf(`（預約：${item.slotStart}）`, ` (Booked: ${item.slotStart})`) : '';
+      return `${item.serviceName || tf('服務', 'Service')}${opt}${slot}`;
     }).join('、');
-    if (checkoutStep3Service) checkoutStep3Service.textContent = summary || (checkoutServiceName ? checkoutServiceName.textContent : '服務');
+    if (checkoutStep3Service) checkoutStep3Service.textContent = summary || (checkoutServiceName ? checkoutServiceName.textContent : tf('服務', 'Service'));
     if (checkoutStep3Amount) checkoutStep3Amount.textContent = formatTWD(total);
     const slotItem = lastCartSnapshot.find(item => isPhoneConsultService(item) && item.slotStart);
     const slotStart = slotItem ? String(slotItem.slotStart || '') : '';
@@ -3059,7 +3079,9 @@
     const hrs = Math.floor((totalSec % 86400) / 3600);
     const mins = Math.floor((totalSec % 3600) / 60);
     const secs = totalSec % 60;
-    const text = `剩餘 ${days}天 ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    const text = getLang() === 'en'
+      ? `Remaining ${days}d ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
+      : `剩餘 ${days}天 ${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
     if (promoCountdownEl) promoCountdownEl.textContent = text;
     if (detailPromoCountdownEl) detailPromoCountdownEl.textContent = text;
     return true;
@@ -3086,7 +3108,9 @@
       return;
     }
     const endText = formatPromoDate(info.end);
-    const periodText = endText ? `至 ${endText} 截止` : '限時優惠';
+    const periodText = endText
+      ? tf(`至 ${endText} 截止`, `Until ${endText}`)
+      : tOr('svc.promo_limited_label', '限時優惠');
     if (promoPeriodEl) promoPeriodEl.textContent = periodText;
     if (detailPromoPeriodEl) detailPromoPeriodEl.textContent = periodText;
     if (promoEarlyBirdEl) promoEarlyBirdEl.textContent = info.earlyBird || '';
@@ -3132,7 +3156,7 @@
     const cover = service.cover || (Array.isArray(service.gallery) && service.gallery[0]) || '';
     const sold = Number(service.sold || 0);
     const showSold = !isPhoneConsultService(service);
-    const limitedRow = buildLimitedRow(service, '限時服務');
+    const limitedRow = buildLimitedRow(service, tf('限時服務', 'Limited-time'));
     const basePrice = isPhoneConsultService(service) ? getPhoneBasePrice() : Number(service.price||0);
     let priceHtml = formatTWD(basePrice);
     const promoInfo = isPhoneConsultService(service) ? getPromoInfo(service) : null;
@@ -3147,12 +3171,12 @@
     card.innerHTML = `
       <div class="pic">${sanitizeImageUrl(cover) ? `<img src="${escapeHtml(sanitizeImageUrl(cover))}" alt="${escapeHtml(service.name||'')}" loading="lazy">` : ''}</div>
       <div class="body">
-        <div class="name">${escapeHtml(service.name||'服務')}</div>
+        <div class="name">${escapeHtml(service.name||tf('服務','Service'))}</div>
         ${limitedRow}
-        <div class="meta">${showSold ? `<span class="badge badge-sold">已售出：${sold}</span>` : ''}</div>
+        <div class="meta">${showSold ? `<span class="badge badge-sold">${escapeHtml(tf('已售出：','Sold: '))}${sold}</span>` : ''}</div>
         <div class="price">${priceHtml}</div>
         <div class="cta">
-          <button class="btn primary" data-service="${escapeHtml(service.id||'')}">查看服務</button>
+          <button class="btn primary" data-service="${escapeHtml(service.id||'')}">${escapeHtml(tf('查看服務','View'))}</button>
         </div>
       </div>
     `;
@@ -3421,7 +3445,7 @@
     }
     if (promoEditToggle){
       promoEditToggle.style.display = '';
-      promoEditToggle.textContent = '編輯';
+      promoEditToggle.textContent = tf('編輯', 'Edit');
     }
     promoAdminEl.style.display = 'none';
     const data = getPromoData(service);
@@ -3434,7 +3458,7 @@
       promoEditToggle.addEventListener('click', ()=>{
         const next = promoAdminEl.style.display === 'none' ? '' : 'none';
         promoAdminEl.style.display = next;
-        promoEditToggle.textContent = next === 'none' ? '編輯' : '收起';
+        promoEditToggle.textContent = next === 'none' ? tf('編輯','Edit') : tf('收起','Collapse');
         if (promoMediaEl) promoMediaEl.classList.toggle('is-editing', next !== 'none');
       });
     }
@@ -3464,7 +3488,7 @@
           }
         }
         if (!promoOk || !descOk){
-          alert('儲存失敗，請稍後再試');
+          alert(tf('儲存失敗，請稍後再試', 'Save failed. Please try again later.'));
         }
       });
     }
@@ -3482,7 +3506,8 @@
       if (!ts) return '';
       const date = new Date(ts);
       if (Number.isNaN(date.getTime())) return '';
-      return date.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'});
+      const locale = getLang() === 'en' ? 'en-US' : 'zh-TW';
+      return date.toLocaleDateString(locale, {year:'numeric',month:'2-digit',day:'2-digit'});
     }catch(_){
       return '';
     }
@@ -3490,7 +3515,7 @@
 
   function formatStoryMsgHtml(msg){
     const raw = String(msg || '').trim();
-    if (!raw) return '目前尚無留言';
+    if (!raw) return tf('目前尚無留言', 'No message yet');
     const escaped = escapeHtml(raw);
     if (/\r|\n/.test(raw)){
       return escaped.replace(/\r\n|\r|\n/g, '<br>');
@@ -3515,7 +3540,7 @@
     promoStoryMsgEl.innerHTML = formatStoryMsgHtml(item && item.msg ? String(item.msg) : '');
     if (promoStoryMoreBtn){
       promoStoryMoreBtn.style.display = promoStoryItems.length ? '' : 'none';
-      promoStoryMoreBtn.textContent = '查看全部';
+      promoStoryMoreBtn.textContent = tf('查看全部', 'View all');
     }
     if (promoStoryNameEl) promoStoryNameEl.textContent = item && item.nick ? String(item.nick) : '';
     if (promoStoryTimeEl) promoStoryTimeEl.textContent = item ? formatStoryTime(item.ts) : '';
@@ -3738,7 +3763,9 @@
       const placeholder = document.createElement('div');
       placeholder.id = 'svcListEmpty';
       placeholder.className = 'empty';
-      placeholder.textContent = hotOnly ? '目前沒有熱賣中的服務。' : '目前尚未上架服務，請稍後再試。';
+      placeholder.textContent = hotOnly
+        ? tf('目前沒有熱賣中的服務。', 'No bestsellers at the moment.')
+        : tf('目前尚未上架服務，請稍後再試。', 'No services are available yet. Please try again later.');
       listEl.appendChild(placeholder);
       return;
     }
@@ -3944,6 +3971,7 @@
       if (detailAddBtn){
         detailAddBtn.disabled = true;
         setEndedBtn(detailAddBtn, false);
+        if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = 'not_open';
         detailAddBtn.textContent = tf('尚未開放', 'Not available');
       }
       openDialog(detailDialog);
@@ -3980,6 +4008,7 @@
     if (detailAddBtn){
       detailAddBtn.disabled = !!limitedExpired;
       setEndedBtn(detailAddBtn, !!limitedExpired);
+      if (detailAddBtn.dataset) detailAddBtn.dataset.svcBtnKind = limitedExpired ? 'ended' : 'add_to_cart';
       detailAddBtn.textContent = limitedExpired ? tOr('svc.ended', '已結束') : tOr('svc.add_to_cart', '加入購物車');
     }
     if (detailIncludes){
@@ -4032,7 +4061,7 @@
           });
         });
       }else{
-        detailGallery.innerHTML = '<div class="muted">目前尚未提供示意圖</div>';
+        detailGallery.innerHTML = '<div class="muted">' + escapeHtml(tf('目前尚未提供示意圖', 'No images available yet')) + '</div>';
       }
     }
     populateVariantSelect(service);
@@ -4055,7 +4084,7 @@
   function ensureSingleService(cart, serviceId){
     if (!cart.length) return cart;
     if (cart[0].serviceId === serviceId) return cart;
-    const ok = confirm('購物車內已有其他服務，加入新服務會清空原本的內容，是否繼續？');
+    const ok = confirm(tf('購物車內已有其他服務，加入新服務會清空原本的內容，是否繼續？', 'Your cart already has another service. Adding a new one will clear it. Continue?'));
     if (!ok) return null;
     return [];
   }
@@ -4066,11 +4095,11 @@
     const variant = options.length ? getVariantSelection(detail) : null;
     const isPhone = isPhoneConsultService(detail);
     if (options.length && !variant && !isPhone){
-      alert('請先選擇服務項目');
+      alert(tf('請先選擇服務項目', 'Please select a service option first'));
       return null;
     }
     const addonChecked = !isPhoneConsultService(detail) && isPhoneAddonChecked();
-    const addonSummary = addonChecked ? '加購：轉譯＋重點摘要整理(+500)' : '';
+    const addonSummary = addonChecked ? tf('加購：轉譯＋重點摘要整理(+500)', 'Add-on: Translation + summary (+500)') : '';
     const addonPrice = addonChecked ? 500 : 0;
     const svcId = resolveServiceId(detail);
     const qtyEnabled = isQtyEnabled(detail);
@@ -4161,7 +4190,7 @@
     if (!pending) return false;
     if (isPhoneConsultService(pending)){
       if (!pending.slotKey){
-        alert('請先選擇預約時段');
+        alert(tf('請先選擇預約時段', 'Please select a time slot first'));
         return false;
       }
     }
@@ -4184,7 +4213,7 @@
     if (!detailDataset) return;
     const limitedTs = parseLimitedUntil(detailDataset && detailDataset.limitedUntil);
     if (limitedTs && Date.now() >= limitedTs){
-      alert('此服務已結束上架');
+      alert(tf('此服務已結束上架', 'This service is no longer available'));
       return;
     }
     const isPhone = isPhoneConsultService(detailDataset);
@@ -4295,11 +4324,11 @@
   function openCheckoutDialog(){
     const cart = loadCart();
     if (!cart.length){
-      alert('購物車是空的');
+      alert(tf('購物車是空的', 'Your cart is empty'));
       return;
     }
     if (!cart.every(it => it.serviceId === cart[0].serviceId)){
-      alert('購物車內包含不同服務，請清空後重新選擇。');
+      alert(tf('購物車內包含不同服務，請清空後重新選擇。', 'Your cart contains different services. Please clear it and choose again.'));
       return;
     }
     resetCheckoutFlow();
@@ -4342,7 +4371,7 @@
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data || data.ok === false){
       const err = (data && data.error) || '';
-      const msg = mapUserErrorMessage(err) || (data && data.error) || '提交失敗';
+      const msg = mapUserErrorMessage(err) || (data && data.error) || tf('提交失敗', 'Submit failed');
       throw new Error(msg);
     }
     return data;
@@ -4372,15 +4401,15 @@
         lastLookupPhone = phone;
         lastLookupTransfer = bankDigits;
         if (!phone){
-          alert('請輸入手機號碼');
+          alert(tf('請輸入手機號碼', 'Please enter your phone number'));
           return;
         }
         if (!orderDigits && !bankDigits){
-          alert('請輸入訂單末五碼（英數）或匯款帳號末五碼');
+          alert(tf('請輸入訂單末五碼（英數）或匯款帳號末五碼', 'Enter either the last 5 characters of order ID or the last 5 digits of transfer account'));
           return;
         }
         if (orderDigitsRaw && orderDigits.length !== 5){
-          alert('訂單編號末五碼需為 5 位英數');
+          alert(tf('訂單編號末五碼需為 5 位英數', 'Order ID last 5 must be 5 alphanumeric characters'));
           return;
         }
         try{
@@ -4390,11 +4419,11 @@
           const res = await fetch('/api/service/orders/lookup?'+usp.toString(), { cache:'no-store' });
           const data = await res.json().catch(()=>({}));
           if (!res.ok || !data || data.ok === false){
-            throw new Error((data && data.error) || '查詢失敗');
+            throw new Error((data && data.error) || tf('查詢失敗', 'Lookup failed'));
           }
           renderLookupResult(Array.isArray(data.orders) ? data.orders : []);
         }catch(err){
-          alert(err && err.message ? err.message : '查詢失敗，請稍後再試');
+          alert(err && err.message ? err.message : tf('查詢失敗，請稍後再試', 'Lookup failed. Please try again later.'));
         }
       });
     }
@@ -4405,7 +4434,7 @@
     lastLookupResult = Array.isArray(list) ? list : [];
     lookupCards.innerHTML = '';
     if (!list.length){
-      lookupCards.innerHTML = '<div style="color:#94a3b8;">查無資料，請確認輸入是否正確。</div>';
+      lookupCards.innerHTML = '<div style="color:#94a3b8;">' + escapeHtml(tf('查無資料，請確認輸入是否正確。', 'No records found. Please check your input.')) + '</div>';
     }else{
       list.forEach(order=>{
         const transfer = order && order.transfer ? order.transfer : {};
@@ -4435,26 +4464,27 @@
         const scheduleLabel = isPhoneOrder && order.slotStart ? order.slotStart : (order.requestDate || '—');
         const card = document.createElement('div');
         card.className = 'lookup-card';
+        const statusText = statusLabel(order.status);
         card.innerHTML = `
-          <div style="font-weight:700;">訂單編號：${escapeHtml(order.id || '')}</div>
+          <div style="font-weight:700;">${escapeHtml(tf('訂單編號：', 'Order ID: '))}${escapeHtml(order.id || '')}</div>
           <div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:13px;font-weight:700;color:#0f172a;background:#dbeafe;">
             <span style="width:8px;height:8px;border-radius:999px;background:#2563eb;display:inline-block;"></span>
-            ${escapeHtml(STATUS_LABELS[order.status] || order.status || '處理中')}
+            ${escapeHtml(statusText)}
           </div>
-          <div style="margin-top:8px;font-weight:600;">服務：${serviceLine}</div>
-          <div style="font-size:13px;color:#475569;margin-top:6px;">聯絡人：${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
-          <div style="font-size:13px;color:#475569;">Email：${escapeHtml(buyer.email || '—')}</div>
-          <div style="font-size:13px;color:#475569;">生日：${escapeHtml(buyer.birth || '—')}｜指定日期：${escapeHtml(scheduleLabel)}</div>
-          <div style="font-size:13px;color:#475569;margin-top:6px;">總金額：${formatTWD(totalAmount)}</div>
-          <div style="font-size:13px;color:#475569;margin-top:6px;">備註：${escapeHtml(order.note || '—')}</div>
-          <div style="margin-top:12px;font-size:12px;color:#64748b;">申請改期請聯繫 LINE 客服。</div>
-          ${resultUrl ? `<div style="margin-top:12px;"><button type="button" class="btn primary" data-result-url="${escapeHtml(resultUrl)}">查看祈福成果照片</button></div>` : ''}
+          <div style="margin-top:8px;font-weight:600;">${escapeHtml(tf('服務：', 'Service: '))}${serviceLine}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">${escapeHtml(tf('聯絡人：', 'Contact: '))}${escapeHtml(buyer.name || '—')}（${escapeHtml(buyer.phone || '')}）</div>
+          <div style="font-size:13px;color:#475569;">${escapeHtml(tf('Email：','Email: '))}${escapeHtml(buyer.email || '—')}</div>
+          <div style="font-size:13px;color:#475569;">${escapeHtml(tf('生日：', 'Birth: '))}${escapeHtml(buyer.birth || '—')}｜${escapeHtml(tf('指定日期：', 'Schedule: '))}${escapeHtml(scheduleLabel)}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">${escapeHtml(tf('總金額：', 'Total: '))}${formatTWD(totalAmount)}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px;">${escapeHtml(tf('備註：', 'Note: '))}${escapeHtml(order.note || '—')}</div>
+          <div style="margin-top:12px;font-size:12px;color:#64748b;">${escapeHtml(tf('申請改期請聯繫 LINE 客服。', 'To reschedule, please contact LINE support.'))}</div>
+          ${resultUrl ? `<div style="margin-top:12px;"><button type="button" class="btn primary" data-result-url="${escapeHtml(resultUrl)}">${escapeHtml(tf('查看祈福成果照片','View result photo'))}</button></div>` : ''}
           <div style="margin-top:14px;border:1px dashed #cbd5f5;border-radius:12px;padding:12px;background:#f8fbff;">
-            <div style="font-size:13px;color:#1e40af;line-height:1.6;">祈福影片檔案較大無法直接上傳，請點下方加入官方 LINE 並輸入訂單資訊（訂單編號、手機或姓名即可），我們將把完整影片傳送給您。</div>
+            <div style="font-size:13px;color:#1e40af;line-height:1.6;">${escapeHtml(tf('祈福影片檔案較大無法直接上傳，請點下方加入官方 LINE 並輸入訂單資訊（訂單編號、手機或姓名即可），我們將把完整影片傳送給您。','Result videos are too large to upload here. Please add our LINE support below and send your order info (order ID, phone, or name). We will send you the full video.'))}</div>
             <div style="margin-top:10px;">
               <a href="https://line.me/R/ti/p/@427oaemj" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:linear-gradient(90deg,#16a34a,#22c55e);color:#fff;text-decoration:none;font-weight:700;box-shadow:0 6px 14px rgba(34,197,94,.35);">
                 <span style="font-size:16px;">💬</span>
-                官方LINE客服
+                ${escapeHtml(tf('官方LINE客服','Support (LINE)'))}
               </a>
             </div>
           </div>
@@ -4512,7 +4542,7 @@
   if (cartClearBtn){
     cartClearBtn.addEventListener('click', ()=>{
       if (!loadCart().length) return;
-      if (confirm('確定清空購物車？')){
+      if (confirm(tf('確定清空購物車？', 'Clear the cart?'))){
         saveCart([]);
         renderCartPanel();
       }
@@ -4522,13 +4552,13 @@
     cartCheckoutBtn.addEventListener('click', async ()=>{
       const cart = loadCart();
       if (!cart.length){
-        alert('購物車是空的');
+        alert(tf('購物車是空的', 'Your cart is empty'));
         return;
       }
       const phoneItem = cart.find(it => isPhoneConsultService(it));
       if (phoneItem){
         if (!phoneItem.slotKey){
-          alert('請先選擇預約時段');
+          alert(tf('請先選擇預約時段', 'Please select a time slot first'));
           return;
         }
         if (!phoneItem.slotHoldToken){
@@ -4540,7 +4570,7 @@
             }
             return;
           }
-          showWaitOverlay('處理中…', '正在保留預約時段');
+          showWaitOverlay(tf('處理中…', 'Processing…'), tf('正在保留預約時段', 'Holding your time slot'));
           try{
             const holdRes = await requestHold(phoneItem.serviceId, phoneItem.slotKey);
             if (!holdRes.ok){
@@ -4548,7 +4578,7 @@
                 window.authState.login();
                 return;
               }
-              alert(mapUserErrorMessage(holdRes.error) || '無法保留時段，請稍後再試');
+              alert(mapUserErrorMessage(holdRes.error) || tf('無法保留時段，請稍後再試', 'Unable to hold the slot. Please try again later.'));
               return;
             }
             phoneItem.slotHoldToken = holdRes.data.holdToken || '';
@@ -4684,7 +4714,7 @@
     async function openProfile(){
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
         if (window.authState && typeof window.authState.promptLogin === 'function'){
-          window.authState.promptLogin('請先登入再編輯基本資料');
+          window.authState.promptLogin(tf('請先登入再編輯基本資料', 'Please sign in to edit your profile'));
         }
         return;
       }
@@ -4699,14 +4729,14 @@
         if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
         else if (dlg) dlg.setAttribute('open','');
       }catch(e){
-        if (statusEl) statusEl.textContent = '讀取失敗，請稍後再試';
+        if (statusEl) statusEl.textContent = tf('讀取失敗，請稍後再試', 'Failed to load. Please try again later.');
       }
     }
 
     async function saveProfile(){
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
         if (window.authState && typeof window.authState.promptLogin === 'function'){
-          window.authState.promptLogin('請先登入再儲存');
+          window.authState.promptLogin(tf('請先登入再儲存', 'Please sign in to save'));
         }
         return;
       }
@@ -4735,14 +4765,14 @@
         }
         if (statusEl){
           statusEl.style.color = '#16a34a';
-          statusEl.textContent = '已儲存，下次結帳自動帶入。';
+          statusEl.textContent = tf('已儲存，下次結帳自動帶入。', 'Saved. It will auto-fill next time.');
         }
         if (window.authState && typeof window.authState.refreshProfile === 'function'){
           window.authState.refreshProfile();
         }
         setTimeout(()=>{ if (closeBtn) closeBtn.click(); }, 800);
       }catch(err){
-        if (statusEl) statusEl.textContent = err.message || '儲存失敗';
+        if (statusEl) statusEl.textContent = err.message || tf('儲存失敗', 'Save failed');
       }
     }
 
@@ -4751,7 +4781,7 @@
         if (arrow){
           arrow.textContent = isOpen ? '▴' : '▾';
         }else{
-          toggle.textContent = isOpen ? '會員中心 ▴' : '會員中心 ▾';
+          toggle.textContent = isOpen ? (tOr('common.member_center','會員中心') + ' ▴') : (tOr('common.member_center','會員中心') + ' ▾');
         }
       };
       const close = ()=>{
@@ -4992,7 +5022,7 @@
       const serviceId = phoneItem.serviceId;
       slotChangeBtn.disabled = true;
       const oldText = slotChangeBtn.textContent;
-      slotChangeBtn.textContent = '釋放中…';
+      slotChangeBtn.textContent = tf('釋放中…', 'Releasing…');
       const releaseRes = await releaseHoldOnServer(serviceId, phoneItem.slotKey, phoneItem.slotHoldToken);
       if (releaseRes.ok && (releaseRes.released || releaseRes.reason === 'hold_not_found')){
         clearHoldFromStorage(serviceId);
@@ -5019,7 +5049,7 @@
       // 顯示載入中狀態，避免使用者誤以為沒反應
       checkoutNextBtn.disabled = true;
       const oldText = checkoutNextBtn.textContent;
-      checkoutNextBtn.textContent = '處理中…';
+      checkoutNextBtn.textContent = tf('處理中…', 'Processing…');
       checkoutNextBtn.classList.add('loading');
       const data = collectStepOneData();
       if (!data){
@@ -5043,7 +5073,7 @@
       try{
         await ensureRitualPhotoUploaded();
       }catch(err){
-        alert(err && err.message ? err.message : '上傳祈福照片失敗');
+        alert(err && err.message ? err.message : tf('上傳祈福照片失敗', 'Ritual photo upload failed'));
         checkoutNextBtn.disabled = false;
         checkoutNextBtn.textContent = oldText;
         checkoutNextBtn.classList.remove('loading');
@@ -5066,7 +5096,7 @@
       const text = digits || String(BANK_INFO.account||'');
       try{
         navigator.clipboard.writeText(text);
-        alert('已複製匯款帳號');
+        alert(tf('已複製匯款帳號', 'Account copied'));
       }catch(_){
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -5076,7 +5106,7 @@
         ta.select();
         document.execCommand('copy');
         ta.remove();
-        alert('已複製匯款帳號');
+        alert(tf('已複製匯款帳號', 'Account copied'));
       }
     });
   }
@@ -5086,7 +5116,7 @@
       if (bankReceiptInput.files && bankReceiptInput.files[0]){
         const file = bankReceiptInput.files[0];
         if (file.size > RECEIPT_MAX_SIZE){
-          alert('匯款憑證檔案過大（上限 20MB）');
+          alert(tf('匯款憑證檔案過大（上限 20MB）', 'Receipt file is too large (max 20MB)'));
           bankReceiptInput.value = '';
           if (bankReceiptName) bankReceiptName.textContent = '';
           return;
@@ -5103,7 +5133,7 @@
       if (contactPhotoInput.files && contactPhotoInput.files[0]){
         const file = contactPhotoInput.files[0];
         if (file.size > RECEIPT_MAX_SIZE){
-          alert('檔案過大（上限 20MB）');
+          alert(tf('檔案過大（上限 20MB）', 'File is too large (max 20MB)'));
           contactPhotoInput.value = '';
           if (contactPhotoName) contactPhotoName.textContent = '';
           return;
@@ -5122,9 +5152,9 @@
       if (submitTip) submitTip.classList.add('show');
       if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
         if (window.authState && typeof window.authState.promptLogin === 'function'){
-          window.authState.promptLogin('請先登入後再送出匯款資料。');
+          window.authState.promptLogin(tf('請先登入後再送出匯款資料。', 'Please sign in before submitting.'));
         }else{
-          alert('請先登入後再送出匯款資料。');
+          alert(tf('請先登入後再送出匯款資料。', 'Please sign in before submitting.'));
           window.location.href = '/api/auth/google/login?prompt=select_account';
         }
         if (submitTip) submitTip.classList.remove('show');
@@ -5133,32 +5163,32 @@
       const serviceIdFromInput = checkoutServiceIdInput ? checkoutServiceIdInput.value : '';
       const serviceId = serviceIdFromInput || (checkoutForm && checkoutForm.dataset ? checkoutForm.dataset.serviceId : '') || '';
       if (!serviceId){
-        alert('缺少服務資訊，請重新選擇。');
+        alert(tf('缺少服務資訊，請重新選擇。', 'Missing service info. Please choose again.'));
         if (submitTip) submitTip.classList.remove('show');
         return;
       }
       if (!checkoutContact){
-        alert('請先填寫基本資料');
+        alert(tf('請先填寫基本資料', 'Please fill in your details first.'));
         setCheckoutStep(1);
         if (submitTip) submitTip.classList.remove('show');
         return;
       }
       const last5 = bankLast5Input ? bankLast5Input.value.trim() : '';
       if (!/^\d{5}$/.test(last5)){
-        alert('請輸入 5 位數的匯款末五碼');
+        alert(tf('請輸入 5 位數的匯款末五碼', 'Please enter the last 5 digits of your transfer'));
         if (bankLast5Input) bankLast5Input.focus();
         if (submitTip) submitTip.classList.remove('show');
         return;
       }
       const cart = loadCart();
       if (!cart.length){
-        alert('購物車為空，請重新選擇服務。');
+        alert(tf('購物車為空，請重新選擇服務。', 'Cart is empty. Please choose a service again.'));
         if (submitTip) submitTip.classList.remove('show');
         return;
       }
       const slotItem = cart.find(it => isPhoneConsultService(it) && it.slotHoldToken && it.slotKey);
       checkoutSubmitBtn.disabled = true;
-      checkoutSubmitBtn.textContent = '送出中…';
+      checkoutSubmitBtn.textContent = tf('送出中…', 'Submitting…');
       checkoutSubmitBtn.classList.add('loading');
       try{
         const receiptUrl = await ensureReceiptUploaded();
@@ -5218,10 +5248,10 @@
           window.authState.refreshProfile();
         }
       }catch(err){
-        alert(err && err.message ? err.message : '送出失敗，請稍後再試');
+        alert(err && err.message ? err.message : tf('送出失敗，請稍後再試', 'Submit failed. Please try again later.'));
       }finally{
         checkoutSubmitBtn.disabled = false;
-        checkoutSubmitBtn.textContent = '送出匯款資料';
+        checkoutSubmitBtn.textContent = tf('送出匯款資料', 'Submit');
         checkoutSubmitBtn.classList.remove('loading');
         if (submitTip) submitTip.classList.remove('show');
       }
@@ -5311,10 +5341,15 @@
     }catch(_){}
     try{
       if (detailAddBtn){
-        if (isEndedBtn(detailAddBtn)){
+        const kind = detailAddBtn.dataset ? (detailAddBtn.dataset.svcBtnKind || '') : '';
+        if (isEndedBtn(detailAddBtn) || kind === 'ended'){
           detailAddBtn.textContent = tOr('svc.ended', '已結束');
-        }else if (detailAddBtn.textContent === '加入購物車' || detailAddBtn.textContent === 'Add to cart'){
+        }else if (kind === 'add_to_cart'){
           detailAddBtn.textContent = tOr('svc.add_to_cart', '加入購物車');
+        }else if (kind === 'not_open'){
+          detailAddBtn.textContent = tf('尚未開放', 'Not available');
+        }else if (kind === 'not_available'){
+          detailAddBtn.textContent = tf('目前無法預約', 'Not available');
         }
       }
     }catch(_){}
@@ -5420,23 +5455,23 @@
   if (reviewSubmitBtn){
     reviewSubmitBtn.addEventListener('click', async ()=>{
       if (!currentReviewCode){
-        alert('尚未選擇服務');
+        alert(tf('尚未選擇服務', 'No service selected'));
         return;
       }
       const nick = reviewNickInput ? reviewNickInput.value.trim() : '';
       const msg = reviewTextInput ? reviewTextInput.value.trim() : '';
       if (!nick){
-        alert('請輸入您的名字或暱稱');
+        alert(tf('請輸入您的名字或暱稱', 'Please enter your name or nickname'));
         if (reviewNickInput) reviewNickInput.focus();
         return;
       }
       if (!msg){
-        alert('請分享您的體驗內容');
+        alert(tf('請分享您的體驗內容', 'Please share your experience'));
         if (reviewTextInput) reviewTextInput.focus();
         return;
       }
       reviewSubmitBtn.disabled = true;
-      reviewSubmitBtn.textContent = '送出中...';
+      reviewSubmitBtn.textContent = tf('送出中...', 'Submitting…');
       try{
         let imageUrl = '';
         if (reviewFileInput && reviewFileInput.files && reviewFileInput.files[0]){
@@ -5446,7 +5481,7 @@
           const uploadRes = await fetch('/api/upload', { method:'POST', body: formData });
           const uploadData = await uploadRes.json();
           if (!uploadRes.ok || !uploadData || uploadData.ok === false || !uploadData.files || !uploadData.files.length){
-            throw new Error((uploadData && uploadData.error) || '圖片上傳失敗');
+            throw new Error((uploadData && uploadData.error) || tf('圖片上傳失敗', 'Image upload failed'));
           }
           imageUrl = uploadData.files[0].url;
         }
@@ -5458,18 +5493,18 @@
         });
         const data = await res.json().catch(()=>({}));
         if (!res.ok || !data || data.ok === false){
-          throw new Error((data && data.error) || '送出分享失敗');
+          throw new Error((data && data.error) || tf('送出分享失敗', 'Submit failed'));
         }
-        alert('感謝您的分享！');
+        alert(tf('感謝您的分享！', 'Thanks for sharing!'));
         if (reviewNickInput) reviewNickInput.value = '';
         if (reviewTextInput) reviewTextInput.value = '';
         if (reviewFileInput) reviewFileInput.value = '';
         loadServiceReviews(currentReviewCode);
       }catch(err){
-        alert(err && err.message ? err.message : '送出分享失敗');
+        alert(err && err.message ? err.message : tf('送出分享失敗', 'Submit failed'));
       }finally{
         reviewSubmitBtn.disabled = false;
-        reviewSubmitBtn.textContent = '送出分享';
+        reviewSubmitBtn.textContent = tf('送出分享', 'Submit');
       }
     });
   }

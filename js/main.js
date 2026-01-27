@@ -193,9 +193,9 @@ function buildProductCard(p, opts = {}){
   const stockTotal = resolveTotalStock(p);
   const stockBadge = stockTotal === null
     ? ''
-    : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">庫存：${escapeHtml(String(stockTotal))}</span>`;
+    : `<span class="badge badge-stock ${stockTotal > 0 ? 'ok' : 'zero'}">${escapeHtml(t('shop.stock_prefix','庫存：'))}${escapeHtml(String(stockTotal))}</span>`;
   const deityBadge = p.deity ? `<span class="badge badge-deity">${escapeHtml(p.deity)}</span>` : '';
-  const limitedRow = buildLimitedRow(p, '限時商品'); // buildLimitedRow 内部已使用 escapeHtml
+  const limitedRow = buildLimitedRow(p, escapeHtml(t('shop.limited_label','限時商品'))); // buildLimitedRow 内部已使用 escapeHtml
 
   const card = document.createElement('div');
   card.className = 'card' + (opts.hot ? ' hot-card' : '');
@@ -325,14 +325,15 @@ async function loadProducts(){
     applyFilter();
     openProductFromUrl();
     banner.style.display = rawItems.length ? 'none' : 'block';
-    banner.textContent = rawItems.length ? '' : '目前沒有上架商品'; const sk=document.getElementById('skeleton'); if(sk && rawItems.length===0) sk.style.display='none';
+    banner.textContent = rawItems.length ? '' : t('shop.no_products','目前沒有上架商品');
+    const sk=document.getElementById('skeleton'); if(sk && rawItems.length===0) sk.style.display='none';
   }catch(e){
     // 如果先前已有資料，避免錯誤訊息覆蓋畫面
     if (rawItems.length){
       banner.style.display = 'none';
     }else{
       banner.style.display = 'block';
-      banner.textContent = '讀取商品失敗，請稍後再試';
+      banner.textContent = t('shop.load_products_failed','讀取商品失敗，請稍後再試');
     }
     console.error('loadProducts error', e);
   }
@@ -428,7 +429,7 @@ function renderList(items){
   listEl.innerHTML = '';
   if (!items.length){
     const isHot = window.__currentCategoryFilter === '__hot__';
-    const msg = isHot ? '目前沒有熱賣中商品' : '沒有符合條件的商品';
+    const msg = isHot ? t('shop.empty_hot','目前沒有熱賣中商品') : t('shop.empty_filtered','沒有符合條件的商品');
     const emptyDiv = document.createElement('div');
     emptyDiv.className = 'empty';
     emptyDiv.style.cssText = 'grid-column:1/-1';
@@ -511,7 +512,7 @@ document.addEventListener('click', function(e){
   async function openProfile(){
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
-        window.authState.promptLogin('請先登入再編輯基本資料');
+        window.authState.promptLogin(t('shop.profile_need_login_edit','請先登入再編輯基本資料'));
       }
       return;
     }
@@ -526,13 +527,13 @@ document.addEventListener('click', function(e){
       if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
       else if (dlg) dlg.setAttribute('open','');
     }catch(e){
-      if (statusEl) statusEl.textContent = '讀取失敗，請稍後再試';
+      if (statusEl) statusEl.textContent = t('shop.profile_load_failed','讀取失敗，請稍後再試');
     }
   }
   async function saveProfile(){
     if (!window.authState || !window.authState.isLoggedIn || !window.authState.isLoggedIn()){
       if (window.authState && typeof window.authState.promptLogin === 'function'){
-        window.authState.promptLogin('請先登入再儲存');
+        window.authState.promptLogin(t('shop.profile_need_login_save','請先登入再儲存'));
       }
       return;
     }
@@ -561,14 +562,14 @@ document.addEventListener('click', function(e){
       }
       if (statusEl){
         statusEl.style.color = '#16a34a';
-        statusEl.textContent = '已儲存，下次結帳自動帶入。';
+        statusEl.textContent = t('shop.profile_save_ok','已儲存，下次結帳自動帶入。');
       }
       if (window.authState && typeof window.authState.refreshProfile === 'function'){
         window.authState.refreshProfile();
       }
       setTimeout(()=>{ if (closeBtn) closeBtn.click(); }, 800);
     }catch(err){
-      if (statusEl) statusEl.textContent = err.message || '儲存失敗';
+      if (statusEl) statusEl.textContent = err.message || t('shop.profile_save_failed','儲存失敗');
     }
   }
 
@@ -577,7 +578,8 @@ document.addEventListener('click', function(e){
       if (arrow){
         arrow.textContent = isOpen ? '▴' : '▾';
       }else{
-        toggle.textContent = isOpen ? '會員中心 ▴' : '會員中心 ▾';
+        const label = t('common.member_center','會員中心');
+        toggle.textContent = isOpen ? (label + ' ▴') : (label + ' ▾');
       }
     };
     const close = ()=>{

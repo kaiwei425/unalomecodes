@@ -1,4 +1,26 @@
   (function(){
+    function t(key, fallback){
+      try{
+        var fn = window.UC_I18N && typeof window.UC_I18N.t === 'function' ? window.UC_I18N.t : null;
+        if (!fn) return fallback;
+        var v = fn(key);
+        if (!v || v === key) return fallback;
+        return String(v);
+      }catch(_){
+        return fallback;
+      }
+    }
+    function fmt(tpl, vars){
+      var out = String(tpl || '');
+      var obj = vars && typeof vars === 'object' ? vars : {};
+      try{
+        Object.keys(obj).forEach(function(k){
+          out = out.split('{' + k + '}').join(String(obj[k]));
+        });
+      }catch(_){}
+      return out;
+    }
+
     const contentEl = document.getElementById('guideContent');
     const editBtn = document.getElementById('guideEditBtn');
     const saveBtn = document.getElementById('guideSaveBtn');
@@ -61,7 +83,7 @@
     saveBtn.addEventListener('click', async () => {
       const html = contentEl.innerHTML.trim();
       if (!html){
-        alert('內容不能為空');
+        alert(t('sg.alert_empty','內容不能為空'));
         return;
       }
       try{
@@ -75,10 +97,10 @@
         if (data && data.ok){
           setEditing(false);
         }else{
-          alert('儲存失敗：' + (data.error || '未知錯誤'));
+          alert(fmt(t('sg.alert_save_failed','儲存失敗：{msg}'), { msg: (data && data.error) ? data.error : t('common.unknown_error','未知錯誤') }));
         }
       }catch(err){
-        alert('儲存失敗：' + err.message);
+        alert(fmt(t('sg.alert_save_failed','儲存失敗：{msg}'), { msg: err && err.message ? err.message : t('common.unknown_error','未知錯誤') }));
       }
     });
 

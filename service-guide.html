@@ -47,61 +47,64 @@
           <img src="/img/logo.png" alt="unalomecodes">
         </picture>
         <div>
-          <div class="t1">泰國寺廟map ©️ unalomecodes</div>
-          <div class="t2">服務介紹</div>
+          <div class="t1" data-i18n="sg.brand">泰國寺廟map ©️ unalomecodes</div>
+          <div class="t2" data-i18n="sg.title">服務介紹</div>
         </div>
       </div>
       <div class="top-actions-right">
-        <a class="pill-btn" href="/service">← 返回服務專區</a>
-        <button class="pill-btn" type="button" id="guideEditBtn" style="display:none;">編輯內容</button>
-        <button class="pill-btn" type="button" id="guideSaveBtn" style="display:none;">儲存</button>
-        <button class="pill-btn" type="button" id="guideCancelBtn" style="display:none;">取消</button>
+        <button type="button" class="pill-btn" id="btnLang" data-i18n-attr="aria-label:common.lang">ZH/EN</button>
+        <a class="pill-btn" href="/service" data-i18n="sg.back_service">← 返回服務專區</a>
+        <button class="pill-btn" type="button" id="guideEditBtn" style="display:none;" data-i18n="sg.edit">編輯內容</button>
+        <button class="pill-btn" type="button" id="guideSaveBtn" style="display:none;" data-i18n="common.save">儲存</button>
+        <button class="pill-btn" type="button" id="guideCancelBtn" style="display:none;" data-i18n="common.cancel">取消</button>
       </div>
     </div>
 
     <div id="guideContent" class="guide-content">
       <section class="guide-hero">
-        <h1>蠟燭祈福與義德善堂捐棺服務介紹</h1>
-        <p>服務型商品包含蠟燭祈福、法會祈福與義德善堂捐棺等項目，請依需求挑選最合適的服務。</p>
+        <h1 data-i18n="sg.hero_title">蠟燭祈福與義德善堂捐棺服務介紹</h1>
+        <p data-i18n="sg.hero_desc">服務型商品包含蠟燭祈福、法會祈福與義德善堂捐棺等項目，請依需求挑選最合適的服務。</p>
       </section>
 
       <section class="guide-grid">
         <div class="guide-card">
-          <h3>蠟燭祈福</h3>
-          <p>適合希望加強心願或守護能量的朋友，通常會搭配個人資料與祈福需求。</p>
+          <h3 data-i18n="sg.card1_title">蠟燭祈福</h3>
+          <p data-i18n="sg.card1_desc">適合希望加強心願或守護能量的朋友，通常會搭配個人資料與祈福需求。</p>
         </div>
         <div class="guide-card">
-          <h3>法會祈福</h3>
-          <p>以寺廟法會流程進行祈福，適合需要集體儀式與完整祝禱的需求。</p>
+          <h3 data-i18n="sg.card2_title">法會祈福</h3>
+          <p data-i18n="sg.card2_desc">以寺廟法會流程進行祈福，適合需要集體儀式與完整祝禱的需求。</p>
         </div>
         <div class="guide-card">
-          <h3>代捐棺服務</h3>
-          <p>代為完成捐棺功德需求，可搭配固定車馬費設定，方便集中處理。</p>
+          <h3 data-i18n="sg.card3_title">代捐棺服務</h3>
+          <p data-i18n="sg.card3_desc">代為完成捐棺功德需求，可搭配固定車馬費設定，方便集中處理。</p>
         </div>
       </section>
 
       <section class="guide-steps">
         <div class="guide-step">
-          <strong>下單流程</strong>
-          選擇服務 → 填寫資料 → 完成付款 → 等待後續通知與安排。
+          <strong data-i18n="sg.step1_title">下單流程</strong>
+          <span data-i18n="sg.step1_desc">選擇服務 → 填寫資料 → 完成付款 → 等待後續通知與安排。</span>
         </div>
         <div class="guide-step">
-          <strong>資料準備</strong>
-          若該服務需要照片或特定資料，會在商品頁面標示提醒，請依指示上傳。
+          <strong data-i18n="sg.step2_title">資料準備</strong>
+          <span data-i18n="sg.step2_desc">若該服務需要照片或特定資料，會在商品頁面標示提醒，請依指示上傳。</span>
         </div>
         <div class="guide-step">
-          <strong>進度查詢</strong>
-          可在「我的訂單」查看服務進度或留言詢問。
+          <strong data-i18n="sg.step3_title">進度查詢</strong>
+          <span data-i18n="sg.step3_desc">可在「我的訂單」查看服務進度或留言詢問。</span>
         </div>
       </section>
 
-      <div class="guide-note">法會祈福與服務型商品一旦成立訂單即安排流程，恕不提供退款。</div>
+      <div class="guide-note" data-i18n="sg.note">法會祈福與服務型商品一旦成立訂單即安排流程，恕不提供退款。</div>
       <div class="guide-actions">
-        <a class="pill-btn" href="/service">查看服務商品</a>
-        <a class="pill-btn" href="/faq">常見問題</a>
+        <a class="pill-btn" href="/service" data-i18n="sg.action_service">查看服務商品</a>
+        <a class="pill-btn" href="/faq" data-i18n="sg.action_faq">常見問題</a>
       </div>
     </div>
   </div>
+  <script src="/js/uc-i18n-core.js"></script>
+  <script src="/js/uc-i18n-service-guide.js"></script>
   <script src="/js/auth.js?v=20240930"></script>
   <script src="/js/service-guide.inline-1.js"></script>
 </body>

@@ -539,13 +539,9 @@ function resolveLang(){
   let stored = '';
   try{ stored = localStorage.getItem(LANG_KEY) || ''; }catch(_){}
   if (stored === 'zh' || stored === 'en') return stored;
-  const docLang = (document.documentElement.lang || '').toLowerCase();
-  if (docLang.startsWith('zh')) return 'zh';
-  const browser = (navigator.language || '').toLowerCase();
-  if (browser.startsWith('zh')) return 'zh';
-  const langs = Array.isArray(navigator.languages) ? navigator.languages.map(l=>String(l).toLowerCase()) : [];
-  if (langs.some(l=>l.startsWith('zh'))) return 'zh';
-  return browser.startsWith('en') ? 'en' : 'zh';
+  // Force default to Chinese unless user explicitly switches to English.
+  try{ localStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
+  return 'zh';
 }
 
 function setLang(lang){

@@ -261,7 +261,14 @@ let mainMap = null;
 let mainMarkers = [];
 let mainInfoWindow = null;
 const tripResultModal = document.getElementById('tripResultModal');
-let currentLang = 'zh';
+let currentLang = (function(){
+  try{
+    const v = localStorage.getItem('uc_lang') || '';
+    if (v === 'zh' || v === 'en') return v;
+    localStorage.setItem('uc_lang', 'zh');
+  }catch(_){}
+  return 'zh';
+})();
 const TAG_OPTIONS = [
   { value:'aircon', zh:'有冷氣', en:'Air-con' },
   { value:'photo', zh:'拍照點', en:'Photo spot' },
@@ -2505,6 +2512,7 @@ async function checkAdmin(){
 
 function setLanguage(lang) {
   currentLang = lang;
+  try{ localStorage.setItem('uc_lang', lang === 'en' ? 'en' : 'zh'); }catch(_){}
   if (btnLang){
     btnLang.textContent = 'ZH/EN';
     btnLang.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : 'Switch to English');
