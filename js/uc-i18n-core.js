@@ -5,10 +5,13 @@
   var DEFAULT_LANG = 'zh';
 
   function detectLang(){
+    // Always default to Chinese on fresh visits. English only applies after an explicit
+    // user switch (we keep that choice in sessionStorage for this tab/session).
     var stored = '';
-    try{ stored = localStorage.getItem(LANG_KEY) || ''; }catch(_){}
+    try{ stored = sessionStorage.getItem(LANG_KEY) || ''; }catch(_){}
     if (stored === 'zh' || stored === 'en') return stored;
-    // Force default to Chinese unless user explicitly switches to English.
+    try{ sessionStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
+    try{ localStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
     return 'zh';
   }
 
@@ -18,6 +21,7 @@
 
   function setLang(lang){
     var next = (lang === 'en') ? 'en' : 'zh';
+    try{ sessionStorage.setItem(LANG_KEY, next); }catch(_){}
     try{ localStorage.setItem(LANG_KEY, next); }catch(_){}
     try{
       window.dispatchEvent(new CustomEvent('uc_lang_change', { detail:{ lang: next } }));

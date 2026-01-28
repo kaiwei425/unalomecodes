@@ -237,12 +237,16 @@
 
   function resolveLang(){
     var stored = '';
-    try{ stored = localStorage.getItem(LANG_KEY) || ''; }catch(_){}
+    try{ stored = sessionStorage.getItem(LANG_KEY) || ''; }catch(_){}
     if (stored === 'zh' || stored === 'en') return stored;
+    // Force default to Chinese on fresh visits; only keep explicit switches in this session/tab.
+    try{ sessionStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
+    try{ localStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
     return 'zh';
   }
 
   function setLang(lang){
+    try{ sessionStorage.setItem(LANG_KEY, lang); }catch(_){}
     try{ localStorage.setItem(LANG_KEY, lang); }catch(_){}
     applyLang(lang);
   }

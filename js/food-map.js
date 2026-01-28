@@ -262,9 +262,11 @@ let mainMarkers = [];
 let mainInfoWindow = null;
 const tripResultModal = document.getElementById('tripResultModal');
 let currentLang = (function(){
+  // Force default to Chinese on fresh visits; keep explicit switch in sessionStorage.
   try{
-    const v = localStorage.getItem('uc_lang') || '';
+    const v = (sessionStorage.getItem('uc_lang') || '').trim();
     if (v === 'zh' || v === 'en') return v;
+    sessionStorage.setItem('uc_lang', 'zh');
     localStorage.setItem('uc_lang', 'zh');
   }catch(_){}
   return 'zh';
@@ -2512,7 +2514,11 @@ async function checkAdmin(){
 
 function setLanguage(lang) {
   currentLang = lang;
-  try{ localStorage.setItem('uc_lang', lang === 'en' ? 'en' : 'zh'); }catch(_){}
+  try{
+    const next = lang === 'en' ? 'en' : 'zh';
+    sessionStorage.setItem('uc_lang', next);
+    localStorage.setItem('uc_lang', next);
+  }catch(_){}
   if (btnLang){
     btnLang.textContent = 'ZH/EN';
     btnLang.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : 'Switch to English');
