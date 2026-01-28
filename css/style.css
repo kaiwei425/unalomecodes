@@ -51,27 +51,12 @@ html,body{
 .top-actions-right{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
   select,input{width:100%;padding:11px 12px;border:1px solid var(--line);background:linear-gradient(180deg,#fff, #f8fafc);color:var(--fg);border-radius:12px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);}
 
-.top-actions-right .lang-btn{order:-10;}
-
 .auth-widget{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.08);min-height:52px;}
 .auth-widget .auth-status{font-size:13px;font-weight:700;color:#475569;}
 .auth-widget.is-authed .auth-status{color:#15803d;}
 .auth-btn{border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 10px 20px rgba(16,149,214,.25);transition:transform .2s ease,filter .2s ease;}
 .auth-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
 .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
-.lang-btn{
-  border:1px solid var(--line);
-  border-radius:999px;
-  padding:8px 12px;
-  font-weight:800;
-  font-size:13px;
-  background:linear-gradient(180deg,#fff, #f8fafc);
-  color:#0f172a;
-  cursor:pointer;
-  box-shadow:0 8px 18px rgba(15,23,42,.08);
-  transition:transform .2s ease, filter .2s ease, border-color .2s ease;
-}
-.lang-btn:hover{transform:translateY(-1px);filter:brightness(1.01);border-color:#cbd5e1;}
 .guardian-badge{
   display:flex;
   align-items:center;
@@ -398,6 +383,20 @@ html,body{
 }
 .member-menu-panel .qna-badge.show{display:inline-flex;}
 .member-menu-panel a:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
+.member-menu-panel .lang-menu-btn{
+  width:100%;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
+  border-radius:12px;
+  padding:12px 14px;
+  color:#0f172a;
+  font-weight:900;
+  font-size:14px;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85);
+}
+.member-menu-panel .lang-menu-btn:hover{background:linear-gradient(135deg, rgba(24,161,104,.08), rgba(16,149,214,.08));}
 
   /* 商品格 */
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:10px}
