@@ -1,0 +1,1119 @@
+<!--
+使用說明
+1) 如何只改籤詩文字：在本檔案 <script> 內的 FORTUNES 陣列中，修改各籤的 title / poem / meaning / thaiBlessing / tags 欄位內容即可。
+2) 如何調整允杯機率：在本檔案 <script> 內的 PROB 常數中修改 holy / smile / yin 的數值（總和為 1）。
+-->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>線上求籤</title>
+<style>
+:root{
+  --bg1:#120b0a;
+  --bg2:#2b1a16;
+  --gold:#d7b36a;
+  --gold2:#f3d790;
+  --red:#7b1f1f;
+  --red2:#a53a2c;
+  --ink:#f8f1e5;
+  --ink-dim:#e7d7be;
+  --jade:#4f8f7a;
+  --shadow:rgba(0,0,0,.45);
+  --card:#2a1a16;
+  --line:rgba(255,235,200,.12);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:"Noto Serif TC","PingFang TC","Microsoft JhengHei",serif;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #3a241e 0%, transparent 60%),
+    radial-gradient(1000px 500px at 90% 0%, #3b261f 0%, transparent 60%),
+    linear-gradient(180deg,var(--bg1),var(--bg2));
+}
+main{
+  max-width:820px;
+  margin:0 auto;
+  padding:20px 16px 36px;
+}
+.hero{
+  position:relative;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:18px 16px 20px;
+  background:
+    linear-gradient(160deg, rgba(80,44,30,.35), rgba(20,12,10,.8)),
+    repeating-linear-gradient(135deg, rgba(255,214,140,.08) 0 6px, rgba(255,214,140,.02) 6px 12px);
+  box-shadow:0 18px 40px var(--shadow), inset 0 0 0 1px rgba(255,225,170,.08);
+}
+.hero:before,.hero:after{
+  content:""; position:absolute; border-radius:999px; pointer-events:none;
+  background:radial-gradient(circle at 30% 30%, rgba(255,235,200,.25), transparent 60%);
+}
+.hero:before{width:120px;height:120px;left:-30px;top:-30px;opacity:.6;}
+.hero:after{width:160px;height:160px;right:-40px;bottom:-40px;opacity:.4;}
+.brand{
+  display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;
+}
+.brand h1{
+  margin:0;
+  font-size:22px;
+  letter-spacing:2px;
+}
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  background:linear-gradient(120deg,var(--gold),var(--gold2));
+  color:#2a1a16;
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:.5px;
+}
+.stage{
+  margin-top:14px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+.canvas-wrap{
+  position:relative;
+  height:260px; /* fixed animation area */
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(45,27,22,.9), rgba(20,12,10,.9)),
+    repeating-linear-gradient(90deg, rgba(255,235,200,.04) 0 2px, transparent 2px 6px);
+  overflow:hidden;
+}
+canvas{display:block;width:100%;height:100%;}
+.status{
+  display:grid;gap:8px;
+  font-size:14px;color:var(--ink-dim);
+}
+.status strong{color:var(--ink);}
+.controls{display:flex;gap:10px;flex-wrap:wrap;}
+button{
+  appearance:none;border:none;cursor:pointer;
+  border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;
+  background:linear-gradient(140deg,var(--red2),var(--red));
+  color:var(--ink);
+  box-shadow:0 10px 20px var(--shadow), inset 0 0 0 1px rgba(255,235,200,.15);
+}
+button.secondary{
+  background:linear-gradient(140deg,#4a352d,#2a1a16);
+  color:var(--ink-dim);
+}
+button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px;}
+.result{
+  margin-top:16px;
+  border-radius:16px;
+  padding:16px;
+  border:1px solid var(--line);
+  background:linear-gradient(160deg, rgba(60,36,28,.75), rgba(22,13,11,.9));
+  min-height:140px;
+}
+.result.hidden{display:none;}
+.result h2{margin:0 0 6px;font-size:18px;letter-spacing:1px;}
+.result .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
+.tag{padding:3px 8px;border-radius:999px;background:rgba(255,225,170,.12);border:1px solid rgba(255,225,170,.18);} 
+.poem{margin:12px 0 6px;line-height:1.7;}
+.grid{
+  display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;
+}
+.grid .item{
+  background:rgba(255,235,200,.06);
+  border:1px solid rgba(255,235,200,.12);
+  border-radius:12px;
+  padding:10px;
+  font-size:14px;
+}
+.footer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+.notice{
+  font-size:13px;color:var(--ink-dim);margin-top:8px;
+}
+@media(min-width:720px){
+  .stage{grid-template-columns:2fr 1fr;align-items:stretch;}
+  .canvas-wrap{height:300px;}
+  .grid{grid-template-columns:1fr 1fr;}
+}
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto !important;}
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero" aria-live="polite">
+    <div class="brand">
+      <h1>線上求籤</h1>
+      <span class="badge">台灣廟宇感 × 泰式金箔</span>
+    </div>
+    <div class="stage">
+      <div class="canvas-wrap" aria-label="躑杯與抽籤動畫區" role="img">
+        <canvas id="scene" width="800" height="520" aria-hidden="true"></canvas>
+      </div>
+      <div class="status">
+        <div>流程：<strong id="flowText">等待開始</strong></div>
+        <div>躑杯次數：<strong id="tossCount">0</strong> / 3</div>
+        <div>本回合結果：<strong id="tossResult">—</strong></div>
+        <div class="controls">
+          <button id="startBtn" aria-label="開始求籤">開始求籤</button>
+          <button id="restartBtn" class="secondary" aria-label="重新開始" hidden>重新開始</button>
+        </div>
+        <div class="notice">提醒：此結果僅供參考，請以務實行動為主。</div>
+      </div>
+    </div>
+    <div id="result" class="result hidden"></div>
+  </section>
+</main>
+
+<script>
+const FORTUNES = [
+  {
+    id: 1,
+    no: "第01籤",
+    rank: "上上",
+    title: "晨光開路",
+    poem: ["微光未盛先照心","一步未多先定向","把握今朝小勇氣","好風自會送你行"],
+    meaning: {overall:"新局已開 先做最小可行的一步 會帶出連鎖好轉",love:"放下猜測 用一句真誠的話開場 關係自然回暖",career:"先解最卡的那一點 然後再擴張 會越做越順",wealth:"先穩現金流 再談加碼 投入以小額試水最吉",health:"規律作息比補救更有效 先把睡眠拉回來"},
+    thaiBlessing: {mantra:"Na Mo Put Dha Ya",color:"金",action:"點一盞小燈或把桌面整理乾淨"},
+    tags: ["開局","行動","順勢"]
+  },
+  {
+    id: 2,
+    no: "第02籤",
+    rank: "上吉",
+    title: "解結得通",
+    poem: ["結在心頭不在路","路在腳下不在口","先把一事做到完","其餘自會慢慢走"],
+    meaning: {overall:"把一件事收尾 其他問題會跟著鬆動",love:"把期待說清楚 別用暗示測試對方",career:"適合收斂戰線 把交付品質做漂亮",wealth:"清點支出 找出漏水點 很快就能回穩",health:"肩頸緊是提醒 多伸展與走動就好"},
+    thaiBlessing: {mantra:"Sathu Sathu",color:"綠",action:"寫下三件要完成的事 只做第一件"},
+    tags: ["收尾","專注","整理"]
+  },
+  {
+    id: 3,
+    no: "第03籤",
+    rank: "中吉",
+    title: "慢火成湯",
+    poem: ["急湯易溢也易冷","慢煮方能入心香","別怕眼前稍晚些","該來的甜在後方"],
+    meaning: {overall:"節奏放慢反而更快 以穩取勝",love:"別用情緒推進 以陪伴累積安全感",career:"適合打底與學習 先把基本功練扎實",wealth:"分段存錢 小額長期比一次梭哈更好",health:"多喝水與均衡飲食 讓身體回到穩定"},
+    thaiBlessing: {mantra:"Bhavatu Sabba Mangalam",color:"白",action:"泡一杯溫飲 慢慢喝完再做決定"},
+    tags: ["耐心","打底","長線"]
+  },
+  {
+    id: 4,
+    no: "第04籤",
+    rank: "中平",
+    title: "雲來不久",
+    poem: ["雲遮一時非遮天","雨落一陣非落年","先護自己小步走","晴時自有好河山"],
+    meaning: {overall:"短期有阻 但不是壞結局 先保守前進",love:"先照顧自己情緒 再談對錯",career:"避免硬碰硬 用替代方案繞開阻力",wealth:"先守後攻 暫緩高風險支出",health:"感到疲憊就休息 不要硬撐"},
+    thaiBlessing: {mantra:"Metta Metta",color:"藍",action:"今天少一件事 多一段休息"},
+    tags: ["轉折","保守","自護"]
+  },
+  {
+    id: 5,
+    no: "第05籤",
+    rank: "下籤",
+    title: "言多易失",
+    poem: ["話若太滿難轉身","心若太急易生紋","先留三分給明日","再走一步更安穩"],
+    meaning: {overall:"容易因衝動或口快惹麻煩 先慢下來",love:"少翻舊帳 先把當下說清楚就好",career:"避免承諾過量 先確認資源再答應",wealth:"先停手檢查帳目 避免一時衝動購買",health:"壓力訊號明顯 先減少刺激與熬夜"},
+    thaiBlessing: {mantra:"Sabbe Satta Sukhi Hontu",color:"灰",action:"重要訊息先打草稿 放 10 分鐘再送出"},
+    tags: ["慎言","降速","風險"]
+  },
+  {
+    id: 6,
+    no: "第06籤",
+    rank: "上吉",
+    title: "貴人近身",
+    poem: ["你以真心待人久","人以真心回你深","一句善意成橋樑","轉角就遇同行人"],
+    meaning: {overall:"有人願意伸手 你只要開口就能接到助力",love:"用欣賞代替要求 互動會更甜",career:"適合合作與談判 以互利框架談最順",wealth:"合資或分潤可行 但要寫清楚規則",health:"社交也要留白 別把行程排太滿"},
+    thaiBlessing: {mantra:"Chok Dee",color:"金",action:"主動聯絡一位你信任的人"},
+    tags: ["合作","人脈","助力"]
+  },
+  {
+    id: 7,
+    no: "第07籤",
+    rank: "中吉",
+    title: "門開一縫",
+    poem: ["門未全開先見光","路未全明先見向","把握眼前小機會","一步一步到遠方"],
+    meaning: {overall:"機會不大但真 先進去再擴張",love:"先回應對方需求 再談自己的期待",career:"先做小專案驗證 成功後再放大",wealth:"先做預算版 讓每筆錢有去處",health:"多走路 少久坐 身體會更順"},
+    thaiBlessing: {mantra:"Na Cha Li Ti",color:"綠",action:"把下一步寫成 10 分鐘能做的行動"},
+    tags: ["機會","試水","前進"]
+  },
+  {
+    id: 8,
+    no: "第08籤",
+    rank: "中平",
+    title: "回頭是岸",
+    poem: ["不是退後就算輸","是把方向重新鋪","走錯一步能回轉","回到正道就不苦"],
+    meaning: {overall:"需要修正路線 及早轉彎更省力",love:"如果卡住 先停下來聽彼此真話",career:"調整目標或分工 會比硬撐更好",wealth:"停止無效支出 把錢用在刀口上",health:"留意疲勞累積 先恢復再衝"},
+    thaiBlessing: {mantra:"Aroha",color:"白",action:"刪掉一個不必要的承諾"},
+    tags: ["修正","回轉","止損"]
+  },
+  {
+    id: 9,
+    no: "第09籤",
+    rank: "上上",
+    title: "心定萬事成",
+    poem: ["心若不亂路自直","手若不急事自實","先把當下做到好","福氣自然在你側"],
+    meaning: {overall:"穩住節奏 你會越來越順",love:"信任建立在一致 你做得到 對方也會跟上",career:"適合做決策與定案 用數據與事實說話",wealth:"守紀律就會累積 財運走穩健線",health:"心穩則身穩 適合做規律運動"},
+    thaiBlessing: {mantra:"Samma Araham",color:"金",action:"今天只專注一件最重要的事"},
+    tags: ["穩定","定案","上升"]
+  },
+  {
+    id: 10,
+    no: "第10籤",
+    rank: "中吉",
+    title: "水到渠成",
+    poem: ["渠已挖好水自來","因已種下果自開","別催春風快些到","花開自有它的牌"],
+    meaning: {overall:"條件逐步到位 近期會看到成果",love:"別急著要答案 先看對方行動一致性",career:"累積已足 適合提出方案或申請資源",wealth:"收入有機會增加 但先別擴張固定成本",health:"作息一穩 小毛病自然減少"},
+    thaiBlessing: {mantra:"Sukha Hotu",color:"粉",action:"把手邊流程整理成一張清單"},
+    tags: ["成熟","成果","耐心"]
+  },
+
+  {
+    id: 11,
+    no: "第11籤",
+    rank: "上吉",
+    title: "風起正好",
+    poem: ["風起不是要你怕","是要你把帆升起","方向對了不用跑","順風也能到千里"],
+    meaning: {overall:"順勢而為 選對方向比用力更重要",love:"用輕鬆相處取代控制 慢慢更靠近",career:"適合曝光與提案 把優勢放到台前",wealth:"有進帳機會 先把收益留一部分做備用",health:"外出走走 曬到自然光 會更有精神"},
+    thaiBlessing: {mantra:"Chai Yo",color:"金",action:"把你的作品或成果發佈出去"},
+    tags: ["順勢","曝光","提案"]
+  },
+  {
+    id: 12,
+    no: "第12籤",
+    rank: "中平",
+    title: "先小後大",
+    poem: ["大樹也從小芽起","高樓也由地基立","先把小處做得穩","再談遠方與大勢"],
+    meaning: {overall:"先打底再擴張 目前適合做基礎建設",love:"先建立日常互動 別急著定義關係",career:"流程與文件先補齊 才能穩定放量",wealth:"先存緊急預備金 再做其他規劃",health:"少吃太晚 讓腸胃休息"},
+    thaiBlessing: {mantra:"Namo Tassa",color:"白",action:"把你最常拖延的小事今天做完"},
+    tags: ["打底","基礎","穩"]
+  },
+  {
+    id: 13,
+    no: "第13籤",
+    rank: "下籤",
+    title: "路口慎選",
+    poem: ["路口一多心就散","選擇一多手就亂","先定原則再前進","不然容易繞回原"],
+    meaning: {overall:"易分心與反覆 先訂原則再做決定",love:"別同時處理太多曖昧 先誠實面對自己",career:"避免同時開太多專案 先砍掉兩個",wealth:"先停下比較 必要才買 不要情緒消費",health:"腦袋太滿會睡不好 先減少螢幕刺激"},
+    thaiBlessing: {mantra:"Khit Dee",color:"灰",action:"寫下你的三個不可妥協原則"},
+    tags: ["選擇","收斂","慎重"]
+  },
+  {
+    id: 14,
+    no: "第14籤",
+    rank: "中吉",
+    title: "相逢有緣",
+    poem: ["人來人往皆有因","一面之緣也留痕","你若溫柔不計較","好事終會回到身"],
+    meaning: {overall:"人際帶來好消息 以和為貴更順",love:"適合和解或重新連結 用溫柔取勝",career:"客戶或夥伴運佳 先談價值再談價格",wealth:"小利可積大財 先把交易流程做順",health:"情緒穩定後 身體也會跟著好"},
+    thaiBlessing: {mantra:"Metta",color:"粉",action:"對一個人說謝謝 或 做一件小善意"},
+    tags: ["人際","緣分","和氣"]
+  },
+  {
+    id: 15,
+    no: "第15籤",
+    rank: "上上",
+    title: "金光護邊",
+    poem: ["光在邊緣先成圈","圈成之後路更寬","你守規矩人守你","好運因此更常來"],
+    meaning: {overall:"守好邊界與規則 就能穩定獲得回報",love:"尊重彼此界線 反而更靠近",career:"合約與流程做清楚 你會更省心",wealth:"規律記帳與分配 會越存越有感",health:"固定運動與伸展 帶來長期改善"},
+    thaiBlessing: {mantra:"Maha Setthi",color:"金",action:"把規則寫下來 並照做一天"},
+    tags: ["邊界","規則","穩賺"]
+  },
+  {
+    id: 16,
+    no: "第16籤",
+    rank: "中平",
+    title: "心聲要聽",
+    poem: ["別把委屈藏太久","久了會變成暗傷","說出需求不等於吵","是把彼此放在光"],
+    meaning: {overall:"溝通能解大半問題 但要用正確方式",love:"把感受說清楚 不是指責 是分享",career:"需求要寫成可執行條件 才不會反覆",wealth:"避免人情花費過頭 先量力",health:"壓力型疲勞 需要規律放鬆"},
+    thaiBlessing: {mantra:"Santi",color:"藍",action:"用三句話說明你的需求 不加情緒詞"},
+    tags: ["溝通","需求","釐清"]
+  },
+  {
+    id: 17,
+    no: "第17籤",
+    rank: "上吉",
+    title: "暗處有門",
+    poem: ["看似無路其實有","只是入口在側邊","願意多看一眼時","轉機就在那一點"],
+    meaning: {overall:"換角度就見出路 別只盯同一條路",love:"別猜 直接問 反而更安心",career:"替代方案會勝過硬推 先找側門",wealth:"分散風險 先做多來源收入",health:"久坐就起身 你需要的是流動"},
+    thaiBlessing: {mantra:"Panya",color:"綠",action:"列出三個替代方案 先試最簡單的"},
+    tags: ["轉機","替代","創意"]
+  },
+  {
+    id: 18,
+    no: "第18籤",
+    rank: "下籤",
+    title: "別急著證明",
+    poem: ["越想證明越失衡","越要贏就越難贏","先把自己站穩了","別人自然會看清"],
+    meaning: {overall:"自我拉扯易耗損 先回到穩定狀態",love:"不要用輸贏衡量感情 先回到尊重",career:"少比較 多交付 用成果說話",wealth:"避免情緒性消費 用清單購買",health:"注意睡眠與咖啡因 過量會更焦躁"},
+    thaiBlessing: {mantra:"Yen Yen",color:"灰",action:"今天少做一個爭辯 多做一個交付"},
+    tags: ["止耗","自穩","少比較"]
+  },
+  {
+    id: 19,
+    no: "第19籤",
+    rank: "中吉",
+    title: "小舟過橋",
+    poem: ["橋不一定要很寬","小舟也能慢慢過","你若願意守節奏","終會到達另一岸"],
+    meaning: {overall:"步伐小但穩 會平安過關",love:"慢慢培養信任 不求立刻完美",career:"適合把流程拆小 用迭代方式推進",wealth:"先還一筆小債 或 清掉一筆小支出",health:"每天 20 分鐘走動 會改善狀態"},
+    thaiBlessing: {mantra:"Khop Khun",color:"白",action:"把任務拆成 3 個小步 先做第一步"},
+    tags: ["迭代","過關","穩步"]
+  },
+  {
+    id: 20,
+    no: "第20籤",
+    rank: "上上",
+    title: "心燈不滅",
+    poem: ["燈不怕夜深更長","人不怕路遠更慢","只怕你把心熄了","光在手上就能前"],
+    meaning: {overall:"只要持續就會贏 這籤主打長期堅持",love:"用穩定陪伴代替誓言 會更有力量",career:"長期專案見成效 適合定里程碑",wealth:"穩健累積會帶來安全感 不求暴增",health:"持續運動與早睡 會看見明顯差異"},
+    thaiBlessing: {mantra:"Sabai Sabai",color:"金",action:"設定一個 7 天小目標 每天打勾"},
+    tags: ["堅持","長線","自信"]
+  },
+
+  {
+    id: 21,
+    no: "第21籤",
+    rank: "中平",
+    title: "先聽後說",
+    poem: ["耳先開口心先穩","話先過腦路先順","多聽一分少誤會","少說一分少風浪"],
+    meaning: {overall:"溝通關鍵在傾聽 先理解再表態",love:"先聽對方真正需要 再回應你的想法",career:"會議前先整理重點 讓你更有說服力",wealth:"先比價與思考一天 再決定購買",health:"降低資訊轟炸 讓大腦休息"},
+    thaiBlessing: {mantra:"Sati",color:"藍",action:"重要對話前 先深呼吸三次"},
+    tags: ["傾聽","冷靜","減誤會"]
+  },
+  {
+    id: 22,
+    no: "第22籤",
+    rank: "上吉",
+    title: "合力成事",
+    poem: ["一人扛久會疲累","兩人同心路更開","把分工講清楚時","成果自然來得快"],
+    meaning: {overall:"適合找夥伴合作 分工越清楚越順",love:"共同完成一件小事 會加深連結",career:"外包或協作有利 但交付標準要寫清楚",wealth:"分潤模式可行 先訂規則再開始",health:"別把責任全扛身上 你需要休息"},
+    thaiBlessing: {mantra:"Ruam Ruam",color:"綠",action:"把你需要的協助寫成具體清單"},
+    tags: ["合作","分工","效率"]
+  },
+  {
+    id: 23,
+    no: "第23籤",
+    rank: "中吉",
+    title: "舊雨新知",
+    poem: ["舊人不是舊問題","新路也需舊經驗","把過去整理成書","未來就少走彎彎"],
+    meaning: {overall:"整理經驗能換來新機會 舊關係也可能帶來新資源",love:"舊誤會可解 但要用新方式相處",career:"回頭整理作品集 會引來更好的邀約",wealth:"清理訂閱與不必要支出 立刻見效",health:"規律比補品重要 先守基本"},
+    thaiBlessing: {mantra:"Khao Jai",color:"白",action:"整理一份你的成果清單 並更新到公開頁"},
+    tags: ["整理","復盤","邀約"]
+  },
+  {
+    id: 24,
+    no: "第24籤",
+    rank: "下籤",
+    title: "心急易破",
+    poem: ["拉太緊線會斷","催太快花會落","你若願意放鬆點","反而留得住福澤"],
+    meaning: {overall:"急不得 先降速 否則容易出錯或損耗關係",love:"別逼對方表態 先把相處品質做好",career:"時程別壓太死 留緩衝才不會翻車",wealth:"避免追高或衝動加碼 先守住基本盤",health:"休息不足會拖累效率 先補眠"},
+    thaiBlessing: {mantra:"Yen Jai",color:"灰",action:"今天只做必要任務 其他延後"},
+    tags: ["降速","緩衝","避免翻車"]
+  },
+  {
+    id: 25,
+    no: "第25籤",
+    rank: "中平",
+    title: "先定界線",
+    poem: ["界線不是冷漠牆","是讓善意有方向","你若清楚說可以","別人也更懂得量"],
+    meaning: {overall:"把界線說清楚 你會更輕鬆",love:"尊重彼此節奏 先談界線再談承諾",career:"工作範圍與報價要寫清楚 省掉後續糾紛",wealth:"人情支出先設上限 才能長久",health:"過勞是界線模糊造成 先學會拒絕"},
+    thaiBlessing: {mantra:"Rak Tua Eng",color:"藍",action:"寫下一句你需要的界線並練習說出口"},
+    tags: ["界線","自護","清楚"]
+  },
+  {
+    id: 26,
+    no: "第26籤",
+    rank: "上上",
+    title: "花開正盛",
+    poem: ["你種的種子已發芽","你走的路已成形","再給自己多一點信","好事會接著來臨"],
+    meaning: {overall:"運勢走升 可做重要決定 但仍要守節奏",love:"適合表達心意 以真誠與具體行動取勝",career:"升遷或成交機率高 把握窗口期",wealth:"收入有上升 先留一部分做長期規劃",health:"精神回穩 適合開始規律運動"},
+    thaiBlessing: {mantra:"Maha Chok",color:"金",action:"把重要事項排上日程並立刻開始"},
+    tags: ["上升","收穫","把握"]
+  },
+  {
+    id: 27,
+    no: "第27籤",
+    rank: "中吉",
+    title: "路遇清泉",
+    poem: ["走久自會遇清泉","渴時正好得甘甜","別怕途中有灰塵","洗一洗又是晴天"],
+    meaning: {overall:"中途會有補給與援助 不用太擔心",love:"關係需要喘息 先讓彼此輕鬆再推進",career:"資源會到位 但要主動爭取",wealth:"有小財可得 先用來補缺口",health:"補水與休息能改善狀態"},
+    thaiBlessing: {mantra:"Nam Jai",color:"白",action:"把你的需求用一句話說清楚並提出請求"},
+    tags: ["補給","援助","喘息"]
+  },
+  {
+    id: 28,
+    no: "第28籤",
+    rank: "中平",
+    title: "看見本質",
+    poem: ["表面熱鬧不等於好","沉默不等於不好","把眼光放在行動","真相就會自己跑"],
+    meaning: {overall:"用事實看人與事 會避免誤判",love:"看對方是否一致 不要只聽好聽話",career:"用數據與交付說話 遠離口頭承諾陷阱",wealth:"避免跟風消費 以實用為主",health:"少熬夜 多休息 讓身體回到本質"},
+    thaiBlessing: {mantra:"Sajja",color:"灰",action:"列出三個可量化指標來評估這件事"},
+    tags: ["事實","判斷","去泡泡"]
+  },
+  {
+    id: 29,
+    no: "第29籤",
+    rank: "上吉",
+    title: "一念轉吉",
+    poem: ["一念善起路就亮","一念定下心就安","你不必等到完美","現在就能往前走"],
+    meaning: {overall:"心態一轉 事情就轉 先動起來",love:"用溫柔回應勝過爭論",career:"適合啟動新計畫 用最小版本先上線",wealth:"先建立自動存錢 小額也能累積",health:"情緒與睡眠互相影響 先做放鬆儀式"},
+    thaiBlessing: {mantra:"Chai Dee",color:"粉",action:"做一件你一直拖延的小事 只做 5 分鐘"},
+    tags: ["心態","啟動","行動"]
+  },
+  {
+    id: 30,
+    no: "第30籤",
+    rank: "下籤",
+    title: "先停再走",
+    poem: ["馬不停蹄會失蹄","心不歇息會失序","先停一下看方向","再走一步更踏實"],
+    meaning: {overall:"需要暫停檢查 避免因疲勞造成錯誤",love:"先照顧自己的狀態 再談關係",career:"先把流程補洞 再談擴張與上量",wealth:"先盤點固定支出 暫緩大額購買",health:"疲勞訊號明顯 先休息與放鬆"},
+    thaiBlessing: {mantra:"Yut",color:"藍",action:"今天安排一段完全不工作的時間"},
+    tags: ["暫停","檢查","修復"]
+  },
+
+  {
+    id: 31,
+    no: "第31籤",
+    rank: "中吉",
+    title: "竹節向上",
+    poem: ["竹有節才長得高","人有守才走得遠","先把規矩放心上","自然一路向上升"],
+    meaning: {overall:"守規律會帶來上升 適合建立制度",love:"穩定相處比甜言更可靠",career:"建立 SOP 與模板 你會省很多力",wealth:"先建立預算分類 讓錢有方向",health:"固定運動比偶爾衝刺更有效"},
+    thaiBlessing: {mantra:"Khae Khae",color:"綠",action:"把你常做的事做成一份模板"},
+    tags: ["制度","規律","向上"]
+  },
+  {
+    id: 32,
+    no: "第32籤",
+    rank: "中平",
+    title: "不必討好",
+    poem: ["討好換不來長久","委屈養不出溫柔","你若先把自己顧","世界才會對你柔"],
+    meaning: {overall:"先顧好自己 反而更順 更有人尊重你",love:"別用犧牲換關係 用互相換長久",career:"合理拒絕不合理要求 你會更專業",wealth:"把錢花在真正需要的地方",health:"情緒壓抑會累 需要定期釋放"},
+    thaiBlessing: {mantra:"Rak Tua Eng",color:"粉",action:"拒絕一件你不想做的事 並說清原因"},
+    tags: ["自尊","拒絕","自護"]
+  },
+  {
+    id: 33,
+    no: "第33籤",
+    rank: "上上",
+    title: "福自來投",
+    poem: ["你走正道福自來","你做實事路自開","不必羨慕他人快","你會走得更精彩"],
+    meaning: {overall:"正向循環成形 你做的事會被看見",love:"適合更進一步 以承諾與行動落地",career:"成果可被放大 適合談更好的條件",wealth:"有增收機會 記得先存再花",health:"精神狀態佳 適合開始新習慣"},
+    thaiBlessing: {mantra:"Maha Mangala",color:"金",action:"把你的成果做成可分享的作品"},
+    tags: ["好運","成果","被看見"]
+  },
+  {
+    id: 34,
+    no: "第34籤",
+    rank: "中吉",
+    title: "以柔克剛",
+    poem: ["硬碰硬只會兩傷","以柔帶剛更久長","你若願意先退半步","對方反而會讓一方"],
+    meaning: {overall:"用柔軟策略更能達成目的",love:"用理解代替逼問 關係更穩",career:"談判先示好 再談條件 成功率高",wealth:"避免硬性支出 先做彈性配置",health:"放鬆練習能改善緊繃"},
+    thaiBlessing: {mantra:"Jai Yen",color:"藍",action:"用同理句開場再提出你的需求"},
+    tags: ["柔軟","談判","同理"]
+  },
+  {
+    id: 35,
+    no: "第35籤",
+    rank: "下籤",
+    title: "慎選同伴",
+    poem: ["同路不等於同心","熱鬧不等於可靠","先看品行再談夢","別把未來交給巧"],
+    meaning: {overall:"注意合作對象與資訊來源 先驗證再投入",love:"別被一時熱度帶走 看對方是否負責",career:"合作前先試小單 觀察交付與態度",wealth:"避免把錢交給不清楚的方案",health:"壓力大時更容易誤判 先休息再決定"},
+    thaiBlessing: {mantra:"Sati Sati",color:"灰",action:"把你要合作的條件寫成清單 逐條核對"},
+    tags: ["慎選","驗證","防雷"]
+  },
+  {
+    id: 36,
+    no: "第36籤",
+    rank: "上吉",
+    title: "好消息至",
+    poem: ["消息像風來得快","機會像雨落得密","你若準備好接住","收穫就會更確實"],
+    meaning: {overall:"近期會有好消息 但要準備好承接",love:"適合約見面或把話說清楚",career:"適合投遞提案或談合作 把資料備齊",wealth:"有加薪或額外收入可能 記得先做分配",health:"別因忙碌忽略休息"},
+    thaiBlessing: {mantra:"Chok Chok",color:"金",action:"把你的提案資料整理成一頁版本"},
+    tags: ["好消息","機會","承接"]
+  },
+  {
+    id: 37,
+    no: "第37籤",
+    rank: "中平",
+    title: "清理雜音",
+    poem: ["雜音多了心會亂","資訊多了眼會花","把不必要的都關掉","你會聽見真答案"],
+    meaning: {overall:"需要降低噪音 回到清晰判斷",love:"少看外界標準 多看你們相處品質",career:"先關掉無效會議與群組 才有產出",wealth:"停止不必要的訂閱與衝動購買",health:"降低螢幕時間 有助睡眠"},
+    thaiBlessing: {mantra:"Santi",color:"白",action:"刪除或靜音三個讓你焦慮的來源"},
+    tags: ["減噪","清晰","專注"]
+  },
+  {
+    id: 38,
+    no: "第38籤",
+    rank: "中吉",
+    title: "小吉可積",
+    poem: ["小吉不是不夠好","是提醒你要累積","把每天都做對一點","大吉就會靠近你"],
+    meaning: {overall:"靠累積取勝 每天做對一點就很強",love:"每天一點關心 勝過偶爾大驚喜",career:"小改版 小優化 會帶來大效果",wealth:"固定比例存錢 很快就有安全感",health:"每天走動與伸展 會明顯改善"},
+    thaiBlessing: {mantra:"Thamma",color:"綠",action:"今天做一個 1% 的優化並記錄"},
+    tags: ["累積","日拱","微改"]
+  },
+  {
+    id: 39,
+    no: "第39籤",
+    rank: "上上",
+    title: "月明如鏡",
+    poem: ["心如明鏡照見真","不必爭辯也能分","你若守住你的路","萬事終會向你奔"],
+    meaning: {overall:"判斷力強 方向正確 可以做重要決策",love:"以誠相待能更進一步",career:"適合定價或談條件 你有底氣",wealth:"把規劃寫下來並照做 財務更穩",health:"狀態回升 適合建立長期習慣"},
+    thaiBlessing: {mantra:"Panya Panya",color:"金",action:"把你要的未來寫成具體三條"},
+    tags: ["清晰","定價","決策"]
+  },
+  {
+    id: 40,
+    no: "第40籤",
+    rank: "下籤",
+    title: "避開硬石",
+    poem: ["硬石不必用頭撞","急流不必逆著闖","繞一圈不是放棄","是讓自己少受傷"],
+    meaning: {overall:"先避開衝突點 用迂迴策略更好",love:"先冷靜 先退一步 才能保住關係",career:"遇到阻力先換方法 不要硬推",wealth:"避免大額承諾 先觀望再決定",health:"緊繃時先放鬆 不要把壓力硬扛"},
+    thaiBlessing: {mantra:"Yut Krab",color:"灰",action:"把你正在硬推的事改成兩步走"},
+    tags: ["迂迴","避險","保護"]
+  },
+
+  {
+    id: 41,
+    no: "第41籤",
+    rank: "中吉",
+    title: "一線生機",
+    poem: ["看似封口仍有縫","縫裡透光能指路","你若願意再試一次","結果會比想像好"],
+    meaning: {overall:"別放棄 還有機會 但要換做法",love:"先修復溝通方式 再談未來",career:"重新調整提案角度 就會被接受",wealth:"先做小額測試 不要一次押大",health:"多休息 讓身體回彈"},
+    thaiBlessing: {mantra:"Su Su",color:"粉",action:"把計畫改成更小版本 48 小時內上線"},
+    tags: ["再試","改法","轉機"]
+  },
+  {
+    id: 42,
+    no: "第42籤",
+    rank: "上吉",
+    title: "名利皆順",
+    poem: ["你做的事有重量","你說的話有人聽","只要不忘初衷在","名利自然來相應"],
+    meaning: {overall:"聲量上升 影響力變大 記得守住價值",love:"你更有吸引力 但要挑對人",career:"適合談合作與曝光 做品牌化很吉",wealth:"收益可增 先設定分配比例",health:"注意過勞 影響力越大越要休息"},
+    thaiBlessing: {mantra:"Maha Barami",color:"金",action:"寫下你的三個品牌原則並貼在看得到的地方"},
+    tags: ["影響力","品牌","上升"]
+  },
+  {
+    id: 43,
+    no: "第43籤",
+    rank: "中平",
+    title: "先退後進",
+    poem: ["退一步不是認輸","是讓自己看更清","看清之後再前進","路就不再繞不停"],
+    meaning: {overall:"先停下復盤 再前進會更有效率",love:"暫緩情緒反應 先理解彼此",career:"先做檢討與優化 再擴張",wealth:"先盤點 再規劃 投資在自己能力上",health:"需要更多休息與放鬆"},
+    thaiBlessing: {mantra:"Sati",color:"白",action:"寫一頁復盤 只寫事實與下一步"},
+    tags: ["復盤","調整","效率"]
+  },
+  {
+    id: 44,
+    no: "第44籤",
+    rank: "下籤",
+    title: "防口舌",
+    poem: ["是非多從嘴邊起","誤會多從急中生","你若少說多做些","風浪自然不靠近"],
+    meaning: {overall:"口舌是非易起 低調行事更吉",love:"避免翻舊帳 用行動表達更有效",career:"先交付成果 避免捲入八卦",wealth:"避免衝動決策 先看合約條款",health:"壓力會反映在睡眠 先降刺激"},
+    thaiBlessing: {mantra:"Yen Yen",color:"灰",action:"今天少講評價 多做交付"},
+    tags: ["低調","避是非","慎言"]
+  },
+  {
+    id: 45,
+    no: "第45籤",
+    rank: "上上",
+    title: "大願可成",
+    poem: ["願大不怕路更長","只怕你忘了起點","一日一日往前走","終會抵達你所盼"],
+    meaning: {overall:"長期目標可成 靠持續與系統化",love:"關係靠日常經營 不是靠一次決定",career:"建立產品與流程會帶你走遠",wealth:"穩健累積可成大局 先守存錢紀律",health:"把健康當專案管理 就會越來越好"},
+    thaiBlessing: {mantra:"Bhavatu",color:"金",action:"把大目標拆成 12 週計畫並排程"},
+    tags: ["長期","系統","大局"]
+  },
+  {
+    id: 46,
+    no: "第46籤",
+    rank: "中吉",
+    title: "善有回聲",
+    poem: ["你付出的不會白","只是回來有早晚","把心放在做對事","回聲終會到你岸"],
+    meaning: {overall:"你之前的付出會回收 近期會見到回報",love:"真誠會被看見 但別用討好換愛",career:"口碑帶來機會 把服務做到位",wealth:"回款或收益可期 記得留存與分配",health:"保持規律 你會更穩"},
+    thaiBlessing: {mantra:"Karma Dee",color:"粉",action:"做一件無條件的善意 然後不求回報"},
+    tags: ["回報","口碑","善循環"]
+  },
+  {
+    id: 47,
+    no: "第47籤",
+    rank: "中平",
+    title: "別怕慢",
+    poem: ["慢不是輸給別人","是你選擇更穩的路","把每一步踩扎實","你會走得更長久"],
+    meaning: {overall:"放慢節奏可避錯 以穩求進",love:"慢慢相處更能看清是否合適",career:"先把品質做上去 才能撐得起放量",wealth:"穩定存錢比追快錢更安心",health:"慢跑或走路更適合你現在"},
+    thaiBlessing: {mantra:"Sabai",color:"白",action:"把今天的速度降 10% 但把品質升 10%"},
+    tags: ["穩","品質","節奏"]
+  },
+  {
+    id: 48,
+    no: "第48籤",
+    rank: "上吉",
+    title: "新路可試",
+    poem: ["舊路走久也會悶","新路一試見新天","不求一步到終點","先走三步看變遷"],
+    meaning: {overall:"適合嘗試新方向 用小步快跑驗證",love:"換相處方式 或 換表達方式 會更好",career:"新產品或新內容可測試 先做 MVP",wealth:"先小額試水 找到有效方式再加碼",health:"換一種運動或節奏 會更容易持續"},
+    thaiBlessing: {mantra:"ลองดู",color:"綠",action:"做一個小實驗 並設定 7 天驗證標準"},
+    tags: ["實驗","新方向","MVP"]
+  },
+  {
+    id: 49,
+    no: "第49籤",
+    rank: "下籤",
+    title: "先護信用",
+    poem: ["信用如紙易破裂","修補要花雙倍力","你若答應要做到","做不到就先說明"],
+    meaning: {overall:"注意承諾與信用 管理期望最重要",love:"別用空話安撫 用可做到的行動",career:"交付時間與範圍要講清楚 避免爭議",wealth:"避免借貸人情壓力 先量力",health:"焦慮來自未交付 先把該做的做完"},
+    thaiBlessing: {mantra:"Sajja",color:"灰",action:"檢查你所有承諾 把做不到的先改期或取消"},
+    tags: ["信用","承諾","期望管理"]
+  },
+  {
+    id: 50,
+    no: "第50籤",
+    rank: "上上",
+    title: "一呼百應",
+    poem: ["你點起火光眾人看","你說一句眾人聽","但願你心仍柔軟","把光照向對的人"],
+    meaning: {overall:"影響力強 人會跟隨你 但要守住初心",love:"人氣上升也要慎選對象",career:"適合帶團隊或做內容爆發 把節奏控好",wealth:"收益可提升 先把稅務與分配規劃好",health:"高強度期更要安排休息與運動"},
+    thaiBlessing: {mantra:"Barami",color:"金",action:"把你的價值主張寫成一句話並固定使用"},
+    tags: ["影響力","帶領","爆發"]
+  },
+
+  {
+    id: 51,
+    no: "第51籤",
+    rank: "中吉",
+    title: "先穩後快",
+    poem: ["穩是快的前一步","慢是準的前一步","你若先把地基打","起飛才不會翻覆"],
+    meaning: {overall:"先建立系統再放量 成功率更高",love:"先把相處規律建立 起伏就會少",career:"先做基礎架構與流程 再做行銷放大",wealth:"先建立固定儲蓄 再做其他配置",health:"先養成睡眠習慣 其他才跟上"},
+    thaiBlessing: {mantra:"Sati",color:"白",action:"把你最常出錯的流程寫成 SOP"},
+    tags: ["系統","地基","穩後快"]
+  },
+  {
+    id: 52,
+    no: "第52籤",
+    rank: "中平",
+    title: "風向會變",
+    poem: ["風向會變人也會","別把今天當永遠","你若守住你的心","變化反成新機緣"],
+    meaning: {overall:"變動中求穩 你能適應就能贏",love:"別用一時情緒下結論 給彼此空間",career:"策略可調整 但核心價值不要變",wealth:"保留現金彈性 才能抓住機會",health:"情緒波動大時 回到規律與運動"},
+    thaiBlessing: {mantra:"Anicca",color:"藍",action:"準備一個備案 並把最壞情境寫下來"},
+    tags: ["變動","彈性","備案"]
+  },
+  {
+    id: 53,
+    no: "第53籤",
+    rank: "上吉",
+    title: "好運靠近",
+    poem: ["好運不是天上掉","是你把自己準備好","當你準備剛剛好","機會就會剛剛到"],
+    meaning: {overall:"準備期將結束 你會迎來機會",love:"適合認真談一次 未來會更清楚",career:"作品與能力到位 可以談更好的條件",wealth:"有新收入機會 先確定可持續性",health:"保持規律 你會更有能量"},
+    thaiBlessing: {mantra:"พร้อมแล้ว",color:"金",action:"把你的作品集或商品頁做最後一次整理"},
+    tags: ["準備","機會","上升"]
+  },
+  {
+    id: 54,
+    no: "第54籤",
+    rank: "下籤",
+    title: "勿貪多",
+    poem: ["一口吃不成大餅","一次抓不住太多","你若貪多就會漏","不如先把一個做"],
+    meaning: {overall:"貪多會漏 先收斂戰線",love:"別同時處理太多情緒議題 一次一個",career:"砍掉不賺或不重要的工作 才能變強",wealth:"避免同時開太多支出 先守住現金流",health:"過勞風險高 先減量"},
+    thaiBlessing: {mantra:"ทีละอย่าง",color:"灰",action:"列出你在做的事 刪掉兩件"},
+    tags: ["收斂","減量","避免崩盤"]
+  },
+  {
+    id: 55,
+    no: "第55籤",
+    rank: "中吉",
+    title: "一橋通行",
+    poem: ["橋已架好你未走","路已清楚你未信","把腳踏上去那刻","你會知道它很穩"],
+    meaning: {overall:"機會已經在眼前 你需要的是踏出第一步",love:"主動一次就夠 讓對方看見你的心",career:"提案或上線時機成熟 行動即可",wealth:"小額投入可行 先做再調整",health:"走出去 呼吸與日光能幫你回穩"},
+    thaiBlessing: {mantra:"ไปเลย",color:"綠",action:"把你一直拖的事今天完成 50% 也算"},
+    tags: ["行動","上線","跨出"]
+  },
+  {
+    id: 56,
+    no: "第56籤",
+    rank: "中平",
+    title: "留白得福",
+    poem: ["留白不是空","是給好事進來的門","你若把時間塞太滿","福氣也找不到人"],
+    meaning: {overall:"留白能換來靈感與機會 別把自己塞滿",love:"給彼此呼吸空間 反而更想靠近",career:"安排無會議時段 你會更有產出",wealth:"避免用購物填補空虛 先回到需要",health:"休息是效率的一部分"},
+    thaiBlessing: {mantra:"Santi",color:"白",action:"今天留出一段無手機時間"},
+    tags: ["留白","休息","靈感"]
+  },
+  {
+    id: 57,
+    no: "第57籤",
+    rank: "上上",
+    title: "福到心安",
+    poem: ["心安不是沒風浪","是你知道自己會過","你若信任你的能力","每一關都成祝福"],
+    meaning: {overall:"你有能力過關 近期成就感會上升",love:"穩定與可靠是你的魅力 用行動說話",career:"適合擔起更大責任 但要做好節奏管理",wealth:"收益可提升 記得先存再花",health:"身心同步變好 適合建立更好的習慣"},
+    thaiBlessing: {mantra:"Sabba Mangalam",color:"金",action:"把你最自豪的一件事寫下來並感謝自己"},
+    tags: ["自信","過關","祝福"]
+  },
+  {
+    id: 58,
+    no: "第58籤",
+    rank: "上吉",
+    title: "一念慈心",
+    poem: ["慈心起處路更寬","好意流動人更安","你若願意先柔一點","世界也會柔回來"],
+    meaning: {overall:"以和為貴 做人做事更順",love:"用善意對話 會化解緊張",career:"客戶與合作運佳 用服務品質取勝",wealth:"小利可積 把流程做順就是財",health:"情緒穩定後 休息品質也會提升"},
+    thaiBlessing: {mantra:"Metta",color:"粉",action:"對自己說一句溫柔的話 然後去做一件小事"},
+    tags: ["慈心","和氣","人緣"]
+  },
+  {
+    id: 59,
+    no: "第59籤",
+    rank: "中平",
+    title: "守住底線",
+    poem: ["底線清楚心不累","原則在身路不歪","你若敢說不可以","就能守住好未來"],
+    meaning: {overall:"守住原則就是守住運勢",love:"不必討好 用界線換尊重",career:"不合理需求要拒絕 你會更專業",wealth:"先把底線支出守住 再談彈性",health:"過度消耗會讓身體抗議 先保護自己"},
+    thaiBlessing: {mantra:"Sajja",color:"藍",action:"寫下你的底線並設定提醒"},
+    tags: ["原則","底線","自護"]
+  },
+  {
+    id: 60,
+    no: "第60籤",
+    rank: "上上",
+    title: "圓滿收成",
+    poem: ["你走到這裡不容易","你撐過那些不被懂","此刻把成果收起來","下一段會更從容"],
+    meaning: {overall:"一段旅程將告一段落 迎來圓滿與新開始",love:"適合定下方向或做出成熟承諾",career:"可收尾可升級 適合整理成產品或作品集",wealth:"收成期 先做分配與留存 讓成果延續",health:"把作息穩住 你會更有底氣迎接新局"},
+    thaiBlessing: {mantra:"Maha Mangala",color:"金",action:"整理成果並做一次小小慶祝"},
+    tags: ["圓滿","收成","新局"]
+  }
+];
+
+const PROB = { holy: 0.45, smile: 0.30, yin: 0.25 };
+
+const el = {
+  canvas: document.getElementById('scene'),
+  flowText: document.getElementById('flowText'),
+  tossCount: document.getElementById('tossCount'),
+  tossResult: document.getElementById('tossResult'),
+  startBtn: document.getElementById('startBtn'),
+  restartBtn: document.getElementById('restartBtn'),
+  result: document.getElementById('result')
+};
+const ctx = el.canvas.getContext('2d');
+
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ANIM = {
+  tossDuration: prefersReduced ? 320 : 1400,
+  drawDuration: prefersReduced ? 400 : 1600,
+  pauseBetween: prefersReduced ? 300 : 700
+};
+
+let state = 'idle';
+let tosses = 0;
+let currentOutcome = null;
+let activeFortune = null;
+let animStart = 0;
+let frameReq = 0;
+
+function resizeCanvas(){
+  const {width, height} = el.canvas.getBoundingClientRect();
+  el.canvas.width = Math.round(width * devicePixelRatio);
+  el.canvas.height = Math.round(height * devicePixelRatio);
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function setText(){
+  el.tossCount.textContent = String(tosses);
+  el.tossResult.textContent = currentOutcome ? currentOutcome : '—';
+}
+
+function setFlow(text){
+  el.flowText.textContent = text;
+}
+
+function drawBackground(){
+  const w = el.canvas.clientWidth;
+  const h = el.canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(80,50,35,0.8)');
+  grad.addColorStop(1,'rgba(20,12,10,0.9)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,w,h);
+
+  ctx.strokeStyle = 'rgba(255,230,180,0.08)';
+  ctx.lineWidth = 1;
+  for(let i=0;i<8;i++){
+    ctx.beginPath();
+    ctx.moveTo(0, h*0.2 + i*22);
+    ctx.lineTo(w, h*0.2 + i*22);
+    ctx.stroke();
+  }
+
+  // altar base
+  ctx.fillStyle = 'rgba(140,80,50,0.35)';
+  ctx.fillRect(w*0.12, h*0.72, w*0.76, h*0.16);
+  ctx.strokeStyle = 'rgba(255,220,160,0.25)';
+  ctx.strokeRect(w*0.12, h*0.72, w*0.76, h*0.16);
+}
+
+function drawCup(x,y,rot,face){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(rot);
+  ctx.fillStyle = '#a6402a';
+  ctx.strokeStyle = 'rgba(255,215,160,0.35)';
+  ctx.lineWidth = 2;
+  const w=70,h=34;
+  if(face==='up'){
+    ctx.beginPath();
+    ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle='rgba(20,10,8,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(0,0,(w-16)/2,(h-12)/2,0,0,Math.PI*2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(-w/2,0);
+    ctx.quadraticCurveTo(0,-h, w/2,0);
+    ctx.quadraticCurveTo(0,h*0.9,-w/2,0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle='rgba(255,220,160,0.35)';
+    ctx.fillRect(-w/2, -4, w, 8);
+  }
+  ctx.restore();
+}
+
+function drawTube(x,y){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle='rgba(90,50,30,0.9)';
+  ctx.strokeStyle='rgba(255,220,160,0.3)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.rect(-60,-120,120,190);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle='rgba(220,180,110,0.25)';
+  for(let i=-50;i<=40;i+=20){
+    ctx.fillRect(i,-100,12,150);
+  }
+  ctx.beginPath();
+  ctx.ellipse(0,-120,60,16,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(140,90,50,0.9)';
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawStick(x,y,progress){
+  ctx.save();
+  ctx.translate(x,y);
+  const rise = -140*progress;
+  const tilt = -0.3*progress;
+  ctx.rotate(tilt);
+  ctx.fillStyle='rgba(220,180,110,0.95)';
+  ctx.strokeStyle='rgba(255,235,200,0.7)';
+  ctx.lineWidth=1;
+  ctx.fillRect(-6, rise, 12, 180);
+  ctx.strokeRect(-6, rise, 12, 180);
+  ctx.fillStyle='rgba(160,90,40,0.85)';
+  ctx.fillRect(-6, rise+10, 12, 18);
+  ctx.restore();
+}
+
+function renderIdle(){
+  drawBackground();
+  const w = el.canvas.clientWidth;
+  const h = el.canvas.clientHeight;
+  drawCup(w*0.42,h*0.55,0,'down');
+  drawCup(w*0.58,h*0.55,0,'down');
+  drawTube(w*0.78,h*0.78);
+}
+
+function chooseOutcome(){
+  const r = Math.random();
+  if(r < PROB.holy) return '聖杯';
+  if(r < PROB.holy + PROB.smile) return '笑杯';
+  return '陰杯';
+}
+
+function animateToss(ts){
+  if(!animStart) animStart = ts;
+  const t = Math.min(1, (ts - animStart)/ANIM.tossDuration);
+  drawBackground();
+  const w = el.canvas.clientWidth;
+  const h = el.canvas.clientHeight;
+  const bounce = Math.sin(t*Math.PI);
+  const spin = Math.sin(t*6*Math.PI)*(1-t);
+  const y = h*0.52 - bounce*60;
+  drawCup(w*0.42,y,spin,'down');
+  drawCup(w*0.58,y,-spin,'down');
+  drawTube(w*0.78,h*0.78);
+
+  if(t < 1){
+    frameReq = requestAnimationFrame(animateToss);
+  } else {
+    animStart = 0;
+    currentOutcome = chooseOutcome();
+    setText();
+    if(currentOutcome === '聖杯'){
+      setFlow('允杯，進入抽籤');
+      setTimeout(startDraw, ANIM.pauseBetween);
+    } else {
+      if(tosses >= 3){
+        failFlow();
+      } else {
+        setFlow('未得允杯，繼續躑杯');
+        setTimeout(startToss, ANIM.pauseBetween);
+      }
+    }
+  }
+}
+
+function startToss(){
+  state = 'tossing';
+  tosses += 1;
+  currentOutcome = null;
+  setFlow('躑杯中');
+  setText();
+  cancelAnimationFrame(frameReq);
+  frameReq = requestAnimationFrame(animateToss);
+}
+
+function animateDraw(ts){
+  if(!animStart) animStart = ts;
+  const t = Math.min(1, (ts - animStart)/ANIM.drawDuration);
+  drawBackground();
+  const w = el.canvas.clientWidth;
+  const h = el.canvas.clientHeight;
+  drawCup(w*0.42,h*0.58,0,'up');
+  drawCup(w*0.58,h*0.58,0,'down');
+  drawTube(w*0.74,h*0.8);
+  drawStick(w*0.74,h*0.8,t);
+
+  if(t < 1){
+    frameReq = requestAnimationFrame(animateDraw);
+  } else {
+    animStart = 0;
+    revealFortune();
+  }
+}
+
+function startDraw(){
+  state = 'drawing';
+  setFlow('抽籤中');
+  cancelAnimationFrame(frameReq);
+  frameReq = requestAnimationFrame(animateDraw);
+}
+
+function pickFortune(){
+  const idx = Math.floor(Math.random()*FORTUNES.length);
+  return FORTUNES[idx];
+}
+
+function renderResultCard(f){
+  const tags = f.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  el.result.innerHTML = `
+    <h2>${f.no}｜${f.rank}｜${f.title}</h2>
+    <div class="meta">${tags}</div>
+    <div class="poem">${f.poem.map(p=>`<div>${p}</div>`).join('')}</div>
+    <div class="grid">
+      <div class="item"><strong>整體：</strong>${f.meaning.overall}</div>
+      <div class="item"><strong>感情：</strong>${f.meaning.love}</div>
+      <div class="item"><strong>事業：</strong>${f.meaning.career}</div>
+      <div class="item"><strong>財務：</strong>${f.meaning.wealth}</div>
+      <div class="item"><strong>健康：</strong>${f.meaning.health}</div>
+      <div class="item"><strong>泰式祝福：</strong>${f.thaiBlessing.mantra}｜色彩 ${f.thaiBlessing.color}｜行動 ${f.thaiBlessing.action}</div>
+    </div>
+    <div class="footer-actions">
+      <button id="copyBtn" aria-label="複製籤詩結果">複製結果</button>
+      <button id="againBtn" class="secondary" aria-label="再求一次">再求一次</button>
+    </div>
+  `;
+  el.result.classList.remove('hidden');
+  const copyBtn = document.getElementById('copyBtn');
+  const againBtn = document.getElementById('againBtn');
+  copyBtn.addEventListener('click', () => copyResult(f));
+  againBtn.addEventListener('click', resetAll);
+}
+
+function revealFortune(){
+  state = 'done';
+  setFlow('籤詩已出');
+  activeFortune = pickFortune();
+  renderResultCard(activeFortune);
+  el.restartBtn.hidden = true;
+}
+
+function failFlow(){
+  state = 'failed';
+  setFlow('本次未得允杯 請稍後再試');
+  currentOutcome = '—';
+  setText();
+  el.result.classList.add('hidden');
+  el.restartBtn.hidden = false;
+  renderFailScene();
+}
+
+function renderFailScene(){
+  drawBackground();
+  const w = el.canvas.clientWidth;
+  const h = el.canvas.clientHeight;
+  drawCup(w*0.42,h*0.58,0,'down');
+  drawCup(w*0.58,h*0.58,0,'down');
+  drawTube(w*0.78,h*0.78);
+  ctx.fillStyle = 'rgba(255,225,180,0.9)';
+  ctx.font = '16px "Noto Serif TC", serif';
+  ctx.fillText('本次未得允杯', w*0.32, h*0.28);
+}
+
+function copyResult(f){
+  const text = [
+    `${f.no} ${f.rank} ${f.title}`,
+    f.poem.join('\n'),
+    `整體：${f.meaning.overall}`,
+    `感情：${f.meaning.love}`,
+    `事業：${f.meaning.career}`,
+    `財務：${f.meaning.wealth}`,
+    `健康：${f.meaning.health}`,
+    `泰式祝福：${f.thaiBlessing.mantra}｜色彩 ${f.thaiBlessing.color}｜行動 ${f.thaiBlessing.action}`,
+    `標籤：${f.tags.join('、')}`
+  ].join('\n');
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+}
+
+function resetAll(){
+  state = 'idle';
+  tosses = 0;
+  currentOutcome = null;
+  activeFortune = null;
+  setFlow('等待開始');
+  setText();
+  el.result.classList.add('hidden');
+  el.restartBtn.hidden = true;
+  renderIdle();
+}
+
+el.startBtn.addEventListener('click', () => {
+  if(state === 'idle' || state === 'failed'){
+    el.result.classList.add('hidden');
+    el.restartBtn.hidden = true;
+    startToss();
+  }
+});
+
+el.restartBtn.addEventListener('click', resetAll);
+
+resetAll();
+</script>
+</body>
+</html>
