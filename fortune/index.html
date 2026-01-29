@@ -11,67 +11,111 @@
 <title>線上求籤</title>
 <style>
 :root{
-  --bg1:#120b0a;
-  --bg2:#2b1a16;
-  --gold:#d7b36a;
-  --gold2:#f3d790;
-  --red:#7b1f1f;
-  --red2:#a53a2c;
-  --ink:#f8f1e5;
-  --ink-dim:#e7d7be;
-  --jade:#4f8f7a;
-  --shadow:rgba(0,0,0,.45);
-  --card:#2a1a16;
-  --line:rgba(255,235,200,.12);
+  --air-blue:#A7C7E7;
+  --moon-gray:#D3D3D3;
+  --gloss-black:#1A1A1A;
+  --mocha:#A68966;
+  --ink:#F4F7FA;
+  --ink-dim:rgba(244,247,250,.72);
+  --glass:rgba(255,255,255,.08);
+  --glass-strong:rgba(255,255,255,.14);
+  --line:rgba(255,255,255,.22);
+  --shadow:rgba(0,0,0,.35);
 }
 *{box-sizing:border-box;}
 html,body{height:100%;}
 body{
   margin:0;
-  font-family:"Noto Serif TC","PingFang TC","Microsoft JhengHei",serif;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
   color:var(--ink);
   background:
-    radial-gradient(1200px 600px at 10% -10%, #3a241e 0%, transparent 60%),
-    radial-gradient(1000px 500px at 90% 0%, #3b261f 0%, transparent 60%),
-    linear-gradient(180deg,var(--bg1),var(--bg2));
+    radial-gradient(1200px 700px at 20% -10%, rgba(167,199,231,.55) 0%, transparent 60%),
+    radial-gradient(900px 500px at 90% 10%, rgba(211,211,211,.25) 0%, transparent 65%),
+    linear-gradient(180deg, var(--moon-gray), var(--gloss-black));
 }
 main{
-  max-width:820px;
+  max-width:900px;
   margin:0 auto;
-  padding:20px 16px 36px;
+  padding:22px 16px 40px;
 }
 .hero{
   position:relative;
   border:1px solid var(--line);
-  border-radius:18px;
+  border-radius:20px;
   padding:18px 16px 20px;
-  background:
-    linear-gradient(160deg, rgba(80,44,30,.35), rgba(20,12,10,.8)),
-    repeating-linear-gradient(135deg, rgba(255,214,140,.08) 0 6px, rgba(255,214,140,.02) 6px 12px);
-  box-shadow:0 18px 40px var(--shadow), inset 0 0 0 1px rgba(255,225,170,.08);
+  background:linear-gradient(160deg, rgba(255,255,255,.10), rgba(255,255,255,.02));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:0 18px 40px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.hero.appear{
+  animation:fadeIn 1.6s ease-out both;
+}
+@keyframes fadeIn{
+  from{opacity:0; transform:translate3d(0,8px,0);}
+  to{opacity:1; transform:translate3d(0,0,0);}
 }
 .hero:before,.hero:after{
   content:""; position:absolute; border-radius:999px; pointer-events:none;
-  background:radial-gradient(circle at 30% 30%, rgba(255,235,200,.25), transparent 60%);
+  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 60%);
 }
-.hero:before{width:120px;height:120px;left:-30px;top:-30px;opacity:.6;}
-.hero:after{width:160px;height:160px;right:-40px;bottom:-40px;opacity:.4;}
+.hero:before{width:140px;height:140px;left:-30px;top:-30px;opacity:.5;}
+.hero:after{width:200px;height:200px;right:-50px;bottom:-60px;opacity:.35;}
+.parallax{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  border-radius:20px;
+  pointer-events:none;
+  z-index:0;
+}
+.parallax-layer{
+  position:absolute;
+  inset:-10%;
+  opacity:.25;
+  transform:translate3d(0,0,0);
+  transition:transform .2s ease-out;
+  background:
+    radial-gradient(600px 220px at 30% 20%, rgba(255,255,255,.25), transparent 60%),
+    radial-gradient(520px 200px at 70% 30%, rgba(167,199,231,.45), transparent 60%);
+}
+.parallax-layer.temple{
+  opacity:.18;
+  background:
+    linear-gradient(180deg, transparent 50%, rgba(26,26,26,.85) 70%),
+    radial-gradient(220px 120px at 20% 70%, rgba(26,26,26,.8), transparent 70%),
+    radial-gradient(260px 140px at 70% 75%, rgba(26,26,26,.9), transparent 70%);
+}
+.hero > *{position:relative;z-index:1;}
 .brand{
   display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;
 }
+.ranking{
+  margin-bottom:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size:13px;
+  color:var(--ink-dim);
+}
+.ranking strong{color:var(--ink);}
 .brand h1{
   margin:0;
   font-size:22px;
-  letter-spacing:2px;
+  letter-spacing:.1em;
+  font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
 }
 .badge{
-  padding:6px 10px;
+  padding:6px 12px;
   border-radius:999px;
-  background:linear-gradient(120deg,var(--gold),var(--gold2));
-  color:#2a1a16;
+  background:linear-gradient(120deg, rgba(167,199,231,.8), rgba(211,211,211,.6));
+  color:#1b1b1b;
   font-weight:700;
   font-size:12px;
-  letter-spacing:.5px;
+  letter-spacing:.08em;
 }
 .stage{
   margin-top:14px;
@@ -79,94 +123,241 @@ main{
   grid-template-columns:1fr;
   gap:12px;
 }
+.step{
+  margin-top:14px;
+  display:grid;
+  gap:12px;
+}
+.step.hidden{display:none;}
+.step-title{
+  font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
+  letter-spacing:.1em;
+  font-size:16px;
+  color:var(--ink);
+}
+.step-desc{font-size:13px;color:var(--ink-dim);}
+.form{
+  display:grid;
+  gap:12px;
+}
+.input-wrap{
+  position:relative;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow:hidden;
+}
+.input-wrap label{
+  display:block;
+  font-size:12px;
+  color:var(--ink-dim);
+  margin-bottom:6px;
+  letter-spacing:.08em;
+}
+.input-wrap input,
+.input-wrap textarea{
+  width:100%;
+  border:none;
+  background:transparent;
+  color:var(--ink);
+  font-size:16px;
+  outline:none;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+.input-wrap textarea{min-height:88px;resize:vertical;}
+.glow-field{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.pulse{
+  position:absolute;
+  width:120px;height:120px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(167,199,231,.35), transparent 60%);
+  animation:pulse 1.2s ease-out forwards;
+}
+@keyframes pulse{
+  0%{transform:scale(.2);opacity:.8;}
+  100%{transform:scale(1.6);opacity:0;}
+}
 .canvas-wrap{
   position:relative;
   height:260px; /* fixed animation area */
-  border-radius:16px;
-  border:1px solid var(--line);
-  background:
-    linear-gradient(180deg, rgba(45,27,22,.9), rgba(20,12,10,.9)),
-    repeating-linear-gradient(90deg, rgba(255,235,200,.04) 0 2px, transparent 2px 6px);
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.28);
+  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:0 16px 30px var(--shadow);
   overflow:hidden;
+}
+.canvas-wrap.shake{
+  will-change:transform;
 }
 canvas{display:block;width:100%;height:100%;}
 .status{
   display:grid;gap:8px;
   font-size:14px;color:var(--ink-dim);
+  padding:12px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .status strong{color:var(--ink);}
 .controls{display:flex;gap:10px;flex-wrap:wrap;}
 button{
   appearance:none;border:none;cursor:pointer;
-  border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;
-  background:linear-gradient(140deg,var(--red2),var(--red));
-  color:var(--ink);
-  box-shadow:0 10px 20px var(--shadow), inset 0 0 0 1px rgba(255,235,200,.15);
+  border-radius:14px;
+  padding:12px 16px;
+  min-width:48px;
+  min-height:48px;
+  font-size:14px;font-weight:700;
+  background:linear-gradient(140deg, #b29372, var(--mocha));
+  color:#1b1410;
+  box-shadow:0 10px 18px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.2);
 }
 button.secondary{
-  background:linear-gradient(140deg,#4a352d,#2a1a16);
-  color:var(--ink-dim);
+  background:linear-gradient(140deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  color:var(--ink);
 }
-button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px;}
+button:focus-visible{outline:2px solid var(--air-blue);outline-offset:2px;}
 .result{
   margin-top:16px;
-  border-radius:16px;
+  border-radius:18px;
   padding:16px;
   border:1px solid var(--line);
-  background:linear-gradient(160deg, rgba(60,36,28,.75), rgba(22,13,11,.9));
+  background:var(--glass-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   min-height:140px;
+  box-shadow:0 14px 30px var(--shadow);
 }
 .result.hidden{display:none;}
-.result h2{margin:0 0 6px;font-size:18px;letter-spacing:1px;}
+.result h2{
+  margin:0 0 6px;
+  font-size:18px;
+  letter-spacing:.08em;
+  font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
+}
 .result .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
-.tag{padding:3px 8px;border-radius:999px;background:rgba(255,225,170,.12);border:1px solid rgba(255,225,170,.18);} 
-.poem{margin:12px 0 6px;line-height:1.7;}
+.tag{
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(167,199,231,.2);
+  border:1px solid rgba(255,255,255,.28);
+}
+.poem{margin:12px 0 6px;line-height:1.8;}
 .grid{
   display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;
 }
 .grid .item{
-  background:rgba(255,235,200,.06);
-  border:1px solid rgba(255,235,200,.12);
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
   border-radius:12px;
   padding:10px;
   font-size:14px;
 }
 .footer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+.challenge{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);
+  font-size:13px;
+}
+.share{
+  margin-top:12px;
+  display:grid;
+  gap:10px;
+}
+.share img{
+  width:100%;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow:0 12px 24px var(--shadow);
+}
 .notice{
   font-size:13px;color:var(--ink-dim);margin-top:8px;
 }
 @media(min-width:720px){
-  .stage{grid-template-columns:2fr 1fr;align-items:stretch;}
   .canvas-wrap{height:300px;}
-  .grid{grid-template-columns:1fr 1fr;}
 }
 @media(prefers-reduced-motion:reduce){
   *{scroll-behavior:auto !important;}
+  .hero.appear{animation:none;}
 }
 </style>
 </head>
 <body>
 <main>
   <section class="hero" aria-live="polite">
+    <div class="parallax" aria-hidden="true">
+      <div class="parallax-layer cloud"></div>
+      <div class="parallax-layer temple"></div>
+    </div>
+    <div class="ranking">
+      366 天生日運勢每日排行榜：<strong id="rankText">第 — 名</strong>
+      <span id="rankDate"></span>
+    </div>
     <div class="brand">
       <h1>線上求籤</h1>
       <span class="badge">台灣廟宇感 × 泰式金箔</span>
     </div>
-    <div class="stage">
-      <div class="canvas-wrap" aria-label="躑杯與抽籤動畫區" role="img">
-        <canvas id="scene" width="800" height="520" aria-hidden="true"></canvas>
-      </div>
-      <div class="status">
-        <div>流程：<strong id="flowText">等待開始</strong></div>
-        <div>躑杯次數：<strong id="tossCount">0</strong> / 3</div>
-        <div>本回合結果：<strong id="tossResult">—</strong></div>
-        <div class="controls">
-          <button id="startBtn" aria-label="開始求籤">開始求籤</button>
-          <button id="restartBtn" class="secondary" aria-label="重新開始" hidden>重新開始</button>
-        </div>
-        <div class="notice">提醒：此結果僅供參考，請以務實行動為主。</div>
+    <div class="step step-intro" data-step="intro">
+      <div class="step-title">第一步｜淨心</div>
+      <div class="step-desc">請深呼吸三次，讓心緒放慢，進入儀式。</div>
+      <div class="controls">
+        <button id="introBtn" aria-label="進入稟告">進入稟告</button>
       </div>
     </div>
+
+    <div class="step step-form hidden" data-step="form">
+      <div class="step-title">第二步｜稟告</div>
+      <div class="step-desc">請寫下姓名與所求之事，保持語氣清楚與平穩。</div>
+      <div class="form">
+        <div class="input-wrap">
+          <label for="nameInput">姓名</label>
+          <input id="nameInput" type="text" autocomplete="name" placeholder="請輸入姓名" />
+          <div class="glow-field" aria-hidden="true"></div>
+        </div>
+        <div class="input-wrap">
+          <label for="wishInput">所求之事</label>
+          <textarea id="wishInput" placeholder="簡短描述你所求之事"></textarea>
+          <div class="glow-field" aria-hidden="true"></div>
+        </div>
+        <div class="controls">
+          <button id="formBtn" aria-label="完成稟告">完成稟告</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="step step-ritual hidden" data-step="ritual">
+      <div class="step-title">第三步｜求籤與擲筊</div>
+      <div class="step-desc">先搖籤筒，再行擲筊，獲得聖筊方可揭示籤詩。</div>
+      <div class="stage">
+        <div class="canvas-wrap" aria-label="躑杯與抽籤動畫區" role="img">
+          <canvas id="scene" width="800" height="520" aria-hidden="true"></canvas>
+        </div>
+        <div class="status">
+          <div>流程：<strong id="flowText">等待開始</strong></div>
+          <div>躑杯次數：<strong id="tossCount">0</strong> / 3</div>
+          <div>本回合結果：<strong id="tossResult">—</strong></div>
+          <div class="controls">
+            <button id="startBtn" aria-label="開始求籤">開始求籤</button>
+            <button id="restartBtn" class="secondary" aria-label="重新開始" hidden>重新開始</button>
+          </div>
+          <div class="notice">提醒：此結果僅供參考，請以務實行動為主。</div>
+        </div>
+      </div>
+    </div>
+
     <div id="result" class="result hidden"></div>
   </section>
 </main>
@@ -784,6 +975,17 @@ const PROB = { holy: 0.45, smile: 0.30, yin: 0.25 };
 
 const el = {
   canvas: document.getElementById('scene'),
+  canvasWrap: document.querySelector('.canvas-wrap'),
+  hero: document.querySelector('.hero'),
+  stepIntro: document.querySelector('.step-intro'),
+  stepForm: document.querySelector('.step-form'),
+  stepRitual: document.querySelector('.step-ritual'),
+  introBtn: document.getElementById('introBtn'),
+  formBtn: document.getElementById('formBtn'),
+  nameInput: document.getElementById('nameInput'),
+  wishInput: document.getElementById('wishInput'),
+  rankText: document.getElementById('rankText'),
+  rankDate: document.getElementById('rankDate'),
   flowText: document.getElementById('flowText'),
   tossCount: document.getElementById('tossCount'),
   tossResult: document.getElementById('tossResult'),
@@ -806,6 +1008,8 @@ let currentOutcome = null;
 let activeFortune = null;
 let animStart = 0;
 let frameReq = 0;
+let flipBusy = false;
+let noiseCtx = null;
 
 function resizeCanvas(){
   const {width, height} = el.canvas.getBoundingClientRect();
@@ -851,10 +1055,43 @@ function drawBackground(){
   ctx.strokeRect(w*0.12, h*0.72, w*0.76, h*0.16);
 }
 
-function drawCup(x,y,rot,face){
+function roughShake(target, duration=520, strength=8, points=20){
+  if(prefersReduced) return;
+  const start = performance.now();
+  const keys = [];
+  for(let i=0;i<=points;i++){
+    keys.push({
+      t:i/points,
+      x:(Math.random()*2-1)*strength,
+      y:(Math.random()*2-1)*strength,
+      r:(Math.random()*2-1)*strength*0.05
+    });
+  }
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function frame(now){
+    const p = Math.min(1,(now-start)/duration);
+    const idx = Math.min(points-1, Math.floor(p*points));
+    const a = keys[idx], b = keys[idx+1];
+    const lt = (p - a.t) / Math.max(0.0001,(b.t - a.t));
+    const x = lerp(a.x,b.x,lt);
+    const y = lerp(a.y,b.y,lt);
+    const r = lerp(a.r,b.r,lt);
+    target.style.transform = `translate3d(${x}px,${y}px,0) rotate(${r}rad)`;
+    if(p < 1){
+      requestAnimationFrame(frame);
+    } else {
+      target.style.transform = '';
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function drawCup(x,y,rot,face,tilt=0){
   ctx.save();
   ctx.translate(x,y);
   ctx.rotate(rot);
+  const scaleY = 1 - Math.min(0.35, Math.abs(tilt)*0.35);
+  ctx.scale(1, scaleY);
   ctx.fillStyle = '#a6402a';
   ctx.strokeStyle = 'rgba(255,215,160,0.35)';
   ctx.lineWidth = 2;
@@ -924,8 +1161,8 @@ function renderIdle(){
   drawBackground();
   const w = el.canvas.clientWidth;
   const h = el.canvas.clientHeight;
-  drawCup(w*0.42,h*0.55,0,'down');
-  drawCup(w*0.58,h*0.55,0,'down');
+  drawCup(w*0.42,h*0.55,0,'down',0.15);
+  drawCup(w*0.58,h*0.55,0,'down',-0.15);
   drawTube(w*0.78,h*0.78);
 }
 
@@ -944,9 +1181,10 @@ function animateToss(ts){
   const h = el.canvas.clientHeight;
   const bounce = Math.sin(t*Math.PI);
   const spin = Math.sin(t*6*Math.PI)*(1-t);
+  const tilt = Math.sin(t*2*Math.PI) * (1-t);
   const y = h*0.52 - bounce*60;
-  drawCup(w*0.42,y,spin,'down');
-  drawCup(w*0.58,y,-spin,'down');
+  drawCup(w*0.42,y,spin,'down',tilt);
+  drawCup(w*0.58,y,-spin,'down',-tilt);
   drawTube(w*0.78,h*0.78);
 
   if(t < 1){
@@ -971,6 +1209,7 @@ function animateToss(ts){
 
 function startToss(){
   state = 'tossing';
+  roughShake(el.canvasWrap, 520, 8, 20);
   tosses += 1;
   currentOutcome = null;
   setFlow('躑杯中');
@@ -985,8 +1224,8 @@ function animateDraw(ts){
   drawBackground();
   const w = el.canvas.clientWidth;
   const h = el.canvas.clientHeight;
-  drawCup(w*0.42,h*0.58,0,'up');
-  drawCup(w*0.58,h*0.58,0,'down');
+  drawCup(w*0.42,h*0.58,0,'up',0.12);
+  drawCup(w*0.58,h*0.58,0,'down',-0.12);
   drawTube(w*0.74,h*0.8);
   drawStick(w*0.74,h*0.8,t);
 
@@ -1010,7 +1249,38 @@ function pickFortune(){
   return FORTUNES[idx];
 }
 
+const DAILY_CHALLENGES = {
+  wealth: ["整理錢包並丟掉一張不用的收據","清潔廚房一角並擦拭檯面","記下一筆今日必要支出","收納一個抽屜","把零錢集中放入固定容器"],
+  love: ["穿藍色或淺色系衣物","傳一則簡短但真誠的關心訊息","對鏡子微笑三次","寫下一句感謝並說出口","為自己泡一杯溫飲慢慢喝完"],
+  career: ["把今日最重要的任務切成三步","整理桌面 5 分鐘","替一份文件加上清楚的標題","關閉一個不必要的通知","完成一個 10 分鐘的小交付"],
+  health: ["走路 15 分鐘","伸展肩頸 3 分鐘","今晚提早 20 分鐘入睡","喝一杯溫水並深呼吸","做一次簡短的整理呼吸練習"]
+};
+
+function hashSeed(str){
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h += (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);
+  }
+  return h >>> 0;
+}
+
+function pickChallenge(list, seed){
+  return list[seed % list.length];
+}
+
+function buildChallenges(f){
+  const seed = hashSeed(`${f.id}-${new Date().toDateString()}-${el.nameInput.value || ''}`);
+  return {
+    wealth: pickChallenge(DAILY_CHALLENGES.wealth, seed + 3),
+    love: pickChallenge(DAILY_CHALLENGES.love, seed + 7),
+    career: pickChallenge(DAILY_CHALLENGES.career, seed + 11),
+    health: pickChallenge(DAILY_CHALLENGES.health, seed + 19)
+  };
+}
+
 function renderResultCard(f){
+  const challenges = buildChallenges(f);
   const tags = f.tags.map(t=>`<span class="tag">${t}</span>`).join('');
   el.result.innerHTML = `
     <h2>${f.no}｜${f.rank}｜${f.title}</h2>
@@ -1024,6 +1294,14 @@ function renderResultCard(f){
       <div class="item"><strong>健康：</strong>${f.meaning.health}</div>
       <div class="item"><strong>泰式祝福：</strong>${f.thaiBlessing.mantra}｜色彩 ${f.thaiBlessing.color}｜行動 ${f.thaiBlessing.action}</div>
     </div>
+    <div class="challenge"><strong>每日開運挑戰｜金運：</strong>${challenges.wealth}</div>
+    <div class="challenge"><strong>每日開運挑戰｜感情：</strong>${challenges.love}</div>
+    <div class="challenge"><strong>每日開運挑戰｜事業：</strong>${challenges.career}</div>
+    <div class="challenge"><strong>每日開運挑戰｜健康：</strong>${challenges.health}</div>
+    <div class="share">
+      <img id="shareImg" alt="分享卡片預覽" />
+      <button id="downloadBtn" aria-label="下載分享卡片">下載分享卡片</button>
+    </div>
     <div class="footer-actions">
       <button id="copyBtn" aria-label="複製籤詩結果">複製結果</button>
       <button id="againBtn" class="secondary" aria-label="再求一次">再求一次</button>
@@ -1032,8 +1310,146 @@ function renderResultCard(f){
   el.result.classList.remove('hidden');
   const copyBtn = document.getElementById('copyBtn');
   const againBtn = document.getElementById('againBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const shareImg = document.getElementById('shareImg');
   copyBtn.addEventListener('click', () => copyResult(f));
   againBtn.addEventListener('click', resetAll);
+  const shareUrl = generateShareCard(f, challenges);
+  shareImg.src = shareUrl;
+  downloadBtn.addEventListener('click', () => downloadShare(shareUrl, f));
+}
+
+function flipTransition(){
+  if(flipBusy) return;
+  flipBusy = true;
+  const fromRect = el.canvasWrap.getBoundingClientRect();
+  const toRect = el.result.getBoundingClientRect();
+  const proxy = document.createElement('div');
+  proxy.className = 'flip-proxy';
+  proxy.style.position = 'fixed';
+  proxy.style.left = `${fromRect.left}px`;
+  proxy.style.top = `${fromRect.top}px`;
+  proxy.style.width = `${fromRect.width}px`;
+  proxy.style.height = `${fromRect.height}px`;
+  proxy.style.background = 'rgba(255,255,255,.12)';
+  proxy.style.border = '1px solid rgba(255,255,255,.25)';
+  proxy.style.borderRadius = '18px';
+  proxy.style.backdropFilter = 'blur(12px)';
+  proxy.style.boxShadow = '0 16px 30px rgba(0,0,0,.35)';
+  proxy.style.transformOrigin = 'center';
+  proxy.style.zIndex = '9999';
+  document.body.appendChild(proxy);
+
+  el.result.style.opacity = '0';
+  const start = performance.now();
+  const duration = prefersReduced ? 260 : 900;
+  function easeOutCubic(t){return 1 - Math.pow(1-t,3);}
+  function frame(now){
+    const t = Math.min(1,(now-start)/duration);
+    const e = easeOutCubic(t);
+    const x = fromRect.left + (toRect.left - fromRect.left)*e;
+    const y = fromRect.top + (toRect.top - fromRect.top)*e;
+    const w = fromRect.width + (toRect.width - fromRect.width)*e;
+    const h = fromRect.height + (toRect.height - fromRect.height)*e;
+    const rot = prefersReduced ? 0 : (1-e)*18;
+    proxy.style.left = `${x}px`;
+    proxy.style.top = `${y}px`;
+    proxy.style.width = `${w}px`;
+    proxy.style.height = `${h}px`;
+    proxy.style.transform = `rotate3d(1,0.3,0,${rot}deg)`;
+    if(t < 1){
+      requestAnimationFrame(frame);
+    } else {
+      proxy.remove();
+      el.result.style.opacity = '1';
+      flipBusy = false;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function generateShareCard(f, challenges){
+  const c = document.createElement('canvas');
+  const w = 1080, h = 1350;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,'#A7C7E7');
+  bg.addColorStop(0.6,'#D3D3D3');
+  bg.addColorStop(1,'#1A1A1A');
+  g.fillStyle = bg;
+  g.fillRect(0,0,w,h);
+
+  g.strokeStyle = 'rgba(255,255,255,.35)';
+  g.lineWidth = 3;
+  g.strokeRect(40,40,w-80,h-80);
+
+  for(let i=0;i<14;i++){
+    g.strokeStyle = `rgba(255,255,255,${0.08 + i*0.01})`;
+    g.beginPath();
+    g.moveTo(80, 120 + i*28);
+    g.lineTo(w-80, 120 + i*28);
+    g.stroke();
+  }
+
+  g.fillStyle = 'rgba(0,0,0,.35)';
+  g.fillRect(80, 160, w-160, 1040);
+
+  g.fillStyle = '#A68966';
+  g.beginPath();
+  g.arc(w-160, 180, 70, 0, Math.PI*2);
+  g.fill();
+  g.fillStyle = '#1A1A1A';
+  g.font = '22px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  g.textAlign = 'center';
+  g.fillText('今日運勢', w-160, 175);
+  g.font = '26px "Noto Serif TC","PMingLiU","MingLiU",serif';
+  g.fillText(f.rank, w-160, 205);
+  g.textAlign = 'left';
+
+  g.fillStyle = '#F4F7FA';
+  g.font = '48px "Noto Serif TC","PMingLiU","MingLiU",serif';
+  g.fillText(`${f.no}｜${f.rank}`, 120, 240);
+  g.font = '40px "Noto Serif TC","PMingLiU","MingLiU",serif';
+  g.fillText(f.title, 120, 300);
+
+  g.font = '32px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  let y = 380;
+  f.poem.forEach(line => {
+    g.fillText(line, 120, y);
+    y += 46;
+  });
+
+  y += 20;
+  g.font = '28px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  const items = [
+    `金運：${f.meaning.wealth}`,
+    `感情：${f.meaning.love}`,
+    `事業：${f.meaning.career}`,
+    `健康：${f.meaning.health}`
+  ];
+  items.forEach(t => { g.fillText(t, 120, y); y += 42; });
+
+  y += 10;
+  g.font = '26px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  g.fillText(`每日開運｜金運：${challenges.wealth}`, 120, y); y += 38;
+  g.fillText(`每日開運｜感情：${challenges.love}`, 120, y); y += 38;
+  g.fillText(`每日開運｜事業：${challenges.career}`, 120, y); y += 38;
+  g.fillText(`每日開運｜健康：${challenges.health}`, 120, y);
+
+  g.font = '24px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  g.fillStyle = 'rgba(244,247,250,.8)';
+  g.fillText('今日提醒：以務實行動為主', 120, h-140);
+  return c.toDataURL('image/png');
+}
+
+function downloadShare(url, f){
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${f.no}-${f.title}-share.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function revealFortune(){
@@ -1041,6 +1457,7 @@ function revealFortune(){
   setFlow('籤詩已出');
   activeFortune = pickFortune();
   renderResultCard(activeFortune);
+  flipTransition();
   el.restartBtn.hidden = true;
 }
 
@@ -1058,8 +1475,8 @@ function renderFailScene(){
   drawBackground();
   const w = el.canvas.clientWidth;
   const h = el.canvas.clientHeight;
-  drawCup(w*0.42,h*0.58,0,'down');
-  drawCup(w*0.58,h*0.58,0,'down');
+  drawCup(w*0.42,h*0.58,0,'down',0.1);
+  drawCup(w*0.58,h*0.58,0,'down',-0.1);
   drawTube(w*0.78,h*0.78);
   ctx.fillStyle = 'rgba(255,225,180,0.9)';
   ctx.font = '16px "Noto Serif TC", serif';
@@ -1103,6 +1520,117 @@ function resetAll(){
   renderIdle();
 }
 
+function setStep(step){
+  el.stepIntro.classList.toggle('hidden', step !== 'intro');
+  el.stepForm.classList.toggle('hidden', step !== 'form');
+  el.stepRitual.classList.toggle('hidden', step !== 'ritual');
+}
+
+function createPulse(field){
+  if(prefersReduced) return;
+  const pulse = document.createElement('span');
+  pulse.className = 'pulse';
+  const rect = field.getBoundingClientRect();
+  const x = Math.random() * rect.width;
+  const y = Math.random() * rect.height;
+  pulse.style.left = `${x - 60}px`;
+  pulse.style.top = `${y - 60}px`;
+  field.appendChild(pulse);
+  pulse.addEventListener('animationend', () => pulse.remove());
+}
+
+function setupInputGlow(){
+  const wraps = document.querySelectorAll('.input-wrap');
+  wraps.forEach((wrap) => {
+    const glow = wrap.querySelector('.glow-field');
+    const input = wrap.querySelector('input,textarea');
+    if(!glow || !input) return;
+    const handler = () => createPulse(glow);
+    input.addEventListener('input', handler);
+    input.addEventListener('focus', handler);
+  });
+}
+
+function getDayOfYear(d){
+  const start = new Date(d.getFullYear(), 0, 0);
+  const diff = d - start;
+  return Math.floor(diff / 86400000);
+}
+
+function updateRank(){
+  const now = new Date();
+  const day = getDayOfYear(now);
+  const year = now.getFullYear();
+  const isLeap = new Date(year, 1, 29).getMonth() === 1;
+  const total = isLeap ? 366 : 365;
+  const seed = hashSeed(`${year}-${day}-${el.nameInput.value || ''}`);
+  const rank = (seed % total) + 1;
+  el.rankText.textContent = `第 ${rank} 名`;
+  el.rankDate.textContent = `（${year}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}）`;
+}
+
+function startNoise(){
+  if(prefersReduced) return;
+  if(noiseCtx) return;
+  try{
+    noiseCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const bufferSize = 2 * noiseCtx.sampleRate;
+    const buffer = noiseCtx.createBuffer(1, bufferSize, noiseCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){
+      data[i] = (Math.random() * 2 - 1) * 0.08;
+    }
+    const src = noiseCtx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const gain = noiseCtx.createGain();
+    gain.gain.value = 0.12;
+    src.connect(gain).connect(noiseCtx.destination);
+    src.start(0);
+  } catch(_e){
+    noiseCtx = null;
+  }
+}
+
+function ensureNoise(){
+  if(noiseCtx && noiseCtx.state === 'suspended'){
+    noiseCtx.resume();
+  }
+  if(!noiseCtx) startNoise();
+}
+
+function setupParallax(){
+  if(prefersReduced) return;
+  const layers = Array.from(document.querySelectorAll('.parallax-layer'));
+  let targetX = 0, targetY = 0, raf = 0;
+  function apply(){
+    layers.forEach((layer,i) => {
+      const depth = (i+1) * 6;
+      const x = targetX * depth;
+      const y = targetY * depth;
+      layer.style.transform = `translate3d(${x}px,${y}px,0)`;
+    });
+    raf = 0;
+  }
+  function schedule(){
+    if(!raf) raf = requestAnimationFrame(apply);
+  }
+  el.hero.addEventListener('pointermove', (e) => {
+    const r = el.hero.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / r.width - 0.5;
+    const ny = (e.clientY - r.top) / r.height - 0.5;
+    targetX = nx * 6;
+    targetY = ny * 6;
+    schedule();
+  });
+  window.addEventListener('deviceorientation', (e) => {
+    if(e.beta == null || e.gamma == null) return;
+    targetX = Math.max(-1, Math.min(1, e.gamma / 30)) * 6;
+    targetY = Math.max(-1, Math.min(1, e.beta / 30)) * 6;
+    schedule();
+  }, {passive:true});
+}
+
 el.startBtn.addEventListener('click', () => {
   if(state === 'idle' || state === 'failed'){
     el.result.classList.add('hidden');
@@ -1113,7 +1641,26 @@ el.startBtn.addEventListener('click', () => {
 
 el.restartBtn.addEventListener('click', resetAll);
 
+el.introBtn.addEventListener('click', () => {
+  setStep('form');
+  ensureNoise();
+});
+
+el.formBtn.addEventListener('click', () => {
+  setStep('ritual');
+  ensureNoise();
+});
+
+document.addEventListener('pointerdown', ensureNoise, {once:true});
+el.nameInput.addEventListener('input', updateRank);
+
 resetAll();
+setupParallax();
+setupInputGlow();
+setStep('intro');
+startNoise();
+updateRank();
+requestAnimationFrame(() => el.hero.classList.add('appear'));
 </script>
 </body>
 </html>
