@@ -1,22 +1,25 @@
 <!--
 使用說明
-1) 如何只改籤詩文字：在本檔案 <script> 內的 FORTUNES 陣列中，修改各籤的 title / poem / meaning / thaiBlessing / tags 欄位內容即可。
-2) 如何調整允杯機率：在本檔案 <script> 內的 PROB 常數中修改 holy / smile / yin 的數值（總和為 1）。
+1) 如何只改籤詩文字：修改本檔案 <script> 內的 FORTUNES 陣列內容即可。
+2) 如何調整允杯機率：修改本檔案 <script> 內的 PROB 常數。
+3) 如何關閉音效預設：修改本檔案 <script> 內的 SOUND_DEFAULT 常數為 false。
 -->
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>線上求籤</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>高階專業化線上求籤平台</title>
 <style>
 :root{
-  --air-blue:#A7C7E7;
-  --moon-gray:#D3D3D3;
-  --gloss-black:#1A1A1A;
-  --mocha:#A68966;
+  --ethereal-blue:#A7C7E7;
+  --moonlit-grey:#D3D3D3;
+  --mocha-mousse:#A68966;
+  --digital-lavender:#E6E6FA;
+  --glossy-black:#1A1A1A;
+
   --ink:#F4F7FA;
-  --ink-dim:rgba(244,247,250,.72);
+  --ink-dim:rgba(244,247,250,.75);
   --glass:rgba(255,255,255,.08);
   --glass-strong:rgba(255,255,255,.14);
   --line:rgba(255,255,255,.22);
@@ -31,43 +34,63 @@ body{
   background:
     radial-gradient(1200px 700px at 20% -10%, rgba(167,199,231,.55) 0%, transparent 60%),
     radial-gradient(900px 500px at 90% 10%, rgba(211,211,211,.25) 0%, transparent 65%),
-    linear-gradient(180deg, var(--moon-gray), var(--gloss-black));
+    linear-gradient(180deg, var(--moonlit-grey), var(--glossy-black));
 }
 main{
-  max-width:900px;
+  max-width:980px;
   margin:0 auto;
-  padding:22px 16px 40px;
+  padding:16px 14px 40px;
+}
+.nav{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.nav h1{
+  margin:0;
+  font-size:18px;
+  font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
+  letter-spacing:.1em;
+}
+.stage-pill{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:linear-gradient(120deg, rgba(167,199,231,.8), rgba(230,230,250,.6));
+  color:#1b1b1b;
+  font-weight:700;
+  letter-spacing:.08em;
 }
 .hero{
+  margin-top:12px;
   position:relative;
   border:1px solid var(--line);
   border-radius:20px;
-  padding:18px 16px 20px;
+  padding:14px;
   background:linear-gradient(160deg, rgba(255,255,255,.10), rgba(255,255,255,.02));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow:0 18px 40px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.08);
+  overflow:hidden;
 }
 .hero.appear{
-  animation:fadeIn 1.6s ease-out both;
+  animation:fadeIn 1.4s ease-out both;
 }
 @keyframes fadeIn{
-  from{opacity:0; transform:translate3d(0,8px,0);}
-  to{opacity:1; transform:translate3d(0,0,0);}
+  from{opacity:0; transform:translate3d(0,8px,0);} 
+  to{opacity:1; transform:translate3d(0,0,0);} 
 }
-.hero:before,.hero:after{
-  content:""; position:absolute; border-radius:999px; pointer-events:none;
-  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 60%);
-}
-.hero:before{width:140px;height:140px;left:-30px;top:-30px;opacity:.5;}
-.hero:after{width:200px;height:200px;right:-50px;bottom:-60px;opacity:.35;}
 .parallax{
   position:absolute;
   inset:0;
-  overflow:hidden;
-  border-radius:20px;
   pointer-events:none;
-  z-index:0;
 }
 .parallax-layer{
   position:absolute;
@@ -75,6 +98,8 @@ main{
   opacity:.25;
   transform:translate3d(0,0,0);
   transition:transform .2s ease-out;
+}
+.parallax-layer.fog{
   background:
     radial-gradient(600px 220px at 30% 20%, rgba(255,255,255,.25), transparent 60%),
     radial-gradient(520px 200px at 70% 30%, rgba(167,199,231,.45), transparent 60%);
@@ -86,60 +111,58 @@ main{
     radial-gradient(220px 120px at 20% 70%, rgba(26,26,26,.8), transparent 70%),
     radial-gradient(260px 140px at 70% 75%, rgba(26,26,26,.9), transparent 70%);
 }
-.hero > *{position:relative;z-index:1;}
-.brand{
-  display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;
+.parallax-layer.altar{
+  opacity:.25;
+  background:
+    radial-gradient(220px 120px at 50% 85%, rgba(166,137,102,.6), transparent 60%),
+    linear-gradient(0deg, rgba(123,37,37,.5), transparent 60%);
 }
-.ranking{
-  margin-bottom:12px;
-  padding:12px 14px;
-  border-radius:16px;
-  border:1px solid var(--line);
-  background:rgba(255,255,255,.08);
+.hero > *{position:relative; z-index:1;}
+.stage{
+  height:280px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.28);
+  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  font-size:13px;
-  color:var(--ink-dim);
+  box-shadow:0 16px 30px var(--shadow);
+  overflow:hidden;
+  position:relative;
 }
-.ranking strong{color:var(--ink);}
-.brand h1{
-  margin:0;
-  font-size:22px;
-  letter-spacing:.1em;
-  font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
+canvas{display:block;width:100%;height:100%;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;}
+button{
+  appearance:none;border:none;cursor:pointer;
+  border-radius:14px;
+  padding:12px 16px;
+  min-width:48px;min-height:48px;
+  font-size:14px;font-weight:700;
+  background:linear-gradient(140deg, #b29372, var(--mocha-mousse));
+  color:#1b1410;
+  box-shadow:0 10px 18px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.2);
 }
-.badge{
-  padding:6px 12px;
-  border-radius:999px;
-  background:linear-gradient(120deg, rgba(167,199,231,.8), rgba(211,211,211,.6));
-  color:#1b1b1b;
-  font-weight:700;
-  font-size:12px;
-  letter-spacing:.08em;
+button.secondary{
+  background:linear-gradient(140deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  color:var(--ink);
 }
-.stage{
-  margin-top:14px;
-  display:grid;
-  grid-template-columns:1fr;
-  gap:12px;
+button:focus-visible{outline:2px solid var(--ethereal-blue);outline-offset:2px;}
+.section{margin-top:14px;display:grid;gap:12px;}
+.card{
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding:12px;
 }
-.step{
-  margin-top:14px;
-  display:grid;
-  gap:12px;
-}
-.step.hidden{display:none;}
 .step-title{
   font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
   letter-spacing:.1em;
   font-size:16px;
-  color:var(--ink);
 }
 .step-desc{font-size:13px;color:var(--ink-dim);}
-.form{
-  display:grid;
-  gap:12px;
-}
+.hidden{display:none;}
+.form{display:grid;gap:12px;}
 .input-wrap{
   position:relative;
   padding:12px;
@@ -158,7 +181,8 @@ main{
   letter-spacing:.08em;
 }
 .input-wrap input,
-.input-wrap textarea{
+.input-wrap textarea,
+.input-wrap select{
   width:100%;
   border:none;
   background:transparent;
@@ -168,11 +192,7 @@ main{
   font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
 }
 .input-wrap textarea{min-height:88px;resize:vertical;}
-.glow-field{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-}
+.glow-field{position:absolute;inset:0;pointer-events:none;}
 .pulse{
   position:absolute;
   width:120px;height:120px;
@@ -184,58 +204,17 @@ main{
   0%{transform:scale(.2);opacity:.8;}
   100%{transform:scale(1.6);opacity:0;}
 }
-.canvas-wrap{
-  position:relative;
-  height:260px; /* fixed animation area */
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.28);
-  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:0 16px 30px var(--shadow);
-  overflow:hidden;
-}
-.canvas-wrap.shake{
-  will-change:transform;
-}
-canvas{display:block;width:100%;height:100%;}
-.status{
-  display:grid;gap:8px;
-  font-size:14px;color:var(--ink-dim);
-  padding:12px;
-  border-radius:16px;
-  border:1px solid var(--line);
-  background:var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.status strong{color:var(--ink);}
-.controls{display:flex;gap:10px;flex-wrap:wrap;}
-button{
-  appearance:none;border:none;cursor:pointer;
-  border-radius:14px;
-  padding:12px 16px;
-  min-width:48px;
-  min-height:48px;
-  font-size:14px;font-weight:700;
-  background:linear-gradient(140deg, #b29372, var(--mocha));
-  color:#1b1410;
-  box-shadow:0 10px 18px var(--shadow), inset 0 0 0 1px rgba(255,255,255,.2);
-}
-button.secondary{
-  background:linear-gradient(140deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
-  color:var(--ink);
-}
-button:focus-visible{outline:2px solid var(--air-blue);outline-offset:2px;}
+.privacy{font-size:12px;color:var(--ink-dim);}
+.status{display:grid;gap:6px;font-size:13px;color:var(--ink-dim);} 
+.status strong{color:var(--ink);} 
 .result{
-  margin-top:16px;
   border-radius:18px;
   padding:16px;
   border:1px solid var(--line);
   background:var(--glass-strong);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  min-height:140px;
+  min-height:160px;
   box-shadow:0 14px 30px var(--shadow);
 }
 .result.hidden{display:none;}
@@ -245,124 +224,166 @@ button:focus-visible{outline:2px solid var(--air-blue);outline-offset:2px;}
   letter-spacing:.08em;
   font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;
 }
-.result .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);}
-.tag{
-  padding:4px 10px;
-  border-radius:999px;
-  background:rgba(167,199,231,.2);
-  border:1px solid rgba(255,255,255,.28);
-}
-.poem{margin:12px 0 6px;line-height:1.8;}
-.grid{
-  display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;
-}
-.grid .item{
-  background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:12px;
-  padding:10px;
-  font-size:14px;
-}
-.footer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
-.challenge{
-  margin-top:10px;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(255,255,255,.06);
-  font-size:13px;
-}
-.share{
-  margin-top:12px;
-  display:grid;
-  gap:10px;
-}
-.share img{
-  width:100%;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.25);
-  box-shadow:0 12px 24px var(--shadow);
-}
-.notice{
-  font-size:13px;color:var(--ink-dim);margin-top:8px;
-}
-@media(min-width:720px){
-  .canvas-wrap{height:300px;}
-}
-@media(prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto !important;}
-  .hero.appear{animation:none;}
-}
+.result .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-dim);} 
+.tag{padding:4px 10px;border-radius:999px;background:rgba(167,199,231,.2);border:1px solid rgba(255,255,255,.28);} 
+.poem{margin:12px 0 6px;line-height:1.8;} 
+.grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;} 
+.grid .item{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px;font-size:14px;} 
+.challenge{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);font-size:13px;} 
+.footer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;} 
+.reveal-wrap{position:relative;overflow:hidden;} 
+.reveal-mask{position:absolute; inset:0; background:linear-gradient(180deg, rgba(26,26,26,.9), rgba(26,26,26,.2)); transform:translateY(0%); animation:reveal 1.4s ease-out forwards;} 
+@keyframes reveal{from{transform:translateY(0%);} to{transform:translateY(-100%);} } 
+.kine{font-size:18px;letter-spacing:.1em;font-family:"Noto Serif TC","PMingLiU","MingLiU",serif;} 
+.kine span{display:inline-block;} 
+.longpress{position:relative;display:inline-flex;align-items:center;gap:10px;} 
+.progress-ring{width:36px;height:36px;} 
+.progress-ring circle{fill:none;stroke:rgba(255,255,255,.35);stroke-width:4;} 
+.progress-ring .bar{stroke:var(--mocha-mousse);stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;} 
+.mute-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-dim);} 
+.history, .bless-wall{margin-top:16px;border-radius:16px;border:1px solid var(--line);background:var(--glass);backdrop-filter: blur(12px);-webkit-backdrop-filter: blur(12px);padding:12px;} 
+details summary{cursor:pointer; font-weight:700; letter-spacing:.05em;} 
+.history-list{margin-top:10px;display:grid;gap:8px;font-size:12px;color:var(--ink-dim);} 
+@media(min-width:720px){ .stage{height:320px;} .grid{grid-template-columns:1fr 1fr;} } 
+@media(prefers-reduced-motion:reduce){ *{scroll-behavior:auto !important;} .hero.appear{animation:none;} .reveal-mask{animation:none; transform:translateY(-100%);} }
 </style>
 </head>
 <body>
 <main>
+  <div class="nav" role="navigation" aria-label="主導覽">
+    <h1>數位聖所求籤</h1>
+    <div class="stage-pill" id="stagePill">Preparation</div>
+  </div>
+
   <section class="hero" aria-live="polite">
     <div class="parallax" aria-hidden="true">
-      <div class="parallax-layer cloud"></div>
+      <div class="parallax-layer fog"></div>
       <div class="parallax-layer temple"></div>
-    </div>
-    <div class="ranking">
-      366 天生日運勢每日排行榜：<strong id="rankText">第 — 名</strong>
-      <span id="rankDate"></span>
-    </div>
-    <div class="brand">
-      <h1>線上求籤</h1>
-      <span class="badge">台灣廟宇感 × 泰式金箔</span>
-    </div>
-    <div class="step step-intro" data-step="intro">
-      <div class="step-title">第一步｜淨心</div>
-      <div class="step-desc">請深呼吸三次，讓心緒放慢，進入儀式。</div>
-      <div class="controls">
-        <button id="introBtn" aria-label="進入稟告">進入稟告</button>
-      </div>
+      <div class="parallax-layer altar"></div>
     </div>
 
-    <div class="step step-form hidden" data-step="form">
-      <div class="step-title">第二步｜稟告</div>
-      <div class="step-desc">請寫下姓名與所求之事，保持語氣清楚與平穩。</div>
-      <div class="form">
-        <div class="input-wrap">
-          <label for="nameInput">姓名</label>
-          <input id="nameInput" type="text" autocomplete="name" placeholder="請輸入姓名" />
-          <div class="glow-field" aria-hidden="true"></div>
-        </div>
-        <div class="input-wrap">
-          <label for="wishInput">所求之事</label>
-          <textarea id="wishInput" placeholder="簡短描述你所求之事"></textarea>
-          <div class="glow-field" aria-hidden="true"></div>
-        </div>
+    <div class="section" id="stepA">
+      <div class="card">
+        <div class="step-title">A 淨心 Preparation</div>
+        <div class="step-desc">三次呼吸，引心入靜。</div>
+        <div class="kine" id="breathText" aria-live="polite"></div>
         <div class="controls">
-          <button id="formBtn" aria-label="完成稟告">完成稟告</button>
+          <button id="toB" aria-label="進入稟告">進入稟告</button>
+          <label class="mute-toggle">
+            <input id="muteToggle" type="checkbox" aria-label="靜音切換"/>
+            靜音
+          </label>
         </div>
+      </div>
+      <div class="stage" aria-label="淨心舞台" role="img">
+        <canvas id="stageCanvas" width="900" height="600" aria-hidden="true"></canvas>
       </div>
     </div>
 
-    <div class="step step-ritual hidden" data-step="ritual">
-      <div class="step-title">第三步｜求籤與擲筊</div>
-      <div class="step-desc">先搖籤筒，再行擲筊，獲得聖筊方可揭示籤詩。</div>
-      <div class="stage">
-        <div class="canvas-wrap" aria-label="躑杯與抽籤動畫區" role="img">
-          <canvas id="scene" width="800" height="520" aria-hidden="true"></canvas>
+    <div class="section hidden" id="stepB">
+      <div class="card">
+        <div class="step-title">B 稟告 Intention</div>
+        <div class="step-desc">儀式用途，資料不會上傳。</div>
+        <div class="form">
+          <div class="input-wrap">
+            <label for="nickname">稱呼（可空）</label>
+            <input id="nickname" type="text" placeholder="你的稱呼"/>
+            <div class="glow-field" aria-hidden="true"></div>
+          </div>
+          <div class="input-wrap">
+            <label for="topic">求問主題</label>
+            <select id="topic">
+              <option>感情</option>
+              <option>事業</option>
+              <option>財運</option>
+              <option>生活</option>
+              <option>人際</option>
+            </select>
+            <div class="glow-field" aria-hidden="true"></div>
+          </div>
+          <div class="input-wrap">
+            <label for="question">一句話問題（可空）</label>
+            <textarea id="question" placeholder="簡短描述你所求之事"></textarea>
+            <div class="glow-field" aria-hidden="true"></div>
+          </div>
+          <div class="privacy">隱私承諾：此頁面不會上傳任何個人資料。</div>
+          <div class="controls">
+            <button id="toC" aria-label="進入擲筊">進入擲筊</button>
+          </div>
         </div>
+      </div>
+      <div class="stage" aria-label="稟告舞台" role="img">
+        <canvas id="intentionCanvas" width="900" height="600" aria-hidden="true"></canvas>
+      </div>
+    </div>
+
+    <div class="section hidden" id="stepC">
+      <div class="card">
+        <div class="step-title">C 擲筊 Verification</div>
+        <div class="step-desc" id="tossHint">先向內心稟告，然後擲筊。</div>
         <div class="status">
           <div>流程：<strong id="flowText">等待開始</strong></div>
           <div>躑杯次數：<strong id="tossCount">0</strong> / 3</div>
           <div>本回合結果：<strong id="tossResult">—</strong></div>
-          <div class="controls">
-            <button id="startBtn" aria-label="開始求籤">開始求籤</button>
-            <button id="restartBtn" class="secondary" aria-label="重新開始" hidden>重新開始</button>
-          </div>
-          <div class="notice">提醒：此結果僅供參考，請以務實行動為主。</div>
         </div>
+        <div class="controls">
+          <button id="startTossBtn" aria-label="開始擲筊">開始擲筊</button>
+          <button id="restartBtn" class="secondary" aria-label="重新開始" hidden>重新開始</button>
+        </div>
+      </div>
+      <div class="stage" aria-label="擲筊舞台" role="img">
+        <canvas id="tossCanvas" width="900" height="600" aria-hidden="true"></canvas>
       </div>
     </div>
 
-    <div id="result" class="result hidden"></div>
+    <div class="section hidden" id="stepD">
+      <div class="card">
+        <div class="step-title">D 求籤 Action</div>
+        <div class="step-desc" id="drawHint">長按誠心求籤 1.5 秒，籤筒震動後抽出竹籤。</div>
+        <div class="controls">
+          <button id="holdBtn" aria-label="誠心求籤" class="longpress">
+            誠心求籤
+            <svg class="progress-ring" viewBox="0 0 40 40" aria-hidden="true">
+              <circle cx="20" cy="20" r="16"></circle>
+              <circle class="bar" cx="20" cy="20" r="16"></circle>
+            </svg>
+          </button>
+          <button id="backToB" class="secondary" aria-label="返回稟告">返回稟告</button>
+        </div>
+      </div>
+      <div class="stage" aria-label="求籤舞台" role="img">
+        <canvas id="drawCanvas" width="900" height="600" aria-hidden="true"></canvas>
+      </div>
+    </div>
+
+    <div class="section hidden" id="stepE">
+      <div class="card">
+        <div class="step-title">E 解籤 Revelation</div>
+        <div class="step-desc">籤詩僅供參考，請以務實行動為主。</div>
+      </div>
+      <div class="result hidden" id="result"></div>
+    </div>
+
+    <details class="history">
+      <summary>求籤紀錄（最多 20 筆）</summary>
+      <div class="history-list" id="historyList"></div>
+      <div class="controls">
+        <button id="clearHistory" class="secondary" aria-label="清除紀錄">清除紀錄</button>
+      </div>
+    </details>
+
+    <div class="bless-wall">
+      <div class="step-title">祈福短句牆</div>
+      <div class="step-desc">平穩前行、光自相隨、善念常在、心定萬事成。</div>
+    </div>
   </section>
 </main>
 
 <script>
+const SOUND_DEFAULT = true;
+const PROB = { holy: 0.45, smile: 0.30, yin: 0.25 };
+const STORAGE_KEY = 'fortune_history_v1';
+
 const FORTUNES = [
   {
     id: 1,
@@ -971,122 +992,172 @@ const FORTUNES = [
   }
 ];
 
-const PROB = { holy: 0.45, smile: 0.30, yin: 0.25 };
-
 const el = {
-  canvas: document.getElementById('scene'),
-  canvasWrap: document.querySelector('.canvas-wrap'),
-  hero: document.querySelector('.hero'),
-  stepIntro: document.querySelector('.step-intro'),
-  stepForm: document.querySelector('.step-form'),
-  stepRitual: document.querySelector('.step-ritual'),
-  introBtn: document.getElementById('introBtn'),
-  formBtn: document.getElementById('formBtn'),
-  nameInput: document.getElementById('nameInput'),
-  wishInput: document.getElementById('wishInput'),
-  rankText: document.getElementById('rankText'),
-  rankDate: document.getElementById('rankDate'),
-  flowText: document.getElementById('flowText'),
+  stagePill: document.getElementById('stagePill'),
+  stepA: document.getElementById('stepA'),
+  stepB: document.getElementById('stepB'),
+  stepC: document.getElementById('stepC'),
+  stepD: document.getElementById('stepD'),
+  stepE: document.getElementById('stepE'),
+
+  breathText: document.getElementById('breathText'),
+  toB: document.getElementById('toB'),
+  toC: document.getElementById('toC'),
+  backToB: document.getElementById('backToB'),
+  startTossBtn: document.getElementById('startTossBtn'),
+  restartBtn: document.getElementById('restartBtn'),
+  holdBtn: document.getElementById('holdBtn'),
   tossCount: document.getElementById('tossCount'),
   tossResult: document.getElementById('tossResult'),
-  startBtn: document.getElementById('startBtn'),
-  restartBtn: document.getElementById('restartBtn'),
-  result: document.getElementById('result')
+  flowText: document.getElementById('flowText'),
+  tossHint: document.getElementById('tossHint'),
+  drawHint: document.getElementById('drawHint'),
+
+  nickname: document.getElementById('nickname'),
+  topic: document.getElementById('topic'),
+  question: document.getElementById('question'),
+
+  result: document.getElementById('result'),
+  historyList: document.getElementById('historyList'),
+  clearHistory: document.getElementById('clearHistory'),
+
+  muteToggle: document.getElementById('muteToggle'),
+
+  stageCanvas: document.getElementById('stageCanvas'),
+  intentionCanvas: document.getElementById('intentionCanvas'),
+  tossCanvas: document.getElementById('tossCanvas'),
+  drawCanvas: document.getElementById('drawCanvas')
 };
-const ctx = el.canvas.getContext('2d');
 
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const ANIM = {
-  tossDuration: prefersReduced ? 320 : 1400,
-  drawDuration: prefersReduced ? 400 : 1600,
-  pauseBetween: prefersReduced ? 300 : 700
-};
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
-let state = 'idle';
+let audioCtx = null;
+let muted = !SOUND_DEFAULT;
+let currentStep = 'A';
+
 let tosses = 0;
 let currentOutcome = null;
 let activeFortune = null;
-let animStart = 0;
-let frameReq = 0;
-let flipBusy = false;
-let noiseCtx = null;
+let animReq = 0;
+let drawAnimating = false;
 
-function resizeCanvas(){
-  const {width, height} = el.canvas.getBoundingClientRect();
-  el.canvas.width = Math.round(width * devicePixelRatio);
-  el.canvas.height = Math.round(height * devicePixelRatio);
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-
-function setText(){
-  el.tossCount.textContent = String(tosses);
-  el.tossResult.textContent = currentOutcome ? currentOutcome : '—';
+function resizeCanvas(c){
+  const {width, height} = c.getBoundingClientRect();
+  c.width = Math.round(width * DPR);
+  c.height = Math.round(height * DPR);
 }
 
-function setFlow(text){
-  el.flowText.textContent = text;
+[el.stageCanvas, el.intentionCanvas, el.tossCanvas, el.drawCanvas].forEach(resizeCanvas);
+window.addEventListener('resize', () => {
+  [el.stageCanvas, el.intentionCanvas, el.tossCanvas, el.drawCanvas].forEach(resizeCanvas);
+});
+
+function setStage(step){
+  currentStep = step;
+  el.stagePill.textContent = ({
+    A:'Preparation',
+    B:'Intention',
+    C:'Verification',
+    D:'Action',
+    E:'Revelation'
+  })[step];
+  el.stepA.classList.toggle('hidden', step!=='A');
+  el.stepB.classList.toggle('hidden', step!=='B');
+  el.stepC.classList.toggle('hidden', step!=='C');
+  el.stepD.classList.toggle('hidden', step!=='D');
+  el.stepE.classList.toggle('hidden', step!=='E');
 }
 
-function drawBackground(){
-  const w = el.canvas.clientWidth;
-  const h = el.canvas.clientHeight;
-  ctx.clearRect(0,0,w,h);
+function initAudio(){
+  if(audioCtx) return;
+  try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+  catch(_e){ audioCtx = null; }
+}
+function playTone(type){
+  if(muted || !audioCtx) return;
+  const ctx = audioCtx;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  if(type === 'wood'){
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(90, now + 0.12);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  } else if(type === 'bell'){
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(1320, now + 0.15);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+  } else if(type === 'bamboo'){
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.08);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  }
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.7);
+}
+
+function drawStageBackground(ctx, w, h){
   const grad = ctx.createLinearGradient(0,0,0,h);
-  grad.addColorStop(0,'rgba(80,50,35,0.8)');
-  grad.addColorStop(1,'rgba(20,12,10,0.9)');
+  grad.addColorStop(0,'rgba(120,120,140,0.25)');
+  grad.addColorStop(1,'rgba(26,26,26,0.8)');
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,w,h);
-
-  ctx.strokeStyle = 'rgba(255,230,180,0.08)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   for(let i=0;i<8;i++){
     ctx.beginPath();
     ctx.moveTo(0, h*0.2 + i*22);
     ctx.lineTo(w, h*0.2 + i*22);
     ctx.stroke();
   }
-
-  // altar base
-  ctx.fillStyle = 'rgba(140,80,50,0.35)';
+  ctx.fillStyle = 'rgba(140,80,50,0.25)';
   ctx.fillRect(w*0.12, h*0.72, w*0.76, h*0.16);
-  ctx.strokeStyle = 'rgba(255,220,160,0.25)';
-  ctx.strokeRect(w*0.12, h*0.72, w*0.76, h*0.16);
 }
 
-function roughShake(target, duration=520, strength=8, points=20){
-  if(prefersReduced) return;
-  const start = performance.now();
-  const keys = [];
-  for(let i=0;i<=points;i++){
-    keys.push({
-      t:i/points,
-      x:(Math.random()*2-1)*strength,
-      y:(Math.random()*2-1)*strength,
-      r:(Math.random()*2-1)*strength*0.05
-    });
-  }
-  function lerp(a,b,t){return a+(b-a)*t;}
-  function frame(now){
-    const p = Math.min(1,(now-start)/duration);
-    const idx = Math.min(points-1, Math.floor(p*points));
-    const a = keys[idx], b = keys[idx+1];
-    const lt = (p - a.t) / Math.max(0.0001,(b.t - a.t));
-    const x = lerp(a.x,b.x,lt);
-    const y = lerp(a.y,b.y,lt);
-    const r = lerp(a.r,b.r,lt);
-    target.style.transform = `translate3d(${x}px,${y}px,0) rotate(${r}rad)`;
-    if(p < 1){
-      requestAnimationFrame(frame);
-    } else {
-      target.style.transform = '';
-    }
-  }
-  requestAnimationFrame(frame);
+function drawIncense(ctx, w, h){
+  ctx.fillStyle = 'rgba(166,137,102,.55)';
+  ctx.beginPath();
+  ctx.ellipse(w*0.5, h*0.78, w*0.12, h*0.05, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.2)';
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.2)';
+  ctx.beginPath();
+  ctx.moveTo(w*0.5, h*0.68);
+  ctx.quadraticCurveTo(w*0.52, h*0.6, w*0.48, h*0.52);
+  ctx.stroke();
 }
 
-function drawCup(x,y,rot,face,tilt=0){
+function drawTube(ctx, x, y){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle='rgba(90,50,30,0.9)';
+  ctx.strokeStyle='rgba(255,220,160,0.3)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.rect(-60,-120,120,190);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle='rgba(220,180,110,0.25)';
+  for(let i=-50;i<=40;i+=20){
+    ctx.fillRect(i,-100,12,150);
+  }
+  ctx.beginPath();
+  ctx.ellipse(0,-120,60,16,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(140,90,50,0.9)';
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCup(ctx, x, y, rot, face, tilt=0){
   ctx.save();
   ctx.translate(x,y);
   ctx.rotate(rot);
@@ -1119,29 +1190,7 @@ function drawCup(x,y,rot,face,tilt=0){
   ctx.restore();
 }
 
-function drawTube(x,y){
-  ctx.save();
-  ctx.translate(x,y);
-  ctx.fillStyle='rgba(90,50,30,0.9)';
-  ctx.strokeStyle='rgba(255,220,160,0.3)';
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.rect(-60,-120,120,190);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle='rgba(220,180,110,0.25)';
-  for(let i=-50;i<=40;i+=20){
-    ctx.fillRect(i,-100,12,150);
-  }
-  ctx.beginPath();
-  ctx.ellipse(0,-120,60,16,0,0,Math.PI*2);
-  ctx.fillStyle='rgba(140,90,50,0.9)';
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawStick(x,y,progress){
+function drawStick(ctx, x, y, progress){
   ctx.save();
   ctx.translate(x,y);
   const rise = -140*progress;
@@ -1157,13 +1206,40 @@ function drawStick(x,y,progress){
   ctx.restore();
 }
 
-function renderIdle(){
-  drawBackground();
-  const w = el.canvas.clientWidth;
-  const h = el.canvas.clientHeight;
-  drawCup(w*0.42,h*0.55,0,'down',0.15);
-  drawCup(w*0.58,h*0.55,0,'down',-0.15);
-  drawTube(w*0.78,h*0.78);
+function renderStaticStages(){
+  const c1 = el.stageCanvas.getContext('2d');
+  const c2 = el.intentionCanvas.getContext('2d');
+  const w1 = el.stageCanvas.clientWidth, h1 = el.stageCanvas.clientHeight;
+  const w2 = el.intentionCanvas.clientWidth, h2 = el.intentionCanvas.clientHeight;
+  c1.clearRect(0,0,w1,h1); drawStageBackground(c1,w1,h1); drawIncense(c1,w1,h1); drawTube(c1,w1*0.75,h1*0.8);
+  c2.clearRect(0,0,w2,h2); drawStageBackground(c2,w2,h2); drawIncense(c2,w2,h2); drawTube(c2,w2*0.75,h2*0.8);
+}
+renderStaticStages();
+
+const breathSequence = ["吸氣", "停", "留", "呼", "吸氣", "停", "留", "呼", "吸氣", "停", "留", "呼"]; 
+let breathIndex = 0;
+function animateBreath(){
+  if(prefersReduced){ el.breathText.textContent = "吸氣・停・留・呼（3 次）"; return; }
+  el.breathText.innerHTML = '';
+  const word = breathSequence[breathIndex % breathSequence.length];
+  const span = document.createElement('span');
+  span.textContent = word;
+  span.animate([
+    {opacity:0, transform:'translateY(8px)'},
+    {opacity:1, transform:'translateY(0)'},
+    {opacity:0.6, transform:'translateY(-6px)'}
+  ], {duration:1200, easing:'ease-out'});
+  el.breathText.appendChild(span);
+  breathIndex++;
+  if(breathIndex < breathSequence.length){
+    setTimeout(animateBreath, 1200);
+  }
+}
+animateBreath();
+
+function setText(){
+  el.tossCount.textContent = String(tosses);
+  el.tossResult.textContent = currentOutcome ? currentOutcome : '—';
 }
 
 function chooseOutcome(){
@@ -1173,314 +1249,185 @@ function chooseOutcome(){
   return '陰杯';
 }
 
-function animateToss(ts){
-  if(!animStart) animStart = ts;
-  const t = Math.min(1, (ts - animStart)/ANIM.tossDuration);
-  drawBackground();
-  const w = el.canvas.clientWidth;
-  const h = el.canvas.clientHeight;
-  const bounce = Math.sin(t*Math.PI);
-  const spin = Math.sin(t*6*Math.PI)*(1-t);
-  const tilt = Math.sin(t*2*Math.PI) * (1-t);
-  const y = h*0.52 - bounce*60;
-  drawCup(w*0.42,y,spin,'down',tilt);
-  drawCup(w*0.58,y,-spin,'down',-tilt);
-  drawTube(w*0.78,h*0.78);
-
-  if(t < 1){
-    frameReq = requestAnimationFrame(animateToss);
-  } else {
-    animStart = 0;
-    currentOutcome = chooseOutcome();
-    setText();
-    if(currentOutcome === '聖杯'){
-      setFlow('允杯，進入抽籤');
-      setTimeout(startDraw, ANIM.pauseBetween);
-    } else {
-      if(tosses >= 3){
-        failFlow();
-      } else {
-        setFlow('未得允杯，繼續躑杯');
-        setTimeout(startToss, ANIM.pauseBetween);
-      }
-    }
+function roughShake(duration=600, strength=8, points=20){
+  if(prefersReduced) return (t)=>0;
+  const keys = [];
+  for(let i=0;i<=points;i++){
+    keys.push({
+      t:i/points,
+      x:(Math.random()*2-1)*strength,
+      y:(Math.random()*2-1)*strength
+    });
   }
-}
-
-function startToss(){
-  state = 'tossing';
-  roughShake(el.canvasWrap, 520, 8, 20);
-  tosses += 1;
-  currentOutcome = null;
-  setFlow('躑杯中');
-  setText();
-  cancelAnimationFrame(frameReq);
-  frameReq = requestAnimationFrame(animateToss);
-}
-
-function animateDraw(ts){
-  if(!animStart) animStart = ts;
-  const t = Math.min(1, (ts - animStart)/ANIM.drawDuration);
-  drawBackground();
-  const w = el.canvas.clientWidth;
-  const h = el.canvas.clientHeight;
-  drawCup(w*0.42,h*0.58,0,'up',0.12);
-  drawCup(w*0.58,h*0.58,0,'down',-0.12);
-  drawTube(w*0.74,h*0.8);
-  drawStick(w*0.74,h*0.8,t);
-
-  if(t < 1){
-    frameReq = requestAnimationFrame(animateDraw);
-  } else {
-    animStart = 0;
-    revealFortune();
-  }
-}
-
-function startDraw(){
-  state = 'drawing';
-  setFlow('抽籤中');
-  cancelAnimationFrame(frameReq);
-  frameReq = requestAnimationFrame(animateDraw);
-}
-
-function pickFortune(){
-  const idx = Math.floor(Math.random()*FORTUNES.length);
-  return FORTUNES[idx];
-}
-
-const DAILY_CHALLENGES = {
-  wealth: ["整理錢包並丟掉一張不用的收據","清潔廚房一角並擦拭檯面","記下一筆今日必要支出","收納一個抽屜","把零錢集中放入固定容器"],
-  love: ["穿藍色或淺色系衣物","傳一則簡短但真誠的關心訊息","對鏡子微笑三次","寫下一句感謝並說出口","為自己泡一杯溫飲慢慢喝完"],
-  career: ["把今日最重要的任務切成三步","整理桌面 5 分鐘","替一份文件加上清楚的標題","關閉一個不必要的通知","完成一個 10 分鐘的小交付"],
-  health: ["走路 15 分鐘","伸展肩頸 3 分鐘","今晚提早 20 分鐘入睡","喝一杯溫水並深呼吸","做一次簡短的整理呼吸練習"]
-};
-
-function hashSeed(str){
-  let h = 2166136261;
-  for(let i=0;i<str.length;i++){
-    h ^= str.charCodeAt(i);
-    h += (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);
-  }
-  return h >>> 0;
-}
-
-function pickChallenge(list, seed){
-  return list[seed % list.length];
-}
-
-function buildChallenges(f){
-  const seed = hashSeed(`${f.id}-${new Date().toDateString()}-${el.nameInput.value || ''}`);
-  return {
-    wealth: pickChallenge(DAILY_CHALLENGES.wealth, seed + 3),
-    love: pickChallenge(DAILY_CHALLENGES.love, seed + 7),
-    career: pickChallenge(DAILY_CHALLENGES.career, seed + 11),
-    health: pickChallenge(DAILY_CHALLENGES.health, seed + 19)
+  return (p)=>{
+    const idx = Math.min(points-1, Math.floor(p*points));
+    const a = keys[idx], b = keys[idx+1];
+    const lt = (p - a.t) / Math.max(0.0001,(b.t - a.t));
+    const x = a.x + (b.x-a.x)*lt;
+    const y = a.y + (b.y-a.y)*lt;
+    return {x,y};
   };
 }
 
+function animateToss(){
+  const ctx = el.tossCanvas.getContext('2d');
+  const w = el.tossCanvas.clientWidth;
+  const h = el.tossCanvas.clientHeight;
+  const start = performance.now();
+  const duration = prefersReduced ? 400 : 1400;
+  function frame(now){
+    const t = Math.min(1,(now-start)/duration);
+    ctx.clearRect(0,0,w,h);
+    drawStageBackground(ctx,w,h);
+    const bounce = Math.sin(t*Math.PI);
+    const spin = Math.sin(t*6*Math.PI)*(1-t);
+    const tilt = Math.sin(t*2*Math.PI) * (1-t);
+    const y = h*0.52 - bounce*60;
+    drawCup(ctx,w*0.42,y,spin,'down',tilt);
+    drawCup(ctx,w*0.58,y,-spin,'down',-tilt);
+    drawTube(ctx,w*0.78,h*0.8);
+    if(t < 1){
+      animReq = requestAnimationFrame(frame);
+    } else {
+      currentOutcome = chooseOutcome();
+      setText();
+      if(currentOutcome === '聖杯'){
+        el.flowText.textContent = '允杯，進入求籤';
+        flashGold(ctx,w,h);
+        playTone('bell');
+        setTimeout(()=>setStage('D'), prefersReduced?200:600);
+      } else {
+        if(tosses >= 3){
+          el.flowText.textContent = '本次未得允杯 請稍後再試';
+          el.restartBtn.hidden = false;
+        } else {
+          el.flowText.textContent = '未得允杯，請靜心再擲';
+        }
+      }
+    }
+  }
+  animReq = requestAnimationFrame(frame);
+}
+
+function flashGold(ctx,w,h){
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,210,140,0.5)';
+  ctx.fillRect(0,0,w,h);
+  ctx.restore();
+}
+
+function startToss(){
+  if(tosses>=3) return;
+  tosses += 1;
+  currentOutcome = null;
+  el.flowText.textContent = '擲筊中…';
+  setText();
+  playTone('wood');
+  setTimeout(animateToss, prefersReduced?200:600);
+}
+
+function animateDrawStart(){
+  const ctx = el.drawCanvas.getContext('2d');
+  const w = el.drawCanvas.clientWidth;
+  const h = el.drawCanvas.clientHeight;
+  const shake = roughShake(600,8,20);
+  const start = performance.now();
+  const duration = prefersReduced ? 500 : 1400;
+  function frame(now){
+    const t = Math.min(1,(now-start)/duration);
+    ctx.clearRect(0,0,w,h);
+    drawStageBackground(ctx,w,h);
+    const s = shake(t);
+    ctx.save();
+    ctx.translate(s.x||0, s.y||0);
+    drawTube(ctx,w*0.55,h*0.8);
+    ctx.restore();
+    drawCup(ctx,w*0.34,h*0.6,0,'down',0.12);
+    drawCup(ctx,w*0.66,h*0.6,0,'down',-0.12);
+    if(t<1){ animReq = requestAnimationFrame(frame); }
+    else { animateStick(); }
+  }
+  animReq = requestAnimationFrame(frame);
+}
+
+function animateStick(){
+  const ctx = el.drawCanvas.getContext('2d');
+  const w = el.drawCanvas.clientWidth;
+  const h = el.drawCanvas.clientHeight;
+  const start = performance.now();
+  const duration = prefersReduced ? 500 : 1200;
+  function frame(now){
+    const t = Math.min(1,(now-start)/duration);
+    ctx.clearRect(0,0,w,h);
+    drawStageBackground(ctx,w,h);
+    drawTube(ctx,w*0.55,h*0.8);
+    drawStick(ctx,w*0.55,h*0.8,t);
+    if(t<1){ animReq = requestAnimationFrame(frame); }
+    else { playTone('bamboo'); flipToResult(); }
+  }
+  animReq = requestAnimationFrame(frame);
+}
+
+function flipToResult(){
+  const from = el.drawCanvas.getBoundingClientRect();
+  const to = el.result.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.style.position='fixed';
+  ghost.style.left = `${from.left + from.width*0.52}px`;
+  ghost.style.top = `${from.top + from.height*0.2}px`;
+  ghost.style.width='12px';
+  ghost.style.height='180px';
+  ghost.style.background='linear-gradient(180deg,#d9c188,#8f5c2b)';
+  ghost.style.borderRadius='6px';
+  ghost.style.transformOrigin='center';
+  ghost.style.zIndex='9999';
+  document.body.appendChild(ghost);
+
+  const anim = ghost.animate([
+    {transform:'rotate3d(1,0.3,0,20deg) translate3d(0,0,0)'},
+    {transform:'rotate3d(1,0.3,0,0deg) translate3d(0,0,0)', width:`${to.width}px`, height:`${to.height}px` }
+  ], {duration: prefersReduced?300:900, easing:'cubic-bezier(.2,.8,.2,1)'});
+  anim.onfinish = () => {
+    ghost.remove();
+    revealFortune();
+  };
+}
+
+function getBangkokTime(){
+  return new Date().toLocaleString('zh-Hant', {timeZone:'Asia/Bangkok', hour12:false});
+}
+function buildMicroAction(text){
+  const short = text.replace(/[，。]/g,' ').split(' ').slice(0,10).join(' ');
+  return `今日微行動：先做一件最小可行的小步驟，針對「${short}」採取可完成的行動。`;
+}
+
 function renderResultCard(f){
-  const challenges = buildChallenges(f);
   const tags = f.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  const micro = buildMicroAction(f.meaning.overall);
   el.result.innerHTML = `
-    <h2>${f.no}｜${f.rank}｜${f.title}</h2>
-    <div class="meta">${tags}</div>
-    <div class="poem">${f.poem.map(p=>`<div>${p}</div>`).join('')}</div>
-    <div class="grid">
-      <div class="item"><strong>整體：</strong>${f.meaning.overall}</div>
-      <div class="item"><strong>感情：</strong>${f.meaning.love}</div>
-      <div class="item"><strong>事業：</strong>${f.meaning.career}</div>
-      <div class="item"><strong>財務：</strong>${f.meaning.wealth}</div>
-      <div class="item"><strong>健康：</strong>${f.meaning.health}</div>
-      <div class="item"><strong>泰式祝福：</strong>${f.thaiBlessing.mantra}｜色彩 ${f.thaiBlessing.color}｜行動 ${f.thaiBlessing.action}</div>
-    </div>
-    <div class="challenge"><strong>每日開運挑戰｜金運：</strong>${challenges.wealth}</div>
-    <div class="challenge"><strong>每日開運挑戰｜感情：</strong>${challenges.love}</div>
-    <div class="challenge"><strong>每日開運挑戰｜事業：</strong>${challenges.career}</div>
-    <div class="challenge"><strong>每日開運挑戰｜健康：</strong>${challenges.health}</div>
-    <div class="share">
-      <img id="shareImg" alt="分享卡片預覽" />
-      <button id="downloadBtn" aria-label="下載分享卡片">下載分享卡片</button>
-    </div>
-    <div class="footer-actions">
-      <button id="copyBtn" aria-label="複製籤詩結果">複製結果</button>
-      <button id="againBtn" class="secondary" aria-label="再求一次">再求一次</button>
+    <div class="reveal-wrap">
+      <div class="reveal-mask"></div>
+      <h2>${f.no}｜${f.rank}｜${f.title}</h2>
+      <div class="meta">${tags}</div>
+      <div class="poem">${f.poem.map(p=>`<div>${p}</div>`).join('')}</div>
+      <div class="grid">
+        <div class="item"><strong>整體：</strong>${f.meaning.overall}</div>
+        <div class="item"><strong>感情：</strong>${f.meaning.love}</div>
+        <div class="item"><strong>事業：</strong>${f.meaning.career}</div>
+        <div class="item"><strong>財務：</strong>${f.meaning.wealth}</div>
+        <div class="item"><strong>健康：</strong>${f.meaning.health}</div>
+        <div class="item"><strong>泰式祝福：</strong>${f.thaiBlessing.mantra}｜色彩 ${f.thaiBlessing.color}｜行動 ${f.thaiBlessing.action}</div>
+      </div>
+      <div class="challenge"><strong>${micro}</strong></div>
+      <div class="footer-actions">
+        <button id="copyBtn" aria-label="複製結果">複製結果</button>
+        <button id="againBtn" class="secondary" aria-label="再求一支">再求一支</button>
+      </div>
     </div>
   `;
   el.result.classList.remove('hidden');
-  const copyBtn = document.getElementById('copyBtn');
-  const againBtn = document.getElementById('againBtn');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const shareImg = document.getElementById('shareImg');
-  copyBtn.addEventListener('click', () => copyResult(f));
-  againBtn.addEventListener('click', resetAll);
-  const shareUrl = generateShareCard(f, challenges);
-  shareImg.src = shareUrl;
-  downloadBtn.addEventListener('click', () => downloadShare(shareUrl, f));
-}
-
-function flipTransition(){
-  if(flipBusy) return;
-  flipBusy = true;
-  const fromRect = el.canvasWrap.getBoundingClientRect();
-  const toRect = el.result.getBoundingClientRect();
-  const proxy = document.createElement('div');
-  proxy.className = 'flip-proxy';
-  proxy.style.position = 'fixed';
-  proxy.style.left = `${fromRect.left}px`;
-  proxy.style.top = `${fromRect.top}px`;
-  proxy.style.width = `${fromRect.width}px`;
-  proxy.style.height = `${fromRect.height}px`;
-  proxy.style.background = 'rgba(255,255,255,.12)';
-  proxy.style.border = '1px solid rgba(255,255,255,.25)';
-  proxy.style.borderRadius = '18px';
-  proxy.style.backdropFilter = 'blur(12px)';
-  proxy.style.boxShadow = '0 16px 30px rgba(0,0,0,.35)';
-  proxy.style.transformOrigin = 'center';
-  proxy.style.zIndex = '9999';
-  document.body.appendChild(proxy);
-
-  el.result.style.opacity = '0';
-  const start = performance.now();
-  const duration = prefersReduced ? 260 : 900;
-  function easeOutCubic(t){return 1 - Math.pow(1-t,3);}
-  function frame(now){
-    const t = Math.min(1,(now-start)/duration);
-    const e = easeOutCubic(t);
-    const x = fromRect.left + (toRect.left - fromRect.left)*e;
-    const y = fromRect.top + (toRect.top - fromRect.top)*e;
-    const w = fromRect.width + (toRect.width - fromRect.width)*e;
-    const h = fromRect.height + (toRect.height - fromRect.height)*e;
-    const rot = prefersReduced ? 0 : (1-e)*18;
-    proxy.style.left = `${x}px`;
-    proxy.style.top = `${y}px`;
-    proxy.style.width = `${w}px`;
-    proxy.style.height = `${h}px`;
-    proxy.style.transform = `rotate3d(1,0.3,0,${rot}deg)`;
-    if(t < 1){
-      requestAnimationFrame(frame);
-    } else {
-      proxy.remove();
-      el.result.style.opacity = '1';
-      flipBusy = false;
-    }
-  }
-  requestAnimationFrame(frame);
-}
-
-function generateShareCard(f, challenges){
-  const c = document.createElement('canvas');
-  const w = 1080, h = 1350;
-  c.width = w; c.height = h;
-  const g = c.getContext('2d');
-  const bg = g.createLinearGradient(0,0,0,h);
-  bg.addColorStop(0,'#A7C7E7');
-  bg.addColorStop(0.6,'#D3D3D3');
-  bg.addColorStop(1,'#1A1A1A');
-  g.fillStyle = bg;
-  g.fillRect(0,0,w,h);
-
-  g.strokeStyle = 'rgba(255,255,255,.35)';
-  g.lineWidth = 3;
-  g.strokeRect(40,40,w-80,h-80);
-
-  for(let i=0;i<14;i++){
-    g.strokeStyle = `rgba(255,255,255,${0.08 + i*0.01})`;
-    g.beginPath();
-    g.moveTo(80, 120 + i*28);
-    g.lineTo(w-80, 120 + i*28);
-    g.stroke();
-  }
-
-  g.fillStyle = 'rgba(0,0,0,.35)';
-  g.fillRect(80, 160, w-160, 1040);
-
-  g.fillStyle = '#A68966';
-  g.beginPath();
-  g.arc(w-160, 180, 70, 0, Math.PI*2);
-  g.fill();
-  g.fillStyle = '#1A1A1A';
-  g.font = '22px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
-  g.textAlign = 'center';
-  g.fillText('今日運勢', w-160, 175);
-  g.font = '26px "Noto Serif TC","PMingLiU","MingLiU",serif';
-  g.fillText(f.rank, w-160, 205);
-  g.textAlign = 'left';
-
-  g.fillStyle = '#F4F7FA';
-  g.font = '48px "Noto Serif TC","PMingLiU","MingLiU",serif';
-  g.fillText(`${f.no}｜${f.rank}`, 120, 240);
-  g.font = '40px "Noto Serif TC","PMingLiU","MingLiU",serif';
-  g.fillText(f.title, 120, 300);
-
-  g.font = '32px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
-  let y = 380;
-  f.poem.forEach(line => {
-    g.fillText(line, 120, y);
-    y += 46;
-  });
-
-  y += 20;
-  g.font = '28px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
-  const items = [
-    `金運：${f.meaning.wealth}`,
-    `感情：${f.meaning.love}`,
-    `事業：${f.meaning.career}`,
-    `健康：${f.meaning.health}`
-  ];
-  items.forEach(t => { g.fillText(t, 120, y); y += 42; });
-
-  y += 10;
-  g.font = '26px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
-  g.fillText(`每日開運｜金運：${challenges.wealth}`, 120, y); y += 38;
-  g.fillText(`每日開運｜感情：${challenges.love}`, 120, y); y += 38;
-  g.fillText(`每日開運｜事業：${challenges.career}`, 120, y); y += 38;
-  g.fillText(`每日開運｜健康：${challenges.health}`, 120, y);
-
-  g.font = '24px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
-  g.fillStyle = 'rgba(244,247,250,.8)';
-  g.fillText('今日提醒：以務實行動為主', 120, h-140);
-  return c.toDataURL('image/png');
-}
-
-function downloadShare(url, f){
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${f.no}-${f.title}-share.png`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
-function revealFortune(){
-  state = 'done';
-  setFlow('籤詩已出');
-  activeFortune = pickFortune();
-  renderResultCard(activeFortune);
-  flipTransition();
-  el.restartBtn.hidden = true;
-}
-
-function failFlow(){
-  state = 'failed';
-  setFlow('本次未得允杯 請稍後再試');
-  currentOutcome = '—';
-  setText();
-  el.result.classList.add('hidden');
-  el.restartBtn.hidden = false;
-  renderFailScene();
-}
-
-function renderFailScene(){
-  drawBackground();
-  const w = el.canvas.clientWidth;
-  const h = el.canvas.clientHeight;
-  drawCup(w*0.42,h*0.58,0,'down',0.1);
-  drawCup(w*0.58,h*0.58,0,'down',-0.1);
-  drawTube(w*0.78,h*0.78);
-  ctx.fillStyle = 'rgba(255,225,180,0.9)';
-  ctx.font = '16px "Noto Serif TC", serif';
-  ctx.fillText('本次未得允杯', w*0.32, h*0.28);
+  document.getElementById('copyBtn').onclick = () => copyResult(f);
+  document.getElementById('againBtn').onclick = () => { resetAll(); setStage('B'); };
 }
 
 function copyResult(f){
@@ -1493,9 +1440,9 @@ function copyResult(f){
     `財務：${f.meaning.wealth}`,
     `健康：${f.meaning.health}`,
     `泰式祝福：${f.thaiBlessing.mantra}｜色彩 ${f.thaiBlessing.color}｜行動 ${f.thaiBlessing.action}`,
-    `標籤：${f.tags.join('、')}`
+    `標籤：${f.tags.join('、')}`,
+    `時間（Asia/Bangkok）：${getBangkokTime()}`
   ].join('\n');
-
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text);
   } else {
@@ -1508,95 +1455,98 @@ function copyResult(f){
   }
 }
 
+function saveHistory(f){
+  const history = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  const entry = {id:f.id,no:f.no,rank:f.rank,title:f.title,time:getBangkokTime()};
+  history.unshift(entry);
+  const trimmed = history.slice(0,20);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  renderHistory();
+}
+
+function renderHistory(){
+  const history = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  el.historyList.innerHTML = history.map(h=>`<div>${h.time}｜${h.no} ${h.rank} ${h.title}</div>`).join('') || '<div>目前尚無紀錄</div>';
+}
+
+function revealFortune(){
+  activeFortune = FORTUNES[Math.floor(Math.random()*FORTUNES.length)];
+  renderResultCard(activeFortune);
+  saveHistory(activeFortune);
+  setStage('E');
+}
+
 function resetAll(){
-  state = 'idle';
   tosses = 0;
   currentOutcome = null;
-  activeFortune = null;
-  setFlow('等待開始');
-  setText();
-  el.result.classList.add('hidden');
+  el.tossCount.textContent = '0';
+  el.tossResult.textContent = '—';
+  el.flowText.textContent = '等待開始';
   el.restartBtn.hidden = true;
-  renderIdle();
+  el.result.classList.add('hidden');
 }
 
-function setStep(step){
-  el.stepIntro.classList.toggle('hidden', step !== 'intro');
-  el.stepForm.classList.toggle('hidden', step !== 'form');
-  el.stepRitual.classList.toggle('hidden', step !== 'ritual');
-}
+function longPressHandler(){
+  const ring = el.holdBtn.querySelector('.bar');
+  let pressTimer = null;
+  let start = 0;
 
-function createPulse(field){
-  if(prefersReduced) return;
-  const pulse = document.createElement('span');
-  pulse.className = 'pulse';
-  const rect = field.getBoundingClientRect();
-  const x = Math.random() * rect.width;
-  const y = Math.random() * rect.height;
-  pulse.style.left = `${x - 60}px`;
-  pulse.style.top = `${y - 60}px`;
-  field.appendChild(pulse);
-  pulse.addEventListener('animationend', () => pulse.remove());
+  function setProgress(p){
+    const offset = 100 - p*100;
+    ring.style.strokeDashoffset = String(offset);
+  }
+
+  function startPress(){
+    if(drawAnimating) return;
+    start = performance.now();
+    drawAnimating = true;
+    const duration = 1500;
+    const tick = () => {
+      const p = Math.min(1, (performance.now()-start)/duration);
+      setProgress(p);
+      if(p<1){ pressTimer = requestAnimationFrame(tick); }
+      else{
+        setProgress(1);
+        el.drawHint.textContent = '誠心已成，抽籤開始…';
+        animateDrawStart();
+      }
+    };
+    pressTimer = requestAnimationFrame(tick);
+  }
+
+  function endPress(){
+    if(!drawAnimating) return;
+    if(pressTimer) cancelAnimationFrame(pressTimer);
+    setProgress(0);
+    drawAnimating = false;
+  }
+
+  el.holdBtn.addEventListener('pointerdown', startPress);
+  el.holdBtn.addEventListener('pointerup', endPress);
+  el.holdBtn.addEventListener('pointerleave', endPress);
 }
 
 function setupInputGlow(){
   const wraps = document.querySelectorAll('.input-wrap');
   wraps.forEach((wrap) => {
     const glow = wrap.querySelector('.glow-field');
-    const input = wrap.querySelector('input,textarea');
+    const input = wrap.querySelector('input,textarea,select');
     if(!glow || !input) return;
-    const handler = () => createPulse(glow);
+    const handler = () => {
+      if(prefersReduced) return;
+      const pulse = document.createElement('span');
+      pulse.className = 'pulse';
+      const rect = glow.getBoundingClientRect();
+      const x = Math.random() * rect.width;
+      const y = Math.random() * rect.height;
+      pulse.style.left = `${x - 60}px`;
+      pulse.style.top = `${y - 60}px`;
+      glow.appendChild(pulse);
+      pulse.addEventListener('animationend', () => pulse.remove());
+    };
     input.addEventListener('input', handler);
     input.addEventListener('focus', handler);
   });
-}
-
-function getDayOfYear(d){
-  const start = new Date(d.getFullYear(), 0, 0);
-  const diff = d - start;
-  return Math.floor(diff / 86400000);
-}
-
-function updateRank(){
-  const now = new Date();
-  const day = getDayOfYear(now);
-  const year = now.getFullYear();
-  const isLeap = new Date(year, 1, 29).getMonth() === 1;
-  const total = isLeap ? 366 : 365;
-  const seed = hashSeed(`${year}-${day}-${el.nameInput.value || ''}`);
-  const rank = (seed % total) + 1;
-  el.rankText.textContent = `第 ${rank} 名`;
-  el.rankDate.textContent = `（${year}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}）`;
-}
-
-function startNoise(){
-  if(prefersReduced) return;
-  if(noiseCtx) return;
-  try{
-    noiseCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const bufferSize = 2 * noiseCtx.sampleRate;
-    const buffer = noiseCtx.createBuffer(1, bufferSize, noiseCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for(let i=0;i<bufferSize;i++){
-      data[i] = (Math.random() * 2 - 1) * 0.08;
-    }
-    const src = noiseCtx.createBufferSource();
-    src.buffer = buffer;
-    src.loop = true;
-    const gain = noiseCtx.createGain();
-    gain.gain.value = 0.12;
-    src.connect(gain).connect(noiseCtx.destination);
-    src.start(0);
-  } catch(_e){
-    noiseCtx = null;
-  }
-}
-
-function ensureNoise(){
-  if(noiseCtx && noiseCtx.state === 'suspended'){
-    noiseCtx.resume();
-  }
-  if(!noiseCtx) startNoise();
 }
 
 function setupParallax(){
@@ -1612,55 +1562,42 @@ function setupParallax(){
     });
     raf = 0;
   }
-  function schedule(){
-    if(!raf) raf = requestAnimationFrame(apply);
-  }
-  el.hero.addEventListener('pointermove', (e) => {
-    const r = el.hero.getBoundingClientRect();
+  function schedule(){ if(!raf) raf = requestAnimationFrame(apply); }
+  document.addEventListener('pointermove', (e) => {
+    const r = document.body.getBoundingClientRect();
     const nx = (e.clientX - r.left) / r.width - 0.5;
     const ny = (e.clientY - r.top) / r.height - 0.5;
     targetX = nx * 6;
     targetY = ny * 6;
     schedule();
   });
-  window.addEventListener('deviceorientation', (e) => {
-    if(e.beta == null || e.gamma == null) return;
-    targetX = Math.max(-1, Math.min(1, e.gamma / 30)) * 6;
-    targetY = Math.max(-1, Math.min(1, e.beta / 30)) * 6;
-    schedule();
-  }, {passive:true});
 }
 
-el.startBtn.addEventListener('click', () => {
-  if(state === 'idle' || state === 'failed'){
-    el.result.classList.add('hidden');
-    el.restartBtn.hidden = true;
-    startToss();
+el.toB.addEventListener('click', () => { setStage('B'); initAudio(); if(audioCtx) audioCtx.resume(); });
+el.toC.addEventListener('click', () => { setStage('C'); initAudio(); if(audioCtx) audioCtx.resume(); });
+el.backToB.addEventListener('click', () => { setStage('B'); });
+el.startTossBtn.addEventListener('click', () => {
+  initAudio(); if(audioCtx) audioCtx.resume();
+  if(tosses < 3){
+    el.tossHint.textContent = '請靜心等待片刻…';
+    setTimeout(startToss, prefersReduced?200:700);
   }
 });
+el.restartBtn.addEventListener('click', () => { resetAll(); setStage('B'); });
 
-el.restartBtn.addEventListener('click', resetAll);
+el.muteToggle.checked = muted;
+el.muteToggle.addEventListener('change', () => { muted = el.muteToggle.checked; });
 
-el.introBtn.addEventListener('click', () => {
-  setStep('form');
-  ensureNoise();
-});
+el.clearHistory.addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); renderHistory(); });
 
-el.formBtn.addEventListener('click', () => {
-  setStep('ritual');
-  ensureNoise();
-});
+document.addEventListener('pointerdown', () => { initAudio(); if(audioCtx) audioCtx.resume(); }, {once:true});
 
-document.addEventListener('pointerdown', ensureNoise, {once:true});
-el.nameInput.addEventListener('input', updateRank);
-
-resetAll();
-setupParallax();
 setupInputGlow();
-setStep('intro');
-startNoise();
-updateRank();
-requestAnimationFrame(() => el.hero.classList.add('appear'));
+setupParallax();
+longPressHandler();
+renderHistory();
+setStage('A');
+requestAnimationFrame(() => document.querySelector('.hero').classList.add('appear'));
 </script>
 </body>
 </html>
