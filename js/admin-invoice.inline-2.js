@@ -38,6 +38,8 @@
     pvNotes: $('pvNotes')
   };
 
+  var PREVIEW_BASE_W = 794;
+
   var PRESETS = [
     { id:'ig_reel', name:'Instagram Reel', meta:'短影音 / Reels' },
     { id:'fb_post', name:'Facebook Post', meta:'貼文曝光' },
@@ -519,15 +521,77 @@
     return base.replace(/[^a-zA-Z0-9\\-_.]+/g, '_');
   }
 
+  function applyResponsivePreviewScale(){
+    if (!els.invoicePaper) return;
+    var canvas = $('previewCanvas');
+    if (!canvas) return;
+
+    var padding = 24; // preview-canvas has 12px padding on each side
+    var availableW = Math.max(320, (canvas.clientWidth || 0) - padding);
+    var scale = Math.min(1, availableW / PREVIEW_BASE_W);
+
+    // Prefer zoom because it affects layout size, avoiding horizontal clipping/scrollbars.
+    try{
+      els.invoicePaper.style.zoom = String(scale);
+      els.invoicePaper.style.transform = 'none';
+      els.invoicePaper.style.transformOrigin = 'top center';
+      return;
+    }catch(_){}
+
+    // Fallback: transform scale (may still allow scrollbars but will visually fit).
+    els.invoicePaper.style.transform = 'scale(' + scale + ')';
+    els.invoicePaper.style.transformOrigin = 'top center';
+    els.invoicePaper.style.zoom = '';
+  }
+
+  function bindResponsivePreview(){
+    if (!els.invoicePaper) return;
+    var canvas = $('previewCanvas');
+    if (!canvas) return;
+
+    applyResponsivePreviewScale();
+    try{
+      canvas.scrollTop = 0;
+      canvas.scrollLeft = 0;
+    }catch(_){}
+
+    if (window.ResizeObserver){
+      try{
+        var ro = new ResizeObserver(function(){
+          applyResponsivePreviewScale();
+        });
+        ro.observe(canvas);
+      }catch(_){}
+    } else {
+      window.addEventListener('resize', function(){
+        applyResponsivePreviewScale();
+      });
+    }
+  }
+
   function renderCanvasForExport(){
     setStatus('正在產出影像…');
     var target = els.invoicePaper;
     var scale = 2;
+    var prevZoom = '';
+    var prevTransform = '';
+    try{
+      prevZoom = target.style.zoom || '';
+      prevTransform = target.style.transform || '';
+      target.style.zoom = '1';
+      target.style.transform = 'none';
+    }catch(_){}
+
     return window.html2canvas(target, {
       backgroundColor: '#ffffff',
       scale: scale,
       useCORS: true,
       logging: false
+    }).finally(function(){
+      try{
+        target.style.zoom = prevZoom;
+        target.style.transform = prevTransform;
+      }catch(_){}
     });
   }
 
@@ -597,6 +661,7 @@
     renderItemsEditor();
     renderPreview();
     bindInputs();
+    bindResponsivePreview();
     setStatus('');
   }
 
