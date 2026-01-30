@@ -906,25 +906,46 @@
     setStatus('正在產出影像…');
     var target = els.invoicePaper;
     var scale = 2;
-    var prevZoom = '';
-    var prevTransform = '';
+
+    // Workaround: html2canvas may clip if the element is inside a scroll container or scaled via zoom.
+    // Clone the invoice into an offscreen fixed layer at 100% size and capture that clone.
+    var stage = document.createElement('div');
+    stage.style.position = 'fixed';
+    stage.style.left = '-100000px';
+    stage.style.top = '0';
+    stage.style.width = '0';
+    stage.style.height = '0';
+    stage.style.overflow = 'visible';
+    stage.style.zIndex = '-1';
+
+    var clone = target.cloneNode(true);
     try{
-      prevZoom = target.style.zoom || '';
-      prevTransform = target.style.transform || '';
-      target.style.zoom = '1';
-      target.style.transform = 'none';
+      clone.style.zoom = '1';
+      clone.style.transform = 'none';
+      clone.style.transformOrigin = 'top left';
+      clone.style.margin = '0';
     }catch(_){}
 
-    return window.html2canvas(target, {
+    stage.appendChild(clone);
+    document.body.appendChild(stage);
+
+    // Ensure layout is computed before capture.
+    var w = Math.max(PREVIEW_BASE_W, clone.scrollWidth || 0, clone.getBoundingClientRect ? Math.ceil(clone.getBoundingClientRect().width) : 0);
+    var h = Math.max(1123, clone.scrollHeight || 0, clone.getBoundingClientRect ? Math.ceil(clone.getBoundingClientRect().height) : 0);
+
+    return window.html2canvas(clone, {
       backgroundColor: '#ffffff',
       scale: scale,
       useCORS: true,
-      logging: false
+      logging: false,
+      width: w,
+      height: h,
+      windowWidth: w,
+      windowHeight: h,
+      scrollX: 0,
+      scrollY: 0
     }).finally(function(){
-      try{
-        target.style.zoom = prevZoom;
-        target.style.transform = prevTransform;
-      }catch(_){}
+      try{ stage.remove(); }catch(_){}
     });
   }
 
