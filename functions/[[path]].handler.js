@@ -1786,7 +1786,25 @@ async function requireAdmin2FA(request, env, adminSession){
   const cookies = parseCookies(request);
   const proof = String(cookies.admin_2fa || '').trim();
   const adminToken = String(cookies.admin_session || '').trim();
-  const next = (()=>{ try{ const u = new URL(request.url); return u.pathname + u.search; }catch(_){ return '/admin'; }})();
+  const next = (()=>{
+    try{
+      const u = new URL(request.url);
+      const path = u.pathname + u.search;
+      if (!u.pathname.startsWith('/api/')) return path;
+      const ref = (request.headers.get('Referer') || '').trim();
+      if (ref){
+        try{
+          const ru = new URL(ref);
+          if (ru.origin === u.origin && !ru.pathname.startsWith('/api/')){
+            return ru.pathname + ru.search + ru.hash;
+          }
+        }catch(_){}
+      }
+      return '/admin/';
+    }catch(_){
+      return '/admin/';
+    }
+  })();
   const nextUrl = `/admin/2fa?next=${encodeURIComponent(next)}`;
   if (!proof || !adminToken){
     return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
