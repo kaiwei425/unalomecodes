@@ -106,7 +106,18 @@
       selected_clear: '清空選取',
       selected_remove: '移除',
       selected_count: '共 {count} 個時段',
-      selected_need_publish: '請先選取要上架的時段'
+      selected_need_publish: '請先選取要上架的時段',
+      msg_missing_service: '缺少 serviceId',
+      msg_missing_date: '請選擇日期',
+      msg_updated: '已更新',
+      confirm_publish_slots: '確定要執行【開放時段】？此動作無法復原',
+      confirm_unpublish_slots: '確定要執行【取消選取時段】？此動作無法復原',
+      confirm_unblock_slots: '確定要執行【重新開放】？此動作無法復原',
+      confirm_release_booked: '確定要解除已預約時段？此動作會清空該時段的預約並重新開放。',
+      consult_stage_payment_pending: '訂單成立待確認付款',
+      consult_stage_payment_confirmed: '已確認付款，預約中',
+      consult_stage_appointment_confirmed: '已完成預約',
+      consult_stage_done: '已完成訂單'
     },
     en: {
       slots_title: 'Slot Management',
@@ -214,7 +225,18 @@
       selected_clear: 'Clear selection',
       selected_remove: 'Remove',
       selected_count: '{count} slots selected',
-      selected_need_publish: 'Please select slots to publish'
+      selected_need_publish: 'Please select slots to publish',
+      msg_missing_service: 'Missing serviceId',
+      msg_missing_date: 'Please select a date',
+      msg_updated: 'Updated',
+      confirm_publish_slots: 'Publish slots now? This cannot be undone.',
+      confirm_unpublish_slots: 'Unpublish selected slots? This cannot be undone.',
+      confirm_unblock_slots: 'Re-open selected slots? This cannot be undone.',
+      confirm_release_booked: 'Release booked slots? This clears the booking and reopens the slot.',
+      consult_stage_payment_pending: 'Payment pending confirmation',
+      consult_stage_payment_confirmed: 'Payment confirmed, scheduling',
+      consult_stage_appointment_confirmed: 'Booking confirmed',
+      consult_stage_done: 'Order completed'
     }
   };
   var ADMIN_LANG = 'zh';
@@ -272,7 +294,7 @@
     input.type = 'text';
     input.id = 'serviceIdInput';
     input.name = 'serviceId';
-    input.placeholder = '輸入 serviceId';
+    input.placeholder = t('ph_service_id');
     field.appendChild(input);
     var hint = document.createElement('div');
     hint.id = 'serviceIdHint';
@@ -918,13 +940,6 @@
     return raw;
   }
 
-  var CONSULT_STAGE_LABELS = {
-    payment_pending: '訂單成立待確認付款 / Payment pending confirmation',
-    payment_confirmed: '已確認付款，預約中 / Payment confirmed, scheduling',
-    appointment_confirmed: '已完成預約 / Booking confirmed',
-    done: '已完成訂單 / Order completed'
-  };
-
   function isPhoneConsultOrder(order){
     if (!order) return false;
     if (order.consultStage) return true;
@@ -934,7 +949,11 @@
 
   function consultStageLabel(stage){
     var key = String(stage || '').trim().toLowerCase();
-    return CONSULT_STAGE_LABELS[key] || stage || '';
+    if (key === 'payment_pending') return t('consult_stage_payment_pending');
+    if (key === 'payment_confirmed') return t('consult_stage_payment_confirmed');
+    if (key === 'appointment_confirmed') return t('consult_stage_appointment_confirmed');
+    if (key === 'done') return t('consult_stage_done');
+    return stage || '';
   }
 
   function renderConsultList(items){
@@ -1068,12 +1087,12 @@
     var serviceId = getServiceIdValue();
     var date = dateOverride || getDateValue();
     if (!serviceId){
-      setStatus('缺少 serviceId', true);
+      setStatus(t('msg_missing_service'), true);
       return;
     }
     ensureSelectionForService(serviceId);
     if (!date){
-      setStatus('請選擇日期', true);
+      setStatus(t('msg_missing_date'), true);
       return;
     }
     setStatus(t('msg_loading'));
@@ -1089,7 +1108,7 @@
           if (result.data && result.data.error === 'slots_kv_not_configured'){
             setStatus(t('hint_kv_missing'), true);
           }else if (result.data && result.data.error === 'missing_service_id'){
-            setStatus('缺少 serviceId', true);
+            setStatus(t('msg_missing_service'), true);
           }else if (result.data && result.data.error === 'forbidden_role'){
             setStatus(t('msg_forbidden'), true);
           }else{
@@ -1102,7 +1121,7 @@
         var shownDate = (day && day.date) ? day.date : date;
         if (shownDate) setCurrentDate(shownDate);
         renderSlots(day ? day.slots : []);
-        setStatus('已更新');
+        setStatus(t('msg_updated'));
         setTimeout(function(){ setStatus(''); }, 1800);
         loadPublishedSlots(serviceId);
         loadConsultQueue();
@@ -1180,7 +1199,7 @@
   }
 
   function handlePublish(){
-    if (!confirm('確定要執行【開放時段】？此動作無法復原')) return;
+    if (!confirm(t('confirm_publish_slots'))) return;
     var slotKeys = collectSlotKeys('publish');
     if (!slotKeys.length){
       setStatus(t('msg_failed'), true);
@@ -1458,7 +1477,7 @@
   }
 
   function handleBlock(blocked){
-    if (!confirm(blocked ? '確定要執行【取消選取時段】？此動作無法復原' : '確定要執行【重新開放】？此動作無法復原')) return;
+    if (!confirm(blocked ? t('confirm_unpublish_slots') : t('confirm_unblock_slots'))) return;
     var action = blocked ? 'block' : 'unblock';
     var slotKeys = collectSlotKeys(action);
     if (!slotKeys.length){
@@ -1497,7 +1516,7 @@
       setStatus(t('msg_forbidden'), true);
       return;
     }
-    if (!confirm('確定要解除已預約時段？此動作會清空該時段的預約並重新開放。')) return;
+    if (!confirm(t('confirm_release_booked'))) return;
     var slotKeys = collectSlotKeys('release');
     if (!slotKeys.length){
       setStatus(t('msg_failed'), true);
