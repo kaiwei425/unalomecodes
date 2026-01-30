@@ -1,6 +1,8 @@
 (function(){
   var pageKey = document.body ? document.body.getAttribute('data-page-key') : '';
   if (!pageKey) return;
+  var path = String(location.pathname || '');
+  if (path === '/en' || path === '/en/') return;
 
   var editableNodes = Array.from(document.querySelectorAll('[data-edit-key]'));
   var inputNodes = Array.from(document.querySelectorAll('[data-edit-input]'));
