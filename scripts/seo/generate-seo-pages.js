@@ -753,6 +753,20 @@ async function generate(){
     }
   }
 
+  const sitemapOrder = [
+    '/sitemaps/sitemap-food-zh',
+    '/sitemaps/sitemap-temple-zh',
+    '/sitemaps/sitemap-guides-zh',
+    '/sitemaps/sitemap-food-en',
+    '/sitemaps/sitemap-temple-en',
+    '/sitemaps/sitemap-guides-en',
+    '/sitemaps/sitemap-misc'
+  ];
+  sitemaps.sort((a, b)=>{
+    const aKey = sitemapOrder.findIndex(prefix=>a.file.startsWith(prefix));
+    const bKey = sitemapOrder.findIndex(prefix=>b.file.startsWith(prefix));
+    return (aKey === -1 ? 999 : aKey) - (bKey === -1 ? 999 : bKey);
+  });
   const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemaps.map(sm=>`  <sitemap><loc>${SITE.origin}${sm.file}</loc><lastmod>${formatDate(new Date())}</lastmod></sitemap>`).join('\n')}\n</sitemapindex>`;
   await writeFileIfChanged(path.join(outputRoot, 'sitemap-index.xml'), sitemapIndex, manifest);
 

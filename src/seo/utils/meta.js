@@ -30,6 +30,6 @@ export function buildAlternates(path){
   return [
     { hreflang: 'zh-Hant', href: `${SITE.origin}/zh${cleanPath}` },
     { hreflang: 'en', href: `${SITE.origin}/en${cleanPath}` },
-    { hreflang: 'x-default', href: `${SITE.origin}/en${cleanPath}` }
+    { hreflang: 'x-default', href: `${SITE.origin}/zh${cleanPath}` }
   ];
 }
