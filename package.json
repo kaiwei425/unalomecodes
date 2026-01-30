@@ -1,0 +1,10 @@
+{
+  "name": "unalomecodes-seo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seo:snapshot": "node scripts/seo/snapshot-data.js",
+    "seo:build": "node scripts/seo/snapshot-data.js && node scripts/seo/generate-seo-pages.js",
+    "build": "npm run seo:build"
+  }
+}

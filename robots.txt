@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://unalomecodes.com/sitemap.xml
+Sitemap: https://unalomecodes.com/sitemap-index.xml
