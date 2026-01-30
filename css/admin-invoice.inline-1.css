@@ -9,6 +9,12 @@
 
   html.admin-guard-hide{visibility:hidden;}
 
+  .admin-invoice-view *,
+  .admin-invoice-view *::before,
+  .admin-invoice-view *::after{
+    box-sizing:border-box;
+  }
+
   .admin-shell-applied .page{max-width:1560px;}
 
   .invoice-layout{
@@ -17,6 +23,8 @@
     gap:14px;
     align-items:start;
   }
+  .invoice-layout > .panel{min-width:0;}
+  .invoice-form, .invoice-preview-panel{min-width:0;}
   @media (max-width: 1100px){
     .invoice-layout{grid-template-columns:1fr;}
   }
@@ -25,6 +33,7 @@
     display:grid;
     gap:12px;
   }
+  .invoice-form .btn{max-width:100%;}
 
   .history-box{
     border:1px solid var(--admin-border);
@@ -39,6 +48,9 @@
     justify-content:space-between;
     gap:10px;
     margin-bottom:10px;
+  }
+  .history-actions .btn{
+    padding:8px 12px;
   }
   .history-title{
     font-weight:1000;
@@ -72,6 +84,7 @@
     grid-template-columns: 1fr 44px;
     gap:10px;
     align-items:stretch;
+    min-width:0;
   }
   .history-open{
     width:100%;
@@ -82,6 +95,7 @@
     padding:10px 12px;
     cursor:pointer;
     transition: box-shadow .15s ease, transform .15s ease, background .15s ease;
+    min-width:0;
   }
   .history-open:hover{
     background:var(--admin-surface);
@@ -94,16 +108,22 @@
     justify-content:space-between;
     gap:10px;
     margin-bottom:4px;
+    min-width:0;
   }
   .history-open .no{
     font-weight:1000;
     font-size:13px;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
   .history-open .date{
     font-size:12px;
     color:var(--admin-muted);
     font-weight:900;
     white-space:nowrap;
+    flex:0 0 auto;
   }
   .history-open .meta{
     font-size:12px;
@@ -139,8 +159,10 @@
   }
 
   .field input,
-  .field textarea{
+  .field textarea,
+  .field select{
     width:100%;
+    max-width:100%;
     border:1px solid var(--admin-border);
     background:var(--admin-surface);
     color:var(--admin-text);
@@ -162,18 +184,22 @@
     display:flex;
     gap:10px;
     align-items:center;
+    flex-wrap:wrap;
   }
   .field-row input{flex:1; min-width:0;}
+  .field-row .btn{white-space:nowrap;}
 
   .hint{
     margin-top:6px;
     font-size:12px;
     color:var(--admin-muted);
+    overflow-wrap:anywhere;
   }
   .status{
     margin-top:10px;
     font-size:12px;
     color:var(--admin-muted);
+    overflow-wrap:anywhere;
   }
   .status.is-error{color:#b91c1c;}
   .status.is-ok{color:#065f46;}
@@ -199,19 +225,21 @@
   .preset .name{font-weight:900; font-size:13px;}
   .preset .meta{font-size:12px;color:var(--admin-muted); margin-top:2px;}
 
-  .items-editor{display:grid; gap:10px;}
+  .items-editor{display:grid; gap:10px; min-width:0;}
   .items-table{
     width:100%;
     border:1px solid var(--admin-border);
     border-radius:14px;
     overflow:hidden;
     background:var(--admin-surface);
+    table-layout:fixed;
   }
   .items-table th, .items-table td{
     border-bottom:1px solid var(--admin-border-soft);
     padding:10px;
     font-size:13px;
     vertical-align:top;
+    overflow:hidden;
   }
   .items-table th{
     background:var(--admin-surface-2);
@@ -255,8 +283,10 @@
     display:flex;
     gap:10px;
     width:100%;
+    flex-wrap:wrap;
   }
   .add-custom input{flex:1; min-width:0;}
+  .add-custom .btn{white-space:nowrap;}
 
   .totals-grid{
     display:grid;
