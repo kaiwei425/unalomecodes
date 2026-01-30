@@ -1880,7 +1880,7 @@ function createTempleUtils(deps){
     const holdTtlMin = Math.max(5, Number(env?.SLOT_HOLD_TTL_MIN || 15) || 15);
     const daysAhead = Math.max(1, Math.min(31, Number(env?.SLOT_DAYS_AHEAD || 14) || 14));
     const stepMin = Math.max(5, Number(env?.SLOT_STEP_MIN || 30) || 30);
-    const windowsStr = String(env?.SLOT_DAILY_WINDOWS || '13:00-20:00');
+    const windowsStr = String(env?.SLOT_DAILY_WINDOWS || '13:00-20:30');
     return { tz, holdTtlMin, daysAhead, stepMin, windowsStr };
   }
   const SLOT_MODE_KEY_PREFIX = 'slot_mode:';

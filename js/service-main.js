@@ -1454,10 +1454,12 @@
 
   function buildPlaceholderSlots(dateStr){
     const slots = [];
-    for (let h = 13; h <= 19; h += 1){
+    for (let h = 13; h <= 20; h += 1){
       const hh = String(h).padStart(2, '0');
       slots.push({ slotKey: `slot:placeholder:${dateStr}:${hh}00`, time: `${hh}:00`, status: 'free', enabled: false });
-      slots.push({ slotKey: `slot:placeholder:${dateStr}:${hh}30`, time: `${hh}:30`, status: 'free', enabled: false });
+      if (h < 20){
+        slots.push({ slotKey: `slot:placeholder:${dateStr}:${hh}30`, time: `${hh}:30`, status: 'free', enabled: false });
+      }
     }
     return slots;
   }
