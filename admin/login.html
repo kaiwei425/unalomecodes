@@ -15,29 +15,38 @@
 </head>
 <body>
   <div class="login-shell">
-    <header class="login-top">
-      <a class="login-brand" href="/" aria-label="Go to home">
-        <img class="login-brand__logo" src="/img/logo.png" alt="Unalome Codes">
-        <span class="login-brand__text">Admin</span>
-      </a>
-      <div class="login-lang">
-        <button type="button" class="lang-btn" id="langZh">中文</button>
-        <button type="button" class="lang-btn" id="langEn">EN</button>
-      </div>
-    </header>
-
     <main class="login-card">
+      <div class="login-brand">
+        <img class="login-brand__logo" src="/img/logo.png" alt="Unalome Codes">
+      </div>
+
       <div class="login-head">
         <h1 class="login-title" data-i18n="title">管理員登入</h1>
         <p class="login-sub" data-i18n="subtitle">請使用已授權的帳號登入後台。</p>
       </div>
 
+      <div class="login-meta">
+        <span class="login-label" data-i18n="method_label">登入方式</span>
+        <a class="login-link" href="mailto:support@unalomecodes.com" data-i18n="forgot">忘記權限？</a>
+      </div>
+
       <div class="login-actions">
-        <button type="button" class="login-btn" id="btnAdminGoogle" data-i18n="btn_google">使用 Google 登入</button>
-        <button type="button" class="login-btn secondary" id="btnAdminLine" data-i18n="btn_line" disabled>使用 LINE 登入（未開放）</button>
+        <button type="button" class="login-btn" id="btnAdminGoogle" data-i18n="btn_google">
+          <span class="btn-label">使用 Google 登入</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="login-btn secondary" id="btnAdminLine" data-i18n="btn_line" disabled>
+          <span class="btn-label">使用 LINE 登入（未開放）</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
       </div>
 
       <div id="loginHint" class="login-hint muted" data-i18n="hint">若登入後顯示權限不足，請聯繫 Owner 開通。</div>
+
+      <div class="login-lang">
+        <button type="button" class="lang-btn" id="langZh">中文</button>
+        <button type="button" class="lang-btn" id="langEn">EN</button>
+      </div>
     </main>
 
     <footer class="login-foot muted">Unalome Codes Admin Center</footer>

@@ -10,6 +10,8 @@
     zh: {
       title: '管理員登入',
       subtitle: '請使用已授權的帳號登入後台。',
+      method_label: '登入方式',
+      forgot: '忘記權限？',
       btn_google: '使用 Google 登入',
       btn_line: '使用 LINE 登入（未開放）',
       hint: '若登入後顯示權限不足，請聯繫 Owner 開通。'
@@ -17,6 +19,8 @@
     en: {
       title: 'Admin sign in',
       subtitle: 'Sign in with an authorized admin account.',
+      method_label: 'Sign-in method',
+      forgot: 'Forgot access?',
       btn_google: 'Continue with Google',
       btn_line: 'Continue with LINE (disabled)',
       hint: 'If you see “not authorized”, contact the Owner to grant access.'
@@ -47,8 +51,16 @@
       const next = t(key);
       if (next) node.textContent = next;
     });
-    if (btnGoogle) btnGoogle.textContent = t('btn_google');
-    if (btnLine) btnLine.textContent = t('btn_line');
+    if (btnGoogle){
+      const label = btnGoogle.querySelector('.btn-label');
+      if (label) label.textContent = t('btn_google');
+      else btnGoogle.textContent = t('btn_google');
+    }
+    if (btnLine){
+      const label = btnLine.querySelector('.btn-label');
+      if (label) label.textContent = t('btn_line');
+      else btnLine.textContent = t('btn_line');
+    }
     if (langZh) langZh.classList.toggle('is-active', ADMIN_LANG === 'zh');
     if (langEn) langEn.classList.toggle('is-active', ADMIN_LANG === 'en');
   }
@@ -79,6 +91,8 @@
 
   if (btnGoogle){
     btnGoogle.addEventListener('click', () => {
+      btnGoogle.classList.add('is-loading');
+      btnGoogle.setAttribute('aria-busy', 'true');
       const url = `/api/auth/google/admin/start?redirect=${encodeURIComponent(redirect)}`;
       location.href = url;
     });
