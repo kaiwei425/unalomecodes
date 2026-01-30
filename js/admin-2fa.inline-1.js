@@ -3,6 +3,7 @@
   var input = document.getElementById('admin2faCode');
   var btn = document.getElementById('admin2faSubmit');
   var errorEl = document.getElementById('admin2faError');
+  var statusEl = document.getElementById('admin2faStatus');
   var params = new URLSearchParams(location.search);
   var next = params.get('next') || '/admin/';
 
@@ -15,6 +16,28 @@
     if (!errorEl) return;
     errorEl.textContent = '';
     errorEl.hidden = true;
+  }
+  function setStatus(msg){
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+    statusEl.hidden = !msg;
+  }
+
+  async function refreshStatus(){
+    if (!statusEl) return;
+    try{
+      const res = await fetch('/api/auth/admin/2fa/status', { credentials:'include', cache:'no-store' });
+      const data = await res.json().catch(function(){ return {}; });
+      if (res.ok && data && data.ok && data.remainingSeconds >= 0){
+        const mins = Math.floor(data.remainingSeconds / 60);
+        const secs = Math.floor(data.remainingSeconds % 60);
+        setStatus(`目前已驗證，可用 ${mins}m ${String(secs).padStart(2,'0')}s`);
+      }else{
+        setStatus('尚未完成 2FA 驗證');
+      }
+    }catch(_){
+      setStatus('');
+    }
   }
 
   if (form){
@@ -41,6 +64,7 @@
         if (!res.ok || !data || data.ok !== true){
           setError(data && data.error === 'INVALID_CODE' ? 'Invalid code. Please try again.' : 'Verification failed.');
         }else{
+          setStatus('');
           location.href = data.next || next || '/admin/';
         }
       }catch(_){
@@ -53,4 +77,6 @@
       }
     });
   }
+
+  refreshStatus();
 })();

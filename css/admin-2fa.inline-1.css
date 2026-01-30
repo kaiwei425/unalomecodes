@@ -103,6 +103,11 @@ body{
   color:#b91c1c;
   font-size:13px;
 }
+.admin-2fa-status{
+  margin-top:10px;
+  color:#475569;
+  font-size:13px;
+}
 .admin-2fa-hint{
   margin-top:14px;
   font-size:12px;

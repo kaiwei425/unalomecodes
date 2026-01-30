@@ -1,1 +1,7 @@
 .cache/
+
+# Local development mocks and helpers (keep only on local machine)
+dev/
+
+# Editor / OS
+.DS_Store
