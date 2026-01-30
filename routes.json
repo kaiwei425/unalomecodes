@@ -166,6 +166,21 @@
         "/api/service/products",
         "/api/stories?code=... (&_method=DELETE)"
       ]
+    },
+    {
+      "path": "/admin/invoice",
+      "label": "發票產生器 / Invoice Generator",
+      "module": "invoice",
+      "file": "admin/invoice.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-invoice.inline-1.css",
+        "js/admin-invoice.inline-1.js",
+        "js/admin-invoice.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": []
     }
   ],
   "adminGate": {

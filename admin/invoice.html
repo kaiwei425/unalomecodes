@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="後台發票產生器（僅限管理員）。">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://unalomecodes.com/admin/invoice">
+  <title>unalomecodes | 發票產生器</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <meta name="theme-color" content="#f6f6f7">
+  <link rel="stylesheet" href="/admin/admin-ui.css">
+  <link rel="stylesheet" href="/css/admin-invoice.inline-1.css">
+  <script src="/js/admin-invoice.inline-1.js"></script>
+  <script src="/js/admin-guard.js" defer></script>
+  <script src="/js/admin-shell.js" defer></script>
+</head>
+<body class="admin-view admin-invoice-view">
+  <div class="wrap" data-admin-page="invoice">
+    <div class="page">
+      <div class="page-head">
+        <div class="page-title">
+          <h1>發票產生器</h1>
+          <div class="page-sub">填寫資料 → 即時預覽 → 下載 PDF / PNG</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" type="button" id="btnReset">重設</button>
+          <button class="btn" type="button" id="btnDownloadPng">下載 PNG</button>
+          <button class="btn primary" type="button" id="btnDownloadPdf">下載 PDF</button>
+          <button class="btn" type="button" id="btnPrint">列印</button>
+        </div>
+      </div>
+
+      <div class="page-body invoice-layout">
+        <section class="panel invoice-form" aria-label="發票輸入表單">
+          <div class="form-grid">
+            <div class="field">
+              <label for="invDate">日期</label>
+              <input id="invDate" type="date" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="invNo">Invoice No</label>
+              <div class="field-row">
+                <input id="invNo" type="text" placeholder="例如：2026013001" autocomplete="off">
+                <button class="btn" type="button" id="btnGenNo">重新產生</button>
+              </div>
+              <div class="hint">規則：YYYYMMDD + 流水號（僅本機 localStorage）。可手動修改。</div>
+            </div>
+
+            <div class="field">
+              <label for="issuedBy">Issued By（可多行）</label>
+              <textarea id="issuedBy" rows="6" placeholder="KV&#10;Instagram: ...&#10;Phone: ...&#10;Email: ..."></textarea>
+            </div>
+            <div class="field">
+              <label for="invoiceFor">Invoice For（可多行）</label>
+              <textarea id="invoiceFor" rows="6" placeholder="Company / Name&#10;Address...&#10;Tax ID..."></textarea>
+            </div>
+
+            <div class="field">
+              <label>方案勾選（快速加入 Items）</label>
+              <div class="preset-grid" id="presetGrid" role="group" aria-label="發票方案勾選"></div>
+            </div>
+
+            <div class="field">
+              <label>Items（可編輯）</label>
+              <div class="items-editor">
+                <table class="items-table" aria-label="Items 編輯表">
+                  <thead>
+                    <tr>
+                      <th>ITEM</th>
+                      <th style="width:110px">QTY</th>
+                      <th style="width:160px">UNIT PRICE (THB)</th>
+                      <th style="width:160px">SUBTOTAL</th>
+                      <th style="width:70px"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="itemsEditorBody"></tbody>
+                </table>
+                <div class="items-actions">
+                  <div class="add-custom">
+                    <input id="customItemName" type="text" placeholder="新增自訂項目名稱（例如：savoy restaurant）" autocomplete="off">
+                    <button class="btn" type="button" id="btnAddCustom">＋新增</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field totals-grid">
+              <div class="field">
+                <label for="taxPercent">Tax (%)（選填）</label>
+                <input id="taxPercent" type="number" min="0" step="0.01" placeholder="例如：0 或 7">
+              </div>
+              <div class="field">
+                <label for="discountAmount">Discount (THB)（選填）</label>
+                <input id="discountAmount" type="number" min="0" step="1" placeholder="例如：0 或 500">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="notes">備註 / Thank you（可多行）</label>
+              <textarea id="notes" rows="4" placeholder="THANK YOU FOR YOUR BUSINESS.&#10;If you have any questions, please contact us at ..."></textarea>
+            </div>
+
+            <div class="field">
+              <div class="hint">
+                下載 PDF/PNG 需要外部前端套件（jsPDF + html2canvas）。若網路受限，可用「列印」另存 PDF。
+              </div>
+              <div class="status" id="status" aria-live="polite"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel invoice-preview-panel" aria-label="發票預覽">
+          <div class="preview-head">
+            <div class="preview-title">即時預覽</div>
+            <div class="preview-meta">
+              <span class="chip">A4</span>
+              <span class="chip alt">THB</span>
+            </div>
+          </div>
+
+          <div class="preview-canvas" id="previewCanvas">
+            <article class="invoice-paper" id="invoicePaper" aria-label="Invoice">
+              <div class="invoice-hero">
+                <div class="invoice-title-pill">INVOICE</div>
+              </div>
+
+              <div class="invoice-top">
+                <div class="kv">
+                  <div class="kv-row"><div class="k">Date</div><div class="sep">:</div><div class="v" id="pvDate">—</div></div>
+                  <div class="kv-row"><div class="k">No</div><div class="sep">:</div><div class="v" id="pvNo">—</div></div>
+                </div>
+                <div class="cols">
+                  <div class="col">
+                    <div class="col-title">ISSUED BY</div>
+                    <div class="col-body" id="pvIssuedBy">—</div>
+                  </div>
+                  <div class="col">
+                    <div class="col-title">INVOICE FOR</div>
+                    <div class="col-body" id="pvInvoiceFor">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="invoice-table">
+                <div class="table-head">
+                  <div class="th item">ITEM</div>
+                  <div class="th qty">QUANTITY</div>
+                  <div class="th unit">UNIT PRICE</div>
+                  <div class="th sub">SUBTOTAL</div>
+                </div>
+                <div class="table-body" id="pvItems"></div>
+              </div>
+
+              <div class="invoice-bottom">
+                <div class="thanks">
+                  <div class="thanks-title">THANK YOU FOR YOUR BUSINESS.</div>
+                  <div class="thanks-note" id="pvNotes">—</div>
+                </div>
+
+                <div class="totals">
+                  <div class="t-row"><span>Subtotal</span><span id="pvSubtotal">฿0</span></div>
+                  <div class="t-row"><span>Tax</span><span id="pvTax">฿0</span></div>
+                  <div class="t-row"><span>Discount</span><span id="pvDiscount">฿0</span></div>
+                  <div class="t-total"><span>TOTAL :</span><span id="pvTotal">฿0</span></div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export libs (loaded at runtime; Cloudflare Pages static) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="/js/admin-invoice.inline-2.js"></script>
+</body>
+</html>
+
