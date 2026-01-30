@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="後台商品圖片產生器（僅限管理員）。">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://unalomecodes.com/admin/product-image">
+  <title>unalomecodes | 商品圖片產生器</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <meta name="theme-color" content="#f6f6f7">
+  <link rel="stylesheet" href="/admin/admin-ui.css">
+  <link rel="stylesheet" href="/css/admin-product-image.inline-1.css">
+  <script src="/js/admin-product-image.inline-1.js"></script>
+  <script src="/js/admin-guard.js" defer></script>
+  <script src="/js/admin-shell.js" defer></script>
+</head>
+<body class="admin-view admin-product-image-view">
+  <div class="wrap" data-admin-page="product-image">
+    <div class="page">
+      <div class="page-head">
+        <div class="page-title">
+          <h1>商品圖片產生器</h1>
+          <div class="page-sub">編輯內容 → 即時預覽（1080×1080）→ 下載 PNG</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn" type="button" id="btnResetImageGen">重設</button>
+          <button class="btn primary" type="button" id="btnDownloadProductPng">下載 PNG</button>
+        </div>
+      </div>
+
+      <div class="page-body imggen-layout">
+        <section class="panel imggen-form" aria-label="商品圖輸入表單">
+          <div class="form-grid">
+            <div class="field">
+              <label for="imgTitle">主標題（可換行）</label>
+              <textarea id="imgTitle" rows="2" placeholder="例：阿贊空德-東北強悍＋三流老虎法脈&#10;掐朗金【虎睡吃】"></textarea>
+            </div>
+
+            <div class="field two-col">
+              <div>
+                <label for="imgBadge">左上標籤（例如：防水殼版）</label>
+                <input id="imgBadge" type="text" placeholder="防水殼版">
+              </div>
+              <div>
+                <label for="accentColor">重點色（紫色）</label>
+                <input id="accentColor" type="color" value="#2e2b7a">
+              </div>
+            </div>
+
+            <div class="field">
+              <label>條列（每一條：標題 + 內容，可多行）</label>
+              <div class="bullets" id="bullets"></div>
+              <div class="bullets-actions">
+                <button class="btn" type="button" id="btnAddBullet">＋新增條列</button>
+              </div>
+            </div>
+
+            <div class="field two-col">
+              <div>
+                <label for="brandText">品牌文字</label>
+                <input id="brandText" type="text" value="unalomecodes">
+              </div>
+              <div>
+                <label for="brandShowMark">顯示 Logo</label>
+                <select id="brandShowMark">
+                  <option value="1">顯示</option>
+                  <option value="0">隱藏</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>商品圖片（建議透明背景 PNG）</label>
+              <div class="upload-row">
+                <input id="productImageFile" type="file" accept="image/*">
+                <button class="btn" type="button" id="btnClearProductImage">清除圖片</button>
+              </div>
+              <div class="hint">若你上傳的是 JPG（無透明），背景會一起出現。想要跟範例一樣乾淨，請用去背 PNG。</div>
+            </div>
+
+            <div class="field two-col">
+              <div>
+                <label for="imageScale">圖片大小</label>
+                <input id="imageScale" type="range" min="70" max="140" value="100">
+              </div>
+              <div>
+                <label for="imageRotate">圖片旋轉</label>
+                <input id="imageRotate" type="range" min="-25" max="25" value="0">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="footerNote">底部小字（可留空）</label>
+              <input id="footerNote" type="text" placeholder="（選填）">
+            </div>
+
+            <div class="status" id="imgGenStatus" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="panel imggen-preview-panel" aria-label="商品圖預覽">
+          <div class="preview-head">
+            <div class="preview-title">即時預覽</div>
+            <div class="preview-meta">
+              <span class="chip">1080×1080</span>
+              <span class="chip alt">PNG</span>
+            </div>
+          </div>
+
+          <div class="preview-canvas" id="imgPreviewCanvas">
+            <div class="img-card" id="imgCard">
+              <div class="img-bg"></div>
+              <div class="img-content">
+                <div class="img-title" id="pvImgTitle">—</div>
+                <div class="img-divider"></div>
+                <div class="img-badge" id="pvImgBadge">—</div>
+                <div class="img-bullets" id="pvBullets"></div>
+              </div>
+              <div class="img-brand">
+                <img class="brand-mark" id="pvBrandMark" src="/img/logo.svg" alt="logo">
+                <div class="brand-text" id="pvBrandText">unalomecodes</div>
+              </div>
+              <div class="img-product">
+                <div class="pedestal"></div>
+                <img id="pvProductImage" alt="product" style="display:none;">
+              </div>
+              <div class="img-footnote" id="pvFooterNote" style="display:none;"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="/js/admin-product-image.inline-2.js"></script>
+</body>
+</html>
+

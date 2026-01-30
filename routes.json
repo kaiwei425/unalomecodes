@@ -181,6 +181,21 @@
         "js/admin-shell.js"
       ],
       "api": []
+    },
+    {
+      "path": "/admin/product-image",
+      "label": "商品圖產生器 / Product Image Generator",
+      "module": "product_image",
+      "file": "admin/product-image.html",
+      "assets": [
+        "admin/admin-ui.css",
+        "css/admin-product-image.inline-1.css",
+        "js/admin-product-image.inline-1.js",
+        "js/admin-product-image.inline-2.js",
+        "js/admin-guard.js",
+        "js/admin-shell.js"
+      ],
+      "api": []
     }
   ],
   "adminGate": {
