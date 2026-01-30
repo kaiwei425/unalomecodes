@@ -236,6 +236,9 @@
   }
 
   function resolveLang(){
+    var path = String(location.pathname || '');
+    if (path === '/en' || path === '/en/' || path.startsWith('/en/?')) return 'en';
+    if (path === '/zh' || path === '/zh/' || path.startsWith('/zh/?')) return 'zh';
     var stored = '';
     try{ stored = sessionStorage.getItem(LANG_KEY) || ''; }catch(_){}
     if (stored === 'zh' || stored === 'en') return stored;
@@ -898,6 +901,10 @@
   if (langToggle){
     langToggle.addEventListener('click', function(){
       var next = (langToggle.dataset.lang === 'en') ? 'zh' : 'en';
+      if (location.pathname === '/' || location.pathname === '/en' || location.pathname === '/en/' || location.pathname === '/zh' || location.pathname === '/zh/'){
+        location.href = next === 'en' ? '/en/' : '/zh/';
+        return;
+      }
       setLang(next);
     });
   }
