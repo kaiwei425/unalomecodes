@@ -1810,7 +1810,7 @@ async function requireAdmin2FA(request, env, adminSession){
     return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
   }
   const payload = await verifyAdmin2FAToken(proof, env);
-  const now = Math.floor(Date.now() / 1000);
+  const now = Date.now();
   if (!payload || !payload.exp || Number(payload.exp) < now){
     return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
   }

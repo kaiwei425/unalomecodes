@@ -43,7 +43,7 @@ function createAuthHandlers(deps){
         return new Response(JSON.stringify({ ok:false, error:'not_verified' }), { status:200, headers });
       }
       const payload = await verifyAdmin2FAToken(proof, env);
-      const now = Math.floor(Date.now() / 1000);
+      const now = Date.now();
       if (!payload || !payload.exp || Number(payload.exp) < now){
         return new Response(JSON.stringify({ ok:false, error:'expired' }), { status:200, headers });
       }
@@ -54,8 +54,8 @@ function createAuthHandlers(deps){
       if (String(payload.sub || '').toLowerCase() !== String(adminSession.email || '').toLowerCase()){
         return new Response(JSON.stringify({ ok:false, error:'mismatch' }), { status:200, headers });
       }
-      const remaining = Math.max(0, Number(payload.exp) - now);
-      return new Response(JSON.stringify({ ok:true, expiresAt: payload.exp, remainingSeconds: remaining }), { status:200, headers });
+      const remainingSec = Math.max(0, Math.floor((Number(payload.exp) - now) / 1000));
+      return new Response(JSON.stringify({ ok:true, expiresAt: payload.exp, remainingSeconds: remainingSec }), { status:200, headers });
     }
 
     if (pathname === '/api/auth/admin/2fa/verify' && request.method === 'POST'){
@@ -79,7 +79,7 @@ function createAuthHandlers(deps){
       const adminToken = String(cookies.admin_session || '').trim();
       const sid = await hashAdminSessionToken(adminToken);
       const ttl = Math.max(60, Number(env?.ADMIN_2FA_TTL_SEC || 600) || 600);
-      const exp = Math.floor(Date.now() / 1000) + ttl;
+      const exp = Date.now() + ttl * 1000;
       const payload = { sub: String(adminSession.email || '').toLowerCase(), sid, exp };
       const token = await signAdmin2FAToken(payload, env);
       const next = String(body.next || '/admin/');
