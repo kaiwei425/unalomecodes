@@ -6,7 +6,7 @@ function requireDeps(deps, names, label){
 }
 
 function createUploadHandlers(deps){
-  requireDeps(deps, ['withCORS', 'json', 'isAllowedOrigin', 'getSessionUser', 'getAdminSession', 'getAdminRole', 'getClientIp', 'checkRateLimit', 'guessExt', 'safeExt'], 'upload.js');
+  requireDeps(deps, ['withCORS', 'json', 'isAllowedOrigin', 'getSessionUser', 'getAdminSession', 'getAdminRole', 'requireAdmin2FA', 'getClientIp', 'checkRateLimit', 'guessExt', 'safeExt'], 'upload.js');
   const {
     withCORS,
     json,
@@ -14,6 +14,7 @@ function createUploadHandlers(deps){
     getSessionUser,
     getAdminSession,
     getAdminRole,
+    requireAdmin2FA,
     getClientIp,
     checkRateLimit,
     guessExt,
@@ -33,6 +34,10 @@ function createUploadHandlers(deps){
       const adminEmail = (adminSession && adminSession.email) ? String(adminSession.email) : '';
       const adminRole = adminEmail ? await getAdminRole(adminEmail, env) : '';
       const isFulfillmentAdmin = !!adminEmail && adminRole === 'fulfillment';
+      if (adminSession){
+        const guard2fa = await requireAdmin2FA(request, env, adminSession);
+        if (guard2fa) return guard2fa;
+      }
       if (!isAuthed) {
         return withCORS(json({ ok:false, error:"Login required" }, 401));
       }

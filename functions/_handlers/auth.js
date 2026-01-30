@@ -6,7 +6,7 @@ function requireDeps(deps, names, label){
 }
 
 function createAuthHandlers(deps){
-  requireDeps(deps, ['json', 'jsonHeadersFor', 'makeToken', 'makeSignedState', 'verifySignedState', 'parseCookies', 'ensureUserRecord', 'signSession', 'verifyLineIdToken', 'getSessionUser', 'parseAdminEmails', 'getAdminSecret', 'redirectWithBody', 'base64UrlDecodeToBytes'], 'auth.js');
+  requireDeps(deps, ['json', 'jsonHeadersFor', 'makeToken', 'makeSignedState', 'verifySignedState', 'parseCookies', 'ensureUserRecord', 'signSession', 'verifyLineIdToken', 'getSessionUser', 'parseAdminEmails', 'getAdminSecret', 'redirectWithBody', 'base64UrlDecodeToBytes', 'getAdminSession', 'verifyTotpCode', 'signAdmin2FAToken', 'verifyAdmin2FAToken', 'hashAdminSessionToken'], 'auth.js');
   const {
     json,
     jsonHeadersFor,
@@ -21,10 +21,79 @@ function createAuthHandlers(deps){
     parseAdminEmails,
     getAdminSecret,
     redirectWithBody,
-    base64UrlDecodeToBytes
+    base64UrlDecodeToBytes,
+    getAdminSession,
+    verifyTotpCode,
+    signAdmin2FAToken,
+    verifyAdmin2FAToken,
+    hashAdminSessionToken
   } = deps;
 
   async function handleAuth(request, env, url, pathname, origin){
+    if (pathname === '/api/auth/admin/2fa/status' && request.method === 'GET'){
+      const headers = jsonHeadersFor(request, env);
+      const adminSession = await getAdminSession(request, env);
+      if (!adminSession || !adminSession.email){
+        return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers });
+      }
+      const cookies = parseCookies(request);
+      const proof = String(cookies.admin_2fa || '').trim();
+      const adminToken = String(cookies.admin_session || '').trim();
+      if (!proof || !adminToken){
+        return new Response(JSON.stringify({ ok:false, error:'not_verified' }), { status:200, headers });
+      }
+      const payload = await verifyAdmin2FAToken(proof, env);
+      const now = Math.floor(Date.now() / 1000);
+      if (!payload || !payload.exp || Number(payload.exp) < now){
+        return new Response(JSON.stringify({ ok:false, error:'expired' }), { status:200, headers });
+      }
+      const sid = await hashAdminSessionToken(adminToken);
+      if (!sid || payload.sid !== sid){
+        return new Response(JSON.stringify({ ok:false, error:'mismatch' }), { status:200, headers });
+      }
+      if (String(payload.sub || '').toLowerCase() !== String(adminSession.email || '').toLowerCase()){
+        return new Response(JSON.stringify({ ok:false, error:'mismatch' }), { status:200, headers });
+      }
+      const remaining = Math.max(0, Number(payload.exp) - now);
+      return new Response(JSON.stringify({ ok:true, expiresAt: payload.exp, remainingSeconds: remaining }), { status:200, headers });
+    }
+
+    if (pathname === '/api/auth/admin/2fa/verify' && request.method === 'POST'){
+      const headers = jsonHeadersFor(request, env);
+      const adminSession = await getAdminSession(request, env);
+      if (!adminSession || !adminSession.email){
+        return new Response(JSON.stringify({ ok:false, error:'unauthorized' }), { status:401, headers });
+      }
+      const secret = String(env?.ADMIN_OWNER_TOTP_SECRET_BASE32 || '').trim();
+      if (!secret){
+        return new Response(JSON.stringify({ ok:false, error:'OWNER_2FA_SECRET_MISSING' }), { status:500, headers });
+      }
+      let body = {};
+      try{ body = await request.json(); }catch(_){ body = {}; }
+      const code = String(body.code || '').trim();
+      const ok = await verifyTotpCode(secret, code, 1, 30, 6);
+      if (!ok){
+        return new Response(JSON.stringify({ ok:false, error:'INVALID_CODE' }), { status:400, headers });
+      }
+      const cookies = parseCookies(request);
+      const adminToken = String(cookies.admin_session || '').trim();
+      const sid = await hashAdminSessionToken(adminToken);
+      const ttl = Math.max(60, Number(env?.ADMIN_2FA_TTL_SEC || 600) || 600);
+      const exp = Math.floor(Date.now() / 1000) + ttl;
+      const payload = { sub: String(adminSession.email || '').toLowerCase(), sid, exp };
+      const token = await signAdmin2FAToken(payload, env);
+      const next = String(body.next || '/admin/');
+      const h = new Headers(headers);
+      h.append('Set-Cookie', `admin_2fa=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ttl}`);
+      return new Response(JSON.stringify({ ok:true, next }), { status:200, headers: h });
+    }
+
+    if (pathname === '/api/auth/admin/2fa/logout' && request.method === 'POST'){
+      const headers = jsonHeadersFor(request, env);
+      const h = new Headers(headers);
+      h.append('Set-Cookie', 'admin_2fa=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
+      return new Response(JSON.stringify({ ok:true }), { status:200, headers: h });
+    }
     if (pathname === '/api/auth/google/login') {
       if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
         return new Response('Google OAuth not configured', { status:500 });

@@ -37,7 +37,15 @@
   - 使用 `admin_session` Cookie（HTTPOnly, Secure, SameSite=Lax）作為管理員 session。
   - Admin OAuth：`/api/auth/google/admin/start` → `/api/auth/google/admin/callback`。
   - 允許 **Header key**：`X-Admin-Key`（比對環境變數 `ADMIN_KEY`）作為替代 admin 驗證方式。
-  - Admin 白名單：`ADMIN_ALLOWED_EMAILS`（只允許特定 email 登入管理後台）。
+- Admin 白名單：`ADMIN_ALLOWED_EMAILS`（只允許特定 email 登入管理後台）。
+
+---
+
+## Owner Step-Up 2FA（TOTP）
+- 設定 `ADMIN_OWNER_TOTP_SECRET_BASE32` 為 Base32 TOTP 密鑰（Authenticator App）。
+- 可選：設定 `ADMIN_OWNER_EMAIL`，只針對該 email 強制 2FA。
+- 預設有效時間 10 分鐘（可用 `ADMIN_2FA_TTL_SEC` 覆蓋）。
+- 若 `ADMIN_OWNER_TOTP_SECRET_BASE32` 缺失，Owner 寫入會直接拒絕（fail-closed）。
   - Admin session secret：`ADMIN_JWT_SECRET` 或 `SESSION_SECRET`（值以 `***` 遮罩）。
 - **一般會員（User）**：
   - 另有一般 Google/LINE 登入流程（`/api/auth/google/login`、`/api/auth/line/login` 等），本報告聚焦 admin 後台，僅描述存在。
@@ -308,4 +316,3 @@
 - 未找到後台的「Settings（金流/物流）」專頁；推測多以環境變數/程式內設定為主，沒有 UI 管理介面。
 - 未找到 `fortune-stats` 的後台頁面檔案（`admin/fortune-stats.html` 不存在），但後端仍存在 `/api/admin/fortune-stats` endpoint（可能是舊功能殘留）。
 - 專案未提供 package manager 設定（無 `package.json`），因此無法判定是否曾經使用 bundler/TS；目前觀察為手寫 Vanilla JS 與 Cloudflare Functions。
-

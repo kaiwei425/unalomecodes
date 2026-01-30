@@ -1,0 +1,111 @@
+:root{
+  --twofa-bg:#f5f7fa;
+  --twofa-card:#ffffff;
+  --twofa-ink:#0f172a;
+  --twofa-muted:#64748b;
+  --twofa-line:#e2e8f0;
+  --twofa-shadow:0 14px 30px rgba(15,23,42,.12);
+  --twofa-radius:16px;
+}
+html, body{ height:100%; }
+body{
+  margin:0;
+  background:var(--twofa-bg);
+  font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Roboto", "Noto Sans TC", Arial, sans-serif;
+  color:var(--twofa-ink);
+}
+.admin-2fa-shell{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px 16px;
+}
+.admin-2fa-card{
+  width:min(420px, 100%);
+  background:var(--twofa-card);
+  border:1px solid var(--twofa-line);
+  border-radius:var(--twofa-radius);
+  box-shadow:var(--twofa-shadow);
+  padding:32px;
+  text-align:center;
+}
+.admin-2fa-brand img{
+  width:54px;
+  height:54px;
+  border-radius:14px;
+  box-shadow:0 10px 24px rgba(15,23,42,.12);
+  margin-bottom:20px;
+}
+.admin-2fa-card h1{
+  margin:0 0 8px;
+  font-size:22px;
+  font-weight:800;
+}
+.admin-2fa-sub{
+  margin:0 0 20px;
+  color:var(--twofa-muted);
+  font-size:14px;
+}
+.admin-2fa-form{
+  display:grid;
+  gap:12px;
+}
+.admin-2fa-form label{
+  text-align:left;
+  font-size:12px;
+  font-weight:700;
+  color:#475569;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.admin-2fa-form input{
+  height:48px;
+  border-radius:12px;
+  border:1px solid var(--twofa-line);
+  padding:0 14px;
+  font-size:16px;
+  font-weight:600;
+  letter-spacing:.2em;
+  text-align:center;
+}
+.admin-2fa-form input:focus{
+  outline:none;
+  border-color:#0f172a;
+  box-shadow:0 0 0 3px rgba(15,23,42,.18);
+}
+.admin-2fa-form .btn{
+  height:48px;
+  border-radius:12px;
+  border:1px solid #111827;
+  background:#111827;
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+  position:relative;
+}
+.admin-2fa-form .btn:active{ transform:scale(0.98); }
+.btn-spinner{
+  display:none;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.5);
+  border-top-color:#fff;
+  animation:spin .8s linear infinite;
+  position:absolute;
+  right:16px;
+}
+.btn.is-loading .btn-label{ opacity:0; }
+.btn.is-loading .btn-spinner{ display:inline-block; }
+.admin-2fa-error{
+  margin-top:12px;
+  color:#b91c1c;
+  font-size:13px;
+}
+.admin-2fa-hint{
+  margin-top:14px;
+  font-size:12px;
+  color:var(--twofa-muted);
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }

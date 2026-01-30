@@ -6,9 +6,10 @@ function requireDeps(deps, names, label){
 }
 
 export function createServiceOrdersExportHandler(deps){
-  requireDeps(deps, ['isAdmin', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'csvEscape', 'formatTZ'], 'service-orders-export.js');
+  requireDeps(deps, ['isAdmin', 'requireAdmin2FA', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'csvEscape', 'formatTZ'], 'service-orders-export.js');
   const {
     isAdmin,
+    requireAdmin2FA,
     forbidIfFulfillmentAdmin,
     buildAuditActor,
     parseRate,
@@ -25,6 +26,10 @@ export function createServiceOrdersExportHandler(deps){
     if (url.pathname !== '/api/service/orders/export' || request.method !== 'GET') return null;
 
     if (!(await isAdmin(request, env))) return new Response('Unauthorized', { status:401, headers:{'Content-Type':'text/plain'} });
+    {
+      const guard2fa = await requireAdmin2FA(request, env);
+      if (guard2fa) return guard2fa;
+    }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);
       if (guard) return guard;

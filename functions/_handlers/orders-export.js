@@ -6,11 +6,12 @@ function requireDeps(deps, names, label){
 }
 
 export function createOrdersExportHandler(deps){
-  requireDeps(deps, ['ORDER_INDEX_KEY', 'resolveCorsOrigin', 'isAdmin', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'getAny', 'normalizePhone', 'matchPhone', 'matchLast5', 'orderAmount', 'orderItemsSummary', 'normalizeReceiptUrl', 'csvEscape'], 'orders-export.js');
+  requireDeps(deps, ['ORDER_INDEX_KEY', 'resolveCorsOrigin', 'isAdmin', 'requireAdmin2FA', 'forbidIfFulfillmentAdmin', 'buildAuditActor', 'parseRate', 'checkAdminRateLimit', 'buildRateKey', 'auditAppend', 'jsonHeadersFor', 'getAny', 'normalizePhone', 'matchPhone', 'matchLast5', 'orderAmount', 'orderItemsSummary', 'normalizeReceiptUrl', 'csvEscape'], 'orders-export.js');
   const {
     ORDER_INDEX_KEY,
     resolveCorsOrigin,
     isAdmin,
+    requireAdmin2FA,
     forbidIfFulfillmentAdmin,
     buildAuditActor,
     parseRate,
@@ -37,6 +38,10 @@ export function createOrdersExportHandler(deps){
     }
     if (!(await isAdmin(request, env))) {
       return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+    }
+    {
+      const guard2fa = await requireAdmin2FA(request, env);
+      if (guard2fa) return guard2fa;
     }
     {
       const guard = await forbidIfFulfillmentAdmin(request, env);

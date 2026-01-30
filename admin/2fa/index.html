@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Owner 2FA Verification">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://unalomecodes.com/admin/2fa/">
+<title>unalomecodes | Owner 2FA Verification</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+<link rel="stylesheet" href="/admin/admin-ui.css">
+<link rel="stylesheet" href="/css/admin-2fa.inline-1.css">
+<script src="/js/admin-guard.js" defer></script>
+<script src="/js/admin-2fa.inline-1.js" defer></script>
+</head>
+<body class="admin-view">
+  <main class="admin-2fa-shell">
+    <div class="admin-2fa-card">
+      <div class="admin-2fa-brand">
+        <img src="/img/logo.png" alt="Unalome Codes">
+      </div>
+      <h1>Owner 2FA Verification</h1>
+      <p class="admin-2fa-sub">請輸入驗證器 App 內的 6 位數動態碼。</p>
+      <form id="admin2faForm" class="admin-2fa-form">
+        <label for="admin2faCode">6-digit code</label>
+        <input id="admin2faCode" name="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" required>
+        <button type="submit" id="admin2faSubmit" class="btn primary">
+          <span class="btn-label">Verify</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+      <div id="admin2faError" class="admin-2fa-error" hidden></div>
+      <div class="admin-2fa-hint">2FA 會在 10 分鐘後失效。</div>
+    </div>
+  </main>
+</body>
+</html>

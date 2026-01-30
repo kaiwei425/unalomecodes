@@ -512,6 +512,7 @@ const uploadHandlers = createUploadHandlers({
   getSessionUser,
   getAdminSession,
   getAdminRole,
+  requireAdmin2FA,
   getClientIp,
   checkRateLimit,
   guessExt,
@@ -722,7 +723,12 @@ const authHandlers = createAuthHandlers({
   parseAdminEmails,
   getAdminSecret,
   redirectWithBody,
-  base64UrlDecodeToBytes
+  base64UrlDecodeToBytes,
+  getAdminSession,
+  verifyTotpCode,
+  signAdmin2FAToken,
+  verifyAdmin2FAToken,
+  hashAdminSessionToken
 });
 
 async function findOrderByIdForQna(env, orderId){
@@ -1753,6 +1759,51 @@ async function requireAdminWrite(request, env){
   if (!isAllowedAdminOrigin(request, env)) {
     return new Response(JSON.stringify({ ok:false, error:'Forbidden origin' }), { status:403, headers: jsonHeadersFor(request, env) });
   }
+  {
+    const guard2fa = await requireAdmin2FA(request, env);
+    if (guard2fa) return guard2fa;
+  }
+  return null;
+}
+
+function getOwnerEmail(env){
+  return String(env?.ADMIN_OWNER_EMAIL || '').trim().toLowerCase();
+}
+
+async function requireAdmin2FA(request, env, adminSession){
+  const session = adminSession || await getAdminSession(request, env);
+  if (!session || !session.email){
+    return new Response(JSON.stringify({ ok:false, error:'Unauthorized' }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  const ownerEmail = getOwnerEmail(env);
+  const enforce = ownerEmail ? String(session.email || '').toLowerCase() === ownerEmail : true;
+  if (!enforce) return null;
+
+  const secretBase32 = String(env?.ADMIN_OWNER_TOTP_SECRET_BASE32 || '').trim();
+  if (!secretBase32){
+    return new Response(JSON.stringify({ ok:false, error:'OWNER_2FA_SECRET_MISSING' }), { status:500, headers: jsonHeadersFor(request, env) });
+  }
+  const cookies = parseCookies(request);
+  const proof = String(cookies.admin_2fa || '').trim();
+  const adminToken = String(cookies.admin_session || '').trim();
+  const next = (()=>{ try{ const u = new URL(request.url); return u.pathname + u.search; }catch(_){ return '/admin'; }})();
+  const nextUrl = `/admin/2fa?next=${encodeURIComponent(next)}`;
+  if (!proof || !adminToken){
+    return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  const payload = await verifyAdmin2FAToken(proof, env);
+  const now = Math.floor(Date.now() / 1000);
+  if (!payload || !payload.exp || Number(payload.exp) < now){
+    return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  const sub = String(payload.sub || '').toLowerCase();
+  if (sub !== String(session.email || '').toLowerCase()){
+    return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
+  const sid = await hashAdminSessionToken(adminToken);
+  if (!sid || payload.sid !== sid){
+    return new Response(JSON.stringify({ ok:false, error:'2FA_REQUIRED', next: nextUrl }), { status:401, headers: jsonHeadersFor(request, env) });
+  }
   return null;
 }
 async function requireCronOrAdmin(request, env){
@@ -2184,6 +2235,77 @@ function base64UrlDecodeToBytes(b64){
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+function base32ToBytes(input){
+  const raw = String(input || '').toUpperCase().replace(/=+$/,'').replace(/[^A-Z2-7]/g,'');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0;
+  let value = 0;
+  const out = [];
+  for (let i = 0; i < raw.length; i++){
+    const idx = alphabet.indexOf(raw[i]);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8){
+      out.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return new Uint8Array(out);
+}
+
+async function hmacSha1(keyBytes, dataBytes){
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name:'HMAC', hash:'SHA-1' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, dataBytes);
+  return new Uint8Array(sig);
+}
+
+async function hotp(secretBytes, counter, digits){
+  const buf = new Uint8Array(8);
+  let c = counter;
+  for (let i = 7; i >= 0; i--){
+    buf[i] = c & 0xff;
+    c = Math.floor(c / 256);
+  }
+  const h = await hmacSha1(secretBytes, buf);
+  const offset = h[h.length - 1] & 0x0f;
+  const bin = ((h[offset] & 0x7f) << 24) | ((h[offset + 1] & 0xff) << 16) | ((h[offset + 2] & 0xff) << 8) | (h[offset + 3] & 0xff);
+  const mod = 10 ** digits;
+  const code = String(bin % mod).padStart(digits, '0');
+  return code;
+}
+
+async function verifyTotpCode(secretBase32, code, window = 1, step = 30, digits = 6){
+  const cleaned = String(code || '').replace(/\D/g,'');
+  if (cleaned.length !== digits) return false;
+  const secret = base32ToBytes(secretBase32);
+  if (!secret.length) return false;
+  const counter = Math.floor(Date.now() / 1000 / step);
+  for (let w = -window; w <= window; w++){
+    const candidate = await hotp(secret, counter + w, digits);
+    if (candidate === cleaned) return true;
+  }
+  return false;
+}
+
+async function hashAdminSessionToken(token){
+  const bytes = new TextEncoder().encode(String(token || ''));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+async function signAdmin2FAToken(payload, env){
+  const secret = getAdminSecret(env);
+  if (!secret) return '';
+  return await signSession(payload, secret);
+}
+
+async function verifyAdmin2FAToken(token, env){
+  const secret = getAdminSecret(env);
+  if (!secret) return null;
+  return await verifySessionToken(token, secret);
 }
 
 function escapeHtmlAttr(value){
@@ -4236,6 +4358,7 @@ export async function onRequest(context) {
     ORDER_ID_LEN,
     getClientIp,
     checkRateLimit,
+    requireAdmin2FA,
     normalizeOrderSuffix,
     redactOrderForPublic,
     attachSignedProofs,

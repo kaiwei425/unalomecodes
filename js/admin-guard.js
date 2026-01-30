@@ -1,5 +1,22 @@
 (function(){
   try{
+    if (window.fetch && !window.__adminFetch2faPatched){
+      window.__adminFetch2faPatched = true;
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = function(input, init){
+        return originalFetch(input, init).then(async function(res){
+          if (res && res.status === 401){
+            try{
+              const data = await res.clone().json();
+              if (data && data.error === '2FA_REQUIRED' && data.next){
+                location.href = data.next;
+              }
+            }catch(_){}
+          }
+          return res;
+        });
+      };
+    }
     var root = document.documentElement;
     if (!root) return;
     var redirect = encodeURIComponent(location.pathname + location.search + location.hash);
