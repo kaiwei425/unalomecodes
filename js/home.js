@@ -237,8 +237,16 @@
 
   function resolveLang(){
     var path = String(location.pathname || '');
-    if (path === '/en' || path === '/en/' || path.startsWith('/en/?')) return 'en';
-    if (path === '/zh' || path === '/zh/' || path.startsWith('/zh/?')) return 'zh';
+    if (path === '/en' || path === '/en/' || path.startsWith('/en/?')){
+      try{ sessionStorage.setItem(LANG_KEY, 'en'); }catch(_){}
+      try{ localStorage.setItem(LANG_KEY, 'en'); }catch(_){}
+      return 'en';
+    }
+    if (path === '/zh' || path === '/zh/' || path.startsWith('/zh/?')){
+      try{ sessionStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
+      try{ localStorage.setItem(LANG_KEY, 'zh'); }catch(_){}
+      return 'zh';
+    }
     var stored = '';
     try{ stored = sessionStorage.getItem(LANG_KEY) || ''; }catch(_){}
     if (stored === 'zh' || stored === 'en') return stored;
