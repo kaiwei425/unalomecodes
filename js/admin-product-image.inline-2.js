@@ -13,6 +13,9 @@
     brandShowMark: $('brandShowMark'),
     productFile: $('productImageFile'),
     btnClearImage: $('btnClearProductImage'),
+    removeBg: $('removeBg'),
+    pedestalFile: $('pedestalImageFile'),
+    btnClearPedestal: $('btnClearPedestalImage'),
     imageScale: $('imageScale'),
     imageRotate: $('imageRotate'),
     footerNote: $('footerNote'),
@@ -25,6 +28,7 @@
     pvBullets: $('pvBullets'),
     pvBrandText: $('pvBrandText'),
     pvBrandMark: $('pvBrandMark'),
+    pvPedestal: $('pvPedestal'),
     pvProductImage: $('pvProductImage'),
     pvFooterNote: $('pvFooterNote')
   };
@@ -44,8 +48,12 @@
       { h:'擋險守運・長期佩戴型', b:'有助避開不必要的風險\n讓生活與運勢在安全線上\n屬於耐用型、陪伴型聖物' }
     ],
     imageDataUrl: '',
+    removeBg: false,
+    pedestalDataUrl: '',
     imageScale: 100,
     imageRotate: 0,
+    imageX: 0,
+    imageY: -16,
     footerNote: ''
   };
 
@@ -85,8 +93,12 @@
       state.brandShowMark = (data.brandShowMark !== undefined) ? !!data.brandShowMark : state.brandShowMark;
       state.bullets = Array.isArray(data.bullets) ? data.bullets.slice(0, 10) : state.bullets;
       state.imageDataUrl = typeof data.imageDataUrl === 'string' ? data.imageDataUrl : '';
+      state.removeBg = !!data.removeBg;
+      state.pedestalDataUrl = typeof data.pedestalDataUrl === 'string' ? data.pedestalDataUrl : '';
       state.imageScale = Number(data.imageScale || 100) || 100;
       state.imageRotate = Number(data.imageRotate || 0) || 0;
+      state.imageX = Number(data.imageX || 0) || 0;
+      state.imageY = Number((data.imageY !== undefined ? data.imageY : -16)) || -16;
       state.footerNote = typeof data.footerNote === 'string' ? data.footerNote : '';
     }catch(_){}
   }
@@ -97,9 +109,56 @@
     if (els.accent) els.accent.value = state.accent || '#2e2b7a';
     if (els.brandText) els.brandText.value = state.brandText || '';
     if (els.brandShowMark) els.brandShowMark.value = state.brandShowMark ? '1' : '0';
+    if (els.removeBg) els.removeBg.checked = !!state.removeBg;
     if (els.imageScale) els.imageScale.value = String(state.imageScale || 100);
     if (els.imageRotate) els.imageRotate.value = String(state.imageRotate || 0);
     if (els.footerNote) els.footerNote.value = state.footerNote || '';
+  }
+
+  function applyImageTransform(){
+    if (!els.pvProductImage) return;
+    var sc = (Number(state.imageScale || 100) || 100) / 100;
+    var rot = Number(state.imageRotate || 0) || 0;
+    var x = Number(state.imageX || 0) || 0;
+    var y = Number(state.imageY || 0) || 0;
+    els.pvProductImage.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + rot + 'deg) scale(' + sc + ')';
+  }
+
+  function processRemoveBgIfNeeded(dataUrl){
+    if (!state.removeBg) return Promise.resolve(dataUrl);
+    return new Promise(function(resolve){
+      try{
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function(){
+          try{
+            var c = document.createElement('canvas');
+            c.width = img.naturalWidth || img.width;
+            c.height = img.naturalHeight || img.height;
+            var ctx = c.getContext('2d', { willReadFrequently:true });
+            ctx.drawImage(img, 0, 0);
+            var id = ctx.getImageData(0, 0, c.width, c.height);
+            var d = id.data;
+            for (var i=0;i<d.length;i+=4){
+              var r = d[i], g = d[i+1], b = d[i+2];
+              if (r > 245 && g > 245 && b > 245){
+                d[i+3] = 0;
+              } else if (r > 235 && g > 235 && b > 235){
+                d[i+3] = Math.min(d[i+3], 80);
+              }
+            }
+            ctx.putImageData(id, 0, 0);
+            resolve(c.toDataURL('image/png'));
+          }catch(_e){
+            resolve(dataUrl);
+          }
+        };
+        img.onerror = function(){ resolve(dataUrl); };
+        img.src = dataUrl;
+      }catch(_){
+        resolve(dataUrl);
+      }
+    });
   }
 
   function renderBulletsEditor(){
@@ -128,7 +187,6 @@
     if (els.pvTitle) els.pvTitle.textContent = String(state.title || '').trim() || '—';
     if (els.pvBadge) {
       els.pvBadge.textContent = String(state.badge || '').trim() || '—';
-      els.pvBadge.style.color = accent;
     }
     if (els.pvBrandText) els.pvBrandText.textContent = String(state.brandText || '').trim() || 'unalomecodes';
     if (els.pvBrandMark) els.pvBrandMark.style.display = state.brandShowMark ? '' : 'none';
@@ -143,6 +201,19 @@
       } else {
         els.pvFooterNote.textContent = '';
         els.pvFooterNote.style.display = 'none';
+      }
+    }
+
+    if (els.pvPedestal){
+      if (state.pedestalDataUrl){
+        els.pvPedestal.style.backgroundImage = 'url(' + JSON.stringify(state.pedestalDataUrl) + ')';
+        els.pvPedestal.style.border = 'none';
+        els.pvPedestal.style.boxShadow = 'none';
+        // allow the uploaded PNG to define its own shadow; keep size/position rules from CSS
+      } else {
+        els.pvPedestal.style.backgroundImage = '';
+        els.pvPedestal.style.border = '';
+        els.pvPedestal.style.boxShadow = '';
       }
     }
 
@@ -175,9 +246,7 @@
         els.pvProductImage.removeAttribute('src');
         els.pvProductImage.style.display = 'none';
       }
-      var sc = (Number(state.imageScale || 100) || 100) / 100;
-      var rot = Number(state.imageRotate || 0) || 0;
-      els.pvProductImage.style.transform = 'translateY(-16px) rotate(' + rot + 'deg) scale(' + sc + ')';
+      applyImageTransform();
     }
   }
 
@@ -221,13 +290,13 @@
     if (els.imageScale){
       els.imageScale.addEventListener('input', function(){
         state.imageScale = Number(els.imageScale.value || 100) || 100;
-        renderPreview(); persist();
+        applyImageTransform(); persist();
       });
     }
     if (els.imageRotate){
       els.imageRotate.addEventListener('input', function(){
         state.imageRotate = Number(els.imageRotate.value || 0) || 0;
-        renderPreview(); persist();
+        applyImageTransform(); persist();
       });
     }
     if (els.btnAddBullet){
@@ -273,15 +342,36 @@
         if (!f) return;
         var reader = new FileReader();
         reader.onload = function(){
-          state.imageDataUrl = String(reader.result || '');
-          renderPreview();
-          persist();
-          setStatus('圖片已載入。', 'ok');
+          var rawUrl = String(reader.result || '');
+          setStatus('圖片處理中…');
+          processRemoveBgIfNeeded(rawUrl).then(function(out){
+            state.imageDataUrl = String(out || rawUrl);
+            renderPreview();
+            persist();
+            setStatus(state.removeBg ? '圖片已載入（已套用簡易去背）。' : '圖片已載入。', 'ok');
+          });
         };
         reader.onerror = function(){
           setStatus('讀取圖片失敗。', 'error');
         };
         reader.readAsDataURL(f);
+      });
+    }
+    if (els.removeBg){
+      els.removeBg.addEventListener('change', function(){
+        state.removeBg = !!els.removeBg.checked;
+        if (!state.imageDataUrl){
+          persist();
+          setStatus(state.removeBg ? '已開啟簡易去背（下次載入圖片會套用）。' : '已關閉簡易去背。', 'ok');
+          return;
+        }
+        setStatus('套用去背中…');
+        processRemoveBgIfNeeded(state.imageDataUrl).then(function(out){
+          state.imageDataUrl = String(out || state.imageDataUrl);
+          renderPreview();
+          persist();
+          setStatus(state.removeBg ? '已套用簡易去背。' : '已關閉簡易去背。', 'ok');
+        });
       });
     }
     if (els.btnClearImage){
@@ -291,6 +381,33 @@
         renderPreview();
         persist();
         setStatus('已清除圖片。', 'ok');
+      });
+    }
+
+    if (els.pedestalFile){
+      els.pedestalFile.addEventListener('change', function(){
+        var f = els.pedestalFile.files && els.pedestalFile.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function(){
+          state.pedestalDataUrl = String(reader.result || '');
+          renderPreview();
+          persist();
+          setStatus('展示台已載入。', 'ok');
+        };
+        reader.onerror = function(){
+          setStatus('讀取展示台失敗。', 'error');
+        };
+        reader.readAsDataURL(f);
+      });
+    }
+    if (els.btnClearPedestal){
+      els.btnClearPedestal.addEventListener('click', function(){
+        state.pedestalDataUrl = '';
+        try{ if (els.pedestalFile) els.pedestalFile.value = ''; }catch(_){}
+        renderPreview();
+        persist();
+        setStatus('已清除展示台。', 'ok');
       });
     }
     if (els.btnReset){
@@ -307,8 +424,12 @@
             { h:'強悍東北十三流虎法', b:'源自泰國東北守護日派\n偏實戰型招財與成願法門\n好的進來 壞的自然出去' }
           ],
           imageDataUrl: '',
+          removeBg: false,
+          pedestalDataUrl: '',
           imageScale: 100,
           imageRotate: 0,
+          imageX: 0,
+          imageY: -16,
           footerNote: ''
         };
         syncInputs();
@@ -317,6 +438,76 @@
         setStatus('已重設。', 'ok');
       });
     }
+  }
+
+  function bindDragRotate(){
+    if (!els.pvProductImage) return;
+    var img = els.pvProductImage;
+    var dragging = false;
+    var mode = 'move';
+    var startX = 0;
+    var startY = 0;
+    var startImgX = 0;
+    var startImgY = 0;
+    var startRot = 0;
+    var centerX = 0;
+    var centerY = 0;
+    var startAngle = 0;
+
+    function getCenter(){
+      try{
+        var rect = img.getBoundingClientRect();
+        return { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+      }catch(_){
+        return { x: 0, y: 0 };
+      }
+    }
+    function angleTo(cx, cy, px, py){
+      return Math.atan2(py - cy, px - cx) * 180 / Math.PI;
+    }
+
+    img.addEventListener('pointerdown', function(ev){
+      if (img.style.display === 'none') return;
+      dragging = true;
+      mode = ev.shiftKey ? 'rotate' : 'move';
+      startX = ev.clientX;
+      startY = ev.clientY;
+      startImgX = Number(state.imageX || 0) || 0;
+      startImgY = Number(state.imageY || 0) || 0;
+      startRot = Number(state.imageRotate || 0) || 0;
+      var c = getCenter();
+      centerX = c.x; centerY = c.y;
+      startAngle = angleTo(centerX, centerY, startX, startY);
+      try{ img.setPointerCapture(ev.pointerId); }catch(_){}
+      img.style.cursor = 'grabbing';
+      ev.preventDefault();
+    });
+
+    img.addEventListener('pointermove', function(ev){
+      if (!dragging) return;
+      if (mode === 'move'){
+        var dx = ev.clientX - startX;
+        var dy = ev.clientY - startY;
+        state.imageX = startImgX + dx;
+        state.imageY = startImgY + dy;
+        applyImageTransform();
+      } else {
+        var a = angleTo(centerX, centerY, ev.clientX, ev.clientY);
+        state.imageRotate = startRot + (a - startAngle);
+        if (els.imageRotate) els.imageRotate.value = String(Math.round(state.imageRotate));
+        applyImageTransform();
+      }
+    });
+
+    function end(ev){
+      if (!dragging) return;
+      dragging = false;
+      try{ img.releasePointerCapture(ev.pointerId); }catch(_){}
+      img.style.cursor = 'grab';
+      persist();
+    }
+    img.addEventListener('pointerup', end);
+    img.addEventListener('pointercancel', end);
   }
 
   function ensureExportLibs(){
@@ -407,6 +598,7 @@
     renderBulletsEditor();
     renderPreview();
     applyResponsivePreview();
+    bindDragRotate();
 
     if (window.ResizeObserver){
       try{
@@ -437,4 +629,3 @@
     boot();
   }
 })();
-

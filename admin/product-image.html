@@ -77,7 +77,22 @@
                 <input id="productImageFile" type="file" accept="image/*">
                 <button class="btn" type="button" id="btnClearProductImage">清除圖片</button>
               </div>
-              <div class="hint">若你上傳的是 JPG（無透明），背景會一起出現。想要跟範例一樣乾淨，請用去背 PNG。</div>
+              <div class="upload-row" style="margin-top:8px">
+                <label style="display:flex;gap:10px;align-items:center;margin:0">
+                  <input id="removeBg" type="checkbox">
+                  <span>簡易去背（白底）</span>
+                </label>
+              </div>
+              <div class="hint">預覽中可直接拖曳圖片改位置；按住 Shift 拖曳可旋轉。簡易去背僅適合白底近似的照片。</div>
+            </div>
+
+            <div class="field">
+              <label>展示台圖片（選填）</label>
+              <div class="upload-row">
+                <input id="pedestalImageFile" type="file" accept="image/*">
+                <button class="btn" type="button" id="btnClearPedestalImage">清除展示台</button>
+              </div>
+              <div class="hint">建議使用透明背景 PNG（只包含展示台元素）。若上傳整張白底圖，會把後面內容蓋住。</div>
             </div>
 
             <div class="field two-col">
@@ -123,7 +138,7 @@
                 <div class="brand-text" id="pvBrandText">unalomecodes</div>
               </div>
               <div class="img-product">
-                <div class="pedestal"></div>
+                <div class="pedestal" id="pvPedestal"></div>
                 <img id="pvProductImage" alt="product" style="display:none;">
               </div>
               <div class="img-footnote" id="pvFooterNote" style="display:none;"></div>
@@ -138,4 +153,3 @@
   <script src="/js/admin-product-image.inline-2.js"></script>
 </body>
 </html>
-
