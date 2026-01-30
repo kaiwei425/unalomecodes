@@ -378,7 +378,12 @@ function createProofUtils(deps){
     return base.toISOString().split('T')[0];
   }
   function parseDailyWindows(windowsStr, stepMin){
-    const list = String(windowsStr || '')
+    const normalize = (input)=>{
+      return String(input || '')
+        .replace(/：/g, ':')
+        .replace(/[–—－]/g, '-');
+    };
+    const list = normalize(windowsStr || '')
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
@@ -392,6 +397,17 @@ function createProofUtils(deps){
       if (endMin <= startMin) return;
       out.push({ startMin, endMin, stepMin });
     });
+    if (!out.length){
+      const fallback = normalize('13:00-20:30');
+      const parts = fallback.split('-').map(s=>s.trim());
+      if (parts.length === 2){
+        const startMin = parseTimeToMinutes(parts[0]);
+        const endMin = parseTimeToMinutes(parts[1]);
+        if (startMin !== null && endMin !== null && endMin > startMin){
+          out.push({ startMin, endMin, stepMin });
+        }
+      }
+    }
     return out;
   }
   function resolveSlotEnabled(record){
