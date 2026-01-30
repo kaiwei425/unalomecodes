@@ -9,10 +9,13 @@
 
   var els = {
     invDate: $('invDate'),
+    docType: $('docType'),
     invNo: $('invNo'),
+    docNoLabel: $('docNoLabel'),
     btnGenNo: $('btnGenNo'),
     issuedBy: $('issuedBy'),
     invoiceFor: $('invoiceFor'),
+    forLabel: $('forLabel'),
     presetGrid: $('presetGrid'),
     itemsEditorBody: $('itemsEditorBody'),
     customItemName: $('customItemName'),
@@ -20,6 +23,11 @@
     taxPercent: $('taxPercent'),
     discountAmount: $('discountAmount'),
     notes: $('notes'),
+    btnSaveHistory: $('btnSaveHistory'),
+    btnNewInvoice: $('btnNewInvoice'),
+    historySearch: $('historySearch'),
+    historyCount: $('historyCount'),
+    historyList: $('historyList'),
     btnReset: $('btnReset'),
     btnDownloadPng: $('btnDownloadPng'),
     btnDownloadPdf: $('btnDownloadPdf'),
@@ -29,6 +37,7 @@
     pvDate: $('pvDate'),
     pvNo: $('pvNo'),
     pvIssuedBy: $('pvIssuedBy'),
+    pvForTitle: $('pvForTitle'),
     pvInvoiceFor: $('pvInvoiceFor'),
     pvItems: $('pvItems'),
     pvSubtotal: $('pvSubtotal'),
@@ -39,6 +48,9 @@
   };
 
   var PREVIEW_BASE_W = 794;
+  var HISTORY_KEY = 'adminInvoiceHistory:v1';
+  var API_HISTORY_ENABLED = true;
+  var historyCache = [];
 
   var PRESETS = [
     { id:'ig_reel', name:'Instagram Reel', meta:'短影音 / Reels' },
@@ -96,6 +108,7 @@
   }
 
   var state = {
+    docType: 'invoice',
     date: '',
     no: '',
     issuedBy: 'KV',
@@ -106,6 +119,219 @@
     discountAmount: '',
     notes: 'THANK YOU FOR YOUR BUSINESS.\nIf you have any questions, please contact us at bkkkaiwei@gmail.com'
   };
+
+  function readHistory(){
+    try{
+      var raw = localStorage.getItem(HISTORY_KEY) || '';
+      if (!raw) return [];
+      var arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    }catch(_){
+      return [];
+    }
+  }
+
+  function writeHistory(list){
+    try{
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+    }catch(_){}
+  }
+
+  function normalizeHistoryItem(obj){
+    var safe = obj && typeof obj === 'object' ? obj : {};
+    return {
+      id: String(safe.id || '').trim(),
+      docType: String(safe.docType || safe.type || '').trim() || 'invoice',
+      date: String(safe.date || '').trim(),
+      no: String(safe.no || '').trim(),
+      issuedBy: typeof safe.issuedBy === 'string' ? safe.issuedBy : '',
+      invoiceFor: typeof safe.invoiceFor === 'string' ? safe.invoiceFor : '',
+      items: Array.isArray(safe.items) ? safe.items : [],
+      taxPercent: safe.taxPercent != null ? safe.taxPercent : '',
+      discountAmount: safe.discountAmount != null ? safe.discountAmount : '',
+      notes: typeof safe.notes === 'string' ? safe.notes : '',
+      createdAt: Number(safe.createdAt) || Date.now(),
+      updatedAt: Number(safe.updatedAt) || Date.now()
+    };
+  }
+
+  function recomputePresetCheckedFromItems(){
+    var checked = {};
+    state.items.forEach(function(it){
+      if (it && it.presetId) checked[it.presetId] = true;
+    });
+    state.presetChecked = checked;
+  }
+
+  function isInvoiceMeaningful(){
+    if (!String(state.no || '').trim()) return false;
+    if (state.items && state.items.length) return true;
+    if (String(state.invoiceFor || '').trim()) return true;
+    return false;
+  }
+
+  function snapshotCurrentInvoice(){
+    var now = Date.now();
+    var id = String(state.no || '').trim();
+    return normalizeHistoryItem({
+      id: id,
+      docType: state.docType,
+      date: state.date,
+      no: state.no,
+      issuedBy: state.issuedBy,
+      invoiceFor: state.invoiceFor,
+      items: state.items,
+      taxPercent: state.taxPercent,
+      discountAmount: state.discountAmount,
+      notes: state.notes,
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+
+  function upsertHistoryItem(item){
+    if (!item || !item.id) return { ok:false, reason:'missing_id' };
+    var list = readHistory();
+    var idx = list.findIndex(function(x){ return x && x.id === item.id; });
+    if (idx >= 0){
+      var prev = normalizeHistoryItem(list[idx]);
+      item.createdAt = prev.createdAt || item.createdAt;
+      item.updatedAt = Date.now();
+      list[idx] = item;
+    } else {
+      item.createdAt = Date.now();
+      item.updatedAt = Date.now();
+      list.unshift(item);
+    }
+    list.sort(function(a,b){
+      return (Number(b && b.updatedAt) || 0) - (Number(a && a.updatedAt) || 0);
+    });
+    writeHistory(list);
+    return { ok:true };
+  }
+
+  function deleteHistoryItem(id){
+    var list = readHistory().filter(function(x){ return x && x.id !== id; });
+    writeHistory(list);
+  }
+
+  function textForHistoryItem(it){
+    var parts = [];
+    if (it && it.no) parts.push(it.no);
+    if (it && it.invoiceFor) parts.push(it.invoiceFor);
+    if (it && Array.isArray(it.items)){
+      it.items.forEach(function(x){
+        if (x && x.desc) parts.push(String(x.desc));
+      });
+    }
+    return parts.join(' ').toLowerCase();
+  }
+
+  function renderHistory(){
+    if (!els.historyList) return;
+    var list = API_HISTORY_ENABLED ? historyCache.slice() : readHistory().map(normalizeHistoryItem);
+    var q = String((els.historySearch && els.historySearch.value) || '').trim().toLowerCase();
+    if (q){
+      list = list.filter(function(it){
+        return textForHistoryItem(it).indexOf(q) >= 0;
+      });
+    }
+    if (els.historyCount){
+      var total = API_HISTORY_ENABLED ? historyCache.length : readHistory().length;
+      els.historyCount.textContent = q ? (list.length + ' / ' + total) : (total ? (total + ' 筆') : '0 筆');
+    }
+
+    if (!list.length){
+      els.historyList.innerHTML = '<div style="color:#64748b;font-size:13px;padding:6px 2px;">尚無紀錄（填好後點「儲存」或下載/列印會自動儲存）。</div>';
+      return;
+    }
+
+    els.historyList.innerHTML = list.map(function(it){
+      var invFor = String(it.invoiceFor || '').trim().replace(/\s+/g, ' ');
+      var items = Array.isArray(it.items) ? it.items.map(function(x){ return x && x.desc ? String(x.desc).trim() : ''; }).filter(Boolean) : [];
+      var meta = (invFor ? invFor : '') + (items.length ? (' · ' + items.slice(0,3).join(', ')) : '');
+      var badge = (String(it.docType || 'invoice') === 'quotation') ? 'QUO' : 'INV';
+      return (
+        '<div class="history-row" data-id="' + escapeHtml(it.id) + '">' +
+          '<button type="button" class="history-open" data-action="open">' +
+            '<div class="top"><span class="no">[' + escapeHtml(badge) + '] ' + escapeHtml(it.no || it.id) + '</span><span class="date">' + escapeHtml(yyyymmdd(it.date) || '') + '</span></div>' +
+            '<div class="meta">' + escapeHtml(meta || '—') + '</div>' +
+          '</button>' +
+          '<button type="button" class="history-del" data-action="delete" title="刪除">刪</button>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function loadInvoiceFromHistory(id){
+    var it = (API_HISTORY_ENABLED ? historyCache : readHistory().map(normalizeHistoryItem)).find(function(x){ return x && x.id === id; });
+    if (!it) return false;
+    state.docType = it.docType === 'quotation' ? 'quotation' : 'invoice';
+    state.date = it.date || state.date;
+    state.no = it.no || it.id || state.no;
+    state.issuedBy = it.issuedBy || state.issuedBy;
+    state.invoiceFor = it.invoiceFor || '';
+    state.items = Array.isArray(it.items) ? it.items : [];
+    state.taxPercent = it.taxPercent != null ? it.taxPercent : '';
+    state.discountAmount = it.discountAmount != null ? it.discountAmount : '';
+    state.notes = it.notes || state.notes;
+    recomputePresetCheckedFromItems();
+    syncInputsFromState();
+    renderItemsEditor();
+    renderPreview();
+    persist();
+    return true;
+  }
+
+  async function apiJson(path, init){
+    var opts = init || {};
+    opts.credentials = 'include';
+    opts.headers = opts.headers || {};
+    if (!opts.headers['Content-Type'] && opts.body) opts.headers['Content-Type'] = 'application/json';
+    var res = await fetch(path, opts);
+    var data = await res.json().catch(function(){ return null; });
+    if (!res.ok){
+      var errMsg = (data && data.error) ? data.error : (res.status + ' ' + res.statusText);
+      var err = new Error(errMsg);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  async function loadHistoryFromKV(){
+    if (!API_HISTORY_ENABLED) return;
+    try{
+      var data = await apiJson('/api/admin/invoices', { method:'GET' });
+      if (data && data.ok && Array.isArray(data.items)){
+        historyCache = data.items.map(normalizeHistoryItem);
+      } else {
+        historyCache = [];
+      }
+      renderHistory();
+    }catch(err){
+      API_HISTORY_ENABLED = false;
+      setStatus('KV 紀錄暫時無法載入，已改用本機紀錄（localStorage）。原因：' + String(err && err.message ? err.message : err), 'error');
+      renderHistory();
+    }
+  }
+
+  async function upsertHistoryKV(item){
+    if (!API_HISTORY_ENABLED) return upsertHistoryItem(item);
+    await apiJson('/api/admin/invoices/' + encodeURIComponent(item.id), { method:'PUT', body: JSON.stringify(item) });
+    await loadHistoryFromKV();
+    return { ok:true };
+  }
+
+  async function deleteHistoryKV(id){
+    if (!API_HISTORY_ENABLED){
+      deleteHistoryItem(id);
+      return;
+    }
+    await apiJson('/api/admin/invoices/' + encodeURIComponent(id), { method:'DELETE' });
+    await loadHistoryFromKV();
+  }
 
   function setStatus(msg, kind){
     if (!els.status) return;
@@ -263,6 +489,16 @@
 
   function renderPreview(){
     if (!els.invoicePaper) return;
+    var isQuotation = (state.docType === 'quotation');
+    if (els.docNoLabel) els.docNoLabel.textContent = isQuotation ? 'Quotation No' : 'Invoice No';
+    if (els.forLabel) els.forLabel.textContent = isQuotation ? 'Quotation For' : 'Invoice For';
+    if (els.pvForTitle){
+      els.pvForTitle.textContent = isQuotation ? 'QUOTATION FOR' : 'INVOICE FOR';
+    }
+    var titlePill = els.invoicePaper.querySelector('.invoice-title-pill');
+    if (titlePill){
+      titlePill.textContent = isQuotation ? 'QUOTATION' : 'INVOICE';
+    }
     els.pvDate.textContent = formatLongDate(state.date);
     els.pvNo.textContent = state.no ? String(state.no).trim() : '—';
     els.pvIssuedBy.textContent = String(state.issuedBy || '').trim() || '—';
@@ -302,6 +538,7 @@
   function persist(){
     try{
       var payload = {
+        docType: state.docType,
         date: state.date,
         no: state.no,
         issuedBy: state.issuedBy,
@@ -323,6 +560,7 @@
     try{
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return;
+      state.docType = data.docType === 'quotation' ? 'quotation' : 'invoice';
       state.date = data.date || state.date;
       state.no = data.no || state.no;
       state.issuedBy = typeof data.issuedBy === 'string' ? data.issuedBy : state.issuedBy;
@@ -337,6 +575,7 @@
 
   function syncInputsFromState(){
     if (els.invDate) els.invDate.value = state.date || '';
+    if (els.docType) els.docType.value = state.docType || 'invoice';
     if (els.invNo) els.invNo.value = state.no || '';
     if (els.issuedBy) els.issuedBy.value = state.issuedBy || '';
     if (els.invoiceFor) els.invoiceFor.value = state.invoiceFor || '';
@@ -354,6 +593,14 @@
   }
 
   function bindInputs(){
+    if (els.docType){
+      els.docType.addEventListener('change', function(){
+        state.docType = els.docType.value === 'quotation' ? 'quotation' : 'invoice';
+        renderPreview();
+        persist();
+      });
+    }
+
     if (els.invDate){
       els.invDate.addEventListener('change', function(){
         state.date = els.invDate.value || '';
@@ -451,6 +698,7 @@
       els.btnReset.addEventListener('click', function(){
         try{ localStorage.removeItem('adminInvoiceDraft:v1'); }catch(_){}
         state = {
+          docType: 'invoice',
           date: '',
           no: '',
           issuedBy: 'KV',
@@ -468,8 +716,87 @@
       });
     }
 
+    if (els.btnSaveHistory){
+      els.btnSaveHistory.addEventListener('click', function(){
+        if (!isInvoiceMeaningful()){
+          setStatus('請先填寫 Invoice No，並至少填入 Invoice For 或加入 Items。', 'error');
+          return;
+        }
+        var item = snapshotCurrentInvoice();
+        setStatus('正在儲存到 KV…');
+        Promise.resolve()
+          .then(function(){ return upsertHistoryKV(item); })
+          .then(function(){ setStatus('已儲存到發票紀錄。', 'ok'); })
+          .catch(function(err){
+            setStatus('儲存失敗：' + String(err && err.message ? err.message : err), 'error');
+          });
+      });
+    }
+
+    if (els.btnNewInvoice){
+      els.btnNewInvoice.addEventListener('click', function(){
+        try{ localStorage.removeItem('adminInvoiceDraft:v1'); }catch(_){}
+        state = {
+          docType: state.docType || 'invoice',
+          date: '',
+          no: '',
+          issuedBy: state.issuedBy || 'KV',
+          invoiceFor: '',
+          items: [],
+          presetChecked: {},
+          taxPercent: '',
+          discountAmount: '',
+          notes: state.notes || 'THANK YOU FOR YOUR BUSINESS.\nIf you have any questions, please contact us at bkkkaiwei@gmail.com'
+        };
+        initDefaults();
+        renderItemsEditor();
+        renderPreview();
+        setStatus('已新建一張發票（不影響歷史紀錄）。', 'ok');
+      });
+    }
+
+    if (els.historySearch){
+      els.historySearch.addEventListener('input', function(){
+        renderHistory();
+      });
+    }
+
+    if (els.historyList){
+      els.historyList.addEventListener('click', function(e){
+        var t = e && e.target;
+        if (!t) return;
+        var row = t.closest('.history-row');
+        if (!row) return;
+        var id = row.getAttribute('data-id');
+        var action = t.getAttribute('data-action') || (t.closest('[data-action]') && t.closest('[data-action]').getAttribute('data-action'));
+        if (!id) return;
+        if (action === 'delete'){
+          if (!confirm('確定要刪除發票紀錄 ' + id + '？（不可復原）')) return;
+          setStatus('正在刪除…');
+          Promise.resolve()
+            .then(function(){ return deleteHistoryKV(id); })
+            .then(function(){ setStatus('已刪除：' + id, 'ok'); })
+            .catch(function(err){
+              setStatus('刪除失敗：' + String(err && err.message ? err.message : err), 'error');
+            });
+          return;
+        }
+        if (action === 'open'){
+          var ok = loadInvoiceFromHistory(id);
+          if (ok){
+            setStatus('已載入：' + id, 'ok');
+          } else {
+            setStatus('找不到該筆紀錄：' + id, 'error');
+          }
+        }
+      });
+    }
+
     if (els.btnPrint){
       els.btnPrint.addEventListener('click', function(){
+        if (isInvoiceMeaningful()){
+          upsertHistoryKV(snapshotCurrentInvoice()).catch(function(){});
+        }
         setStatus('');
         window.print();
       });
@@ -477,12 +804,18 @@
 
     if (els.btnDownloadPng){
       els.btnDownloadPng.addEventListener('click', function(){
+        if (isInvoiceMeaningful()){
+          upsertHistoryKV(snapshotCurrentInvoice()).catch(function(){});
+        }
         downloadPng();
       });
     }
 
     if (els.btnDownloadPdf){
       els.btnDownloadPdf.addEventListener('click', function(){
+        if (isInvoiceMeaningful()){
+          upsertHistoryKV(snapshotCurrentInvoice()).catch(function(){});
+        }
         downloadPdf();
       });
     }
@@ -513,7 +846,7 @@
   }
 
   function safeFileName(){
-    var base = 'invoice';
+    var base = (state.docType === 'quotation') ? 'quotation' : 'invoice';
     var d = yyyymmdd(state.date);
     var no = String(state.no || '').trim();
     if (d) base += '-' + d;
@@ -658,10 +991,13 @@
     renderPresets();
     hydrate();
     initDefaults();
+    recomputePresetCheckedFromItems();
     renderItemsEditor();
     renderPreview();
     bindInputs();
     bindResponsivePreview();
+    renderHistory();
+    loadHistoryFromKV();
     setStatus('');
   }
 

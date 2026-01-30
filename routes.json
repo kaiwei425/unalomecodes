@@ -207,6 +207,8 @@
     { "path": "/api/admin/creator/invite", "file": "functions/[[path]].handler.js", "module": "content" },
     { "path": "/api/admin/qna/unread", "file": "functions/[[path]].handler.js", "module": "orders" },
     { "path": "/api/admin/cron/update-dashboard", "file": "functions/[[path]].handler.js", "module": "analytics" },
-    { "path": "/api/admin/cron/release-holds", "file": "functions/[[path]].handler.js", "module": "orders" }
+    { "path": "/api/admin/cron/release-holds", "file": "functions/[[path]].handler.js", "module": "orders" },
+    { "path": "/api/admin/invoices", "file": "functions/[[path]].handler.js", "module": "invoices" },
+    { "path": "/api/admin/invoices/:id", "file": "functions/[[path]].handler.js", "module": "invoices" }
   ]
 }

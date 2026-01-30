@@ -25,6 +25,7 @@
           <div class="page-sub">填寫資料 → 即時預覽 → 下載 PDF / PNG</div>
         </div>
         <div class="page-actions">
+          <button class="btn" type="button" id="btnSaveHistory">儲存</button>
           <button class="btn" type="button" id="btnReset">重設</button>
           <button class="btn" type="button" id="btnDownloadPng">下載 PNG</button>
           <button class="btn primary" type="button" id="btnDownloadPdf">下載 PDF</button>
@@ -35,12 +36,35 @@
       <div class="page-body invoice-layout">
         <section class="panel invoice-form" aria-label="發票輸入表單">
           <div class="form-grid">
+            <div class="history-box" aria-label="發票紀錄">
+              <div class="history-head">
+                <div class="history-title">發票紀錄</div>
+                <div class="history-actions">
+                  <button class="btn" type="button" id="btnNewInvoice">新建</button>
+                </div>
+              </div>
+              <div class="history-bar">
+                <input id="historySearch" type="text" placeholder="搜尋 Invoice No / Invoice For / Item…" autocomplete="off">
+                <div class="history-count" id="historyCount"></div>
+              </div>
+              <div class="history-list" id="historyList"></div>
+              <div class="hint">紀錄預設儲存在 Cloudflare KV（需綁定 `INVOICES` 或 `KV`）。若 KV 無法使用，會自動退回本機 localStorage。</div>
+            </div>
+
             <div class="field">
               <label for="invDate">日期</label>
               <input id="invDate" type="date" autocomplete="off">
             </div>
             <div class="field">
-              <label for="invNo">Invoice No</label>
+              <label for="docType">類型</label>
+              <select id="docType">
+                <option value="invoice">Invoice</option>
+                <option value="quotation">Quotation</option>
+              </select>
+              <div class="hint">切換後會同步更新右側標題與 For 欄位標籤。</div>
+            </div>
+            <div class="field">
+              <label for="invNo"><span id="docNoLabel">Invoice No</span></label>
               <div class="field-row">
                 <input id="invNo" type="text" placeholder="例如：2026013001" autocomplete="off">
                 <button class="btn" type="button" id="btnGenNo">重新產生</button>
@@ -53,7 +77,7 @@
               <textarea id="issuedBy" rows="6" placeholder="KV&#10;Instagram: ...&#10;Phone: ...&#10;Email: ..."></textarea>
             </div>
             <div class="field">
-              <label for="invoiceFor">Invoice For（可多行）</label>
+              <label for="invoiceFor"><span id="forLabel">Invoice For</span>（可多行）</label>
               <textarea id="invoiceFor" rows="6" placeholder="Company / Name&#10;Address...&#10;Tax ID..."></textarea>
             </div>
 
@@ -137,7 +161,7 @@
                     <div class="col-body" id="pvIssuedBy">—</div>
                   </div>
                   <div class="col">
-                    <div class="col-title">INVOICE FOR</div>
+                    <div class="col-title" id="pvForTitle">INVOICE FOR</div>
                     <div class="col-body" id="pvInvoiceFor">—</div>
                   </div>
                 </div>
@@ -179,4 +203,3 @@
   <script src="/js/admin-invoice.inline-2.js"></script>
 </body>
 </html>
-

@@ -10,6 +10,7 @@ import { createUploadHandler } from './upload.js';
 import { createServiceResultPhotoHandler } from './service-result-photo.js';
 import { createServiceOrdersLookupHandler } from './service-orders-lookup.js';
 import { createAdminStatsHandler } from './admin-stats.js';
+import { createInvoicesHandler } from './invoices.js';
 
 export function createSplitHandler(deps){
   const adminAuth = createAdminAuthHandler(deps);
@@ -24,6 +25,7 @@ export function createSplitHandler(deps){
   const serviceResultPhoto = createServiceResultPhotoHandler(deps);
   const serviceOrdersLookup = createServiceOrdersLookupHandler(deps);
   const adminStats = createAdminStatsHandler(deps);
+  const invoices = createInvoicesHandler(deps);
 
   return {
     async handle(request, env, context){
@@ -51,6 +53,8 @@ export function createSplitHandler(deps){
       if (resServiceLookup) return resServiceLookup;
       const resAdminStats = await adminStats(request, env, context);
       if (resAdminStats) return resAdminStats;
+      const resInvoices = await invoices(request, env, context);
+      if (resInvoices) return resInvoices;
       return null;
     }
   };
