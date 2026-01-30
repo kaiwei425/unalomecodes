@@ -1,5 +1,6 @@
 const dlg = document.getElementById('dlg');
 const dlgInstagram = document.getElementById('dlgInstagram');
+const dlgShareLinkBtn = document.getElementById('dlgShareLink');
 
 function t(key, fallback){
   try{
@@ -28,6 +29,45 @@ function storyCodeFromProduct(p){
 }
 
 function openDetail(p){
+  // Share link button
+  try{
+    if (dlgShareLinkBtn){
+      const pid = String(p && p.id || '').trim();
+      const shareUrl = new URL(window.location.origin + '/shop');
+      if (pid) shareUrl.searchParams.set('pid', pid);
+      dlgShareLinkBtn.dataset.url = shareUrl.toString();
+      dlgShareLinkBtn.onclick = async function(){
+        const url = dlgShareLinkBtn.dataset.url || shareUrl.toString();
+        try{
+          if (navigator.share){
+            await navigator.share({ title: (p && p.name) ? String(p.name) : '商品', url });
+            return;
+          }
+        }catch(_){}
+        try{
+          if (navigator.clipboard && navigator.clipboard.writeText){
+            await navigator.clipboard.writeText(url);
+          }else{
+            const ta = document.createElement('textarea');
+            ta.value = url;
+            ta.setAttribute('readonly','');
+            ta.style.position = 'fixed';
+            ta.style.left = '-1000px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+          }
+          const old = dlgShareLinkBtn.textContent;
+          dlgShareLinkBtn.textContent = '✅';
+          setTimeout(()=>{ dlgShareLinkBtn.textContent = old; }, 1200);
+        }catch(e){
+          alert('複製失敗，請手動複製：\n' + url);
+        }
+      };
+    }
+  }catch(_){}
+
   // expose product id to DOM for order fallback
   try {
     var __dlg = document.getElementById('dlg');

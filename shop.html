@@ -330,7 +330,10 @@
 <dialog id="dlg">
   <div class="closeBar">
     <strong id="dlgTitle">商品資訊</strong>
-    <button class="xbtn" onclick="dlg.close()">✕</button>
+    <div class="closeBarActions">
+      <button type="button" class="xbtn sharebtn" id="dlgShareLink" title="複製分享連結" aria-label="複製分享連結">🔗</button>
+      <button class="xbtn" onclick="dlg.close()">✕</button>
+    </div>
   </div>
   <div class="dlgBody">
     <div>
