@@ -184,10 +184,10 @@
                     </div>
                   </div>
                   <div class="menu-actions">
-                    <button class="btn ghost pill menu-item" id="btnBack">返回首頁</button>
-                    <button class="btn ghost pill menu-item" id="btnFav">收藏清單</button>
-                    <a class="btn ghost pill menu-item" href="/food-map">美食地圖</a>
-                    <button class="btn ghost pill lang-toggle menu-item" id="btnLang" type="button" aria-label="切換語言">ZH/EN</button>
+                    <button class="btn ghost pill menu-item menuActionBtn" id="btnBack">返回首頁</button>
+                    <button class="btn ghost pill menu-item menuActionBtn" id="btnFav">收藏清單</button>
+                    <a class="btn ghost pill menu-item menuActionBtn" href="/food-map">美食地圖</a>
+                    <button class="btn ghost pill lang-toggle menu-item menuActionBtn" id="btnLang" type="button" aria-label="切換語言">ZH/EN</button>
                   </div>
                 </div>
               </div>
@@ -234,7 +234,7 @@
       <select id="fArea" class="filter-select">
         <option value="">全部地區</option>
       </select>
-      <select id="fStatus" class="filter-select">
+      <select id="fStatus" class="filter-select" style="display:none;">
         <option value="">營業狀態</option>
         <option value="open">現在營業中</option>
       </select>

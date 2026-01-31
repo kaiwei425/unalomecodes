@@ -476,6 +476,29 @@
       box-shadow:0 6px 14px rgba(15,23,42,.06);
       line-height:1;
     }
+    .member-menu-panel .menuActionBtn{
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      height:40px !important;
+      min-height:40px !important;
+      padding:10px 14px !important;
+      font-size:14px !important;
+      font-weight:700 !important;
+      line-height:1 !important;
+      border-radius:12px !important;
+      white-space:nowrap !important;
+      box-sizing:border-box !important;
+      text-decoration:none !important;
+      border:1px solid #e2e8f0 !important;
+      background:#fff !important;
+      color:#0f172a !important;
+      box-shadow:0 6px 14px rgba(15,23,42,.06) !important;
+      appearance:none !important;
+      -webkit-appearance:none !important;
+      padding-top:10px !important;
+      padding-bottom:10px !important;
+    }
     .menu-actions .btn:hover,
     .menu-actions a.btn:hover{
       border-color:#cbd5e1;
