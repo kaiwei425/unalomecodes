@@ -732,13 +732,13 @@ header > .wrap{max-width:unset;}
   left:0;
   bottom:-6px;
   height:3px;
-  width:42px;
+  width:72px;
   background:#3b291f;
   border-radius:999px;
   transform:translateX(var(--v2-tab-x, 0));
   transition:transform .25s ease;
 }
-body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:60px;}
+body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:92px;}
 
 @media (max-width: 640px){
   .app-header{padding:10px 12px;gap:8px;}
@@ -913,16 +913,17 @@ body:has(#cards[style*="display: none"]) .highlight-card{display:none;}
   box-shadow:var(--v2-shadow);
   background:#e5e7eb;
 }
-body:has(#cards[style*="display: none"]) #mainContent{padding:0;}
+body:has(#cards[style*="display: none"]) #mainContent{padding:12px 14px 28px;}
 body:has(#cards[style*="display: none"]) #mapView{padding:0;}
 
-/* Map mode: leave room for bottom sheet (app-like) */
+/* Map mode: v1-like (no bottom sheet overlay) */
 body:has(#cards[style*="display: none"]) #mainMap{
-  height:calc(100vh - 56px - 56px - 38vh - env(safe-area-inset-bottom));
-  min-height:360px;
+  height:64vh;
+  min-height:420px;
 }
-body:has(#nearbyCollapse:checked) #mainMap{
-  height:calc(100vh - 56px - 56px - 72px - env(safe-area-inset-bottom));
+body:has(#cards[style*="display: none"]) #nearbyPanel,
+body:has(#cards[style*="display: none"]) #mapPreviewCard{
+  display:none !important;
 }
 
 /* Map bottom sheet (nearbyPanel) */
