@@ -3043,8 +3043,8 @@ function bootFoodMap(){
   }
 
   setSyncIndicator(true);
-  showNearbyToggle(false);
-  setNearbyCollapsed(false);
+  showNearbyToggle(true);
+  setNearbyCollapsed(true);
   checkAdmin().then(()=>{ safeRender(); });
   initFilters();
   resetFilters();

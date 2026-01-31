@@ -367,19 +367,19 @@
       border:2px solid #bfe3d3;
       background:#fff;
       border-radius:999px;
-      padding:8px 18px;
+      padding:8px 14px;
       font-weight:800;
       font-size:15px;
       cursor:pointer;
       box-shadow:0 8px 18px rgba(15,23,42,.06);
       display:flex;
       align-items:center;
-      gap:8px;
-      min-width:150px;
+      gap:6px;
+      min-width:110px;
       justify-content:center;
-      color:#1d4ed8;
+      color:#0f172a;
     }
-    #memberMenuBtn .member-menu-arrow{color:#1d4ed8;font-size:12px;}
+    #memberMenuBtn .member-menu-arrow{display:none;}
     .member-menu button:hover{border-color:rgba(24,161,104,.35);}
     .member-menu button .member-menu-badge{
       min-width:18px;
