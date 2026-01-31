@@ -1146,13 +1146,13 @@ body.v2-explore .searchbox input{border:none;outline:none;font-size:13px;width:1
   }
   body.v2-explore .top-actions .top-actions-row{
     display:flex !important;
-    flex-wrap:wrap !important;
-    gap:8px;
+    flex-wrap:nowrap !important;
+    gap:6px;
     width:100%;
     justify-content:flex-start;
   }
   body.v2-explore .top-actions .top-actions-row > *{
-    flex:1 1 calc(50% - 8px);
+    flex:1 1 0;
     min-width:0;
   }
   body.v2-explore .top-actions .top-actions-row .btn{
