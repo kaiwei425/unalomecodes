@@ -172,24 +172,29 @@
   </header>
 
   <nav class="category-bar" aria-label="分類">
-    <a class="cat-item" href="/deity">神明介紹</a>
-    <a class="cat-item" href="/shop">佛牌</a>
-    <a class="cat-item" href="/shop">聖物</a>
-    <a class="cat-item" href="/shop">賣貨便</a>
-    <a class="cat-item" href="/" >其他</a>
+    <a class="cat-item" href="/shop"><span class="cat-icon">💎</span><span class="cat-label">佛牌聖物</span></a>
+    <a class="cat-item" href="/service"><span class="cat-icon">🙏</span><span class="cat-label">祈福加持</span></a>
+    <a class="cat-item" href="/service-guide"><span class="cat-icon">🕯️</span><span class="cat-label">捐棺行善</span></a>
+    <a class="cat-item" href="/service#svcPromoPhone"><span class="cat-icon">📞</span><span class="cat-label">連線算命</span></a>
+    <a class="cat-item" href="/quiz/"><span class="cat-icon">🛡️</span><span class="cat-label">守護神測驗</span></a>
   </nav>
 
   <section class="highlight-card" aria-label="探索推薦">
+    <div class="highlight-illust">🧙‍♂️</div>
     <div class="highlight-copy">
-      <div class="highlight-title">Don't know where to go?</div>
-      <div class="highlight-sub">選一個方向，先從附近與熱門開始探索。</div>
-      <button class="highlight-cta" type="button">Start Exploring</button>
+      <div class="highlight-badges">
+        <span class="badge badge-new">上新！</span>
+        <span class="badge badge-hot">亮點</span>
+      </div>
+      <div class="highlight-title">Don't know where to go? Get Random!</div>
+      <div class="highlight-sub">開始測試</div>
     </div>
   </section>
 
   <div class="view-toggle" role="tablist" aria-label="View Switch">
-    <button class="tab-btn tab-home" type="button" aria-hidden="true" tabindex="-1">Home</button>
-    <button class="tab-btn tab-map" id="modeToggle" type="button">Map</button>
+    <div class="tab-text"><span class="tab-home">Home</span><span class="tab-sep">|</span><span class="tab-map">Map</span></div>
+    <button class="tab-btn tab-map" id="modeToggle" type="button" aria-label="Toggle Map"></button>
+    <span class="tab-search">🔍</span>
   </div>
 
   <div id="mainContent">
@@ -242,14 +247,17 @@
 
     <section id="mapView" hidden>
       <div id="mainMap" class="main-map"></div>
-      <div id="mapPreviewCard"></div>
+      <div class="nearby-panel map-sheet" id="nearbyPanel">
+        <input type="checkbox" id="nearbyCollapse" class="sheet-collapse" aria-hidden="true">
+        <div class="sheet-handle" aria-hidden="true"></div>
 
-      <div class="nearby-panel" id="nearbyPanel" style="border:none;padding:0;box-shadow:none;">
+        <div id="mapPreviewCard" class="map-preview-card" hidden></div>
+
         <div class="nearby-head">
           <div class="nearby-title">📍 附近推薦</div>
           <div class="nearby-head-actions">
             <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
-            <button class="btn ghost pill" type="button" id="nearbyToggle" style="display:none;" aria-expanded="true">收合</button>
+            <label for="nearbyCollapse" class="btn ghost pill" id="nearbyToggle" role="button" aria-controls="nearbyBody">收合</label>
           </div>
         </div>
         <div class="nearby-body" id="nearbyBody">

@@ -554,7 +554,7 @@
 /* ===== v2 explore ui overrides ===== */
 
 :root{
-  --v2-bg:#f7f1e6;
+  --v2-bg:#f7f8fb;
   --v2-card:#fffaf3;
   --v2-text:#4b3126;
   --v2-muted:#8c6f60;
@@ -689,7 +689,9 @@ header > .wrap{max-width:unset;}
 .view-toggle .tab-home{color:#3b291f;}
 .view-toggle .tab-search{font-size:18px;color:#3b291f;}
 /* Make the real toggle clickable anywhere (still one JS handler) */
-#modeToggle{position:absolute;inset:0;opacity:0;}
+#modeToggle{position:absolute;inset:0;opacity:0;z-index:2;}
+.view-toggle .tab-text,
+.view-toggle .tab-search{pointer-events:none;}
 
 /* Underline indicator (active state follows JS inline styles; no JS changes) */
 .view-toggle::after{
@@ -714,11 +716,30 @@ body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:60px;}
   .app-logo-sub{font-size:11px;max-width:220px;}
   .app-search{padding:10px 12px;}
   .app-user{gap:8px;}
-  .app-user-actions{justify-content:flex-start;}
-  .app-user-actions .btn{padding:6px 10px;font-size:12px;min-height:36px;}
+  .app-user-actions{justify-content:flex-start;gap:6px;}
+  .app-user-actions .btn{padding:6px 10px;font-size:12px;min-height:34px;height:34px;}
   .app-user-auth{justify-content:flex-start;}
-  .auth-widget{width:100%;}
-  .auth-btn{min-height:36px;}
+  .auth-widget{
+    width:auto;
+    max-width:280px;
+    padding:6px 10px;
+    min-height:34px;
+    border-radius:14px;
+    box-shadow:var(--v2-shadow-sm);
+  }
+  .auth-widget .auth-status{
+    font-size:12px;
+    max-width:120px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .auth-btn{
+    height:28px;
+    padding:4px 10px;
+    font-size:12px;
+    min-height:28px;
+  }
 
   .view-toggle{
     background:#fffaf2;
@@ -731,7 +752,7 @@ body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:60px;}
   }
   .view-toggle .tab-text{font-size:18px;}
   .view-toggle .tab-search{font-size:16px;}
-  #modeToggle{position:absolute;inset:auto;right:44px;top:0;bottom:0;width:72px;opacity:0;}
+  #modeToggle{position:absolute;inset:0;opacity:0;}
   .view-toggle::after{bottom:6px;left:12px;}
   body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:56px;}
 }
