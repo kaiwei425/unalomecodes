@@ -706,6 +706,36 @@ header > .wrap{max-width:unset;}
 }
 body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:60px;}
 
+@media (max-width: 640px){
+  .app-header{padding:10px 12px;gap:8px;}
+  .app-logo-mark{width:28px;height:28px;}
+  .app-logo-mark img{width:28px;height:28px;}
+  .app-logo-title{font-size:16px;}
+  .app-logo-sub{font-size:11px;max-width:220px;}
+  .app-search{padding:10px 12px;}
+  .app-user{gap:8px;}
+  .app-user-actions{justify-content:flex-start;}
+  .app-user-actions .btn{padding:6px 10px;font-size:12px;min-height:36px;}
+  .app-user-auth{justify-content:flex-start;}
+  .auth-widget{width:100%;}
+  .auth-btn{min-height:36px;}
+
+  .view-toggle{
+    background:#fffaf2;
+    border:1px solid rgba(123,87,65,.18);
+    border-radius:999px;
+    padding:8px 12px;
+    box-shadow:var(--v2-shadow-sm);
+    gap:8px;
+    position:relative;
+  }
+  .view-toggle .tab-text{font-size:18px;}
+  .view-toggle .tab-search{font-size:16px;}
+  #modeToggle{position:absolute;inset:auto;right:44px;top:0;bottom:0;width:72px;opacity:0;}
+  .view-toggle::after{bottom:6px;left:12px;}
+  body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:56px;}
+}
+
 #mainContent{padding:12px 14px 28px; overflow-x:hidden;}
 body.v2-explore{overflow-x:hidden;}
 
