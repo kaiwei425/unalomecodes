@@ -336,21 +336,23 @@
     .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
     .member-menu{position:relative;display:block;}
     .member-menu.is-visible{display:block;}
-    .member-menu button{
-      border:1px solid var(--line);
+    #memberMenuBtn{
+      border:2px solid #bfe3d3;
       background:#fff;
       border-radius:999px;
-      padding:10px 16px;
+      padding:8px 18px;
       font-weight:800;
-      font-size:14px;
+      font-size:15px;
       cursor:pointer;
-      box-shadow:0 8px 18px rgba(15,23,42,.08);
+      box-shadow:0 8px 18px rgba(15,23,42,.06);
       display:flex;
       align-items:center;
       gap:8px;
-      min-width:140px;
+      min-width:150px;
       justify-content:center;
+      color:#1d4ed8;
     }
+    #memberMenuBtn .member-menu-arrow{color:#1d4ed8;font-size:12px;}
     .member-menu button:hover{border-color:rgba(24,161,104,.35);}
     .member-menu button .member-menu-badge{
       min-width:18px;
@@ -461,6 +463,15 @@
     }
     .menu-actions .btn,
     .menu-actions a.btn{
+      width:100%;
+      height:44px;
+      padding:10px 14px;
+      font-size:14px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      text-decoration:none;
       background:#fff;
       color:#0f172a;
       border-color:#e2e8f0;
