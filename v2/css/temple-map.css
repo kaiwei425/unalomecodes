@@ -482,6 +482,16 @@
       border-color:#cbd5e1;
       box-shadow:0 10px 18px rgba(15,23,42,.1);
     }
+
+    @media(max-width:720px){
+      .member-submenu{
+        left:0;
+        right:auto;
+        top:calc(100% + 8px);
+        min-width:100%;
+        max-width:100%;
+      }
+    }
     .member-menu-panel a,
     .member-menu-panel button{
       display:block;
