@@ -403,6 +403,24 @@
       cursor:pointer;
     }
     .menu-auth .auth-btn{height:26px;font-size:11px;padding:4px 8px;}
+    .menu-member{
+      position:relative;
+      margin-bottom:8px;
+      display:none;
+    }
+    .member-center-btn{
+      width:100%;
+      border:1px solid #e2e8f0;
+      background:#fff;
+      border-radius:999px;
+      padding:8px 12px;
+      font-weight:800;
+      font-size:13px;
+      color:#0f172a;
+      text-align:center;
+      cursor:pointer;
+      box-shadow:0 6px 14px rgba(15,23,42,.06);
+    }
     .member-submenu{
       position:absolute;
       top:0;
@@ -416,7 +434,10 @@
       display:none;
       z-index:2100;
     }
-    .member-menu.is-visible .menu-auth:focus-within .member-submenu{
+    .member-menu.is-visible .menu-member{
+      display:block;
+    }
+    .menu-member:focus-within .member-submenu{
       display:block;
     }
     .member-menu:not(.is-visible) .member-submenu{
@@ -427,6 +448,16 @@
       grid-template-columns:1fr;
       gap:8px;
       margin-bottom:4px;
+    }
+    .menu-actions .btn{
+      background:#fff;
+      color:#0f172a;
+      border-color:#e2e8f0;
+      box-shadow:0 6px 14px rgba(15,23,42,.06);
+    }
+    .menu-actions .btn:hover{
+      border-color:#cbd5e1;
+      box-shadow:0 10px 18px rgba(15,23,42,.1);
     }
     .member-menu-panel a,
     .member-menu-panel button{
