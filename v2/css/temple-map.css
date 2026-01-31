@@ -386,7 +386,7 @@
       gap:8px;
       padding:6px 8px;
       border-radius:12px;
-      background:#f8fafc;
+      background:#fff;
       border:1px solid #e2e8f0;
       margin-bottom:10px;
     }
@@ -402,7 +402,16 @@
       text-align:left;
       cursor:pointer;
     }
-    .menu-auth .auth-btn{height:26px;font-size:11px;padding:4px 8px;}
+    .menu-auth .auth-btn{
+      height:26px;
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      background:linear-gradient(135deg,#18a168,#1095d6);
+      color:#fff;
+      box-shadow:0 8px 16px rgba(16,149,214,.2);
+      min-width:52px;
+    }
     .menu-member{
       position:relative;
       margin-bottom:8px;
@@ -437,7 +446,8 @@
     .member-menu.is-visible .menu-member{
       display:block;
     }
-    .menu-member:focus-within .member-submenu{
+    .menu-member:focus-within .member-submenu,
+    .menu-member:hover .member-submenu{
       display:block;
     }
     .member-menu:not(.is-visible) .member-submenu{
@@ -449,13 +459,15 @@
       gap:8px;
       margin-bottom:4px;
     }
-    .menu-actions .btn{
+    .menu-actions .btn,
+    .menu-actions a.btn{
       background:#fff;
       color:#0f172a;
       border-color:#e2e8f0;
       box-shadow:0 6px 14px rgba(15,23,42,.06);
     }
-    .menu-actions .btn:hover{
+    .menu-actions .btn:hover,
+    .menu-actions a.btn:hover{
       border-color:#cbd5e1;
       box-shadow:0 10px 18px rgba(15,23,42,.1);
     }
