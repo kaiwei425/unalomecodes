@@ -318,6 +318,7 @@ const TRANSLATIONS = {
     home: '返回首頁',
     fav: '收藏清單',
     memberLabel: '會員中心',
+    menuLabel: 'Menu',
     profileInfo: '基本資料',
     myCoupons: '我的優惠券',
     myOrders: '我的訂單',
@@ -535,6 +536,7 @@ const TRANSLATIONS = {
     home: 'Home',
     fav: 'Favorites',
     memberLabel: 'Member Center',
+    menuLabel: 'Menu',
     profileInfo: 'Profile',
     myCoupons: 'My Coupons',
     myOrders: 'My Orders',
@@ -1587,7 +1589,14 @@ function setLanguage(lang) {
   if (btnBack) btnBack.textContent = t('home');
   if (btnFav) btnFav.textContent = t('fav');
   const memLabel = document.querySelector('.member-menu-label');
-  if (memLabel) memLabel.textContent = t('memberLabel');
+  const memBtn = document.getElementById('memberMenuBtn');
+  if (memLabel) {
+    if (memBtn && memBtn.hasAttribute('data-menu-label')) {
+      memLabel.textContent = t('menuLabel');
+    } else {
+      memLabel.textContent = t('memberLabel');
+    }
+  }
   const replaceLinkTextWithBadge = (link, text) => {
     if (!link) return;
     const badge = link.querySelector('span');
