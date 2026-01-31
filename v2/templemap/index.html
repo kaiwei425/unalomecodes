@@ -112,7 +112,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/temple-map.css">
 </head>
-<body class="v2-explore">
+<body>
   <header>
     <div class="wrap">
       <div class="topbar" data-nosnippet>
@@ -146,12 +146,13 @@
             <span id="pageSubtitle">熱門寺廟路線、附近搜尋與參拜重點一次整理</span>
             <button id="btnEditSubtitle" style="display:none;border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;margin-left:4px;" title="編輯副標題">✏️</button>
           </div>
+          <!-- Pillar Content: Temple map + worship guidance -->
           <section id="ai-summary">
             <p>本頁提供泰國寺廟地圖與參拜資訊，包含寺廟清單、附近搜尋、收藏與路線整理，並補充禮儀、禁忌與現場提醒，同時標示更新時間；內容以公開資料與現場資訊交叉整理，並以寺廟公告為準。</p>
           </section>
         </div>
         <div class="top-actions">
-          <div class="action-group top-actions-row">
+            <div class="action-group top-actions-row">
             <button class="btn ghost pill" id="btnBack">返回首頁</button>
             <button class="btn ghost pill" id="btnFav">收藏清單</button>
             <a class="btn ghost pill" href="/food-map">美食地圖</a>
@@ -194,108 +195,69 @@
             <span class="search-icon">🔍</span>
             <input type="text" id="kw" placeholder="搜尋寺廟名稱 / 關鍵字">
           </div>
+          <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
+            <select id="fCat" class="filter-select">
+              <option value="">全部分類</option>
+            </select>
+            <select id="fArea" class="filter-select">
+              <option value="">全部地區</option>
+            </select>
+            <select id="fStatus" class="filter-select">
+              <option value="">營業狀態</option>
+              <option value="open">現在營業中</option>
+            </select>
+            <select id="fSort" class="filter-select">
+              <option value="">排序</option>
+              <option value="dist_asc">距離 近→遠</option>
+              <option value="rating_desc">評分 高→低</option>
+              <option value="name_asc">寺廟名稱 A→Z</option>
+            </select>
+          </div>
         </div>
+        <div class="hero-right">
+          <div class="nearby-panel" id="nearbyPanel" style="border:none;padding:0;box-shadow:none;">
+            <div class="nearby-head">
+              <div class="nearby-title">📍 附近推薦</div>
+              <div class="nearby-head-actions">
+                <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
+                <button class="btn ghost pill" type="button" id="nearbyToggle" style="display:none;" aria-expanded="true">收合</button>
+              </div>
+            </div>
+            <div class="nearby-body" id="nearbyBody">
+              <div class="nearby-input">
+                <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
+                <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
+              </div>
+              <div class="nearby-map" id="nearbyMap">地圖載入中...</div>
+              <div class="nearby-status" id="nearbyStatus">尚未搜尋附近寺廟</div>
+              <div class="nearby-list" id="nearbyList"></div>
+            </div>
+        </div>
+      </div>
       </div>
     </div>
   </header>
 
-  <nav class="category-bar" aria-label="分類">
-    <a class="cat-item" href="/shop"><span class="cat-icon">💎</span><span class="cat-label">佛牌聖物</span></a>
-    <a class="cat-item" href="/service"><span class="cat-icon">🙏</span><span class="cat-label">祈福加持</span></a>
-    <a class="cat-item" href="/service?serviceId=svc-173ffcff"><span class="cat-icon">🕯️</span><span class="cat-label">捐棺行善</span></a>
-    <a class="cat-item" href="/service?serviceId=SVT409059d4"><span class="cat-icon">📞</span><span class="cat-label">連線算命</span></a>
-    <a class="cat-item" href="/quiz/"><span class="cat-icon">🛡️</span><span class="cat-label">守護神測驗</span></a>
-  </nav>
-
-  <section class="highlight-card" aria-label="探索推薦">
-    <div class="highlight-illust">🧙‍♂️</div>
-    <div class="highlight-copy">
-      <div class="highlight-badges">
-        <span class="badge badge-new">上新！</span>
-        <span class="badge badge-hot">亮點</span>
-      </div>
-      <div class="highlight-title">Don't know where to go? Get Random!</div>
-      <div class="highlight-sub">開始測試</div>
+  <main class="wrap">
+    <div class="count-bar">
+      <div class="count-total" id="totalCount">共 0 間</div>
+      <div class="count-sync" id="countSync">更新中...</div>
+      <div class="count-tags" id="categoryCounts"></div>
+      <button class="btn pill primary" id="modeToggle" style="margin-left:auto;">地圖模式</button>
     </div>
-  </section>
-
-  <div class="view-toggle" role="tablist" aria-label="View Switch">
-    <div class="tab-text"><span class="tab-home">列表模式</span><span class="tab-sep">|</span><span class="tab-map">地圖模式</span></div>
-    <button class="tab-btn tab-map" id="modeToggle" type="button" aria-label="Toggle Map"></button>
-    <span class="tab-search">🔍</span>
-  </div>
-
-  <div id="mainContent">
-    <section id="homeView">
-      <div class="filter-bar" aria-label="filters">
-        <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
-          <select id="fCat" class="filter-select">
-            <option value="">全部分類</option>
-          </select>
-          <select id="fArea" class="filter-select">
-            <option value="">全部地區</option>
-          </select>
-          <select id="fStatus" class="filter-select">
-            <option value="">營業狀態</option>
-            <option value="open">現在營業中</option>
-          </select>
-          <select id="fSort" class="filter-select">
-            <option value="">排序</option>
-            <option value="dist_asc">距離 近→遠</option>
-            <option value="rating_desc">評分 高→低</option>
-            <option value="name_asc">寺廟名稱 A→Z</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="count-bar">
-        <div class="count-total" id="totalCount">共 0 間</div>
-        <div class="count-sync" id="countSync">更新中...</div>
-        <div class="count-tags" id="categoryCounts"></div>
-      </div>
-
-      <div class="cat-tabs" id="catTabs"></div>
-      <div class="intent-status" id="intentStatus">目前篩選：全部</div>
-
-      <div id="cards" class="card-grid"></div>
-    </section>
-
-    <section id="mapView" hidden>
-      <div id="mainMap" class="main-map"></div>
-      <div class="nearby-panel map-sheet" id="nearbyPanel">
-        <input type="checkbox" id="nearbyCollapse" class="sheet-collapse" aria-hidden="true">
-        <div class="sheet-handle" aria-hidden="true"></div>
-
-        <div id="mapPreviewCard" class="map-preview-card" hidden></div>
-
-        <div class="nearby-head">
-          <div class="nearby-title">📍 附近推薦</div>
-          <div class="nearby-head-actions">
-            <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
-            <label for="nearbyCollapse" class="btn ghost pill" id="nearbyToggle" role="button" aria-controls="nearbyBody">收合</label>
-          </div>
-        </div>
-        <div class="nearby-body" id="nearbyBody">
-          <div class="nearby-input">
-            <input type="text" id="nearbyInput" placeholder="輸入飯店 / 地址">
-            <button class="btn pill" type="button" id="nearbySearch">搜尋附近</button>
-          </div>
-          <div class="nearby-map" id="nearbyMap">地圖載入中...</div>
-          <div class="nearby-status" id="nearbyStatus">尚未搜尋附近寺廟</div>
-          <div class="nearby-list" id="nearbyList"></div>
-        </div>
-      </div>
-    </section>
-  </div>
-
+    <div class="cat-tabs" id="catTabs"></div>
+    <div class="intent-status" id="intentStatus">目前篩選：全部</div>
+    <div id="mainMap" class="main-map"></div>
+    <div class="cards" id="cards"></div>
+  </main>
   <footer class="page-footer" data-nosnippet>
-    <div class="wrap footer-inner">
-      <div>© 2025-2026 unalomecodes. All rights reserved.</div>
-      <div>營業時間與資訊可能變動，請以寺廟公告為準。</div>
-    </div>
-  </footer>
+      <div class="wrap footer-inner">
+        <div>© 2025-2026 unalomecodes. All rights reserved.</div>
+        <div>營業時間與資訊可能變動，請以寺廟公告為準。</div>
+      </div>
+    </footer>
 
-<dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
+  <dialog id="foodModal" style="border:none;border-radius:16px;padding:0;max-width:560px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.25);">
     <div id="foodModalBody" style="padding:0;overflow:hidden;border-radius:16px;"></div>
   </dialog>
   <div class="toast" id="saveToast">已儲存</div>
