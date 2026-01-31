@@ -2329,6 +2329,7 @@ function render(){
         <div class="admin-hint">${escapeHtml(t('adminMode'))}</div>
       </div>
     ` : '';
+    const favTag = item.id ? `<button class="fav-btn tag-fav" data-fav="${safeId}" title="${escapeHtml(t('favBtn'))}">${liked?'★':'☆'}</button>` : '';
     return `<article class="card" ${cardStyle} data-card-id="${String(item.__tempId || item.id || '').replace(/"/g,'&quot;')}">
       <div class="cover">${coverImg}</div>
       <div class="card-body">
@@ -2339,10 +2340,9 @@ function render(){
           </div>
           <div class="card-head-actions">
             ${canEdit ? `<button class="edit-btn" data-edit="${escapeHtml(editKey)}">${escapeHtml(t('edit'))}</button>` : ''}
-            ${item.id ? `<button class="fav-btn" data-fav="${safeId}" title="${escapeHtml(t('favBtn'))}">${liked?'★':'☆'}</button>` : ''}
           </div>
         </div>
-        <div class="card-tags">${featuredTag}${tags}${ratingTag}<span class="badge-hot">${escapeHtml(t('recommend'))}</span></div>
+        <div class="card-tags">${featuredTag}${tags}${ratingTag}<span class="badge-hot">${escapeHtml(t('recommend'))}</span>${favTag}</div>
         <div class="card-addr">${escapeHtml(item.address || '')}</div>
         ${snippet ? `<div class="card-desc">${escapeHtml(snippet)}</div>` : ''}
         <div class="card-actions">
@@ -2387,7 +2387,12 @@ function render(){
           body: JSON.stringify({ id, action })
         });
         const data = await res.json().catch(()=>({}));
-        if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+        if (!res.ok || !data.ok) {
+          if (res.status === 401 || res.status === 403 || (data.error||'').toLowerCase().includes('unauthorized')) {
+            throw new Error(action === 'add' ? t('loginAddFav') : t('loginRemoveFav'));
+          }
+          throw new Error(data.error || ('HTTP '+res.status));
+        }
         favs = data.favorites || [];
         safeRender();
       }catch(err){

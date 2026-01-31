@@ -192,6 +192,19 @@
     .card-tags{display:flex;flex-wrap:wrap;gap:6px;}
     .tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:var(--pill);color:#c2410c;font-weight:700;border:1px solid rgba(255,90,60,.25);font-size:12px;}
     .badge-hot{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(255,90,60,.12);color:var(--accent);font-weight:700;font-size:11px;}
+    .card-tags .fav-btn{
+      margin-left:auto;
+      border:1px solid rgba(255,90,60,.25);
+      background:var(--pill);
+      color:#c2410c;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:12px;
+      font-weight:700;
+      width:auto;
+      height:auto;
+      box-shadow:none;
+    }
     .card-actions{display:flex;flex-wrap:wrap;gap:8px;}
 
     @media (max-width:720px){
@@ -221,6 +234,7 @@
       }
       .card-tags{gap:4px;flex-wrap:wrap;}
       .tag{font-size:10px;padding:3px 6px;}
+      .card-tags .fav-btn{font-size:10px;padding:3px 6px;}
       .card-actions{gap:6px;}
       .btn{padding:6px 8px;font-size:12px;min-height:36px;}
     }
