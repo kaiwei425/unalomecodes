@@ -296,7 +296,7 @@
     background-position:center bottom;
     background-size:contain;
     background-image:
-      url('/img/pedestal.png'),
+      url('/img/pedestal.png?v=20260131'),
       radial-gradient(220px 70px at 50% 25%, rgba(0,0,0,.22), rgba(0,0,0,0) 66%),
       radial-gradient(240px 80px at 50% 34%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%),
       radial-gradient(520px 180px at 50% 110%, rgba(15,23,42,.18), rgba(15,23,42,0) 62%),

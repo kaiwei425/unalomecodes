@@ -33,6 +33,7 @@
 
   var STORAGE_KEY = 'adminProductImageDraft:v1';
   var PEDESTAL_ASSET_URLS = [
+    '/img/pedestal.png?v=20260131',
     '/img/pedestal.png',
     '/img/pedestal.webp',
     '/img/pedestal.jpg',
@@ -440,9 +441,6 @@
         els.pvPedestalImg.removeAttribute('src');
         els.pvPedestalImg.style.display = 'none';
         try{ els.card.classList.remove('img-card--has-pedestal'); }catch(_){}
-        if (pedestalTried){
-          setStatus('找不到展示台圖片（請放到 img/pedestal.png）。目前先用內建展示台。', 'warn');
-        }
       }
     }
 
