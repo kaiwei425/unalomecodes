@@ -166,7 +166,8 @@
                     <button type="button" class="auth-btn" data-auth-btn>登入會員</button>
                   </div>
                   <div class="menu-member">
-                    <button type="button" class="member-center-btn">會員中心 ▾</button>
+                    <input type="checkbox" id="memberCenterToggle" class="member-center-toggle" hidden>
+                    <label for="memberCenterToggle" class="member-center-btn menu-item">會員中心 ▾</label>
                     <div class="member-submenu">
                       <a href="#" data-profile>基本資料</a>
                       <a href="/account-coupons" id="userCouponsLink" class="qna-link">我的優惠券 <span class="qna-badge" id="userCouponBadge">0</span></a>
@@ -183,10 +184,10 @@
                     </div>
                   </div>
                   <div class="menu-actions">
-                    <button class="btn ghost pill" id="btnBack">返回首頁</button>
-                    <button class="btn ghost pill" id="btnFav">收藏清單</button>
-                    <a class="btn ghost pill" href="/food-map">美食地圖</a>
-                    <button class="btn ghost pill lang-toggle" id="btnLang" type="button" aria-label="切換語言">ZH/EN</button>
+                    <button class="btn ghost pill menu-item" id="btnBack">返回首頁</button>
+                    <button class="btn ghost pill menu-item" id="btnFav">收藏清單</button>
+                    <a class="btn ghost pill menu-item" href="/food-map">美食地圖</a>
+                    <button class="btn ghost pill lang-toggle menu-item" id="btnLang" type="button" aria-label="切換語言">ZH/EN</button>
                   </div>
                 </div>
               </div>
