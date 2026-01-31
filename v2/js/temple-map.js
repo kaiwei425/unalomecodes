@@ -789,6 +789,7 @@ const nearbyInput = document.getElementById('nearbyInput');
 const nearbySearch = document.getElementById('nearbySearch');
 const nearbyUse = document.getElementById('nearbyUse');
 const nearbyStatus = document.getElementById('nearbyStatus');
+if (nearbyPanel){ setNearbyCollapsed(true); showNearbyToggle(true); }
 
 // Buttons
 const btnBack = document.getElementById('btnBack');
