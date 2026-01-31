@@ -203,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!memberMenu) return;
         if (user){
           memberMenu.classList.add('is-visible');
+          processPendingFav();
         }else{
           memberMenu.classList.remove('is-visible');
           if (panel) panel.style.display = 'none';
@@ -218,6 +219,48 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- 補上缺少的變數宣告，避免 ReferenceError ---
 const FOOD_CACHE_KEY = 'temple_map_data_v1';
 const FOOD_CACHE_TTL = 24 * 60 * 60 * 1000;
+const PENDING_FAV_KEY = 'temple_map_pending_fav';
+
+function queuePendingFav(id){
+  try{
+    if (id) localStorage.setItem(PENDING_FAV_KEY, id);
+  }catch(_){}
+}
+
+async function processPendingFav(){
+  try{
+    if (!window.authState || typeof window.authState.isLoggedIn !== 'function' || !window.authState.isLoggedIn()) return;
+    const id = localStorage.getItem(PENDING_FAV_KEY);
+    if (!id) return;
+    localStorage.removeItem(PENDING_FAV_KEY);
+    if (!id) return;
+    if (favs.includes(id)) { safeRender(); return; }
+    const res = await fetch('/api/me/temple-favs', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({ id, action:'add' })
+    });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP '+res.status));
+    favs = data.favorites || [];
+    safeRender();
+  }catch(err){
+    alert(t('favFail') + (err.message||err));
+  }
+}
+
+function startLoginForFav(){
+  try{
+    const dlg = document.getElementById('foodModal');
+    if (dlg && dlg.open) dlg.close();
+  }catch(_){}
+  if (window.authState && typeof window.authState.login === 'function'){
+    window.authState.login();
+  }else{
+    window.location.href = '/shop';
+  }
+}
 const GOOGLE_MAPS_LANG = 'zh-TW';
 
 let googleMapsKey = '';
@@ -2378,6 +2421,11 @@ function render(){
   cardsEl.querySelectorAll('button[data-fav]').forEach(btn=>{
     btn.onclick = async ()=>{
       const id = btn.getAttribute('data-fav');
+      if (!window.authState || typeof window.authState.isLoggedIn !== 'function' || !window.authState.isLoggedIn()){
+        queuePendingFav(id);
+        startLoginForFav();
+        return;
+      }
       try{
         const action = favs.includes(id) ? 'remove' : 'add';
         const res = await fetch('/api/me/temple-favs', {
@@ -3142,6 +3190,7 @@ async function loadRemote(){
   dataLoading = false;
   setSyncIndicator(false);
   await refreshFavorites();
+  await processPendingFav();
   initFilters();
   safeRender();
   openTempleFromUrl();
@@ -3525,7 +3574,11 @@ async function refreshFavorites(){
   }catch(_){ return false; }
 }
 async function toggleFav(id){
-  if (!checkLoginOrRedirect(t('loginAddFav'))) return;
+  if (!window.authState || typeof window.authState.isLoggedIn !== 'function' || !window.authState.isLoggedIn()){
+    queuePendingFav(id);
+    startLoginForFav();
+    return;
+  }
   try{
     const action = favs.includes(id) ? 'remove' : 'add';
     const res = await fetch('/api/me/temple-favs',{
