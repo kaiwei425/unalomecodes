@@ -644,37 +644,51 @@ header > .wrap{max-width:unset;}
 
 .view-toggle{
   margin:12px 14px 0;
-  background:rgba(255,255,255,.85);
+  background:rgba(255,255,255,.92);
   border:1px solid var(--v2-border);
-  border-radius:999px;
-  padding:6px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:6px;
+  border-radius:16px;
   box-shadow:0 8px 18px rgba(17,24,39,.06);
-  position:relative;
+  position:sticky;
+  top:56px;
+  z-index:60;
+  display:flex;
+  overflow:hidden;
 }
 .view-toggle .tab-btn{
   border:none;
   background:transparent;
-  border-radius:999px;
-  padding:10px 12px;
-  font-weight:1000;
+  padding:12px 12px;
+  font-weight:900;
   cursor:pointer;
-  color:rgba(17,24,39,.72);
+  color:rgba(17,24,39,.64);
+  flex:1 1 0;
+  min-height:44px;
 }
 /* Make the real toggle clickable anywhere (still one JS handler) */
-#modeToggle{position:absolute;inset:6px;opacity:0;}
+#modeToggle{position:absolute;inset:0;opacity:0;}
 .view-toggle .tab-home,
 .view-toggle .tab-map{pointer-events:none;}
 
-/* Active state follows JS inline styles (no JS changes) */
-body:has(#cards[style*="display: none"]) .view-toggle .tab-map{background:#111827;color:#fff;}
-body:has(#cards[style*="display: none"]) .view-toggle .tab-home{background:transparent;color:rgba(17,24,39,.72);}
-body:not(:has(#cards[style*="display: none"])) .view-toggle .tab-home{background:#111827;color:#fff;}
-body:not(:has(#cards[style*="display: none"])) .view-toggle .tab-map{background:transparent;color:rgba(17,24,39,.72);}
+/* Underline indicator (active state follows JS inline styles; no JS changes) */
+.view-toggle::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:3px;
+  width:50%;
+  background:#111827;
+  transform:translateX(var(--v2-tab-x, 0));
+  transition:transform .22s ease;
+  will-change: transform;
+}
+body:has(#cards[style*="display: none"]) .view-toggle{--v2-tab-x:100%;}
+body:has(#cards[style*="display: none"]) .view-toggle .tab-map{color:#111827;}
+body:not(:has(#cards[style*="display: none"])) .view-toggle .tab-home{color:#111827;}
 
-#mainContent{padding:12px 14px 28px;}
+#mainContent{padding:12px 14px 28px; overflow-x:hidden;}
+body.v2-explore{overflow-x:hidden;}
 
 /* Home vs Map view: driven by JS style.display on #cards/#mainMap */
 #mapView{display:none;}
@@ -702,28 +716,131 @@ body:has(#cards[style*="display: none"]) #mapView{display:block;}
 }
 
 /* Existing renderer outputs <article class="card"> ... */
-.card{
+.card,
+.temple-card{
   border-radius:16px;
-  overflow:hidden;
   background:var(--v2-card);
   border:1px solid rgba(15,23,42,.08);
-  box-shadow:var(--v2-shadow);
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
+  padding:12px;
   display:flex;
   flex-direction:row;
+  gap:12px;
+  align-items:stretch;
+  min-width:0;
+  transition:transform .16s ease, box-shadow .16s ease;
 }
-.card .cover{width:128px;flex:0 0 128px;position:relative;background:#f3f4f6;}
+@media (hover:hover){
+  .card:hover,
+  .temple-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 26px rgba(0,0,0,0.12);
+  }
+}
+.card .cover{
+  flex:0 0 128px;
+  width:128px;
+  aspect-ratio:4/3;
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+  background:#f3f4f6;
+}
+@media (min-width: 520px){
+  .card .cover{flex-basis:148px;width:148px;}
+}
 .card .cover img{width:100%;height:100%;object-fit:cover;display:block;}
-.card .card-body{padding:12px 12px 12px 12px;min-width:0;flex:1;}
-.card .card-title{font-size:16px;font-weight:1000;color:var(--v2-text);}
-.card .card-sub{margin-top:2px;color:var(--v2-muted);font-weight:800;font-size:12px;}
+.card .card-body{padding:0;min-width:0;flex:1;display:flex;flex-direction:column;}
+.card .card-title{font-size:16px;font-weight:600;line-height:1.2;color:var(--v2-text);}
+.card .card-sub{margin-top:4px;color:var(--v2-muted);font-weight:700;font-size:12px;}
+.card .card-tags{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.card .card-tags > span{
+  display:inline-flex;
+  align-items:center;
+  height:26px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  background:rgba(15,23,42,.06);
+  color:rgba(15,23,42,.78);
+  border:1px solid rgba(15,23,42,.08);
+}
+.card .card-tags .badge-hot{
+  background:rgba(17,24,39,.92);
+  color:#fff;
+  border-color:transparent;
+}
+.card .card-addr{margin-top:8px;color:rgba(17,24,39,.72);font-size:13px;line-height:1.35;}
 .card .card-desc{margin-top:8px;color:#374151;font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.card .card-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
-.card .card-actions .btn{border-radius:999px;}
+.card .card-actions{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:10px;
+  align-items:stretch;
+}
+.card .card-actions > *:only-child{grid-column:1 / -1;}
+.card .card-actions .mini{grid-column:1 / -1;}
+.card .card-actions .btn{
+  border-radius:12px;
+  min-height:44px;
+  padding:10px 12px;
+  font-weight:900;
+}
+.card .card-actions .btn.ghost{
+  background:transparent;
+  border:1px solid rgba(15,23,42,.14);
+  color:rgba(15,23,42,.88);
+}
+.card .card-actions .btn.primary{
+  background:#111827;
+  border:1px solid #111827;
+  color:#fff;
+}
 
 /* Map container */
-#mainMap{height:64vh;min-height:420px;border-radius:16px;overflow:hidden;border:1px solid rgba(15,23,42,.10);box-shadow:var(--v2-shadow);background:#e5e7eb;}
+#mainMap{
+  height:64vh;
+  min-height:420px;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(15,23,42,.10);
+  box-shadow:var(--v2-shadow);
+  background:#e5e7eb;
+}
+body:has(#cards[style*="display: none"]) #mainContent{padding:0;}
+body:has(#cards[style*="display: none"]) #mapView{padding:12px 14px 0;}
+body:has(#cards[style*="display: none"]) #mainMap{
+  height:calc(100vh - 56px - 56px - 16px);
+  min-height:520px;
+}
 
 /* Nearby panel stays usable */
-#nearbyPanel{margin-top:12px;border-radius:16px;overflow:hidden;border:1px solid rgba(15,23,42,.10);box-shadow:var(--v2-shadow);background:rgba(255,255,255,.9);} 
+#nearbyPanel{
+  margin-top:12px;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(15,23,42,.10);
+  box-shadow:var(--v2-shadow);
+  background:rgba(255,255,255,.95);
+}
+
+/* Map preview card style (shared) */
+.map-preview-card{
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+body:has(#cards[style*="display: none"]) #nearbyPanel{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:12px;
+  margin:0;
+  max-height:40vh;
+  overflow:auto;
+  z-index:80;
+}
 
 /* Keep hidden AI summary hidden (already present in head) */
