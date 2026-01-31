@@ -242,14 +242,17 @@
 
     <section id="mapView" hidden>
       <div id="mainMap" class="main-map"></div>
-      <div id="mapPreviewCard" class="map-preview-card" hidden></div>
+      <div class="nearby-panel map-sheet" id="nearbyPanel">
+        <div class="sheet-handle" aria-hidden="true"></div>
 
-      <div class="nearby-panel map-preview-card" id="nearbyPanel">
+        <div id="mapPreviewCard" class="map-preview-card" hidden></div>
+
         <div class="nearby-head">
           <div class="nearby-title">📍 附近推薦</div>
           <div class="nearby-head-actions">
             <button class="btn ghost pill" type="button" id="nearbyUse">使用我的位置</button>
-            <button class="btn ghost pill" type="button" id="nearbyToggle" style="display:none;" aria-expanded="true">收合</button>
+            <input type="checkbox" id="nearbyCollapse" class="sheet-collapse" aria-hidden="true">
+            <label for="nearbyCollapse" class="btn ghost pill" id="nearbyToggle" role="button" aria-controls="nearbyBody">收合</label>
           </div>
         </div>
         <div class="nearby-body" id="nearbyBody">

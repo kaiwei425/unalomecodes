@@ -694,6 +694,8 @@ body.v2-explore{overflow-x:hidden;}
 #mapView{display:none;}
 body:has(#cards[style*="display: none"]) #homeView{display:none;}
 body:has(#cards[style*="display: none"]) #mapView{display:block;}
+body:has(#cards[style*="display: none"]) .category-bar{display:none;}
+body:has(#cards[style*="display: none"]) .highlight-card{display:none;}
 
 .intent-chips{margin-top:10px;}
 
@@ -810,37 +812,81 @@ body:has(#cards[style*="display: none"]) #mapView{display:block;}
   background:#e5e7eb;
 }
 body:has(#cards[style*="display: none"]) #mainContent{padding:0;}
-body:has(#cards[style*="display: none"]) #mapView{padding:12px 14px 0;}
+body:has(#cards[style*="display: none"]) #mapView{padding:0;}
+
+/* Map mode: leave room for bottom sheet (app-like) */
 body:has(#cards[style*="display: none"]) #mainMap{
-  height:calc(100vh - 56px - 56px - 16px);
-  min-height:520px;
+  height:calc(100vh - 56px - 56px - 38vh - env(safe-area-inset-bottom));
+  min-height:360px;
+}
+body:has(#nearbyCollapse:checked) #mainMap{
+  height:calc(100vh - 56px - 56px - 72px - env(safe-area-inset-bottom));
 }
 
-/* Nearby panel stays usable */
-#nearbyPanel{
-  margin-top:12px;
-  border-radius:16px;
-  overflow:hidden;
-  border:1px solid rgba(15,23,42,.10);
-  box-shadow:var(--v2-shadow);
-  background:rgba(255,255,255,.95);
-}
-
-/* Map preview card style (shared) */
-.map-preview-card{
-  background:#fff;
-  border-radius:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,.15);
-}
-body:has(#cards[style*="display: none"]) #nearbyPanel{
+/* Map bottom sheet (nearbyPanel) */
+#nearbyPanel.map-sheet{
   position:fixed;
   left:12px;
   right:12px;
-  bottom:12px;
-  margin:0;
-  max-height:40vh;
-  overflow:auto;
+  bottom:calc(12px + env(safe-area-inset-bottom));
   z-index:80;
+  height:38vh;
+  max-height:48vh;
+  min-height:220px;
+  background:rgba(255,255,255,.98);
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:20px 20px 16px 16px;
+  box-shadow:0 14px 40px rgba(0,0,0,.18);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
 }
+
+.sheet-handle{
+  width:46px;
+  height:5px;
+  border-radius:999px;
+  background:rgba(15,23,42,.18);
+  margin:10px auto 6px;
+  flex:0 0 auto;
+}
+
+/* Map preview card (selected temple) inside sheet */
+#mapPreviewCard.map-preview-card{
+  margin:0 12px 10px;
+  padding:12px;
+  background:#fff;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.12);
+}
+
+.nearby-head{padding:0 12px 10px;}
+.nearby-body{
+  padding:0 12px 12px;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* Ensure toggle is always visible in map mode */
+body:has(#cards[style*="display: none"]) #nearbyToggle{display:inline-flex !important;}
+
+/* Collapse (CSS-only via checkbox) */
+.sheet-collapse{
+  position:absolute;
+  opacity:0;
+  width:1px;
+  height:1px;
+  pointer-events:none;
+}
+#nearbyPanel:has(#nearbyCollapse:checked){
+  height:72px;
+  min-height:72px;
+}
+#nearbyPanel:has(#nearbyCollapse:checked) #nearbyBody{display:none;}
+#nearbyPanel:has(#nearbyCollapse:checked) #mapPreviewCard{display:none !important;}
+
+/* Prevent horizontal overflow on fixed sheet */
+#nearbyPanel.map-sheet *{min-width:0;}
 
 /* Keep hidden AI summary hidden (already present in head) */
