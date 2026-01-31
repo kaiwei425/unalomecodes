@@ -334,7 +334,7 @@
     .auth-btn{border:none;border-radius:999px;padding:4px 10px;height:28px;line-height:1;font-weight:700;font-size:12px;background:linear-gradient(135deg,#18a168,#1095d6);color:#fff;cursor:pointer;box-shadow:0 8px 16px rgba(16,149,214,.2);transition:transform .2s ease,filter .2s ease;}
     .auth-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
     .auth-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;filter:none;}
-    .member-menu{position:relative;display:none;}
+    .member-menu{position:relative;display:block;}
     .member-menu.is-visible{display:block;}
     .member-menu button{
       border:1px solid var(--line);
@@ -376,8 +376,31 @@
       box-shadow:0 14px 40px rgba(15,23,42,.18);
       padding:8px;
       display:none;
-      min-width:180px;
+      min-width:220px;
       z-index:2000;
+    }
+    .menu-auth{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 8px;
+      border-radius:12px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      margin-bottom:8px;
+    }
+    .menu-auth .auth-status{font-size:12px;font-weight:700;color:#475569;}
+    .menu-auth .auth-btn{height:26px;font-size:11px;padding:4px 8px;}
+    .menu-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      margin-bottom:8px;
+    }
+    .menu-divider{
+      height:1px;
+      background:#e2e8f0;
+      margin:6px 0;
     }
     .member-menu-panel a,
     .member-menu-panel button{
