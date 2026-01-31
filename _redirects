@@ -4,3 +4,6 @@
 /en/ /index.html 200
 /zh /index.html 200
 /zh/ /index.html 200
+
+/v2/templemap /v2/templemap.html 200
+/v2/templemap/ /v2/templemap.html 200
