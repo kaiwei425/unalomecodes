@@ -575,9 +575,10 @@ header > .wrap{max-width:unset;}
   position:sticky;
   top:0;
   z-index:50;
-  background:rgba(247,241,230,.92);
-  backdrop-filter:saturate(1.1) blur(10px);
-  border-bottom:1px solid rgba(123,87,65,.12);
+  background:#fff;
+  backdrop-filter:none;
+  border-bottom:1px solid #e2e8f0;
+  box-shadow:0 10px 22px rgba(15,23,42,.08);
   padding:12px 14px;
   display:grid;
   grid-template-columns: 1fr;
@@ -597,10 +598,10 @@ header > .wrap{max-width:unset;}
 .app-search{
   display:flex;align-items:center;gap:10px;
   background:#fff;
-  border:2px solid #8b6a4b;
+  border:1px solid #e2e8f0;
   border-radius:999px;
-  padding:12px 14px;
-  box-shadow:var(--v2-shadow-sm);
+  padding:10px 12px;
+  box-shadow:0 8px 18px rgba(15,23,42,.08);
 }
 .app-search-ico{opacity:.6;font-size:18px;}
 #kw{border:none!important;outline:none!important;background:transparent!important;box-shadow:none!important;padding:0!important;margin:0!important;width:100%;font-size:14px;}
@@ -611,6 +612,37 @@ header > .wrap{max-width:unset;}
 }
 .app-user-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .app-user-auth{width:100%;display:flex;justify-content:flex-end;}
+
+/* v1 header parity for auth widget */
+.auth-widget{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 10px;
+  border-radius:14px;
+  border:1px solid #e2e8f0;
+  background:#fff;
+  box-shadow:0 8px 18px rgba(15,23,42,.08);
+  min-height:34px;
+}
+.auth-widget .auth-status{
+  font-size:12px;
+  font-weight:700;
+  color:#475569;
+}
+.auth-btn{
+  border:none;
+  border-radius:999px;
+  padding:4px 10px;
+  height:28px;
+  line-height:1;
+  font-weight:700;
+  font-size:12px;
+  background:linear-gradient(135deg,#18a168,#1095d6);
+  color:#fff;
+  cursor:pointer;
+  box-shadow:0 8px 16px rgba(16,149,214,.2);
+}
 
 .category-bar{
   display:flex;
@@ -689,7 +721,7 @@ header > .wrap{max-width:unset;}
 .view-toggle .tab-home{color:#3b291f;}
 .view-toggle .tab-search{font-size:18px;color:#3b291f;}
 /* Make the real toggle clickable anywhere (still one JS handler) */
-#modeToggle{position:absolute;inset:0;opacity:0;z-index:2;}
+#modeToggle{position:absolute;inset:0;opacity:0;z-index:2;display:block;width:100%;height:100%;cursor:pointer;}
 .view-toggle .tab-text,
 .view-toggle .tab-search{pointer-events:none;}
 
