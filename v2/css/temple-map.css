@@ -549,3 +549,181 @@
     .trip-result-meta { font-size: 12px; color: var(--muted); }
     .trip-result-dist { font-size: 12px; color: var(--accent-2); font-weight: 700; margin-top: 4px; }
     .trip-result-actions { margin-left: auto; flex-shrink: 0; }
+
+
+/* ===== v2 explore ui overrides ===== */
+
+:root{--v2-bg:#f9f7f3;--v2-card:#fff;--v2-text:#111827;--v2-muted:#6b7280;--v2-border:rgba(15,23,42,.12);--v2-shadow:0 10px 30px rgba(17,24,39,.08);--v2-shadow-sm:0 8px 18px rgba(17,24,39,.08);--v2-radius:16px;}
+
+body{background:var(--v2-bg);}
+
+/* Hide the legacy header/layout blocks if any remain */
+header > .wrap{max-width:unset;}
+
+.app-header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:rgba(249,247,243,.92);
+  backdrop-filter:saturate(1.1) blur(10px);
+  border-bottom:1px solid rgba(15,23,42,.08);
+  padding:12px 14px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:10px;
+}
+@media (min-width: 860px){
+  .app-header{grid-template-columns: 280px 1fr auto; align-items:center;}
+}
+
+.app-logo{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;min-width:0;}
+.app-logo-mark{width:34px;height:34px;display:block;}
+.app-logo-mark img{width:34px;height:34px;object-fit:contain;display:block;}
+.app-logo-text{min-width:0;}
+.app-logo-title{font-weight:900;letter-spacing:.2px;line-height:1.1;}
+.app-logo-sub{color:var(--v2-muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.app-search{
+  display:flex;align-items:center;gap:10px;
+  background:var(--v2-card);
+  border:1px solid var(--v2-border);
+  border-radius:999px;
+  padding:10px 12px;
+  box-shadow:var(--v2-shadow-sm);
+}
+.app-search-ico{opacity:.7;}
+#kw{border:none!important;outline:none!important;background:transparent!important;box-shadow:none!important;padding:0!important;margin:0!important;width:100%;font-size:14px;}
+
+.app-user{display:flex;flex-direction:column;gap:10px;}
+@media (min-width: 860px){
+  .app-user{align-items:flex-end;}
+}
+.app-user-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.app-user-auth{width:100%;display:flex;justify-content:flex-end;}
+
+.category-bar{
+  display:flex;
+  gap:10px;
+  padding:12px 14px 0;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.cat-item{
+  flex:0 0 auto;
+  background:rgba(255,255,255,.9);
+  border:1px solid var(--v2-border);
+  border-radius:999px;
+  padding:10px 12px;
+  font-weight:800;
+  font-size:13px;
+  color:var(--v2-text);
+  text-decoration:none;
+  box-shadow:0 6px 14px rgba(17,24,39,.06);
+}
+
+.highlight-card{
+  margin:12px 14px 0;
+  background:linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:var(--v2-radius);
+  box-shadow:var(--v2-shadow);
+  padding:16px;
+}
+.highlight-title{font-size:18px;font-weight:1000;color:var(--v2-text);}
+.highlight-sub{margin-top:6px;color:var(--v2-muted);font-weight:700;font-size:13px;}
+.highlight-cta{
+  margin-top:12px;
+  border:none;
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:900;
+  background:#111827;
+  color:#fff;
+  cursor:pointer;
+}
+
+.view-toggle{
+  margin:12px 14px 0;
+  background:rgba(255,255,255,.85);
+  border:1px solid var(--v2-border);
+  border-radius:999px;
+  padding:6px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  box-shadow:0 8px 18px rgba(17,24,39,.06);
+  position:relative;
+}
+.view-toggle .tab-btn{
+  border:none;
+  background:transparent;
+  border-radius:999px;
+  padding:10px 12px;
+  font-weight:1000;
+  cursor:pointer;
+  color:rgba(17,24,39,.72);
+}
+/* Make the real toggle clickable anywhere (still one JS handler) */
+#modeToggle{position:absolute;inset:6px;opacity:0;}
+.view-toggle .tab-home,
+.view-toggle .tab-map{pointer-events:none;}
+
+/* Active state follows JS inline styles (no JS changes) */
+body:has(#cards[style*="display: none"]) .view-toggle .tab-map{background:#111827;color:#fff;}
+body:has(#cards[style*="display: none"]) .view-toggle .tab-home{background:transparent;color:rgba(17,24,39,.72);}
+body:not(:has(#cards[style*="display: none"])) .view-toggle .tab-home{background:#111827;color:#fff;}
+body:not(:has(#cards[style*="display: none"])) .view-toggle .tab-map{background:transparent;color:rgba(17,24,39,.72);}
+
+#mainContent{padding:12px 14px 28px;}
+
+/* Home vs Map view: driven by JS style.display on #cards/#mainMap */
+#mapView{display:none;}
+body:has(#cards[style*="display: none"]) #homeView{display:none;}
+body:has(#cards[style*="display: none"]) #mapView{display:block;}
+
+.intent-chips{margin-top:10px;}
+
+.filter-bar{margin-top:12px;}
+
+.count-bar{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.count-total{font-weight:1000;}
+.count-sync{color:var(--v2-muted);font-size:12px;}
+
+/* Grid + card look */
+.card-grid,
+#cards{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+  margin-top:14px;
+}
+@media (min-width: 900px){
+  #cards{grid-template-columns: 1fr 1fr;}
+}
+
+/* Existing renderer outputs <article class="card"> ... */
+.card{
+  border-radius:16px;
+  overflow:hidden;
+  background:var(--v2-card);
+  border:1px solid rgba(15,23,42,.08);
+  box-shadow:var(--v2-shadow);
+  display:flex;
+  flex-direction:row;
+}
+.card .cover{width:128px;flex:0 0 128px;position:relative;background:#f3f4f6;}
+.card .cover img{width:100%;height:100%;object-fit:cover;display:block;}
+.card .card-body{padding:12px 12px 12px 12px;min-width:0;flex:1;}
+.card .card-title{font-size:16px;font-weight:1000;color:var(--v2-text);}
+.card .card-sub{margin-top:2px;color:var(--v2-muted);font-weight:800;font-size:12px;}
+.card .card-desc{margin-top:8px;color:#374151;font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card .card-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.card .card-actions .btn{border-radius:999px;}
+
+/* Map container */
+#mainMap{height:64vh;min-height:420px;border-radius:16px;overflow:hidden;border:1px solid rgba(15,23,42,.10);box-shadow:var(--v2-shadow);background:#e5e7eb;}
+
+/* Nearby panel stays usable */
+#nearbyPanel{margin-top:12px;border-radius:16px;overflow:hidden;border:1px solid rgba(15,23,42,.10);box-shadow:var(--v2-shadow);background:rgba(255,255,255,.9);} 
+
+/* Keep hidden AI summary hidden (already present in head) */
