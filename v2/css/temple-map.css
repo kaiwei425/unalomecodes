@@ -140,6 +140,7 @@
       padding:0;
       box-shadow:none;
       object-fit:cover;
+      filter:brightness(0.9) contrast(1.05) saturate(1);
     }
     .filter-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
     .filter-select{appearance:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;font-family:inherit;color:var(--text);box-shadow:0 6px 12px rgba(15,23,42,.05);height:34px;width:100%;}
