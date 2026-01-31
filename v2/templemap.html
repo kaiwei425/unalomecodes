@@ -201,24 +201,6 @@
             <span class="search-icon">🔍</span>
             <input type="text" id="kw" placeholder="搜尋寺廟名稱 / 關鍵字">
           </div>
-          <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));">
-            <select id="fCat" class="filter-select">
-              <option value="">全部分類</option>
-            </select>
-            <select id="fArea" class="filter-select">
-              <option value="">全部地區</option>
-            </select>
-            <select id="fStatus" class="filter-select">
-              <option value="">營業狀態</option>
-              <option value="open">現在營業中</option>
-            </select>
-            <select id="fSort" class="filter-select">
-              <option value="">排序</option>
-              <option value="dist_asc">距離 近→遠</option>
-              <option value="rating_desc">評分 高→低</option>
-              <option value="name_asc">寺廟名稱 A→Z</option>
-            </select>
-          </div>
         </div>
         <div class="hero-right">
           <div class="nearby-panel" id="nearbyPanel" style="border:none;padding:0;box-shadow:none;">
@@ -245,6 +227,24 @@
   </header>
 
   <main class="wrap">
+    <div class="filter-row" style="grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); margin: 8px 0 12px;">
+      <select id="fCat" class="filter-select">
+        <option value="">全部分類</option>
+      </select>
+      <select id="fArea" class="filter-select">
+        <option value="">全部地區</option>
+      </select>
+      <select id="fStatus" class="filter-select">
+        <option value="">營業狀態</option>
+        <option value="open">現在營業中</option>
+      </select>
+      <select id="fSort" class="filter-select">
+        <option value="">排序</option>
+        <option value="dist_asc">距離 近→遠</option>
+        <option value="rating_desc">評分 高→低</option>
+        <option value="name_asc">寺廟名稱 A→Z</option>
+      </select>
+    </div>
     <div class="count-bar">
       <div class="count-total" id="totalCount">共 0 間</div>
       <div class="count-sync" id="countSync">更新中...</div>
