@@ -380,6 +380,7 @@
       z-index:2000;
     }
     .menu-auth{
+      position:relative;
       display:flex;
       align-items:center;
       gap:8px;
@@ -387,20 +388,45 @@
       border-radius:12px;
       background:#f8fafc;
       border:1px solid #e2e8f0;
-      margin-bottom:8px;
+      margin-bottom:10px;
     }
-    .menu-auth .auth-status{font-size:12px;font-weight:700;color:#475569;}
+    .auth-status-btn{
+      flex:1 1 auto;
+      border:1px solid #e2e8f0;
+      background:#fff;
+      border-radius:999px;
+      padding:6px 10px;
+      font-weight:700;
+      font-size:12px;
+      color:#475569;
+      text-align:left;
+      cursor:pointer;
+    }
     .menu-auth .auth-btn{height:26px;font-size:11px;padding:4px 8px;}
+    .member-submenu{
+      position:absolute;
+      top:0;
+      right:calc(100% + 8px);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:0 14px 40px rgba(15,23,42,.18);
+      padding:8px;
+      min-width:200px;
+      display:none;
+      z-index:2100;
+    }
+    .member-menu.is-visible .menu-auth:focus-within .member-submenu{
+      display:block;
+    }
+    .member-menu:not(.is-visible) .member-submenu{
+      display:none;
+    }
     .menu-actions{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr;
       gap:8px;
-      margin-bottom:8px;
-    }
-    .menu-divider{
-      height:1px;
-      background:#e2e8f0;
-      margin:6px 0;
+      margin-bottom:4px;
     }
     .member-menu-panel a,
     .member-menu-panel button{
