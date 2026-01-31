@@ -456,13 +456,13 @@
     }
     .menu-actions{
       display:grid;
-      grid-template-columns:1fr;
+      grid-template-columns:1fr 1fr;
       gap:8px;
       margin-bottom:4px;
     }
     .menu-item{
       width:100%;
-      height:44px;
+      height:40px;
       padding:10px 14px;
       font-size:14px;
       border-radius:12px;
@@ -474,6 +474,7 @@
       color:#0f172a;
       border:1px solid #e2e8f0;
       box-shadow:0 6px 14px rgba(15,23,42,.06);
+      line-height:1;
     }
     .menu-actions .btn:hover,
     .menu-actions a.btn:hover{
