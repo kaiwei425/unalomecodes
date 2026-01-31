@@ -840,6 +840,9 @@ body:has(#nearbyCollapse:checked) #mainMap{
   overflow:hidden;
   display:flex;
   flex-direction:column;
+  opacity:1;
+  transition:height .25s ease, max-height .25s ease, transform .25s ease, opacity .25s ease, box-shadow .25s ease;
+  overscroll-behavior:contain;
 }
 
 .sheet-handle{
@@ -866,6 +869,11 @@ body:has(#nearbyCollapse:checked) #mainMap{
   padding:0 12px 12px;
   overflow:auto;
   -webkit-overflow-scrolling:touch;
+  overflow-x:hidden;
+  max-height:999px;
+  opacity:1;
+  transition:max-height .25s ease, opacity .25s ease, padding .25s ease;
+  overscroll-behavior:contain;
 }
 
 /* Ensure toggle is always visible in map mode */
@@ -882,6 +890,7 @@ body:has(#cards[style*="display: none"]) #nearbyToggle{display:inline-flex !impo
 #nearbyPanel:has(#nearbyCollapse:checked){
   height:72px;
   min-height:72px;
+  opacity:.98;
 }
 #nearbyPanel:has(#nearbyCollapse:checked) #nearbyBody{display:none;}
 #nearbyPanel:has(#nearbyCollapse:checked) #mapPreviewCard{display:none !important;}
@@ -889,4 +898,91 @@ body:has(#cards[style*="display: none"]) #nearbyToggle{display:inline-flex !impo
 /* Prevent horizontal overflow on fixed sheet */
 #nearbyPanel.map-sheet *{min-width:0;}
 
+/* Fallback for environments without :has() */
+#nearbyCollapse:checked ~ #mapPreviewCard{
+  max-height:0;
+  opacity:0;
+  margin-bottom:0;
+  padding:0;
+  overflow:hidden;
+}
+#nearbyCollapse:checked ~ .nearby-body{
+  max-height:0;
+  opacity:0;
+  padding-bottom:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+#nearbyCollapse:checked ~ .nearby-head{
+  padding-bottom:0;
+}
+
 /* Keep hidden AI summary hidden (already present in head) */
+
+/* ===== v2 polish (step 6) ===== */
+:root{
+  --v2-radius:16px;
+  --v2-shadow:0 10px 30px rgba(17,24,39,.12);
+  --v2-shadow-strong:0 14px 36px rgba(17,24,39,.18);
+}
+
+.app-header{
+  backdrop-filter:saturate(1.2) blur(14px);
+}
+
+.view-toggle::after{
+  height:4px;
+  box-shadow:0 4px 10px rgba(17,24,39,.25);
+  transition:transform .25s ease;
+}
+
+.card,
+.temple-card{
+  border-radius:var(--v2-radius);
+  box-shadow:var(--v2-shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.card:hover,
+.temple-card:hover{
+  box-shadow:var(--v2-shadow-strong);
+}
+.card:active,
+.temple-card:active{
+  transform:scale(0.985);
+}
+
+button,
+.btn,
+.cat-item,
+.highlight-cta,
+.intent-chip{
+  min-height:44px;
+  transition:transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+}
+button:active,
+.btn:active,
+.cat-item:active,
+.highlight-cta:active,
+.intent-chip:active{
+  transform:scale(0.98);
+}
+
+#nearbyPanel.map-sheet{
+  border-radius:20px 20px 16px 16px;
+  box-shadow:var(--v2-shadow-strong);
+  transition:height .25s ease, transform .25s ease, box-shadow .25s ease;
+  transform:translateY(0);
+}
+#nearbyPanel:has(#nearbyCollapse:checked){
+  transform:translateY(0);
+}
+
+#mapPreviewCard.map-preview-card{
+  border-radius:var(--v2-radius);
+  box-shadow:var(--v2-shadow);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+#mapPreviewCard.map-preview-card:not([hidden]){
+  transform:translateY(-4px);
+  box-shadow:var(--v2-shadow-strong);
+}
