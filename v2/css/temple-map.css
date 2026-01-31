@@ -36,6 +36,7 @@
     @media(max-width:720px){
       .sub{margin:2px 0 2px;}
       .hero{margin-top:2px;}
+      .hero-panel{margin-top:0;padding-top:6px;}
     }
     .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;position:relative;overflow:visible;}
     .top-actions .btn{padding:6px 12px;font-size:12px;}
