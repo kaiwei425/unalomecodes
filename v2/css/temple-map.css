@@ -1105,18 +1105,149 @@ body.v2-explore .searchbox input{border:none;outline:none;font-size:13px;width:1
   body.v2-explore .brand .brand-logo,
   body.v2-explore .brand .brand-logo img{height:32px;}
 }
-@media (max-width:720px){
-  body.v2-explore .top-actions{gap:8px;}
+
+/* Mobile parity (match v1 exactly) */
+@media(max-width:720px){
+  body.v2-explore .top-actions{
+    width:100%;
+    align-items:stretch;
+    gap:8px;
+  }
   body.v2-explore .top-actions .member-menu{flex:1 1 48%;}
   body.v2-explore .top-actions .auth-widget{flex:1 1 48%;}
   body.v2-explore .top-actions .member-menu button,
   body.v2-explore .top-actions .auth-widget{
-    width:100%;justify-content:center;
+    width:100%;
+    justify-content:center;
+    min-height:50px;
+    height:50px;
+    border-radius:16px;
+  }
+  body.v2-explore .top-actions .auth-widget{
+    height:50px;
+    padding:6px 12px;
   }
   body.v2-explore .auth-widget{gap:8px;padding:6px 10px;}
+  body.v2-explore .auth-widget .auth-status{display:inline-flex;}
   body.v2-explore .auth-widget .auth-btn{min-width:80px;height:26px;padding:4px 8px;}
+  body.v2-explore .auth-btn{font-size:11px;}
   body.v2-explore .top-actions .btn,
-  body.v2-explore .member-menu button{height:36px;font-size:12px;}
+  body.v2-explore .member-menu button{
+    height:44px;
+    border-radius:14px;
+    font-size:13px;
+  }
+  body.v2-explore .action-group{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:8px;
+    width:100%;
+  }
+  body.v2-explore .top-actions .top-actions-row{
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    gap:6px;
+    width:100%;
+    justify-content:flex-start;
+  }
+  body.v2-explore .top-actions .top-actions-row > *{
+    flex:1 1 0;
+    min-width:0;
+  }
+  body.v2-explore .top-actions .top-actions-row .btn{
+    height:32px;
+    padding:6px 4px;
+    font-size:11px;
+    white-space:nowrap;
+    width:100%;
+    justify-content:center;
+    text-align:center;
+  }
+  body.v2-explore .top-actions .top-actions-row .dropdown{
+    width:100%;
+    min-width:0;
+  }
+  body.v2-explore .top-actions .top-actions-row .dropdown .btn{
+    width:100%;
+    justify-content:center;
+  }
+  body.v2-explore .action-group:first-child{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+  body.v2-explore .action-group:last-child{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+  body.v2-explore .topbar{
+    align-items:center;
+  }
+  body.v2-explore .topbar-actions{
+    width:100%;
+    justify-content:flex-start;
+  }
+  body.v2-explore .topbar-actions .btn{
+    height:32px;
+  }
+  body.v2-explore .mobile-auth-slot{
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+  }
+  body.v2-explore .mobile-auth-slot .action-group{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+    flex-wrap:nowrap;
+  }
+  body.v2-explore .mobile-auth-slot .member-menu,
+  body.v2-explore .mobile-auth-slot .auth-widget{
+    flex:0 0 auto;
+    width:140px;
+  }
+  body.v2-explore .mobile-auth-slot .member-menu button,
+  body.v2-explore .mobile-auth-slot .auth-widget{
+    height:32px;
+    min-height:32px;
+    padding:4px 8px;
+    border-radius:12px;
+    width:100%;
+  }
+  body.v2-explore .mobile-auth-slot .auth-widget{
+    gap:6px;
+    padding:4px 8px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-items:center;
+  }
+  body.v2-explore .mobile-auth-slot .auth-status{
+    font-size:12px;
+    white-space:nowrap;
+    line-height:1;
+    width:100%;
+    min-width:0;
+    max-width:none;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    padding:0 6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  body.v2-explore .mobile-auth-slot .auth-btn{
+    height:22px;
+    padding:2px 8px;
+    font-size:11px;
+    white-space:nowrap;
+    min-width:60px;
+  }
+  body.v2-explore .top-actions{
+    z-index:30;
+  }
+  body.v2-explore .dropdown-content{
+    z-index:1500;
+  }
 }
 
 @media (min-width: 960px){
