@@ -295,11 +295,18 @@
     background-repeat:no-repeat;
     background-position:center bottom;
     background-size:contain;
-    background:
+    background-image:
+      url('/img/pedestal.png'),
       radial-gradient(220px 70px at 50% 25%, rgba(0,0,0,.22), rgba(0,0,0,0) 66%),
       radial-gradient(240px 80px at 50% 34%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%),
       radial-gradient(520px 180px at 50% 110%, rgba(15,23,42,.18), rgba(15,23,42,0) 62%),
       linear-gradient(180deg, #fbfcfe, #e5e7eb);
+    background-blend-mode:
+      screen,
+      normal,
+      normal,
+      normal,
+      normal;
   }
 
   .img-card.img-card--has-pedestal .pedestal-fallback{

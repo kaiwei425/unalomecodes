@@ -258,6 +258,107 @@
     });
   }
 
+  function processRemoveSolidBg(dataUrl){
+    // Remove a solid-ish background by sampling corner pixels.
+    // Works for both black/white backgrounds (your pedestal screenshot is black background).
+    return new Promise(function(resolve){
+      try{
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function(){
+          try{
+            var w = img.naturalWidth || img.width;
+            var h = img.naturalHeight || img.height;
+            if (!w || !h) return resolve(dataUrl);
+
+            var c = document.createElement('canvas');
+            c.width = w;
+            c.height = h;
+            var ctx = c.getContext('2d', { willReadFrequently:true });
+            ctx.drawImage(img, 0, 0);
+
+            var id = ctx.getImageData(0, 0, w, h);
+            var d = id.data;
+
+            function px(x, y){
+              var ix = (Math.max(0, Math.min(w - 1, x)) + Math.max(0, Math.min(h - 1, y)) * w) * 4;
+              return [d[ix], d[ix+1], d[ix+2]];
+            }
+
+            // Sample 4 corners (slightly inset).
+            var s1 = px(2, 2);
+            var s2 = px(w - 3, 2);
+            var s3 = px(2, h - 3);
+            var s4 = px(w - 3, h - 3);
+            var br = Math.round((s1[0] + s2[0] + s3[0] + s4[0]) / 4);
+            var bg = Math.round((s1[1] + s2[1] + s3[1] + s4[1]) / 4);
+            var bb = Math.round((s1[2] + s2[2] + s3[2] + s4[2]) / 4);
+
+            // Thresholds (tuned for pedestal image): near background -> transparent, near-edge -> feather.
+            var t0 = 46;  // hard remove
+            var t1 = 90;  // feather end
+
+            for (var i=0;i<d.length;i+=4){
+              var r = d[i], g = d[i+1], b = d[i+2];
+              var dist = Math.abs(r - br) + Math.abs(g - bg) + Math.abs(b - bb); // 0..765
+              if (dist <= t0){
+                d[i+3] = 0;
+              } else if (dist < t1){
+                var a = Math.round(((dist - t0) / (t1 - t0)) * 255);
+                d[i+3] = Math.min(d[i+3], a);
+              }
+            }
+
+            ctx.putImageData(id, 0, 0);
+            resolve(c.toDataURL('image/png'));
+          }catch(_e){
+            resolve(dataUrl);
+          }
+        };
+        img.onerror = function(){ resolve(dataUrl); };
+        img.src = dataUrl;
+      }catch(_){
+        resolve(dataUrl);
+      }
+    });
+  }
+
+  function hasVisiblePixels(dataUrl){
+    // Best-effort: verify the processed image didn't become "almost fully transparent".
+    return new Promise(function(resolve){
+      try{
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function(){
+          try{
+            var w = img.naturalWidth || img.width;
+            var h = img.naturalHeight || img.height;
+            if (!w || !h) return resolve(false);
+            var c = document.createElement('canvas');
+            c.width = Math.min(220, w);
+            c.height = Math.min(220, h);
+            var ctx = c.getContext('2d', { willReadFrequently:true });
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            var id = ctx.getImageData(0, 0, c.width, c.height);
+            var d = id.data;
+            var hits = 0;
+            for (var i=3;i<d.length;i+=16){
+              if (d[i] > 40) hits += 1;
+              if (hits > 60) return resolve(true);
+            }
+            resolve(false);
+          }catch(_){
+            resolve(false);
+          }
+        };
+        img.onerror = function(){ resolve(false); };
+        img.src = dataUrl;
+      }catch(_){
+        resolve(false);
+      }
+    });
+  }
+
   async function loadFixedPedestal(){
     try{
       pedestalTried = true;
@@ -279,7 +380,17 @@
           if (await hasAnyAlpha(dataUrl)){
             pedestalOverlayUrl = dataUrl;
           } else {
-            pedestalOverlayUrl = String((await processRemoveWhiteBg(dataUrl)) || dataUrl);
+            // Try solid background keying first (supports black background),
+            // then fall back to near-white removal.
+            var keyed = await processRemoveSolidBg(dataUrl);
+            if (!(await hasVisiblePixels(keyed))){
+              keyed = await processRemoveWhiteBg(dataUrl);
+            }
+            if (await hasVisiblePixels(keyed)){
+              pedestalOverlayUrl = String(keyed || dataUrl);
+            } else {
+              pedestalOverlayUrl = '';
+            }
           }
           ok = true;
           break;
