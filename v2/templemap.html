@@ -172,24 +172,29 @@
   </header>
 
   <nav class="category-bar" aria-label="分類">
-    <a class="cat-item" href="/deity">神明介紹</a>
-    <a class="cat-item" href="/shop">佛牌</a>
-    <a class="cat-item" href="/shop">聖物</a>
-    <a class="cat-item" href="/shop">賣貨便</a>
-    <a class="cat-item" href="/" >其他</a>
+    <a class="cat-item" href="/deity"><span class="cat-icon">💎</span><span class="cat-label">神明介紹</span></a>
+    <a class="cat-item" href="/shop"><span class="cat-icon">🔥</span><span class="cat-label">佛牌</span></a>
+    <a class="cat-item" href="/shop"><span class="cat-icon">🏛️</span><span class="cat-label">聖物</span></a>
+    <a class="cat-item" href="/shop"><span class="cat-icon">🏪</span><span class="cat-label">賣貨便</span></a>
+    <a class="cat-item" href="/"><span class="cat-icon">▦</span><span class="cat-label">其他</span></a>
   </nav>
 
   <section class="highlight-card" aria-label="探索推薦">
+    <div class="highlight-illust">🧙‍♂️</div>
     <div class="highlight-copy">
-      <div class="highlight-title">Don't know where to go?</div>
-      <div class="highlight-sub">選一個方向，先從附近與熱門開始探索。</div>
-      <button class="highlight-cta" type="button">Start Exploring</button>
+      <div class="highlight-badges">
+        <span class="badge badge-new">上新！</span>
+        <span class="badge badge-hot">亮點</span>
+      </div>
+      <div class="highlight-title">Don't know where to go? Get Random!</div>
+      <div class="highlight-sub">開始測試</div>
     </div>
   </section>
 
   <div class="view-toggle" role="tablist" aria-label="View Switch">
-    <button class="tab-btn tab-home" type="button" aria-hidden="true" tabindex="-1">Home</button>
-    <button class="tab-btn tab-map" id="modeToggle" type="button">Map</button>
+    <div class="tab-text"><span class="tab-home">Home</span><span class="tab-sep">|</span><span class="tab-map">Map</span></div>
+    <button class="tab-btn tab-map" id="modeToggle" type="button" aria-label="Toggle Map"></button>
+    <span class="tab-search">🔍</span>
   </div>
 
   <div id="mainContent">
