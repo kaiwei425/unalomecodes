@@ -70,6 +70,7 @@
   .status{font-size:12px;color:var(--admin-muted);min-height:16px;overflow-wrap:anywhere;}
   .status.is-error{color:#b91c1c;}
   .status.is-ok{color:#065f46;}
+  .status.is-warn{color:#b45309;}
 
   .bullets{display:grid;gap:10px;}
   .bullet{
@@ -286,16 +287,19 @@
     height: 180px;
     left:50%;
     transform: translateX(-50%);
-    background:
-      radial-gradient(220px 70px at 50% 25%, rgba(0,0,0,.20), rgba(0,0,0,0) 65%),
-      radial-gradient(220px 70px at 50% 25%, rgba(255,255,255,.85), rgba(255,255,255,0) 65%),
-      linear-gradient(180deg, #f8fafc, #e5e7eb);
-    box-shadow: 0 26px 40px rgba(15,23,42,.12);
-    border: 1px solid rgba(15,23,42,.10);
     border-radius: 999px;
+    border: 1px solid rgba(15,23,42,.10);
+    box-shadow:
+      0 30px 44px rgba(15,23,42,.14),
+      inset 0 1px 0 rgba(255,255,255,.85);
     background-repeat:no-repeat;
     background-position:center bottom;
     background-size:contain;
+    background:
+      radial-gradient(220px 70px at 50% 25%, rgba(0,0,0,.22), rgba(0,0,0,0) 66%),
+      radial-gradient(240px 80px at 50% 34%, rgba(255,255,255,.95), rgba(255,255,255,0) 72%),
+      radial-gradient(520px 180px at 50% 110%, rgba(15,23,42,.18), rgba(15,23,42,0) 62%),
+      linear-gradient(180deg, #fbfcfe, #e5e7eb);
   }
 
   .img-card.img-card--has-pedestal .pedestal-fallback{

@@ -32,8 +32,16 @@
   };
 
   var STORAGE_KEY = 'adminProductImageDraft:v1';
-  var PEDESTAL_ASSET_URL = '/img/pedestal.png';
+  var PEDESTAL_ASSET_URLS = [
+    '/img/pedestal.png',
+    '/img/pedestal.webp',
+    '/img/pedestal.jpg',
+    '/img/pedestal.jpeg',
+    '../img/pedestal.png',
+    'img/pedestal.png'
+  ];
   var pedestalOverlayUrl = '';
+  var pedestalTried = false;
 
   var state = {
     title: '',
@@ -58,9 +66,10 @@
 
   function setStatus(msg, kind){
     if (!els.status) return;
-    els.status.classList.remove('is-error','is-ok');
+    els.status.classList.remove('is-error','is-ok','is-warn');
     if (kind === 'error') els.status.classList.add('is-error');
     if (kind === 'ok') els.status.classList.add('is-ok');
+    if (kind === 'warn') els.status.classList.add('is-warn');
     els.status.textContent = msg || '';
   }
 
@@ -176,7 +185,8 @@
   }
 
   function processRemoveWhiteBg(dataUrl){
-    // Always best-effort remove near-white pixels, used for pedestal overlay.
+    // Best-effort remove white background pixels, used for pedestal overlay.
+    // We keep light gray shading (platform details) by mapping "distance from white" to alpha.
     return new Promise(function(resolve){
       try{
         var img = new Image();
@@ -192,10 +202,13 @@
             var d = id.data;
             for (var i=0;i<d.length;i+=4){
               var r = d[i], g = d[i+1], b = d[i+2];
-              if (r > 250 && g > 250 && b > 250){
+              var dist = (255 - r) + (255 - g) + (255 - b); // 0..765
+              if (dist < 12){
                 d[i+3] = 0;
-              } else if (r > 240 && g > 240 && b > 240){
-                d[i+3] = Math.min(d[i+3], 40);
+              } else if (dist < 90){
+                // Map 12..90 => 0..255
+                var a = Math.round(((dist - 12) / (90 - 12)) * 255);
+                d[i+3] = Math.min(d[i+3], a);
               }
             }
             ctx.putImageData(id, 0, 0);
@@ -212,19 +225,71 @@
     });
   }
 
+  function hasAnyAlpha(dataUrl){
+    return new Promise(function(resolve){
+      try{
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function(){
+          try{
+            var w = img.naturalWidth || img.width;
+            var h = img.naturalHeight || img.height;
+            if (!w || !h) return resolve(false);
+            var c = document.createElement('canvas');
+            c.width = Math.min(220, w);
+            c.height = Math.min(220, h);
+            var ctx = c.getContext('2d', { willReadFrequently:true });
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            var id = ctx.getImageData(0, 0, c.width, c.height);
+            var d = id.data;
+            for (var i=3;i<d.length;i+=16){
+              if (d[i] < 250) return resolve(true);
+            }
+            resolve(false);
+          }catch(_){
+            resolve(false);
+          }
+        };
+        img.onerror = function(){ resolve(false); };
+        img.src = dataUrl;
+      }catch(_){
+        resolve(false);
+      }
+    });
+  }
+
   async function loadFixedPedestal(){
     try{
-      var res = await fetch(PEDESTAL_ASSET_URL, { cache:'force-cache' });
-      if (!res.ok) return;
-      var blob = await res.blob();
-      var dataUrl = await new Promise(function(resolve){
-        var r = new FileReader();
-        r.onload = function(){ resolve(String(r.result || '')); };
-        r.onerror = function(){ resolve(''); };
-        r.readAsDataURL(blob);
-      });
-      if (!dataUrl) return;
-      pedestalOverlayUrl = String((await processRemoveWhiteBg(dataUrl)) || dataUrl);
+      pedestalTried = true;
+      var ok = false;
+      for (var i=0;i<PEDESTAL_ASSET_URLS.length;i++){
+        var url = PEDESTAL_ASSET_URLS[i];
+        try{
+          var res = await fetch(url, { cache:'force-cache' });
+          if (!res.ok) continue;
+          var blob = await res.blob();
+          var dataUrl = await new Promise(function(resolve){
+            var r = new FileReader();
+            r.onload = function(){ resolve(String(r.result || '')); };
+            r.onerror = function(){ resolve(''); };
+            r.readAsDataURL(blob);
+          });
+          if (!dataUrl) continue;
+          // If the pedestal is already a transparent PNG, keep it as-is.
+          if (await hasAnyAlpha(dataUrl)){
+            pedestalOverlayUrl = dataUrl;
+          } else {
+            pedestalOverlayUrl = String((await processRemoveWhiteBg(dataUrl)) || dataUrl);
+          }
+          ok = true;
+          break;
+        }catch(_e){
+          // keep trying next url
+        }
+      }
+      if (!ok){
+        pedestalOverlayUrl = '';
+      }
     }catch(_){}
   }
 
@@ -264,6 +329,9 @@
         els.pvPedestalImg.removeAttribute('src');
         els.pvPedestalImg.style.display = 'none';
         try{ els.card.classList.remove('img-card--has-pedestal'); }catch(_){}
+        if (pedestalTried){
+          setStatus('找不到展示台圖片（請放到 img/pedestal.png）。目前先用內建展示台。', 'warn');
+        }
       }
     }
 
