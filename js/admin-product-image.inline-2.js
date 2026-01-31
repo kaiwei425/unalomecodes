@@ -14,8 +14,6 @@
     productFile: $('productImageFile'),
     btnClearImage: $('btnClearProductImage'),
     removeBg: $('removeBg'),
-    pedestalFile: $('pedestalImageFile'),
-    btnClearPedestal: $('btnClearPedestalImage'),
     imageScale: $('imageScale'),
     imageRotate: $('imageRotate'),
     footerNote: $('footerNote'),
@@ -28,12 +26,14 @@
     pvBullets: $('pvBullets'),
     pvBrandText: $('pvBrandText'),
     pvBrandMark: $('pvBrandMark'),
-    pvPedestal: $('pvPedestal'),
+    pvPedestalImg: $('pvPedestalImg'),
     pvProductImage: $('pvProductImage'),
     pvFooterNote: $('pvFooterNote')
   };
 
   var STORAGE_KEY = 'adminProductImageDraft:v1';
+  var PEDESTAL_ASSET_URL = '/img/pedestal.png';
+  var pedestalOverlayUrl = '';
 
   var state = {
     title: '',
@@ -49,7 +49,6 @@
     ],
     imageDataUrl: '',
     removeBg: false,
-    pedestalDataUrl: '',
     imageScale: 100,
     imageRotate: 0,
     imageX: 0,
@@ -94,7 +93,6 @@
       state.bullets = Array.isArray(data.bullets) ? data.bullets.slice(0, 10) : state.bullets;
       state.imageDataUrl = typeof data.imageDataUrl === 'string' ? data.imageDataUrl : '';
       state.removeBg = !!data.removeBg;
-      state.pedestalDataUrl = typeof data.pedestalDataUrl === 'string' ? data.pedestalDataUrl : '';
       state.imageScale = Number(data.imageScale || 100) || 100;
       state.imageRotate = Number(data.imageRotate || 0) || 0;
       state.imageX = Number(data.imageX || 0) || 0;
@@ -177,6 +175,59 @@
     els.bullets.innerHTML = html || '<div style="color:#64748b;font-size:13px;">尚未建立條列。</div>';
   }
 
+  function processRemoveWhiteBg(dataUrl){
+    // Always best-effort remove near-white pixels, used for pedestal overlay.
+    return new Promise(function(resolve){
+      try{
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function(){
+          try{
+            var c = document.createElement('canvas');
+            c.width = img.naturalWidth || img.width;
+            c.height = img.naturalHeight || img.height;
+            var ctx = c.getContext('2d', { willReadFrequently:true });
+            ctx.drawImage(img, 0, 0);
+            var id = ctx.getImageData(0, 0, c.width, c.height);
+            var d = id.data;
+            for (var i=0;i<d.length;i+=4){
+              var r = d[i], g = d[i+1], b = d[i+2];
+              if (r > 250 && g > 250 && b > 250){
+                d[i+3] = 0;
+              } else if (r > 240 && g > 240 && b > 240){
+                d[i+3] = Math.min(d[i+3], 40);
+              }
+            }
+            ctx.putImageData(id, 0, 0);
+            resolve(c.toDataURL('image/png'));
+          }catch(_e){
+            resolve(dataUrl);
+          }
+        };
+        img.onerror = function(){ resolve(dataUrl); };
+        img.src = dataUrl;
+      }catch(_){
+        resolve(dataUrl);
+      }
+    });
+  }
+
+  async function loadFixedPedestal(){
+    try{
+      var res = await fetch(PEDESTAL_ASSET_URL, { cache:'force-cache' });
+      if (!res.ok) return;
+      var blob = await res.blob();
+      var dataUrl = await new Promise(function(resolve){
+        var r = new FileReader();
+        r.onload = function(){ resolve(String(r.result || '')); };
+        r.onerror = function(){ resolve(''); };
+        r.readAsDataURL(blob);
+      });
+      if (!dataUrl) return;
+      pedestalOverlayUrl = String((await processRemoveWhiteBg(dataUrl)) || dataUrl);
+    }catch(_){}
+  }
+
   function renderPreview(){
     if (!els.card) return;
     var accent = String(state.accent || '#2e2b7a').trim() || '#2e2b7a';
@@ -204,16 +255,15 @@
       }
     }
 
-    if (els.pvPedestal){
-      if (state.pedestalDataUrl){
-        els.pvPedestal.style.backgroundImage = 'url(' + JSON.stringify(state.pedestalDataUrl) + ')';
-        els.pvPedestal.style.border = 'none';
-        els.pvPedestal.style.boxShadow = 'none';
-        // allow the uploaded PNG to define its own shadow; keep size/position rules from CSS
+    if (els.pvPedestalImg){
+      if (pedestalOverlayUrl){
+        els.pvPedestalImg.src = pedestalOverlayUrl;
+        els.pvPedestalImg.style.display = '';
+        try{ els.card.classList.add('img-card--has-pedestal'); }catch(_){}
       } else {
-        els.pvPedestal.style.backgroundImage = '';
-        els.pvPedestal.style.border = '';
-        els.pvPedestal.style.boxShadow = '';
+        els.pvPedestalImg.removeAttribute('src');
+        els.pvPedestalImg.style.display = 'none';
+        try{ els.card.classList.remove('img-card--has-pedestal'); }catch(_){}
       }
     }
 
@@ -225,12 +275,12 @@
         return (
           '<div class="pv-bullet">' +
             '<div class="icon">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="#0b1220" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
                 '<path d="M20 6L9 17l-5-5"></path>' +
               '</svg>' +
             '</div>' +
             '<div>' +
-              '<div class="h" style="color:' + esc(accent) + ';">' + esc(h || '—') + '</div>' +
+              '<div class="h" style="color:#0b1220;">' + esc(h || '—') + '</div>' +
               '<div class="b" style="color:' + esc(accent) + ';">' + esc(b || '—') + '</div>' +
             '</div>' +
           '</div>'
@@ -384,32 +434,6 @@
       });
     }
 
-    if (els.pedestalFile){
-      els.pedestalFile.addEventListener('change', function(){
-        var f = els.pedestalFile.files && els.pedestalFile.files[0];
-        if (!f) return;
-        var reader = new FileReader();
-        reader.onload = function(){
-          state.pedestalDataUrl = String(reader.result || '');
-          renderPreview();
-          persist();
-          setStatus('展示台已載入。', 'ok');
-        };
-        reader.onerror = function(){
-          setStatus('讀取展示台失敗。', 'error');
-        };
-        reader.readAsDataURL(f);
-      });
-    }
-    if (els.btnClearPedestal){
-      els.btnClearPedestal.addEventListener('click', function(){
-        state.pedestalDataUrl = '';
-        try{ if (els.pedestalFile) els.pedestalFile.value = ''; }catch(_){}
-        renderPreview();
-        persist();
-        setStatus('已清除展示台。', 'ok');
-      });
-    }
     if (els.btnReset){
       els.btnReset.addEventListener('click', function(){
         try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
@@ -425,7 +449,6 @@
           ],
           imageDataUrl: '',
           removeBg: false,
-          pedestalDataUrl: '',
           imageScale: 100,
           imageRotate: 0,
           imageX: 0,
@@ -596,7 +619,9 @@
     hydrate();
     syncInputs();
     renderBulletsEditor();
-    renderPreview();
+    loadFixedPedestal().finally(function(){
+      renderPreview();
+    });
     applyResponsivePreview();
     bindDragRotate();
 

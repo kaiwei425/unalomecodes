@@ -86,15 +86,6 @@
               <div class="hint">預覽中可直接拖曳圖片改位置；按住 Shift 拖曳可旋轉。簡易去背僅適合白底近似的照片。</div>
             </div>
 
-            <div class="field">
-              <label>展示台圖片（選填）</label>
-              <div class="upload-row">
-                <input id="pedestalImageFile" type="file" accept="image/*">
-                <button class="btn" type="button" id="btnClearPedestalImage">清除展示台</button>
-              </div>
-              <div class="hint">建議使用透明背景 PNG（只包含展示台元素）。若上傳整張白底圖，會把後面內容蓋住。</div>
-            </div>
-
             <div class="field two-col">
               <div>
                 <label for="imageScale">圖片大小</label>
@@ -127,6 +118,7 @@
           <div class="preview-canvas" id="imgPreviewCanvas">
             <div class="img-card" id="imgCard">
               <div class="img-bg"></div>
+              <img class="pedestal-img" id="pvPedestalImg" alt="" style="display:none;">
               <div class="img-content">
                 <div class="img-title" id="pvImgTitle">—</div>
                 <div class="img-divider"></div>
@@ -138,7 +130,7 @@
                 <div class="brand-text" id="pvBrandText">unalomecodes</div>
               </div>
               <div class="img-product">
-                <div class="pedestal" id="pvPedestal"></div>
+                <div class="pedestal-fallback" aria-hidden="true"></div>
                 <img id="pvProductImage" alt="product" style="display:none;">
               </div>
               <div class="img-footnote" id="pvFooterNote" style="display:none;"></div>
