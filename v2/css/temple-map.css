@@ -1114,6 +1114,12 @@ body.v2-explore .searchbox input{border:none;outline:none;font-size:13px;width:1
     align-items:stretch;
     gap:8px;
   }
+  body.v2-explore .top-actions .action-group{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    width:100%;
+  }
   body.v2-explore .top-actions .member-menu{flex:1 1 48%;}
   body.v2-explore .top-actions .auth-widget{flex:1 1 48%;}
   body.v2-explore .top-actions .member-menu button,
@@ -1138,21 +1144,15 @@ body.v2-explore .searchbox input{border:none;outline:none;font-size:13px;width:1
     border-radius:14px;
     font-size:13px;
   }
-  body.v2-explore .action-group{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:8px;
-    width:100%;
-  }
   body.v2-explore .top-actions .top-actions-row{
     display:flex !important;
-    flex-wrap:nowrap !important;
-    gap:6px;
+    flex-wrap:wrap !important;
+    gap:8px;
     width:100%;
     justify-content:flex-start;
   }
   body.v2-explore .top-actions .top-actions-row > *{
-    flex:1 1 0;
+    flex:1 1 calc(50% - 8px);
     min-width:0;
   }
   body.v2-explore .top-actions .top-actions-row .btn{
@@ -1171,12 +1171,6 @@ body.v2-explore .searchbox input{border:none;outline:none;font-size:13px;width:1
   body.v2-explore .top-actions .top-actions-row .dropdown .btn{
     width:100%;
     justify-content:center;
-  }
-  body.v2-explore .action-group:first-child{
-    grid-template-columns:repeat(2, minmax(0,1fr));
-  }
-  body.v2-explore .action-group:last-child{
-    grid-template-columns:repeat(2, minmax(0,1fr));
   }
   body.v2-explore .topbar{
     align-items:center;
