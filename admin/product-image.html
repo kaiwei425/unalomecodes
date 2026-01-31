@@ -86,7 +86,7 @@
               <div class="hint">預覽中可直接拖曳圖片改位置；按住 Shift 拖曳可旋轉。簡易去背僅適合白底近似的照片。</div>
             </div>
 
-            <div class="field two-col">
+          <div class="field two-col">
               <div>
                 <label for="imageScale">圖片大小</label>
                 <input id="imageScale" type="range" min="70" max="140" value="100">
@@ -94,6 +94,17 @@
               <div>
                 <label for="imageRotate">圖片旋轉</label>
                 <input id="imageRotate" type="range" min="-25" max="25" value="0">
+              </div>
+            </div>
+
+            <div class="field two-col">
+              <div>
+                <label for="pedestalScale">展示台大小</label>
+                <input id="pedestalScale" type="range" min="60" max="140" value="100">
+              </div>
+              <div>
+                <label>展示台位置</label>
+                <div class="hint" style="margin-top:0">可在預覽中直接拖曳展示台調整位置。</div>
               </div>
             </div>
 
@@ -118,7 +129,6 @@
           <div class="preview-canvas" id="imgPreviewCanvas">
             <div class="img-card" id="imgCard">
               <div class="img-bg"></div>
-              <img class="pedestal-img" id="pvPedestalImg" alt="" style="display:none;">
               <div class="img-content">
                 <div class="img-title" id="pvImgTitle">—</div>
                 <div class="img-divider"></div>
@@ -130,6 +140,7 @@
                 <div class="brand-text" id="pvBrandText">unalomecodes</div>
               </div>
               <div class="img-product">
+                <img class="pedestal-img" id="pvPedestalImg" alt="" style="display:none;">
                 <div class="pedestal-fallback" aria-hidden="true"></div>
                 <img id="pvProductImage" alt="product" style="display:none;">
               </div>

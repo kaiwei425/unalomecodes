@@ -16,6 +16,7 @@
     removeBg: $('removeBg'),
     imageScale: $('imageScale'),
     imageRotate: $('imageRotate'),
+    pedestalScale: $('pedestalScale'),
     footerNote: $('footerNote'),
     btnReset: $('btnResetImageGen'),
     btnDownload: $('btnDownloadProductPng'),
@@ -62,6 +63,9 @@
     imageRotate: 0,
     imageX: 0,
     imageY: -16,
+    pedestalScale: 100,
+    pedestalX: 0,
+    pedestalY: 0,
     footerNote: ''
   };
 
@@ -107,6 +111,9 @@
       state.imageRotate = Number(data.imageRotate || 0) || 0;
       state.imageX = Number(data.imageX || 0) || 0;
       state.imageY = Number((data.imageY !== undefined ? data.imageY : -16)) || -16;
+      state.pedestalScale = Number(data.pedestalScale || 100) || 100;
+      state.pedestalX = Number(data.pedestalX || 0) || 0;
+      state.pedestalY = Number(data.pedestalY || 0) || 0;
       state.footerNote = typeof data.footerNote === 'string' ? data.footerNote : '';
     }catch(_){}
   }
@@ -120,6 +127,7 @@
     if (els.removeBg) els.removeBg.checked = !!state.removeBg;
     if (els.imageScale) els.imageScale.value = String(state.imageScale || 100);
     if (els.imageRotate) els.imageRotate.value = String(state.imageRotate || 0);
+    if (els.pedestalScale) els.pedestalScale.value = String(state.pedestalScale || 100);
     if (els.footerNote) els.footerNote.value = state.footerNote || '';
   }
 
@@ -130,6 +138,14 @@
     var x = Number(state.imageX || 0) || 0;
     var y = Number(state.imageY || 0) || 0;
     els.pvProductImage.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + rot + 'deg) scale(' + sc + ')';
+  }
+
+  function applyPedestalTransform(){
+    if (!els.pvPedestalImg) return;
+    var sc = (Number(state.pedestalScale || 100) || 100) / 100;
+    var x = Number(state.pedestalX || 0) || 0;
+    var y = Number(state.pedestalY || 0) || 0;
+    els.pvPedestalImg.style.transform = 'translateX(-50%) translate(' + x + 'px,' + y + 'px) scale(' + sc + ')';
   }
 
   function processRemoveBgIfNeeded(dataUrl){
@@ -442,6 +458,7 @@
         els.pvPedestalImg.style.display = 'none';
         try{ els.card.classList.remove('img-card--has-pedestal'); }catch(_){}
       }
+      applyPedestalTransform();
     }
 
     if (els.pvBullets){
@@ -524,6 +541,13 @@
       els.imageRotate.addEventListener('input', function(){
         state.imageRotate = Number(els.imageRotate.value || 0) || 0;
         applyImageTransform(); persist();
+      });
+    }
+    if (els.pedestalScale){
+      els.pedestalScale.addEventListener('input', function(){
+        state.pedestalScale = Number(els.pedestalScale.value || 100) || 100;
+        applyPedestalTransform();
+        persist();
       });
     }
     if (els.btnAddBullet){
@@ -630,6 +654,9 @@
           imageRotate: 0,
           imageX: 0,
           imageY: -16,
+          pedestalScale: 100,
+          pedestalX: 0,
+          pedestalY: 0,
           footerNote: ''
         };
         syncInputs();
@@ -697,6 +724,47 @@
         if (els.imageRotate) els.imageRotate.value = String(Math.round(state.imageRotate));
         applyImageTransform();
       }
+    });
+
+    function end(ev){
+      if (!dragging) return;
+      dragging = false;
+      try{ img.releasePointerCapture(ev.pointerId); }catch(_){}
+      img.style.cursor = 'grab';
+      persist();
+    }
+    img.addEventListener('pointerup', end);
+    img.addEventListener('pointercancel', end);
+  }
+
+  function bindPedestalDrag(){
+    if (!els.pvPedestalImg) return;
+    var img = els.pvPedestalImg;
+    var dragging = false;
+    var startX = 0;
+    var startY = 0;
+    var startPX = 0;
+    var startPY = 0;
+
+    img.addEventListener('pointerdown', function(ev){
+      if (img.style.display === 'none') return;
+      dragging = true;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      startPX = Number(state.pedestalX || 0) || 0;
+      startPY = Number(state.pedestalY || 0) || 0;
+      try{ img.setPointerCapture(ev.pointerId); }catch(_){}
+      img.style.cursor = 'grabbing';
+      ev.preventDefault();
+    });
+
+    img.addEventListener('pointermove', function(ev){
+      if (!dragging) return;
+      var dx = ev.clientX - startX;
+      var dy = ev.clientY - startY;
+      state.pedestalX = startPX + dx;
+      state.pedestalY = startPY + dy;
+      applyPedestalTransform();
     });
 
     function end(ev){
@@ -801,6 +869,7 @@
     });
     applyResponsivePreview();
     bindDragRotate();
+    bindPedestalDrag();
 
     if (window.ResizeObserver){
       try{
