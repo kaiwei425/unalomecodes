@@ -104,7 +104,7 @@
     .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .title-ig{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 8px 16px rgba(15,23,42,.08);text-decoration:none;}
     .title-ig img{width:16px;height:16px;display:block;}
-    .hero-panel{background:linear-gradient(135deg, rgba(255,90,60,.12), rgba(255,138,0,.08));border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:8px;}
+    .hero-panel{background:linear-gradient(135deg, rgba(255,90,60,.18), rgba(255,138,0,.18));border:1px solid rgba(255,90,60,.25);border-radius:16px;padding:12px;display:grid;gap:8px;}
     .hero-right{background:#fff;border:1px solid rgba(255,90,60,.2);border-radius:16px;padding:12px;display:grid;gap:10px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;box-shadow:0 8px 16px rgba(15,23,42,.06);}
     .searchbox input{border:none;outline:none;font-size:13px;width:100%;font-family:inherit;background:transparent;}
@@ -128,14 +128,14 @@
       white-space:nowrap;
     }
     .icon-item img{
-      width:44px;
-      height:44px;
+      width:56px;
+      height:56px;
       border-radius:50%;
-      background:#fff;
-      border:2px solid #e6c8a6;
-      padding:7px;
-      box-shadow:0 8px 16px rgba(15,23,42,.12);
-      object-fit:contain;
+      background:transparent;
+      border:none;
+      padding:0;
+      box-shadow:none;
+      object-fit:cover;
     }
     .filter-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
     .filter-select{appearance:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;font-family:inherit;color:var(--text);box-shadow:0 6px 12px rgba(15,23,42,.05);height:34px;width:100%;}
