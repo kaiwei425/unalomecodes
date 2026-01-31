@@ -9,16 +9,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="coupon-api" content="https://coupon-service.kaiwei425.workers.dev/">
 <meta name="api-base" content="/">
-<meta name="description" content="泰國佛牌與守護神商品專區，提供價格篩選、熱門排行與新品上架，適合新手到收藏者的選購入口。">
+<meta name="description" content="泰國佛牌與守護神商品專區：可依神祇、價格與熱門度篩選，提供商品資訊、購買流程與常見問題，方便查詢與下單。">
+<meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
+<meta name="googlebot" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
 <link rel="canonical" href="https://unalomecodes.com/shop">
-<title>unalomecodes | 懂玩泰國 - 商城</title>
+<title>泰國佛牌與守護神商品專區 - unalomecodes</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
 <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png?v=20260131">
   <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png?v=20260131">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png?v=20260131">
-<meta property="og:title" content="unalomecodes | 懂玩泰國 - 商城">
-<meta property="og:description" content="泰國佛牌與守護神商品專區，提供價格篩選、熱門排行與新品上架，適合新手到收藏者的選購入口。">
+<meta property="og:title" content="泰國佛牌與守護神商品專區 - unalomecodes">
+<meta property="og:description" content="可依神祇、價格與熱門度篩選，提供商品資訊、購買流程與常見問題。">
 <meta property="og:image" content="https://unalomecodes.com/img/logo.png">
 <meta property="og:url" content="https://unalomecodes.com/shop">
 <meta property="og:type" content="website">
@@ -47,6 +49,91 @@
     }
   }
 </script>
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://unalomecodes.com/#org",
+        "name": "unalomecodes",
+        "url": "https://unalomecodes.com/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://unalomecodes.com/img/logo.png"
+        },
+        "sameAs": [
+          "https://www.instagram.com/bkkaiwei/"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://unalomecodes.com/#website",
+        "url": "https://unalomecodes.com/",
+        "name": "unalomecodes",
+        "inLanguage": "zh-Hant",
+        "publisher": {
+          "@id": "https://unalomecodes.com/#org"
+        }
+      },
+      {
+        "@type": "Article",
+        "@id": "https://unalomecodes.com/shop#article",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://unalomecodes.com/shop"
+        },
+        "headline": "泰國佛牌與守護神商品專區",
+        "description": "泰國佛牌與守護神商品專區：可依神祇、價格與熱門度篩選，提供商品資訊、購買流程與常見問題，方便查詢與下單。",
+        "inLanguage": "zh-Hant",
+        "author": {
+          "@id": "https://unalomecodes.com/#org"
+        },
+        "publisher": {
+          "@id": "https://unalomecodes.com/#org"
+        },
+        "dateModified": "2026-01-31",
+        "keywords": [
+          "泰國佛牌",
+          "守護神",
+          "聖物",
+          "商品",
+          "購物"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://unalomecodes.com/shop#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "如何篩選適合的商品？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "可依神祇、價格與熱門度篩選，並在商品頁查看描述與規格，以便快速比對。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "付款與出貨資訊在哪裡看？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "付款方式、出貨時間與物流規則可在 FAQ 查看，必要時以結帳流程與客服回覆為準。"
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "如何查詢訂單狀態？",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "可使用側邊欄的訂單查詢入口，輸入訂單資訊即可查看最新狀態。"
+            }
+          }
+        ]
+      }
+    ]
+  }
+</script>
 <link rel="stylesheet" href="/css/style.css">
 <meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="/css/shop.inline-1.css">
@@ -57,7 +144,7 @@
 <script src="/js/shop.inline-1.js"></script>
 <div class="wrap">
   <h1 class="sr-only">泰國佛牌選購與守護神商品專區</h1>
-  <div class="top">
+  <div class="top" data-nosnippet>
     <div class="brand">
       <picture class="brand-logo">
         <source srcset="/img/logo.svg" type="image/svg+xml">
@@ -97,8 +184,12 @@
     </div>
   </div>
 
+  <!-- Supporting Content: Commerce hub for deity/topic cluster -->
+  <section id="ai-summary">
+    <p>本頁是泰國佛牌與守護神商品專區，提供以神祇與需求為線索的商品清單與篩選，並連結常見問題與訂單查詢，方便在選購前後核對資訊、確認流程與完成下單；商品資訊與規格以頁面標示為主，必要時可透過客服核對。</p>
+  </section>
   <div class="store">
-    <aside id="sideDeities">
+    <aside id="sideDeities" data-nosnippet>
     <div class="side-cart">
       <button id="cartFab" type="button" title="查看購物車" data-i18n-attr="title:shop.view_cart"><span class="lbl" data-i18n="shop.cart">購物車</span><span id="cartBadge">0</span></button>
     </div>

@@ -3,26 +3,113 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="輸入飯店與時間，混合寺廟與美食，一鍵產生順路的一日行程。">
+  <meta name="description" content="輸入起點與時間，一鍵混合寺廟與美食，產出順路的一日行程卡與 Google 路線連結，適合自由行規劃。">
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
+  <meta name="googlebot" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
   <link rel="canonical" href="https://unalomecodes.com/day-trip">
-  <title>unalomecodes | 懂玩泰國 - 一日行程產生器</title>
+  <title>泰國一日行程產生器｜寺廟×美食順路規劃 - unalomecodes</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png?v=20260131">
   <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png?v=20260131">
   <link rel="apple-touch-icon" href="/img/apple-touch-icon.png?v=20260131">
-  <meta property="og:title" content="unalomecodes | 懂玩泰國 - 一日行程產生器">
-  <meta property="og:description" content="輸入飯店與時間，混合寺廟與美食，一鍵產生順路的一日行程。">
+  <meta property="og:title" content="泰國一日行程產生器｜寺廟×美食順路規劃 - unalomecodes">
+  <meta property="og:description" content="輸入起點與時間，一鍵產生順路的一日行程卡與 Google 路線連結。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://unalomecodes.com/day-trip">
   <meta property="og:image" content="https://unalomecodes.com/img/logo.png">
   <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://unalomecodes.com/#org",
+          "name": "unalomecodes",
+          "url": "https://unalomecodes.com/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://unalomecodes.com/img/logo.png"
+          },
+          "sameAs": [
+            "https://www.instagram.com/bkkaiwei/"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://unalomecodes.com/#website",
+          "url": "https://unalomecodes.com/",
+          "name": "unalomecodes",
+          "inLanguage": "zh-Hant",
+          "publisher": {
+            "@id": "https://unalomecodes.com/#org"
+          }
+        },
+        {
+          "@type": "Article",
+          "@id": "https://unalomecodes.com/day-trip#article",
+          "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https://unalomecodes.com/day-trip"
+          },
+          "headline": "泰國一日行程產生器｜寺廟×美食順路規劃",
+          "description": "輸入起點與時間，一鍵混合寺廟與美食，產出順路的一日行程卡與 Google 路線連結，適合自由行規劃。",
+          "inLanguage": "zh-Hant",
+          "author": {
+            "@id": "https://unalomecodes.com/#org"
+          },
+          "publisher": {
+            "@id": "https://unalomecodes.com/#org"
+          },
+          "dateModified": "2026-01-31",
+          "keywords": [
+            "泰國行程",
+            "一日行程",
+            "寺廟",
+            "美食",
+            "路線規劃"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://unalomecodes.com/day-trip#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "這個工具會產出什麼？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "會產出一日行程卡與可直接開啟的 Google 路線連結，方便在手機上導航。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "行程可以如何調整？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "可依出發/回程時間、交通方式與模式調整，並在結果中重新產生與微調。"
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "資料來源如何更新？",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "地點與建議以公開資料與內容整理為主，並依回饋與實際使用情況更新。"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  </script>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/day-trip.css">
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
+    <div class="top" data-nosnippet>
       <a class="brand" href="/">
         <picture class="brand-logo">
           <source srcset="/img/logo.svg" type="image/svg+xml">
@@ -43,6 +130,10 @@
     <section class="planner-hero">
       <h1>一日行程產生器</h1>
       <p>一步一步輸入條件，最後產出行程卡與 Google 路線。</p>
+      <!-- Supporting Content: Planning tool for topic cluster -->
+      <section id="ai-summary">
+        <p>本頁提供泰國一日行程規劃工具，依起點、時間與交通方式混合寺廟與美食，產出順路的行程卡與路線連結，可直接在手機導航並依現場狀況再微調；結果可重新產生，並可搭配地圖收藏清單調整停留點。</p>
+      </section>
       <div class="stepper" id="stepper">
         <button class="step-pill is-active" type="button" data-step-pill="1"><span>1</span>起點與時間</button>
         <button class="step-pill" type="button" data-step-pill="2"><span>2</span>行程模式</button>

@@ -16,6 +16,9 @@
 /sitemap-index.xml
   Cache-Control: public, max-age=300
 
+/sitemap.xml
+  Cache-Control: public, max-age=300
+
 /sitemaps/*
   Cache-Control: public, max-age=300
 
